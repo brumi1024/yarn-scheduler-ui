@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YARN Capacity Scheduler Configuration</title>
+    <link rel="stylesheet" href="styles/main.css">
+    <link rel="stylesheet" href="styles/queue-cards.css">
+    <link rel="stylesheet" href="styles/modals.css">
+    <link rel="stylesheet" href="styles/notification.css">
+</head>
+<body>
+<!-- Header Navigation -->
+<div class="header">
+    <ul class="nav-tabs">
+        <li class="nav-tab">Overview</li>
+        <li class="nav-tab active">Configuration</li>
+        <li class="nav-tab">Placement Rules</li>
+        <li class="nav-tab">Partitions</li>
+        <li class="nav-tab">Schedule</li>
+    </ul>
+</div>
+
+<!-- Controls -->
+<div class="controls">
+    <div class="partition-selector">
+        <label>Partition</label>
+        <select id="partition-select">
+            <option value="">default</option>
+        </select>
+    </div>
+    <div class="queue-actions">
+        <button class="btn btn-success" onclick="openAddQueueModal()">+ Add Queue</button>
+    </div>
+    <div class="search-sort">
+        <input type="text" class="search-box" placeholder="Search queues" id="search-input">
+        <select class="sort-selector" id="sort-select">
+            <option value="capacity">Capacity - High to Low</option>
+            <option value="name">Name - A to Z</option>
+        </select>
+    </div>
+</div>
+
+<div id="notification-container" class="notification-container"></div>
+
+<!-- Main Content -->
+<div class="main-content" id="main-content">
+    <!-- Loading state -->
+    <div id="loading-container" class="loading-container" style="display: none;">
+        <div class="loading-spinner"></div>
+        <div class="loading-text" id="loading-text">Loading scheduler configuration...</div>
+    </div>
+
+    <!-- Content when loaded -->
+    <div id="content" style="display: none;">
+        <div class="level-headers" id="level-headers"></div>
+        <div class="queue-tree" id="queue-tree"></div>
+        <svg class="arrow-container" id="arrow-svg">
+            <defs>
+                <marker id="arrowhead" markerWidth="10" markerHeight="7"
+                        refX="9" refY="3.5" orient="auto">
+                    <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+                </marker>
+            </defs>
+        </svg>
+    </div>
+</div>
+
+<!-- Batch Edit Controls -->
+<div class="batch-controls" id="batch-controls">
+    <div class="batch-info" id="batch-info">0 changes pending</div>
+    <div class="batch-validation" id="batch-validation"></div>
+    <button class="btn btn-secondary" onclick="discardChanges()">Discard Changes</button>
+    <button class="btn btn-success" id="apply-changes-btn" onclick="applyAllChanges()" disabled>Apply All Changes</button>
+</div>
+
+<!-- Refresh Button -->
+<button class="refresh-btn" onclick="refreshQueues()">
+    <span>🔄</span>
+</button>
+
+<!-- Minimap -->
+<div class="minimap">
+    <div class="minimap-queues" id="minimap"></div>
+</div>
+
+<!-- Edit Queue Modal -->
+<div class="modal" id="edit-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title" id="modal-title">Edit Queue</h2>
+            <button class="close-btn" onclick="closeModal()">&times;</button>
+        </div>
+        <div id="edit-form-container"></div>
+    </div>
+</div>
+
+<!-- Add Queue Modal -->
+<div class="modal" id="add-queue-modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 class="modal-title">Add New Queue</h2>
+            <button class="close-btn" onclick="closeAddQueueModal()">&times;</button>
+        </div>
+        <div id="add-form-container"></div>
+    </div>
+</div>
+
+<script src="js/config.js"></script>
+<script src="js/queue-parser.js"></script>
+<script src="js/notifications.js"></script>
+<script src="js/validation.js"></script>
+<script src="js/ui-components.js"></script>
+<script src="js/queue-renderer.js"></script>
+<script src="js/arrow-renderer.js"></script>
+<script src="js/api.js"></script>
+<script src="js/modals.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
