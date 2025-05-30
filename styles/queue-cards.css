@@ -1,7 +1,7 @@
 .level-headers {
     display: flex;
     margin-bottom: 20px;
-    gap: 100px;
+    gap: 120px; /* Slightly increased to match wider cards */
     justify-content: flex-start;
 }
 
@@ -9,14 +9,14 @@
     font-weight: 600;
     color: #666;
     font-size: 14px;
-    width: 200px;
+    width: 280px; /* Increased to match card width */
     text-align: center;
     flex-shrink: 0;
 }
 
 .queue-tree {
     display: flex;
-    gap: 100px;
+    gap: 120px; /* Increased to match header spacing */
     align-items: flex-start;
     position: relative;
     min-width: fit-content;
@@ -27,7 +27,7 @@
     flex-direction: column;
     gap: 20px;
     position: relative;
-    width: 200px;
+    width: 280px; /* Increased width */
     flex-shrink: 0;
 }
 
@@ -40,7 +40,7 @@
     border: 1.5px solid #bdbdbd;
     border-radius: 6px;
     background: #f5f7fa;
-    padding: 5px 8px;
+    padding: 4px 6px; /* Reduced padding */
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
     outline: none;
@@ -48,6 +48,7 @@
     display: flex;
     align-items: center;
 }
+
 .queue-menu-btn:hover,
 .queue-menu-btn:focus {
     border-color: #1976d2;
@@ -60,12 +61,12 @@
     border: none;
     border-radius: 12px;
     box-shadow: 0 3px 12px 0 rgba(0,0,0,0.08), 2px 0 0 0 #1976d2;
-    padding: 20px 18px 16px 22px;
-    width: 240px;
-    min-height: 175px;
+    padding: 14px 16px 12px 18px; /* Reduced padding */
+    width: 280px; /* Increased width */
+    min-height: 160px; /* Slightly reduced height */
     display: flex;
     flex-direction: column;
-    gap: 10px;
+    gap: 8px; /* Reduced gap */
     position: relative;
     transition: box-shadow 0.2s, transform 0.12s;
     cursor: pointer;
@@ -76,32 +77,69 @@
     transform: translateY(-2px) scale(1.012);
 }
 
+/* Status borders - preserved */
 .queue-card.pending-changes { border-left: 4px solid #ffc107; background: #fffbe8; }
 .queue-card.validation-error { border-left: 4px solid #dc3545; background: #fbf3f3;}
 .queue-card.new-queue { border-left: 4px solid #28a745; background: #f6fef7; }
 .queue-card.to-be-deleted { border-left: 4px solid #dc3545; background: #fbf3f3; opacity: 0.75; }
 
+/* Updated header layout */
 .queue-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    margin-bottom: 2px;
+    margin-bottom: 6px; /* Reduced margin */
+    gap: 8px;
 }
 
+.queue-name {
+    font-weight: 600; /* Reduced weight for better readability */
+    color: #24335a;
+    font-size: 0.95rem; /* Slightly reduced for longer names */
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex: 1;
+    min-width: 0; /* Allow shrinking for ellipsis */
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Add info button styling */
+.queue-info-btn {
+    background: none;
+    border: none;
+    color: #64748B;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    border-radius: 4px;
+    line-height: 1;
+    flex-shrink: 0;
+    margin-left: 4px;
+    transition: all 0.2s ease;
+}
+
+.queue-info-btn:hover {
+    color: #007bff;
+    background-color: #f8f9fa;
+}
+
+/* Enhanced dropdown styling for better visibility */
 .queue-dropdown {
     position: absolute;
-    top: 100%; /* Position directly below the menu button */
-    right: 0;   /* Align to the right edge of the menu button */
+    top: calc(100% + 4px); /* Small gap below button */
+    right: 0;
     background: white;
-    border: 1px solid #ccc;
-    border-radius: 4px;
-    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-    z-index: 10;
-    min-width: 150px;
+    border: 1px solid #d1d5db; /* More visible border */
+    border-radius: 8px; /* Slightly more rounded */
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15), 0 0 0 1px rgba(0,0,0,0.05); /* Enhanced shadow */
+    z-index: 1000; /* Higher z-index to ensure visibility */
+    min-width: 160px;
     display: none;
-    /* Add these properties to fix positioning */
-    transform: translateY(0); /* Ensure no transform offset */
-    margin-top: 0; /* Remove any margin */
+    backdrop-filter: blur(8px); /* Add blur effect for modern look */
+    background: rgba(255, 255, 255, 0.95); /* Slightly transparent */
 }
 
 .queue-dropdown.show {
@@ -109,82 +147,167 @@
 }
 
 .dropdown-item {
-    padding: 8px 12px;
+    padding: 10px 14px; /* Increased padding for better touch targets */
     cursor: pointer;
-    border-bottom: 1px solid #f0f0f0;
-    white-space: nowrap; /* Prevent text wrapping */
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: block;
 }
 
 .dropdown-item:hover {
-    background: #f8f9fa;
+    background: #f8fafc;
+    color: #1976d2;
+    transform: translateX(2px); /* Subtle hover animation */
 }
 
 .dropdown-item:last-child {
     border-bottom: none;
+    border-radius: 0 0 8px 8px;
 }
 
-.queue-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    margin-bottom: 10px;
+.dropdown-item:first-child {
+    border-radius: 8px 8px 0 0;
 }
 
+.dropdown-item.disabled {
+    color: #9ca3af;
+    cursor: not-allowed;
+    background: transparent;
+}
 
-.queue-name {
-    font-weight: 700;
-    color: #24335a;
-    font-size: 1.12rem;
+.dropdown-item.disabled:hover {
+    background: transparent;
+    color: #9ca3af;
+    transform: none;
+}
+
+/* Divider styling */
+.queue-card-divider {
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    margin: 8px 0 10px 0;
+}
+
+/* Label Area */
+.queue-label-area {
     display: flex;
-    align-items: center;
-    gap: 8px;
     flex-wrap: wrap;
-    text-overflow: ellipsis;
-    overflow: hidden;
+    gap: 6px;
+    margin-bottom: 12px;
+    min-height: 24px; /* Ensure consistent spacing even with no labels */
 }
 
-.queue-mode-badge {
-    background: #e3f2fd;
-    color: #1976d2;
+/* Queue Tags */
+.queue-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
     font-size: 0.7rem;
     font-weight: 500;
-    border-radius: 6px;
-    padding: 4px 4px 4px 4px;
-    margin: 4px 4px 4px 4px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 1px solid;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: all 0.2s ease;
+}
+
+.queue-tag:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Mode Tags */
+.tag-mode {
+    background-color: #e3f2fd;
+    color: #1565c0;
+    border-color: #90caf9;
+}
+
+/* State Tags */
+.tag-state.tag-running {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border-color: #c8e6c9;
+}
+
+.tag-state.tag-stopped {
+    background-color: #ffebee;
+    color: #c62828;
+    border-color: #ffcdd2;
+}
+
+/* Auto-Create Tag */
+.tag-auto-create {
+    background-color: #fff3e0;
+    color: #ef6c00;
+    border-color: #ffcc02;
+}
+
+/* Capacity Section */
+.queue-capacity-section {
+    margin-top: auto; /* Push to bottom of card */
+}
+
+/* Info button positioning */
+.queue-info-button {
+    background: none;
+    border: none;
+    color: #64748B;
+    cursor: pointer;
+    padding: 4px;
+    font-size: 14px;
+    border-radius: 4px;
+    line-height: 1;
+    transition: all 0.2s ease;
+    margin-right: 8px;
+}
+
+.queue-info-button:hover {
+    color: #007bff;
+    background-color: #f8f9fa;
 }
 
 .queue-capacities {
-    display: inline-flex;         /* use flexbox for easy centering */
-    align-items: center;          /* vertical centering */
-    justify-content: center;      /* horizontal centering */
-    border: 2px solid #aaa7a7;    /* green border */
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid #aaa7a7;
     border-radius: 8px;
     font-family: Arial, sans-serif;
     font-weight: bold;
     color: #333;
     background-color: #f5f7fa;
-    min-width: 100px;             /* optional: ensure box has some width */
-    height: 40px;                 /* optional: fixed height */
+    min-width: 100px;
+    height: 35px; /* Slightly reduced height */
     margin-top: auto;
 }
+
 .queue-capacities table {
     width: 100%;
     text-align: center;
 }
+
 .capacity-compact, .separator {
     display: inline-block;
     vertical-align: middle;
-    font-size: 16px;
+    font-size: 14px; /* Slightly smaller */
 }
 
 .separator {
-    margin: 8px 8px;
+    margin: 6px 6px; /* Reduced margin */
     color: #666;
 }
 
 .queue-capacity-absolute,
 .queue-max-capacity-absolute {
-    font-size: 12px;
+    font-size: 11px; /* Slightly smaller */
     color: #223768;
     background: #f9fafc;
     border-radius: 4px;
@@ -193,7 +316,7 @@
     font-family: monospace;
     white-space: pre-wrap;
     word-break: break-all;
-    max-width: 120px;
+    max-width: 140px; /* Increased for wider cards */
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -205,7 +328,7 @@
 }
 
 .queue-visual {
-    height: 80px;
+    height: 70px; /* Slightly reduced */
     background: #e9ecef;
     border-radius: 4px;
     position: relative;
@@ -224,13 +347,14 @@
 }
 
 .effective-capacity {
-    font-size: 12px;
+    font-size: 11px; /* Slightly smaller */
     color: #666;
     text-align: center;
-    margin-top: 5px;
+    margin-top: 4px; /* Reduced margin */
     font-style: italic;
 }
 
+/* Arrow rendering - preserved */
 .arrow-container {
     position: absolute;
     top: 0;
@@ -248,13 +372,168 @@
     marker-end: url(#arrowhead);
 }
 
-.dropdown-item.disabled {
-    color: #999;
-    cursor: not-allowed;
-    background: #f8f9fa;
+/* Close dropdown when clicking outside */
+.queue-dropdown::before {
+    content: '';
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: -1;
 }
 
-.dropdown-item.disabled:hover {
+/* Add these new styles after the existing capacity styles */
+
+/* Capacity Display Styles */
+.capacity-display {
     background: #f8f9fa;
-    color: #999;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin-top: auto;
+}
+
+.capacity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+
+.capacity-row:last-child {
+    margin-bottom: 0;
+}
+
+.capacity-label {
+    color: #6c757d;
+    font-weight: 500;
+    font-size: 0.75rem;
+}
+
+.capacity-value {
+    color: #343a40;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+}
+
+/* Absolute Capacity Styles */
+.absolute-capacity-display {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.75rem;
+    margin-top: auto;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.capacity-section {
+    margin-bottom: 8px;
+}
+
+.capacity-section:last-child {
+    margin-bottom: 0;
+}
+
+.capacity-section-title {
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.resource-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.resource-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 4px;
+    background: #fff;
+    border-radius: 3px;
+    border: 1px solid #e9ecef;
+}
+
+.resource-key {
+    color: #495057;
+    font-weight: 500;
+    font-size: 0.7rem;
+}
+
+.resource-value {
+    color: #212529;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.7rem;
+}
+
+.resource-raw {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
+    font-size: 0.7rem;
+    color: #495057;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
+
+/* Update existing queue-capacities for backward compatibility */
+.queue-capacities {
+    display: none; /* Hide old style when new capacity-display is present */
+}
+
+.capacity-display ~ .queue-capacities {
+    display: none; /* Ensure old style is hidden when new one exists */
+}
+
+/* Responsive adjustments for longer resource lists */
+@media (max-width: 1200px) {
+    .absolute-capacity-display {
+        max-height: 100px;
+    }
+    
+    .resource-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+    
+    .resource-key {
+        font-size: 0.65rem;
+    }
+    
+    .resource-value {
+        font-size: 0.65rem;
+        align-self: flex-end;
+    }
+}
+
+/* Scrollbar styling for capacity overflow */
+.absolute-capacity-display::-webkit-scrollbar {
+    width: 4px;
+}
+
+.absolute-capacity-display::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 2px;
+}
+
+.absolute-capacity-display::-webkit-scrollbar-thumb {
+    background: #c1c1c1;
+    border-radius: 2px;
+}
+
+.absolute-capacity-display::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8;
 }
