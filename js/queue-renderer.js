@@ -163,11 +163,18 @@ function createQueueCard(queue, level) {
     openEditModal(findQueueByPath(queue.path));
   };
 
-  // Info button
-  const infoBtn = document.createElement("span");
-  infoBtn.className = "queue-info-button";
-  infoBtn.innerHTML = "ℹ️";
-  infoBtn.title = "More info about this queue";
+  // Info button - moved to right side with submenu styling
+  const infoBtn = document.createElement("button");
+  infoBtn.className = "queue-info-btn";
+  infoBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2" fill="none"/>
+      <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="8" r="1" fill="currentColor"/>
+    </svg>
+  `;
+  infoBtn.title = "Queue Information";
+  infoBtn.setAttribute("aria-label", "Queue information");
   infoBtn.onclick = (e) => {
     e.stopPropagation();
     openInfoModal(findQueueByPath(queue.path));
@@ -179,47 +186,32 @@ function createQueueCard(queue, level) {
 
   const deletionStatus = canQueueBeDeleted(queue.path);
   actionsMenu.innerHTML = `
-            <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${
-              queue.path
-            }')">
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                    <circle cx="5" cy="12" r="2"/>
-                    <circle cx="12" cy="12" r="2"/>
-                    <circle cx="19" cy="12" r="2"/>
-                </svg>
-            </button>
-            <div class="queue-dropdown" id="dropdown-${queue.path}">
-                <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${
-                  queue.path
-                }'))">Edit Queue</div>
-                <div class="dropdown-item" onclick="openAddQueueModalWithParent('${
-                  queue.path
-                }')">Add Child Queue</div>
-                ${
-                  queue.path !== "root"
-                    ? `<div class="dropdown-item ${
-                        deletionStatus.canDelete ? "" : "disabled"
-                      }" 
-                    onclick="${
-                      deletionStatus.canDelete
-                        ? `markQueueForDeletion('${queue.path}')`
-                        : ""
-                    }"
-                    title="${
-                      deletionStatus.canDelete
-                        ? "Delete this queue"
-                        : deletionStatus.reason
-                    }">
-                    Delete Queue ${deletionStatus.canDelete ? "" : "(disabled)"}
-                </div>`
-                    : ""
-                }
-            </div>
-        `;
+    <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${queue.path}')">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <circle cx="5" cy="12" r="2"/>
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="19" cy="12" r="2"/>
+      </svg>
+    </button>
+    <div class="queue-dropdown" id="dropdown-${queue.path}">
+      <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">Edit Queue</div>
+      <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">Add Child Queue</div>
+      ${queue.path !== "root" ? `<div class="dropdown-item ${deletionStatus.canDelete ? "" : "disabled"}" 
+        onclick="${deletionStatus.canDelete ? `markQueueForDeletion('${queue.path}')` : ""}"
+        title="${deletionStatus.canDelete ? "Delete this queue" : deletionStatus.reason}">
+        Delete Queue ${deletionStatus.canDelete ? "" : "(disabled)"}
+      </div>` : ""}
+    </div>
+  `;
 
-  titleBar.appendChild(infoBtn);
+  // Create a wrapper for the buttons on the right
+  const buttonGroup = document.createElement("div");
+  buttonGroup.className = "queue-button-group";
+  buttonGroup.appendChild(infoBtn);
+  buttonGroup.appendChild(actionsMenu);
+
   titleBar.appendChild(nameEl);
-  titleBar.appendChild(actionsMenu);
+  titleBar.appendChild(buttonGroup);
 
   // --- Divider ---
   const divider = document.createElement("hr");
@@ -239,15 +231,22 @@ function createQueueCard(queue, level) {
   const displayCapacity = pendingChange?.capacity || queue.capacity;
   const maxCapacity = pendingChange?.maxCapacity || queue.maxCapacity;
 
-  capacitySection.innerHTML = queueCapacity(
-    formatCapacityDisplay(
-      displayCapacity,
-      mode,
-      queue.weight,
-      queue.capacityVector
-    ),
-    maxCapacity,
-    mode
+  // TODO cleanup where the capacity comes from
+  // Get the correct weight value - prioritize pending changes
+  let weightValue;
+  if (mode === "weight") {
+    // For weight mode, the weight value could be in different places depending on the change state
+    weightValue =
+      pendingChange?.capacity ||
+      queue.weight ||
+      queue.capacity;
+  } else {
+    weightValue = pendingChange?.weight || queue.weight;
+  }
+
+  capacitySection.innerHTML = createCapacityDisplay(
+    formatCapacityDisplay(displayCapacity, mode, weightValue),
+    maxCapacity
   );
 
   // Assemble the card
@@ -308,7 +307,7 @@ function createQueueLabels(queue, pendingChange) {
 }
 
 // Add this helper function before createQueueCard
-function formatCapacityDisplay(capacity, mode, weight, capacityVector) {
+function formatCapacityDisplay(capacity, mode, weight) {
   switch (mode) {
     case "percentage":
       return `${parseFloat(capacity || 0).toFixed(1)}%`;
@@ -322,63 +321,14 @@ function formatCapacityDisplay(capacity, mode, weight, capacityVector) {
   }
 }
 
-// Update the queueCapacity function to handle all modes better
-function queueCapacity(capacity, maxCapacity, capacityMode) {
-  if (capacityMode === "percentage") {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Capacity:</span>
-                    <span class="capacity-value">${capacity}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${parseFloat(
-                      maxCapacity || 0
-                    ).toFixed(1)}%</span>
-                </div>
-            </div>
-        `;
-  } else if (capacityMode === "weight") {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Weight:</span>
-                    <span class="capacity-value">${capacity}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${parseFloat(
-                      maxCapacity || 0
-                    ).toFixed(1)}%</span>
-                </div>
-            </div>
-        `;
-  } else if (capacityMode === "absolute" || capacityMode === "vector") {
-    return createAbsoluteCapacityDisplay(capacity, maxCapacity);
-  } else {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Capacity:</span>
-                    <span class="capacity-value">${capacity || "N/A"}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${maxCapacity || "N/A"}</span>
-                </div>
-            </div>
-        `;
-  }
-}
-
 // New function to handle absolute/vector capacity display
-function createAbsoluteCapacityDisplay(capacity, maxCapacity) {
+function createCapacityDisplay(capacity, maxCapacity) {
   const parseAbsoluteCapacity = (capStr) => {
     if (!capStr) return [];
 
     // Remove brackets if present
     let cleanStr = capStr.toString().trim();
+
     if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
       cleanStr = cleanStr.slice(1, -1);
     }

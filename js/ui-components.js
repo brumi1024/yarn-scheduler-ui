@@ -168,36 +168,6 @@ function updateBatchControls() {
   }
 }
 
-function formatCapacityDisplay(
-  capacity,
-  mode,
-  weight = null,
-  capacityVector = null
-) {
-  if (capacityVector && capacityVector.isVector) {
-    return capacityVector.formatted;
-  }
-
-  switch (mode) {
-    case "vector":
-      return capacity.toString();
-    case "weight":
-      if (weight && weight > 0) {
-        return `${weight}w`;
-      }
-      return capacity.toString().includes("w")
-        ? capacity.toString()
-        : `${capacity}w`;
-    case "absolute":
-      return typeof capacity === "string"
-        ? capacity
-        : `${capacity.toFixed(1)}%`;
-    case "percentage":
-    default:
-      return `${capacity.toFixed(1)}%`;
-  }
-}
-
 // Partition management
 function extractPartitions(schedulerInfo) {
   const partitions = new Set([""]); // Default partition
@@ -244,7 +214,7 @@ function searchQueues(searchTerm) {
   renderQueueTree();
 }
 
-function sortQueues(sortValue) {
+function executeSorting(sortValue) {
   currentSort = sortValue;
   renderQueueTree();
 }
@@ -259,7 +229,7 @@ function initializeEventHandlers() {
   document
     .getElementById("sort-select")
     .addEventListener("change", function (e) {
-      sortQueues(e.target.value);
+      executeSorting(e.target.value);
     });
   // Close modals when clicking outside
   document.getElementById("edit-modal").addEventListener("click", function (e) {

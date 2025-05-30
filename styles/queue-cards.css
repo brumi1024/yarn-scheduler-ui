@@ -42,11 +42,13 @@
   background: #f5f7fa;
   padding: 4px 6px; /* Reduced padding */
   cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s;
+  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
   outline: none;
   box-shadow: 0 1px 2px rgba(60, 65, 80, 0.04);
   display: flex;
   align-items: center;
+  justify-content: center;
+  color: #64748B;
 }
 
 .queue-menu-btn:hover,
@@ -54,6 +56,7 @@
   border-color: #1976d2;
   box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
   background: #e3f0fd;
+  color: #1976d2;
 }
 
 .queue-card {
@@ -98,45 +101,69 @@
 
 /* Updated header layout */
 .queue-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 6px; /* Reduced margin */
-  gap: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 6px;
+    gap: 8px;
 }
 
 .queue-name {
-  font-weight: 600; /* Reduced weight for better readability */
-  color: #24335a;
-  font-size: 0.95rem; /* Slightly reduced for longer names */
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  min-width: 0; /* Allow shrinking for ellipsis */
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+    font-weight: 600;
+    color: #24335a;
+    font-size: 0.95rem;
+    flex: 1;
+    min-width: 0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    cursor: pointer;
 }
 
-/* Add info button styling */
+.queue-name:hover {
+    color: #1976d2;
+}
+
+/* Button group container */
+.queue-button-group {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    flex-shrink: 0;
+}
+
+/* Info button styling - similar to menu button */
 .queue-info-btn {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 4px;
-  font-size: 14px;
-  border-radius: 4px;
-  line-height: 1;
-  flex-shrink: 0;
-  margin-left: 4px;
-  transition: all 0.2s ease;
+    border: 1.5px solid #bdbdbd;
+    border-radius: 6px;
+    background: #f5f7fa;
+    padding: 4px 6px;
+    cursor: pointer;
+    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    outline: none;
+    box-shadow: 0 1px 2px rgba(60, 65, 80, 0.04);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #64748B;
 }
 
-.queue-info-btn:hover {
-  color: #007bff;
-  background-color: #f8f9fa;
+.queue-info-btn:hover,
+.queue-info-btn:focus {
+    border-color: #1976d2;
+    box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
+    background: #e3f0fd;
+    color: #1976d2;
+}
+
+.queue-actions-menu {
+    position: relative;
+    margin-left: 0; /* Remove left margin since it's now in a button group */
+}
+
+/* Remove the old queue-info-button styles */
+.queue-info-button {
+    display: none; /* Hide if it exists elsewhere */
 }
 
 /* Enhanced dropdown styling for better visibility */
