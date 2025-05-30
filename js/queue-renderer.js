@@ -219,7 +219,7 @@
         <div>
             ${modeBadge}
         </div>
-        ${queueCapacity(hasChanges || isNewQueue, capacityText, maxCapacityText, displayState)}
+        ${queueCapacity(capacityText, maxCapacityText, queue.capacityMode)}
         `
 
         /*
@@ -238,14 +238,36 @@
         return card;
     }
 
-    function queueCapacity(isChanged, capacity, maxCapacity, displayState) {
-        return `
-        <div class="queue-capacities${displayState === 'STOPPED' ? ' stopped' : ''}" style="bottom: 0;">
-            <span class="capacity" title="Capacity">${capacity}</span>
-            <span class="separator"> | </span>
-            <span class="capacity" title="Max Capacity">${maxCapacity}</span>
-        </div>
-    `;
+    function queueCapacity(capacity, maxCapacity, capacityMode) {
+        if (capacityMode === "percentage" || capacityMode === "weight") {
+            return `
+            <div class="queue-capacities">
+                <span class="capacity-compact" title="Capacity">Cap: ${capacity}</span>
+                <span class="separator"> | </span>
+                <span class="capacity-compact" title="Max Capacity">Max: ${maxCapacity}</span>
+            </div>
+            `
+        } else if (capacityMode === "absolute") {
+            const keyValuePairs = capacity.slice(1, -1).split(',');
+            let lines = ""
+            keyValuePairs.forEach(pair => {
+                const [key, value] = pair.split('=');
+                lines += `<tr><td>${key}</td><td>${value}</td></tr>`
+            });
+            return `
+            <h6>Capacity:</h6>
+            <table>${lines}</table>
+            <h6>Max Capacity:</h6>
+            <span>${maxCapacity}</span>
+            `
+        } else {
+            return `
+            <h6>Capacity:</h6>
+            <span>${capacity}</span>
+            <h6>Max Capacity:</h6>
+            <span>${maxCapacity}</span>
+            `
+        }
     }
 
     function renderQueueTree() {

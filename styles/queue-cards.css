@@ -157,30 +157,25 @@
     display: inline-flex;         /* use flexbox for easy centering */
     align-items: center;          /* vertical centering */
     justify-content: center;      /* horizontal centering */
-    border: 2px solid #4caf50;    /* green border */
+    border: 2px solid #aaa7a7;    /* green border */
     border-radius: 8px;
     font-family: Arial, sans-serif;
     font-weight: bold;
     color: #333;
-    background-color: #e8f5e9;   /* light green background */
+    background-color: #f5f7fa;
     min-width: 100px;             /* optional: ensure box has some width */
     height: 40px;                 /* optional: fixed height */
     margin-top: auto;
 }
 
-.queue-capacities.stopped {
-    border: #aaa7a7;
-    background-color: #aaa7a7
-}
-
-.capacity, .separator {
+.capacity-compact, .separator {
     display: inline-block;
     vertical-align: middle;
     font-size: 16px;
 }
 
 .separator {
-    margin: 32px 32px;
+    margin: 8px 8px;
     color: #666;
 }
 
