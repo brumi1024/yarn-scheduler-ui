@@ -166,10 +166,11 @@
 
         // Mode badge
         let modeBadge = '';
-        if (queue.capacityMode === 'weight') modeBadge = `<span class="queue-mode-badge">Weight</span>`;
-        else if (queue.capacityMode === 'vector') modeBadge = `<span class="queue-mode-badge">Vector</span>`;
-        else if (queue.capacityMode === 'absolute') modeBadge = `<span class="queue-mode-badge">Absolute</span>`;
-        if (queue.autoCreationEligibility === 'flexible') modeBadge += `<span class="queue-mode-badge">Auto-Creation</span>`;
+        if (queue.capacityMode === 'weight') modeBadge = `<span class="queue-mode-badge">Weight 𐄷</span>`;
+        else if (queue.capacityMode === 'vector') modeBadge = `<span class="queue-mode-badge">Vector 📐</span>`;
+        else if (queue.capacityMode === 'absolute') modeBadge = `<span class="queue-mode-badge">Absolute 🎯</span>`;
+        if (queue.autoCreationEligibility === 'flexible') modeBadge += `<span class="queue-mode-badge">Auto-Creation ⚡</span>`;
+        if (displayState === 'STOPPED') modeBadge += `<span class="queue-mode-badge">Stopped 🛑</span>`;
 
         // Menu button (modern, accessible)
         const menuButton = `
@@ -210,21 +211,21 @@
         // Compose card HTML
         card.innerHTML = `
         <div class="queue-header">
-            <span class="queue-status${displayState === 'STOPPED' ? ' stopped' : ''}"></span>
-            <span class="queue-name">${highlightMatch(queue.name, currentSearchTerm)}</span>
-            ${modeBadge}
+            <span class="queue-info-button" title="More info about this queue" onclick="openInfoModal(findQueueByPath('${queue.path}'))">ℹ️</span>
+            <span class="queue-name" title="${queue.name}">${highlightMatch(queue.name, currentSearchTerm)}</span>
             <span class="queue-actions-menu">${menuButton}</span>
         </div>
-        <div class="queue-capacities">
-            <div class="queue-capacity-main${hasChanges || isNewQueue ? ' changed' : ''}" title="${capacityText}">${capacityText}</div>
-            ${maxCapacityText}
+        <div>
+            ${modeBadge}
         </div>
-        <div class="queue-visual">
-            <div class="queue-fill${hasChanges ? ' changed' : ''} ${isNewQueue ? ' new' : ''}" style="width: ${Math.min(visualPercentage, 100)}%"></div>
-        </div>
-        ${queue.effectiveCapacity !== undefined && queue.effectiveCapacity !== queue.capacity ?
-            `<div class="effective-capacity">Effective: ${queue.effectiveCapacity.toFixed(1)}%</div>` : ''}
-        `;
+        ${queueCapacity(hasChanges || isNewQueue, capacityText, maxCapacityText, displayState)}
+        `
+
+        /*
+        ${queue.effectiveCapacity !== undefined && queue.effectiveCapacity !== queue.capacity
+            ? `<div class="effective-capacity">Effective: ${queue.effectiveCapacity.toFixed(1)}%</div>`
+            : ''}
+         */
 
         // Click handler for editing (optional: you may want to remove click-to-edit for clarity)
         // card.addEventListener('click', (e) => {
@@ -234,6 +235,16 @@
         // });
 
         return card;
+    }
+
+    function queueCapacity(isChanged, capacity, maxCapacity, displayState) {
+        return `
+        <div class="queue-capacities${displayState === 'STOPPED' ? ' stopped' : ''}">
+            <span class="capacity" title="Capacity">${capacity}</span>
+            <span class="separator"> | </span>
+            <span class="capacity" title="Max Capacity">${maxCapacity}</span>
+        </div>
+    `;
     }
 
     function renderQueueTree() {

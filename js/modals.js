@@ -41,6 +41,26 @@ function createEditForm() {
     `;
 }
 
+function createInfoForm(queue) {
+    let rows = Object.entries(queue)
+        .filter(([_, value]) => typeof value !== 'object' || value === null) // Exclude non-null objects
+        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Sort by key
+        .map(([key, value]) => {return `<tr><td>${key}</td><td>${value}</td></tr>`;})
+        .join('');
+
+    return `
+        <table>
+            <thead>
+                <tr><th>Property Name</th><th>Value</th></tr>
+            </thead>
+            <tbody>
+                ${rows}
+            </tbody>
+        </table>
+    `;
+}
+
+
 function createAddForm() {
     return `
         <form id="add-queue-form">
@@ -156,6 +176,11 @@ function openAddQueueModalWithParent(parentPath) {
 
 function closeModal() {
     document.getElementById('edit-modal').classList.remove('show');
+    currentEditQueue = null;
+}
+
+function closeInfoModal() {
+    document.getElementById('info-modal').classList.remove('show');
     currentEditQueue = null;
 }
 
@@ -565,11 +590,19 @@ function openEditModal(queue) {
     document.getElementById('edit-modal').classList.add('show');
 }
 
+function openInfoModal(queue) {
+    const container = document.getElementById('info-form-container');
+    container.innerHTML = createInfoForm(queue);
+    document.getElementById('info-modal').classList.add('show');
+}
+
 window.openEditModal = openEditModal;
 window.openAddQueueModal = openAddQueueModal;
+window.openInfoModal = openInfoModal;
 window.openAddQueueModalWithParent = openAddQueueModalWithParent;
 window.closeModal = closeModal;
 window.closeAddQueueModal = closeAddQueueModal;
+window.closeInfoModal = closeInfoModal
 window.stageQueueChanges = stageQueueChanges;
 window.addNewQueue = addNewQueue;
 window.markQueueForDeletion = markQueueForDeletion;
