@@ -55,8 +55,6 @@
     background: #e3f0fd;
 }
 
-
-
 .queue-card {
     background: #fff;
     border: none;
@@ -148,58 +146,40 @@
 .queue-mode-badge {
     background: #e3f2fd;
     color: #1976d2;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     font-weight: 500;
     border-radius: 6px;
-    padding: 2px 8px;
-    margin-left: 4px;
+    padding: 4px 4px 4px 4px;
+    margin: 4px 4px 4px 4px;
 }
-
-.queue-status {
-    width: 12px;
-    height: 12px;
-    min-width: 12px;
-    min-height: 12px;
-    border-radius: 50%;
-    background: #28a745;
-    margin-right: 8px;
-}
-.queue-status.stopped { background: #dc3545; }
 
 .queue-capacities {
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-    margin-bottom: 2px;
+    display: inline-flex;         /* use flexbox for easy centering */
+    align-items: center;          /* vertical centering */
+    justify-content: center;      /* horizontal centering */
+    border: 2px solid #aaa7a7;    /* green border */
+    border-radius: 8px;
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    color: #333;
+    background-color: #f5f7fa;
+    min-width: 100px;             /* optional: ensure box has some width */
+    height: 40px;                 /* optional: fixed height */
+    margin-top: auto;
+}
+.queue-capacities table {
+    width: 100%;
+    text-align: center;
+}
+.capacity-compact, .separator {
+    display: inline-block;
+    vertical-align: middle;
+    font-size: 16px;
 }
 
-.queue-capacity-main {
-    font-size: 1.09rem;
-    font-weight: 600;
-    color: #1976d2;
-    background: #e3f0fd;
-    border-radius: 5px;
-    padding: 2px 8px;
-    max-width: 110px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.queue-capacity-main.changed { color: #ffc107; background: #fff6e0; }
-
-.queue-capacity-max {
-    font-size: 0.93rem;
-    color: #656d7a;
-    background: #f3f6fa;
-    padding: 1px 6px;
-    border-radius: 4px;
-    margin-top: 2px;
-    font-weight: 500;
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+.separator {
+    margin: 8px 8px;
+    color: #666;
 }
 
 .queue-capacity-absolute,
