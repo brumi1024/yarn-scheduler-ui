@@ -1,0 +1,180 @@
+{
+  "data": {
+    "scheduler": {
+      "schedulerInfo": {
+        "type": "capacityScheduler",
+        "capacity": 100.0,
+        "usedCapacity": 67.0,
+        "maxCapacity": 100.0,
+        "queueName": "root",
+        "queues": {
+          "queue": [
+            {
+              "queueName": "analytics",
+              "capacity": 40.0,
+              "usedCapacity": 35.0,
+              "maxCapacity": 40.0,
+              "queues": {
+                "queue": [
+                  {
+                    "queueName": "batch",
+                    "capacity": 20.0,
+                    "usedCapacity": 15.0,
+                    "maxCapacity": 20.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "teamA",
+                          "capacity": 10.0,
+                          "usedCapacity": 8.0,
+                          "maxCapacity": 10.0
+                        },
+                        {
+                          "queueName": "teamB",
+                          "capacity": 10.0,
+                          "usedCapacity": 7.0,
+                          "maxCapacity": 10.0
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "queueName": "realtime",
+                    "capacity": 20.0,
+                    "usedCapacity": 20.0,
+                    "maxCapacity": 20.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "alerts",
+                          "capacity": 10.0,
+                          "usedCapacity": 10.0,
+                          "maxCapacity": 10.0
+                        },
+                        {
+                          "queueName": "monitoring",
+                          "capacity": 10.0,
+                          "usedCapacity": 10.0,
+                          "maxCapacity": 10.0
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "queueName": "dev",
+              "capacity": 30.0,
+              "usedCapacity": 20.0,
+              "maxCapacity": 30.0,
+              "queues": {
+                "queue": [
+                  {
+                    "queueName": "frontend",
+                    "capacity": 10.0,
+                    "usedCapacity": 5.0,
+                    "maxCapacity": 10.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "teamX",
+                          "capacity": 5.0,
+                          "usedCapacity": 3.0,
+                          "maxCapacity": 5.0
+                        },
+                        {
+                          "queueName": "teamY",
+                          "capacity": 5.0,
+                          "usedCapacity": 2.0,
+                          "maxCapacity": 5.0
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "queueName": "backend",
+                    "capacity": 20.0,
+                    "usedCapacity": 15.0,
+                    "maxCapacity": 20.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "auto-queue-user123",
+                          "capacity": 5.0,
+                          "usedCapacity": 4.0,
+                          "maxCapacity": 5.0,
+                          "isAutoCreatedQueue": true
+                        },
+                        {
+                          "queueName": "shared",
+                          "capacity": 15.0,
+                          "usedCapacity": 11.0,
+                          "maxCapacity": 15.0
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            },
+            {
+              "queueName": "research",
+              "capacity": 30.0,
+              "usedCapacity": 12.0,
+              "maxCapacity": 30.0,
+              "queues": {
+                "queue": [
+                  {
+                    "queueName": "ml",
+                    "capacity": 15.0,
+                    "usedCapacity": 6.0,
+                    "maxCapacity": 15.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "experiments",
+                          "capacity": 10.0,
+                          "usedCapacity": 4.0,
+                          "maxCapacity": 10.0
+                        },
+                        {
+                          "queueName": "training",
+                          "capacity": 5.0,
+                          "usedCapacity": 2.0,
+                          "maxCapacity": 5.0
+                        }
+                      ]
+                    }
+                  },
+                  {
+                    "queueName": "data",
+                    "capacity": 15.0,
+                    "usedCapacity": 6.0,
+                    "maxCapacity": 15.0,
+                    "queues": {
+                      "queue": [
+                        {
+                          "queueName": "cleaning",
+                          "capacity": 7.5,
+                          "usedCapacity": 3.0,
+                          "maxCapacity": 7.5
+                        },
+                        {
+                          "queueName": "ingestion",
+                          "capacity": 7.5,
+                          "usedCapacity": 3.0,
+                          "maxCapacity": 7.5
+                        }
+                      ]
+                    }
+                  }
+                ]
+              }
+            }
+          ]
+        }
+      }
+    }
+  }
+}
