@@ -55,8 +55,6 @@
     background: #e3f0fd;
 }
 
-
-
 .queue-card {
     background: #fff;
     border: none;
@@ -64,7 +62,7 @@
     box-shadow: 0 3px 12px 0 rgba(0,0,0,0.08), 2px 0 0 0 #1976d2;
     padding: 20px 18px 16px 22px;
     width: 240px;
-    min-height: 200px;
+    min-height: 175px;
     display: flex;
     flex-direction: column;
     gap: 10px;
@@ -148,12 +146,11 @@
 .queue-mode-badge {
     background: #e3f2fd;
     color: #1976d2;
-    font-size: 0.82rem;
+    font-size: 0.7rem;
     font-weight: 500;
     border-radius: 6px;
     padding: 4px 4px 4px 4px;
     margin: 4px 4px 4px 4px;
-    display: block;
 }
 
 .queue-capacities {
@@ -162,13 +159,13 @@
     justify-content: center;      /* horizontal centering */
     border: 2px solid #4caf50;    /* green border */
     border-radius: 8px;
-    padding: 8px 16px;
     font-family: Arial, sans-serif;
     font-weight: bold;
     color: #333;
     background-color: #e8f5e9;   /* light green background */
     min-width: 100px;             /* optional: ensure box has some width */
     height: 40px;                 /* optional: fixed height */
+    margin-top: auto;
 }
 
 .queue-capacities.stopped {
@@ -176,7 +173,7 @@
     background-color: #aaa7a7
 }
 
-.capacity, .max-capacity, .separator {
+.capacity, .separator {
     display: inline-block;
     vertical-align: middle;
     font-size: 16px;

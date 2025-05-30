@@ -215,6 +215,7 @@
             <span class="queue-name" title="${queue.name}">${highlightMatch(queue.name, currentSearchTerm)}</span>
             <span class="queue-actions-menu">${menuButton}</span>
         </div>
+        <hr>
         <div>
             ${modeBadge}
         </div>
@@ -239,7 +240,7 @@
 
     function queueCapacity(isChanged, capacity, maxCapacity, displayState) {
         return `
-        <div class="queue-capacities${displayState === 'STOPPED' ? ' stopped' : ''}">
+        <div class="queue-capacities${displayState === 'STOPPED' ? ' stopped' : ''}" style="bottom: 0;">
             <span class="capacity" title="Capacity">${capacity}</span>
             <span class="separator"> | </span>
             <span class="capacity" title="Max Capacity">${maxCapacity}</span>
@@ -279,7 +280,7 @@
         }, CONFIG.TIMEOUTS.ARROW_RENDER);
 
         renderLevelHeaders();
-        renderMinimap();
+        // renderMinimap();
         updateBatchControls();
     }
 
