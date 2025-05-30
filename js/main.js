@@ -11,7 +11,7 @@ let currentSearchTerm = '';
 let currentSort = 'capacity';
 
 // Create global API instance
-const api = new YarnSchedulerAPI(window.location.origin || '');
+const api = new YarnSchedulerAPI(window.location.origin || '', true);
 
 window.addEventListener('DOMContentLoaded', function() {
     showLoading('Initializing application...');

@@ -1,4 +1,4 @@
-    function calculateMaxDepth(queue, currentDepth = 0) {
+function calculateMaxDepth(queue, currentDepth = 0) {
         let maxDepth = currentDepth;
 
         // Check existing children
@@ -122,154 +122,259 @@
         const isNewQueue = pendingAdditions.has(queue.path);
         const isToBeDeleted = pendingDeletions.has(queue.path);
 
-        // Determine display capacity and visual percentage
-        let displayCapacity, visualPercentage, capacityText, maxCapacityText, maxCapacityClass = '';
-        let mode = queue.capacityMode;
-        let maxCapacity = queue.maxCapacity;
-        let maxCapacityIsAbsolute = false;
-
-        if (pendingChange && pendingChange.capacity !== undefined) {
-            displayCapacity = pendingChange.capacity;
-            mode = pendingChange.capacityMode || queue.capacityMode;
-            capacityText = formatCapacityDisplay(displayCapacity, mode, null, pendingChange.capacityVector);
-            if (mode === 'weight' || mode === 'vector') visualPercentage = 20;
-            else if (mode === 'absolute') visualPercentage = 30;
-            else visualPercentage = parseFloat(displayCapacity) || 0;
-            maxCapacity = pendingChange.maxCapacity !== undefined ? pendingChange.maxCapacity : queue.maxCapacity;
-        } else {
-            displayCapacity = queue.capacity;
-            if (queue.effectiveCapacity !== undefined && queue.effectiveCapacity !== null) {
-                visualPercentage = parseFloat(queue.effectiveCapacity);
-            } else if (queue.absoluteCapacity !== undefined && queue.absoluteCapacity !== null) {
-                visualPercentage = parseFloat(queue.absoluteCapacity);
-            } else {
-                visualPercentage = parseFloat(queue.capacity) || 0;
-            }
-            capacityText = formatCapacityDisplay(queue.capacity, mode, queue.weight, queue.capacityVector);
-        }
-
-        // Format max capacity
-        if (mode === 'absolute' || (typeof maxCapacity === 'string' && maxCapacity.startsWith('['))) {
-            maxCapacityText = `<span class="queue-max-capacity-absolute" title="${maxCapacity}">${maxCapacity}</span>`;
-            maxCapacityIsAbsolute = true;
-        } else {
-            maxCapacityText = `<span class="queue-capacity-max">${maxCapacity !== undefined ? maxCapacity : ''}${mode === 'weight' ? 'w' : '%'}</span>`;
-        }
-
-        const displayState = pendingChange ? pendingChange.state : queue.state;
-        const hasChanges = pendingChange !== undefined;
-
         // Add styling for different states
         if (isNewQueue) card.classList.add('new-queue');
         else if (isToBeDeleted) card.classList.add('to-be-deleted');
-        else if (hasChanges) card.classList.add('pending-changes');
+        else if (pendingChange) card.classList.add('pending-changes');
 
-        // Mode badge
-        let modeBadge = '';
-        if (mode === 'weight') modeBadge = `<span class="queue-mode-badge">Weight 𐄷</span>`;
-        else if (mode === 'vector') modeBadge = `<span class="queue-mode-badge">Vector 📐</span>`;
-        else if (mode === 'absolute') modeBadge = `<span class="queue-mode-badge">Absolute 🎯</span>`;
-        if (mode === 'flexible') modeBadge += `<span class="queue-mode-badge">Auto-Creation ⚡</span>`;
-        if (displayState === 'STOPPED') modeBadge += `<span class="queue-mode-badge">Stopped 🛑</span>`;
+        // Set data attributes for reference
+        card.setAttribute('data-queue-path', queue.path);
+        card.setAttribute('data-level', level);
 
-        // Menu button (modern, accessible)
-        const menuButton = `
-        <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${queue.path}')">
-            <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-            <circle cx="5" cy="12" r="2"/>
-            <circle cx="12" cy="12" r="2"/>
-            <circle cx="19" cy="12" r="2"/>
-            </svg>
-        </button>
-        <div class="queue-dropdown" id="dropdown-${queue.path}">
-            <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">Edit Queue</div>
-            <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">Add Child Queue</div>
-            ${queue.path !== 'root' ? `<div class="dropdown-item" onclick="markQueueForDeletion('${queue.path}')">Delete Queue</div>` : ''}
-        </div>
-        `;
+        // --- Title Bar ---
+        const titleBar = document.createElement('div');
+        titleBar.className = 'queue-header';
 
-        // Check deletion eligibility
-        const deletionStatus = canQueueBeDeleted(queue.path);
+        // Queue name (clickable for edit)
+        const nameEl = document.createElement('span');
+        nameEl.className = 'queue-name';
+        nameEl.innerHTML = highlightMatch(queue.name, currentSearchTerm);
+        nameEl.title = `${queue.path} (Click to edit)`;
+        nameEl.onclick = (e) => {
+            e.stopPropagation();
+            openEditModal(findQueueByPath(queue.path));
+        };
+
+        // Info button
+        const infoBtn = document.createElement('span');
+        infoBtn.className = 'queue-info-button';
+        infoBtn.innerHTML = 'ℹ️';
+        infoBtn.title = 'More info about this queue';
+        infoBtn.onclick = (e) => {
+            e.stopPropagation();
+            openInfoModal(findQueueByPath(queue.path));
+        };
+
+        // Actions menu
+        const actionsMenu = document.createElement('span');
+        actionsMenu.className = 'queue-actions-menu';
         
-        // Add deletion eligibility to dropdown
-        const dropdownHtml = `
+        const deletionStatus = canQueueBeDeleted(queue.path);
+        actionsMenu.innerHTML = `
+            <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${queue.path}')">
+                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="19" cy="12" r="2"/>
+                </svg>
+            </button>
             <div class="queue-dropdown" id="dropdown-${queue.path}">
-                <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">
-                    Edit Queue
-                </div>
-                <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">
-                    Add Child Queue
-                </div>
-                <div class="dropdown-item ${deletionStatus.canDelete ? '' : 'disabled'}" 
+                <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">Edit Queue</div>
+                <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">Add Child Queue</div>
+                ${queue.path !== 'root' ? `<div class="dropdown-item ${deletionStatus.canDelete ? '' : 'disabled'}" 
                     onclick="${deletionStatus.canDelete ? `markQueueForDeletion('${queue.path}')` : ''}"
                     title="${deletionStatus.canDelete ? 'Delete this queue' : deletionStatus.reason}">
                     Delete Queue ${deletionStatus.canDelete ? '' : '(disabled)'}
-                </div>
+                </div>` : ''}
             </div>
         `;
 
-        // Compose card HTML
-        card.innerHTML = `
-        <div class="queue-header">
-            <span class="queue-info-button" title="More info about this queue" onclick="openInfoModal(findQueueByPath('${queue.path}'))">ℹ️</span>
-            <span class="queue-name" title="${queue.name}">${highlightMatch(queue.name, currentSearchTerm)}</span>
-            <span class="queue-actions-menu">${menuButton}</span>
-        </div>
-        <hr>
-        <div>
-            ${modeBadge}
-        </div>
-        ${queueCapacity(capacityText, maxCapacity, mode)}
-        `
+        titleBar.appendChild(infoBtn);
+        titleBar.appendChild(nameEl);
+        titleBar.appendChild(actionsMenu);
 
-        /*
-        ${queue.effectiveCapacity !== undefined && queue.effectiveCapacity !== queue.capacity
-            ? `<div class="effective-capacity">Effective: ${queue.effectiveCapacity.toFixed(1)}%</div>`
-            : ''}
-         */
+        // --- Divider ---
+        const divider = document.createElement('hr');
+        divider.className = 'queue-card-divider';
 
-        // Click handler for editing (optional: you may want to remove click-to-edit for clarity)
-        // card.addEventListener('click', (e) => {
-        //     if (!e.target.closest('.queue-actions-menu')) {
-        //         openEditModal(queue);
-        //     }
-        // });
+        // --- Label Area ---
+        const labelArea = document.createElement('div');
+        labelArea.className = 'queue-label-area';
+        labelArea.innerHTML = createQueueLabels(queue, pendingChange);
+
+        // --- Capacity Section ---
+        const capacitySection = document.createElement('div');
+        capacitySection.className = 'queue-capacity-section';
+        
+        const mode = pendingChange?.capacityMode || queue.capacityMode || 'percentage';
+        const displayCapacity = pendingChange?.capacity || queue.capacity;
+        const maxCapacity = pendingChange?.maxCapacity || queue.maxCapacity;
+        
+        capacitySection.innerHTML = queueCapacity(
+            formatCapacityDisplay(displayCapacity, mode, queue.weight, queue.capacityVector),
+            maxCapacity,
+            mode
+        );
+
+        // Assemble the card
+        card.appendChild(titleBar);
+        card.appendChild(divider);
+        card.appendChild(labelArea);
+        card.appendChild(capacitySection);
 
         return card;
     }
 
-    function queueCapacity(capacity, maxCapacity, capacityMode) {
-        if (capacityMode === "percentage" || capacityMode === "weight") {
-            return `
-            <div class="queue-capacities">
-                <table>
-                <tr><td>${capacity}</td><td>${maxCapacity}%</td></tr>
-                <tr><td><h6>capacity</h6></td><td><h6>max-capacity<h6></td></tr>
-                </table>
-            </div>
-            `
-        } else if (capacityMode === "absolute") {
-            const keyValuePairs = capacity.slice(1, -1).split(',');
-            let lines = ""
-            keyValuePairs.forEach(pair => {
-                const [key, value] = pair.split('=');
-                lines += `<tr><td>${key}</td><td>${value}</td></tr>`
-            });
-            return `
-            <h6>Capacity:</h6>
-            <table>${lines}</table>
-            <h6>Max Capacity:</h6>
-            <span>${maxCapacity}</span>
-            `
+    function createQueueLabels(queue, pendingChange) {
+        const labels = [];
+        
+        // Get current values (pending changes override original values)
+        const mode = pendingChange?.capacityMode || queue.capacityMode || 'percentage';
+        const state = pendingChange?.state || queue.state || 'RUNNING';
+        const autoCreation = queue.autoCreationEligibility === 'on' || queue.autoCreationEligibility === 'enabled';
+        
+        // Capacity Mode Tag
+        const modeIcons = {
+            'percentage': '📊',
+            'weight': '⚖️', 
+            'absolute': '🎯',
+            'vector': '📐',
+            'flexible': '🔄'
+        };
+        
+        const modeIcon = modeIcons[mode] || '📊';
+        labels.push(`<span class="queue-tag tag-mode" title="Capacity Mode: ${mode}">${modeIcon} ${mode.charAt(0).toUpperCase() + mode.slice(1)}</span>`);
+        
+        // State Tag
+        if (state === 'STOPPED') {
+            labels.push(`<span class="queue-tag tag-state tag-stopped" title="Queue State: Stopped">🛑 Stopped</span>`);
         } else {
-            return `
-            <h6>Capacity:</h6>
-            <span>${capacity}</span>
-            <h6>Max Capacity:</h6>
-            <span>${maxCapacity}</span>
-            `
+            labels.push(`<span class="queue-tag tag-state tag-running" title="Queue State: Running">▶️ Running</span>`);
         }
+        
+        // Auto-Creation Tag
+        if (autoCreation) {
+            labels.push(`<span class="queue-tag tag-auto-create" title="Auto Queue Creation Enabled">⚡ Auto-Create</span>`);
+        }
+        
+        return labels.join('');
     }
+
+    // Add this helper function before createQueueCard
+function formatCapacityDisplay(capacity, mode, weight, capacityVector) {
+    switch (mode) {
+        case 'percentage':
+            return `${parseFloat(capacity || 0).toFixed(1)}%`;
+        case 'weight':
+            return `${parseFloat(weight || capacity || 0)}w`;
+        case 'absolute':
+        case 'vector':
+            return capacity; // Keep original format for processing
+        default:
+            return capacity || '0';
+    }
+}
+
+// Update the queueCapacity function to handle all modes better
+function queueCapacity(capacity, maxCapacity, capacityMode) {
+    if (capacityMode === "percentage") {
+        return `
+            <div class="capacity-display">
+                <div class="capacity-row">
+                    <span class="capacity-label">Capacity:</span>
+                    <span class="capacity-value">${capacity}</span>
+                </div>
+                <div class="capacity-row">
+                    <span class="capacity-label">Max Cap:</span>
+                    <span class="capacity-value">${parseFloat(maxCapacity || 0).toFixed(1)}%</span>
+                </div>
+            </div>
+        `;
+    } else if (capacityMode === "weight") {
+        return `
+            <div class="capacity-display">
+                <div class="capacity-row">
+                    <span class="capacity-label">Weight:</span>
+                    <span class="capacity-value">${capacity}</span>
+                </div>
+                <div class="capacity-row">
+                    <span class="capacity-label">Max Cap:</span>
+                    <span class="capacity-value">${parseFloat(maxCapacity || 0).toFixed(1)}%</span>
+                </div>
+            </div>
+        `;
+    } else if (capacityMode === "absolute" || capacityMode === "vector") {
+        return createAbsoluteCapacityDisplay(capacity, maxCapacity);
+    } else {
+        return `
+            <div class="capacity-display">
+                <div class="capacity-row">
+                    <span class="capacity-label">Capacity:</span>
+                    <span class="capacity-value">${capacity || 'N/A'}</span>
+                </div>
+                <div class="capacity-row">
+                    <span class="capacity-label">Max Cap:</span>
+                    <span class="capacity-value">${maxCapacity || 'N/A'}</span>
+                </div>
+            </div>
+        `;
+    }
+}
+
+// New function to handle absolute/vector capacity display
+function createAbsoluteCapacityDisplay(capacity, maxCapacity) {
+    const parseAbsoluteCapacity = (capStr) => {
+        if (!capStr) return [];
+        
+        // Remove brackets if present
+        let cleanStr = capStr.toString().trim();
+        if (cleanStr.startsWith('[') && cleanStr.endsWith(']')) {
+            cleanStr = cleanStr.slice(1, -1);
+        }
+        
+        // Split by comma and parse key=value pairs
+        return cleanStr.split(',').map(pair => {
+            const [key, value] = pair.split('=').map(s => s.trim());
+            return { key, value };
+        }).filter(item => item.key && item.value);
+    };
+
+    const currentResources = parseAbsoluteCapacity(capacity);
+    const maxResources = parseAbsoluteCapacity(maxCapacity);
+
+    let html = '<div class="absolute-capacity-display">';
+    
+    // Current capacity section
+    if (currentResources.length > 0) {
+        html += '<div class="capacity-section">';
+        html += '<div class="capacity-section-title">Capacity:</div>';
+        html += '<div class="resource-list">';
+        currentResources.forEach(resource => {
+            html += `<div class="resource-item">
+                <span class="resource-key">${resource.key}:</span>
+                <span class="resource-value">${resource.value}</span>
+            </div>`;
+        });
+        html += '</div></div>';
+    } else {
+        html += '<div class="capacity-section">';
+        html += '<div class="capacity-section-title">Capacity:</div>';
+        html += '<div class="resource-raw">' + (capacity || 'N/A') + '</div>';
+        html += '</div>';
+    }
+
+    // Max capacity section
+    if (maxResources.length > 0) {
+        html += '<div class="capacity-section">';
+        html += '<div class="capacity-section-title">Max Capacity:</div>';
+        html += '<div class="resource-list">';
+        maxResources.forEach(resource => {
+            html += `<div class="resource-item">
+                <span class="resource-key">${resource.key}:</span>
+                <span class="resource-value">${resource.value}</span>
+            </div>`;
+        });
+        html += '</div></div>';
+    } else {
+        html += '<div class="capacity-section">';
+        html += '<div class="capacity-section-title">Max Capacity:</div>';
+        html += '<div class="resource-raw">' + (maxCapacity || 'N/A') + '</div>';
+        html += '</div>';
+    }
+
+    html += '</div>';
+    return html;
+}
 
     function renderQueueTree() {
         console.log('renderQueueTree called, queueData:', queueData);
