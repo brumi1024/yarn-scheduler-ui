@@ -15,7 +15,6 @@ const api = new YarnSchedulerAPI(window.location.origin || '');
 
 window.addEventListener('DOMContentLoaded', function() {
     showLoading('Initializing application...');
-    
     try {
         api.loadSchedulerConfiguration();
         initializeEventHandlers();

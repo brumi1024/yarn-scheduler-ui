@@ -42,21 +42,100 @@ function createEditForm() {
 }
 
 function createInfoForm(queue) {
-    let rows = Object.entries(queue)
-        .filter(([_, value]) => typeof value !== 'object' || value === null) // Exclude non-null objects
-        .sort(([keyA], [keyB]) => keyA.localeCompare(keyB)) // Sort by key
-        .map(([key, value]) => {return `<tr><td>${key}</td><td>${value}</td></tr>`;})
-        .join('');
+    // Group properties by category for better organization
+    const basicInfo = {
+        'Name': queue.name,
+        'Path': queue.path,
+        'State': queue.state,
+        'Queue Type': queue.queueType || 'Unknown'
+    };
+
+    const capacityInfo = {
+        'Capacity': queue.capacity,
+        'Capacity Mode': queue.capacityMode || 'percentage',
+        'Max Capacity': queue.maxCapacity,
+        'Used Capacity': queue.usedCapacity,
+        'Absolute Capacity': queue.absoluteCapacity,
+        'Absolute Max Capacity': queue.absoluteMaxCapacity,
+        'Effective Capacity': queue.effectiveCapacity,
+        'Effective Max Capacity': queue.effectiveMaxCapacity,
+        'Weight': queue.weight,
+        'Normalized Weight': queue.normalizedWeight
+    };
+
+    const applicationInfo = {
+        'User Limit Factor': queue.userLimitFactor,
+        'Max Applications': queue.maxApplications,
+        'Current Applications': queue.numApplications
+    };
+
+    const advancedInfo = {
+        'Node Labels': Array.isArray(queue.nodeLabels) ? queue.nodeLabels.join(', ') || 'None' : queue.nodeLabels || 'None',
+        'Default Node Label Expression': queue.defaultNodeLabelExpression || 'None',
+        'Auto Creation Eligibility': queue.autoCreationEligibility || 'off',
+        'Creation Method': queue.creationMethod || 'static'
+    };
+
+    // Helper function to create a section
+    function createSection(title, data, icon = '') {
+        const rows = Object.entries(data)
+            .filter(([_, value]) => value !== undefined && value !== null)
+            .map(([key, value]) => {
+                let displayValue = value;
+                
+                // Format specific values
+                if (key.toLowerCase().includes('capacity') && typeof value === 'number') {
+                    displayValue = `${value}%`;
+                }
+                if (key === 'State') {
+                    const stateClass = value === 'RUNNING' ? 'status-running' : 'status-stopped';
+                    displayValue = `<span class="status-badge ${stateClass}">${value}</span>`;
+                }
+                if (key === 'Queue Type') {
+                    const typeClass = value === 'parent' ? 'type-parent' : 'type-leaf';
+                    displayValue = `<span class="type-badge ${typeClass}">${value}</span>`;
+                }
+                if (key === 'Capacity Mode') {
+                    const modeIcons = {
+                        'percentage': '📊',
+                        'weight': '⚖️',
+                        'absolute': '🎯',
+                        'vector': '📐'
+                    };
+                    const modeIcon = modeIcons[value] || '📊';
+                    displayValue = `${modeIcon} ${value}`;
+                }
+                
+                return `
+                    <tr>
+                        <td class="info-label">${key}</td>
+                        <td class="info-value">${displayValue}</td>
+                    </tr>
+                `;
+            })
+            .join('');
+
+        if (!rows) return '';
+
+        return `
+            <div class="info-section">
+                <h3 class="info-section-title">
+                    ${icon} ${title}
+                </h3>
+                <table class="info-table">
+                    ${rows}
+                </table>
+            </div>
+        `;
+    }
 
     return `
-        <table>
-            <thead>
-                <tr><th>Property Name</th><th>Value</th></tr>
-            </thead>
-            <tbody>
-                ${rows}
-            </tbody>
-        </table>
+        <div class="queue-info-container">
+            ${createSection('Basic Information', basicInfo, '📋')}
+            ${createSection('Capacity Configuration', capacityInfo, '📊')}
+            ${createSection('Application Limits', applicationInfo, '🚀')}
+            ${createSection('Advanced Settings', advancedInfo, '⚙️')}
+        </div>
     `;
 }
 
