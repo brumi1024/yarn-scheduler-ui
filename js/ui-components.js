@@ -214,7 +214,7 @@ function searchQueues(searchTerm) {
   renderQueueTree();
 }
 
-function sortQueues(sortValue) {
+function executeSorting(sortValue) {
   currentSort = sortValue;
   renderQueueTree();
 }
@@ -229,7 +229,7 @@ function initializeEventHandlers() {
   document
     .getElementById("sort-select")
     .addEventListener("change", function (e) {
-      sortQueues(e.target.value);
+      executeSorting(e.target.value);
     });
   // Close modals when clicking outside
   document.getElementById("edit-modal").addEventListener("click", function (e) {

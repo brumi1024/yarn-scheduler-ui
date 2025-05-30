@@ -163,11 +163,18 @@ function createQueueCard(queue, level) {
     openEditModal(findQueueByPath(queue.path));
   };
 
-  // Info button
-  const infoBtn = document.createElement("span");
-  infoBtn.className = "queue-info-button";
-  infoBtn.innerHTML = "ℹ️";
-  infoBtn.title = "More info about this queue";
+  // Info button - moved to right side with submenu styling
+  const infoBtn = document.createElement("button");
+  infoBtn.className = "queue-info-btn";
+  infoBtn.innerHTML = `
+    <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+      <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2" fill="none"/>
+      <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
+      <circle cx="12" cy="8" r="1" fill="currentColor"/>
+    </svg>
+  `;
+  infoBtn.title = "Queue Information";
+  infoBtn.setAttribute("aria-label", "Queue information");
   infoBtn.onclick = (e) => {
     e.stopPropagation();
     openInfoModal(findQueueByPath(queue.path));
@@ -179,47 +186,32 @@ function createQueueCard(queue, level) {
 
   const deletionStatus = canQueueBeDeleted(queue.path);
   actionsMenu.innerHTML = `
-            <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${
-              queue.path
-            }')">
-                <svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true">
-                    <circle cx="5" cy="12" r="2"/>
-                    <circle cx="12" cy="12" r="2"/>
-                    <circle cx="19" cy="12" r="2"/>
-                </svg>
-            </button>
-            <div class="queue-dropdown" id="dropdown-${queue.path}">
-                <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${
-                  queue.path
-                }'))">Edit Queue</div>
-                <div class="dropdown-item" onclick="openAddQueueModalWithParent('${
-                  queue.path
-                }')">Add Child Queue</div>
-                ${
-                  queue.path !== "root"
-                    ? `<div class="dropdown-item ${
-                        deletionStatus.canDelete ? "" : "disabled"
-                      }" 
-                    onclick="${
-                      deletionStatus.canDelete
-                        ? `markQueueForDeletion('${queue.path}')`
-                        : ""
-                    }"
-                    title="${
-                      deletionStatus.canDelete
-                        ? "Delete this queue"
-                        : deletionStatus.reason
-                    }">
-                    Delete Queue ${deletionStatus.canDelete ? "" : "(disabled)"}
-                </div>`
-                    : ""
-                }
-            </div>
-        `;
+    <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${queue.path}')">
+      <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+        <circle cx="5" cy="12" r="2"/>
+        <circle cx="12" cy="12" r="2"/>
+        <circle cx="19" cy="12" r="2"/>
+      </svg>
+    </button>
+    <div class="queue-dropdown" id="dropdown-${queue.path}">
+      <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">Edit Queue</div>
+      <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">Add Child Queue</div>
+      ${queue.path !== "root" ? `<div class="dropdown-item ${deletionStatus.canDelete ? "" : "disabled"}" 
+        onclick="${deletionStatus.canDelete ? `markQueueForDeletion('${queue.path}')` : ""}"
+        title="${deletionStatus.canDelete ? "Delete this queue" : deletionStatus.reason}">
+        Delete Queue ${deletionStatus.canDelete ? "" : "(disabled)"}
+      </div>` : ""}
+    </div>
+  `;
 
-  titleBar.appendChild(infoBtn);
+  // Create a wrapper for the buttons on the right
+  const buttonGroup = document.createElement("div");
+  buttonGroup.className = "queue-button-group";
+  buttonGroup.appendChild(infoBtn);
+  buttonGroup.appendChild(actionsMenu);
+
   titleBar.appendChild(nameEl);
-  titleBar.appendChild(actionsMenu);
+  titleBar.appendChild(buttonGroup);
 
   // --- Divider ---
   const divider = document.createElement("hr");
