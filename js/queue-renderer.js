@@ -166,10 +166,10 @@
 
         // Mode badge
         let modeBadge = '';
-        if (queue.capacityMode === 'weight') modeBadge = `<span class="queue-mode-badge">Weight 𐄷</span>`;
-        else if (queue.capacityMode === 'vector') modeBadge = `<span class="queue-mode-badge">Vector 📐</span>`;
-        else if (queue.capacityMode === 'absolute') modeBadge = `<span class="queue-mode-badge">Absolute 🎯</span>`;
-        if (queue.autoCreationEligibility === 'flexible') modeBadge += `<span class="queue-mode-badge">Auto-Creation ⚡</span>`;
+        if (mode === 'weight') modeBadge = `<span class="queue-mode-badge">Weight 𐄷</span>`;
+        else if (mode === 'vector') modeBadge = `<span class="queue-mode-badge">Vector 📐</span>`;
+        else if (mode === 'absolute') modeBadge = `<span class="queue-mode-badge">Absolute 🎯</span>`;
+        if (mode === 'flexible') modeBadge += `<span class="queue-mode-badge">Auto-Creation ⚡</span>`;
         if (displayState === 'STOPPED') modeBadge += `<span class="queue-mode-badge">Stopped 🛑</span>`;
 
         // Menu button (modern, accessible)
@@ -219,7 +219,7 @@
         <div>
             ${modeBadge}
         </div>
-        ${queueCapacity(capacityText, maxCapacityText, queue.capacityMode)}
+        ${queueCapacity(capacityText, maxCapacity, mode)}
         `
 
         /*
