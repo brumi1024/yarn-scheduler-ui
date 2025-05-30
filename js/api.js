@@ -57,13 +57,9 @@
         }
 
         async getMock(url) {
-            console.log(await fetch('./mock' + url + '.json')
-                .then(value => value.text())
-                .then(value => JSON.parse(value))
-            )
-            return fetch('./mock' + url + '.json')
-                .then(value => value.text())
-                .then(value => JSON.parse(value))
+            let resp = await fetch('./mock' + url + '.json')
+            let json = await resp.json()
+            return {data: json}
         }
 
         async makeRequestWithRetry(endpoint, options = {}, maxRetries = 3, timeout = 10000) {
@@ -115,7 +111,6 @@
                 const response = this.useMocks
                     ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
                     : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
-                console.log(response)
                 const data = response.data;
 
                 if (data.scheduler && data.scheduler.schedulerInfo) {
