@@ -242,9 +242,10 @@
         if (capacityMode === "percentage" || capacityMode === "weight") {
             return `
             <div class="queue-capacities">
-                <span class="capacity-compact" title="Capacity">Cap: ${capacity}</span>
-                <span class="separator"> | </span>
-                <span class="capacity-compact" title="Max Capacity">Max: ${maxCapacity}</span>
+                <table>
+                <tr><td>${capacity}</td><td>${maxCapacity}%</td></tr>
+                <tr><td><h6>capacity</h6></td><td><h6>max-capacity<h6></td></tr>
+                </table>
             </div>
             `
         } else if (capacityMode === "absolute") {

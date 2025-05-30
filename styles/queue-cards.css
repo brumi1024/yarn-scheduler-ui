@@ -167,7 +167,10 @@
     height: 40px;                 /* optional: fixed height */
     margin-top: auto;
 }
-
+.queue-capacities table {
+    width: 100%;
+    text-align: center;
+}
 .capacity-compact, .separator {
     display: inline-block;
     vertical-align: middle;
