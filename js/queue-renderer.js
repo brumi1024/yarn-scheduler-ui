@@ -239,15 +239,22 @@ function createQueueCard(queue, level) {
   const displayCapacity = pendingChange?.capacity || queue.capacity;
   const maxCapacity = pendingChange?.maxCapacity || queue.maxCapacity;
 
-  capacitySection.innerHTML = queueCapacity(
-    formatCapacityDisplay(
-      displayCapacity,
-      mode,
-      queue.weight,
-      queue.capacityVector
-    ),
-    maxCapacity,
-    mode
+  // TODO cleanup where the capacity comes from
+  // Get the correct weight value - prioritize pending changes
+  let weightValue;
+  if (mode === "weight") {
+    // For weight mode, the weight value could be in different places depending on the change state
+    weightValue =
+      pendingChange?.capacity ||
+      queue.weight ||
+      queue.capacity;
+  } else {
+    weightValue = pendingChange?.weight || queue.weight;
+  }
+
+  capacitySection.innerHTML = createCapacityDisplay(
+    formatCapacityDisplay(displayCapacity, mode, weightValue),
+    maxCapacity
   );
 
   // Assemble the card
@@ -308,7 +315,7 @@ function createQueueLabels(queue, pendingChange) {
 }
 
 // Add this helper function before createQueueCard
-function formatCapacityDisplay(capacity, mode, weight, capacityVector) {
+function formatCapacityDisplay(capacity, mode, weight) {
   switch (mode) {
     case "percentage":
       return `${parseFloat(capacity || 0).toFixed(1)}%`;
@@ -322,63 +329,14 @@ function formatCapacityDisplay(capacity, mode, weight, capacityVector) {
   }
 }
 
-// Update the queueCapacity function to handle all modes better
-function queueCapacity(capacity, maxCapacity, capacityMode) {
-  if (capacityMode === "percentage") {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Capacity:</span>
-                    <span class="capacity-value">${capacity}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${parseFloat(
-                      maxCapacity || 0
-                    ).toFixed(1)}%</span>
-                </div>
-            </div>
-        `;
-  } else if (capacityMode === "weight") {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Weight:</span>
-                    <span class="capacity-value">${capacity}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${parseFloat(
-                      maxCapacity || 0
-                    ).toFixed(1)}%</span>
-                </div>
-            </div>
-        `;
-  } else if (capacityMode === "absolute" || capacityMode === "vector") {
-    return createAbsoluteCapacityDisplay(capacity, maxCapacity);
-  } else {
-    return `
-            <div class="capacity-display">
-                <div class="capacity-row">
-                    <span class="capacity-label">Capacity:</span>
-                    <span class="capacity-value">${capacity || "N/A"}</span>
-                </div>
-                <div class="capacity-row">
-                    <span class="capacity-label">Max Cap:</span>
-                    <span class="capacity-value">${maxCapacity || "N/A"}</span>
-                </div>
-            </div>
-        `;
-  }
-}
-
 // New function to handle absolute/vector capacity display
-function createAbsoluteCapacityDisplay(capacity, maxCapacity) {
+function createCapacityDisplay(capacity, maxCapacity) {
   const parseAbsoluteCapacity = (capStr) => {
     if (!capStr) return [];
 
     // Remove brackets if present
     let cleanStr = capStr.toString().trim();
+
     if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
       cleanStr = cleanStr.slice(1, -1);
     }
