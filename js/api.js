@@ -6,7 +6,7 @@
     };
 
     class YarnSchedulerAPI {
-        constructor(baseUrl = '') {
+        constructor(baseUrl = '', useMocks = false) {
             this.baseUrl = baseUrl;
             this.defaultHeaders = {
                 'Content-Type': 'application/json',
@@ -17,6 +17,7 @@
                 method: 'GET',
                 body: null
             };
+            this.useMocks = useMocks
         }
 
         addUserParam(url) {
@@ -53,6 +54,12 @@
                 console.error(`API request failed for ${endpoint}:`, error);
                 throw error;
             }
+        }
+
+        async getMock(url) {
+            let resp = await fetch('./mock' + url + '.json')
+            let json = await resp.json()
+            return {data: json}
         }
 
         async makeRequestWithRetry(endpoint, options = {}, maxRetries = 3, timeout = 10000) {
@@ -101,7 +108,9 @@
         async loadSchedulerConfiguration() {
             showLoading('Loading scheduler configuration...');
             try {
-                const response = await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
+                const response = this.useMocks
+                    ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
+                    : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
                 const data = response.data;
 
                 if (data.scheduler && data.scheduler.schedulerInfo) {

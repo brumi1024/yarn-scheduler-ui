@@ -33,6 +33,7 @@ function showContent(show = true) {
 }
 
 function showError(message, duration = 8000) {
+    console.error(message)
     // Hide loading first
     hideLoading();
 
