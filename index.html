@@ -10,19 +10,16 @@
     <link rel="stylesheet" href="styles/notification.css" />
   </head>
   <body>
-    <!-- Header Navigation -->
     <div class="header">
       <ul class="nav-tabs">
-        <li class="nav-tab">Overview</li>
-        <li class="nav-tab active">Configuration</li>
-        <li class="nav-tab">Placement Rules</li>
-        <li class="nav-tab">Partitions</li>
-        <li class="nav-tab">Schedule</li>
+        <li class="nav-tab active" data-tab="queue-config-content">Queue Configuration</li>
+        <li class="nav-tab" data-tab="scheduler-config-content">Scheduler Configuration</li>
+        <li class="nav-tab" data-tab="placement-rules-content">Placement Rules</li>
+        <li class="nav-tab" data-tab="node-labels-content">Node Labels</li>
       </ul>
     </div>
 
-    <!-- Controls -->
-    <div class="controls">
+    <div class="controls" id="queue-config-controls">
       <div class="partition-selector">
         <label>Partition</label>
         <select id="partition-select">
@@ -50,9 +47,7 @@
 
     <div id="notification-container" class="notification-container"></div>
 
-    <!-- Main Content -->
-    <div class="main-content" id="main-content">
-      <!-- Loading state -->
+    <div class="main-content">
       <div
         id="loading-container"
         class="loading-container"
@@ -64,8 +59,7 @@
         </div>
       </div>
 
-      <!-- Content when loaded -->
-      <div id="content" style="display: none">
+      <div id="queue-config-content" class="tab-pane active">
         <div class="level-headers" id="level-headers"></div>
         <div class="queue-tree" id="queue-tree"></div>
         <svg class="arrow-container" id="arrow-svg">
@@ -83,9 +77,34 @@
           </defs>
         </svg>
       </div>
+
+      <div id="scheduler-config-content" class="tab-pane" style="display: none;">
+        <div class="controls"> <div class="tab-title-header">Global Scheduler Settings</div>
+        </div>
+        <div id="global-scheduler-settings-container" style="padding: 20px;">
+          <p>This section will display global scheduler configurations that are not specific to any queue.</p>
+        </div>
+      </div>
+
+      <div id="placement-rules-content" class="tab-pane" style="display: none;">
+        <div class="controls">
+          <div class="tab-title-header">Placement Rules</div>
+        </div>
+        <div style="padding: 20px;">
+            <p>Placement rules configuration will be displayed here. (Not yet implemented)</p>
+        </div>
+      </div>
+
+      <div id="node-labels-content" class="tab-pane" style="display: none;">
+         <div class="controls">
+          <div class="tab-title-header">Node Labels</div>
+        </div>
+        <div style="padding: 20px;">
+            <p>Node labels configuration will be displayed here. (Not yet implemented)</p>
+        </div>
+      </div>
     </div>
 
-    <!-- Batch Edit Controls -->
     <div class="batch-controls" id="batch-controls">
       <div class="batch-info" id="batch-info">0 changes pending</div>
       <div class="batch-validation" id="batch-validation"></div>
@@ -102,17 +121,10 @@
       </button>
     </div>
 
-    <!-- Refresh Button -->
     <button class="refresh-btn" onclick="refreshQueues()">
       <span>🔄</span>
     </button>
 
-    <!-- Minimap -->
-    <!--<div class="minimap">-->
-    <!--    <div class="minimap-queues" id="minimap"></div>-->
-    <!--</div>-->
-
-    <!-- Edit Queue Modal -->
     <div class="modal" id="edit-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -123,7 +135,6 @@
       </div>
     </div>
 
-    <!-- Add Queue Modal -->
     <div class="modal" id="add-queue-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -136,7 +147,6 @@
       </div>
     </div>
 
-    <!-- Queue Info Modal -->
     <div class="modal" id="info-modal">
       <div class="modal-content">
         <div class="modal-header">

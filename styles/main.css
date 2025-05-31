@@ -83,14 +83,6 @@ body {
   background: white;
 }
 
-.main-content {
-  padding: 20px;
-  background: #f8f9fa;
-  min-height: calc(100vh - 120px);
-  position: relative;
-  overflow-x: auto;
-}
-
 .refresh-btn {
   position: fixed;
   top: 100px;
@@ -155,31 +147,83 @@ body {
   cursor: not-allowed;
 }
 
-/* ADD to styles/main.css - .minimap styles are referenced but not defined */
-.minimap {
-  position: fixed;
-  bottom: 20px;
-  right: 20px;
-  width: 200px;
-  height: 150px;
-  background: white;
-  border: 1px solid #e0e0e0;
-  border-radius: 8px;
-  padding: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  z-index: 50;
+.main-content {
+  padding: 0; /* Remove padding from main-content as tab-panes will handle it or their content */
+  background: #f8f9fa;
+  min-height: calc(100vh - 120px); 
+  position: relative;
+  overflow-x: auto; /* Kept for queue-tree if needed */
 }
 
-.minimap-queues {
+.tab-pane {
+  display: none; /* Hidden by default */
+}
+
+.tab-pane.active {
+  display: block; /* Shown when active */
+}
+
+.tab-title-header {
+  font-size: 18px; 
+  font-weight: 600;
+  color: #333;
+  padding: 0; /* Adjusted padding as .controls already has padding */
+  margin: 0; /* Ensure no extra margins */
+  flex-grow: 1; /* Allows the title to take available space if needed */
   display: flex;
-  flex-direction: column;
-  height: 100%;
-  gap: 2px;
+  align-items: center; /* Vertically center if .controls has a fixed height */
 }
 
-.minimap-queue {
-  background: #1976d2;
-  border-radius: 2px;
-  min-height: 4px;
-  transition: all 0.2s;
+/* Styles for the scheduler config page elements */
+#scheduler-config-content h2 {
+  margin-bottom: 20px;
+  color: #333;
+  font-size: 24px;
+  border-bottom: 2px solid #007bff;
+  padding-bottom: 10px;
+}
+
+.config-group {
+  background: #fff;
+  border-radius: 8px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+  margin-bottom: 25px;
+  padding: 20px;
+  border-left: 4px solid #007bff; /* Accent color */
+}
+
+.config-group-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: #0056b3; /* Darker blue for titles */
+  margin-bottom: 15px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.config-item {
+  display: flex;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid #f0f0f0;
+  font-size: 14px;
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+.config-key {
+  font-weight: 500;
+  color: #555;
+  flex-basis: 60%;
+  word-break: break-all; /* Break long keys */
+}
+
+.config-value {
+  color: #333;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  flex-basis: 35%;
+  text-align: right;
+  word-break: break-all; /* Break long values */
 }

@@ -61,11 +61,11 @@ class YarnSchedulerAPI {
   }
 
   async getMock(url) {
-    let resp = await fetch("./mock" + url + ".json");
+    let resp = await fetch("./mock" + url + ".json"); // Ensure path is correct if mocks are in a subfolder
     let json = await resp.json();
     return { data: json };
   }
-
+  
   async makeRequestWithRetry(
     endpoint,
     options = {},
@@ -129,9 +129,9 @@ class YarnSchedulerAPI {
     return response;
   }
 
-  // Get the scheduler configuration
+  // Get the scheduler configuration for queue hierarchy
   async loadSchedulerConfiguration() {
-    showLoading("Loading scheduler configuration...");
+    showLoading("Loading queue configuration...");
     try {
       const response = this.useMocks
         ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
@@ -150,13 +150,27 @@ class YarnSchedulerAPI {
 
         extractPartitions(schedulerInfo);
         populatePartitionSelector();
-        renderQueueTree();
-        showContent(true);
+        renderQueueTree(); // Render the queue tree for the default tab
+        // showContent(true); // showContent is now handled by tab switching
       } else {
         throw new Error("Invalid scheduler data received");
       }
     } catch (error) {
-      showError(`Failed to load scheduler configuration: ${error.message}`);
+      showError(`Failed to load queue configuration: ${error.message}`);
+    }
+  }
+
+  // Get the raw scheduler configuration properties
+  async getSchedulerConf() {
+    // showLoading("Loading global scheduler settings..."); // Loading message handled by calling function
+    try {
+        const response = this.useMocks
+            ? await this.getMock(API_ENDPOINTS.SCHEDULER_CONF)
+            : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_CONF);
+        return response.data;
+    } catch (error) {
+        showError(`Failed to load scheduler-conf: ${error.message}`);
+        throw error; // Re-throw to be caught by caller
     }
   }
 
