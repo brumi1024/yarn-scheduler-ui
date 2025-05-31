@@ -1,7 +1,8 @@
-window.createQueueCard = (queue, level) => {
+window.createQueueCard = (queue) => {
     const card = document.createElement("div");
     card.className = "queue-card";
-    const queuePath = queue.path;
+    const level = queue.level
+    const queuePath = queue.queuePath;
 
     const pendingChange = pendingChanges.get(queuePath) || {}; // Use empty object if no pending changes
     const isNewQueue = pendingAdditions.has(queuePath);
@@ -23,7 +24,7 @@ window.createQueueCard = (queue, level) => {
 
     const nameEl = document.createElement("span");
     nameEl.className = "queue-name";
-    nameEl.innerHTML = highlightMatch(queue.name, currentSearchTerm);
+    nameEl.innerHTML = highlightMatch(queue.queueName, currentSearchTerm);
     nameEl.title = `${queuePath} (Click to edit)`;
     nameEl.onclick = (e) => {
         e.stopPropagation();
