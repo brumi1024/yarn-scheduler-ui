@@ -53,9 +53,15 @@ function display(mode, value) {
     return value.slice(1,-1).split(",").map(v => v.split("="))
 }
 
-
 function allQueue() {
-    //TODO, what structure?
+    const allPath = []
+    for (const [key, _] of _queues.entries()) {
+        allPath.push(key)
+    }
+    for (const [key, _] of _changes.entries()) {
+        allPath.push(key)
+    }
+    return allPath.map(getQueue)
 }
 
 function getQueue(path) {
@@ -95,6 +101,8 @@ function getQueue(path) {
     const maxCapacityMode = detectMode(queue.maxCapacity);
     queue.maxCapacityMode = maxCapacityMode
     queue.maxCapacityDisplay = display(maxCapacityMode, queue.maxCapacity)
+
+    queue.level = path.split(".").length - 1
 
     return queue
 }
