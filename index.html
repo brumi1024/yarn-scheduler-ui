@@ -135,7 +135,7 @@
       <div class="modal-content">
         <div class="modal-header">
           <h2 class="modal-title" id="modal-title">Edit Queue</h2>
-          <button class="close-btn" onclick="closeModal()">&times;</button>
+          <button class="close-btn" onclick="closeEditModal()">&times;</button>
         </div>
         <div id="edit-form-container"></div>
       </div>
@@ -161,16 +161,24 @@
       </div>
     </div>
 
-    <script src="js/config.js"></script>
-    <script src="js/queue-state-store.js"></script>
-    <script src="js/queue-parser.js"></script>
+    <script src="js/config/config.js"></script>
+    <script src="js/config/config-metadata-global.js"></script>
+    <script src="js/config/config-metadata-queue.js"></script>
+    <script src="js/queues/queue-state-store.js"></script>
+    <script src="js/queues/queue-parser.js"></script>
     <script src="js/validation.js"></script>
     <script src="js/ui-components.js"></script>
-    <script src="js/queue-card.js"></script>
-    <script src="js/queue-renderer.js"></script>
+    <script src="js/queues/queue-card.js"></script>
+    <script src="js/queues/queue-renderer.js"></script>
     <script src="js/arrow-renderer.js"></script>
     <script src="js/api.js"></script>
-    <script src="js/modals.js"></script>
+    <script src="js/modals/modal-helpers.js"></script>
+    <script src="js/modals/modal-info-queue.js"></script>
+    <script src="js/modals/modal-add-queue.js"></script>
+    <script src="js/modals/modal-edit-queue.js"></script>
+    <script src="js/modals/queue-actions.js"></script>
+    <script src="js/tab-handler.js"></script>
+    <script src="js/scheduler-config-ui.js"></script>
     <script src="js/main.js"></script>
   </body>
 </html>
