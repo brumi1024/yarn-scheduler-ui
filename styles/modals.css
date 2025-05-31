@@ -48,23 +48,49 @@
   color: #666;
 }
 
-.form-group {
-  margin-bottom: 20px;
+.form-category-title {
+  font-size: 16px; /* Make it distinct */
+  font-weight: 600;
+  color: #0056b3; /* Or a theme color */
+  margin-top: 20px; /* Space above category title */
+  margin-bottom: 10px;
+  padding-bottom: 5px;
+  border-bottom: 1px solid #e0e0e0;
+}
+.form-category-title:first-of-type {
+    margin-top: 10px; /* Less margin for the very first category title */
 }
 
-.form-label {
+.form-group {
+  margin-bottom: 15px; /* Standard margin for form groups */
+}
+
+.form-group.static-info-group { /* For read-only name/path */
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    /* border-bottom: 1px solid #f0f0f0; */ /* Optional separator */
+}
+
+.form-label { /* Standard label styling if used outside property-edit-item */
   display: block;
   margin-bottom: 5px;
   font-weight: 500;
   color: #333;
 }
 
-.form-input {
+.form-input { /* Base style for inputs/selects */
   width: 100%;
-  padding: 10px 12px;
+  padding: 8px 12px; /* Adjusted padding */
   border: 1px solid #ccc;
   border-radius: 4px;
   font-size: 14px;
+  box-sizing: border-box; /* Important for width calculations */
+}
+.form-input:read-only {
+    background-color: #e9ecef;
+    opacity: 0.8;
 }
 
 .form-input:focus {
@@ -73,11 +99,92 @@
   box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
 }
 
+.form-help { /* Help text under inputs */
+    font-size: 0.75rem;
+    color: #6c757d;
+    margin-top: 4px;
+    display: block;
+}
+
+.property-edit-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center; /* Vertically center content of both columns */
+  margin-bottom: 12px; /* Space between property items */
+  padding: 8px 0; /* Padding within the item */
+  /* border-bottom: 1px solid #f0f0f0; /* Optional: separator between items */
+}
+/* .property-edit-item:last-child {
+  border-bottom: none;
+} */
+
+
+.property-details-column {
+  flex: 0 0 55%; /* Adjust flex-basis as needed for left column width */
+  display: flex;
+  flex-direction: column;
+  padding-right: 15px; /* Space between left column and value column */
+}
+
+.property-display-name {
+  display: flex; /* To align text and icon */
+  align-items: center; /* Vertically align text and icon */
+  font-weight: 500;   /* Standard label weight */
+  color: #333;         /* Standard label color */
+  font-size: 14px;      /* Standard label font size */
+  margin-bottom: 3px;
+}
+
+.property-display-name span:first-child { /* The text part */
+  margin-right: 5px;
+}
+
+.info-icon {
+  font-family: "Segoe UI Symbol", Symbola, Meiryo, " टाइम्स न्यू रोमन", "Apple Color Emoji", "Segoe UI Emoji"; /* Ensure good unicode coverage, added Times New Roman as a fallback */
+  margin-left: 8px; /* Adjusted margin for better spacing */
+  cursor: help;
+  color: #007bff;   /* Blue info icon color */
+  font-size: 1em;  /* Adjust font size as needed for the character's appearance */
+  /* border: 1px solid #007bff; */  /* REMOVED CSS border */
+  /* border-radius: 50%; */        /* REMOVED CSS border-radius */
+  
+  /* Using inline-flex to help with alignment if needed, but character should mostly self-align */
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1; /* Helps ensure character is vertically centered if font has unusual metrics */
+  /* width: auto; */ /* Let the character define its own width, or set if specific size desired */
+  /* height: auto; */
+  vertical-align: middle; /* Align with adjacent text */
+}
+.info-icon:hover {
+  /* background-color: #e7f3ff; */ /* Keep hover effect if desired, or remove if too much with just character */
+  opacity: 0.8; /* Simple hover effect */
+}
+
+.property-yarn-name {
+  font-size: 0.75rem; /* Smaller font for the YARN property name */
+  color: #6c757d;     /* Grayish color */
+  font-family: "SF Mono", "Monaco", "Consolas", monospace; /* Monospace for property name */
+  word-break: break-all; /* Allow long property names to wrap */
+}
+
+.property-value-column {
+  flex: 0 0 40%; /* Adjust flex-basis for right column width */
+  display: flex;
+  justify-content: flex-end; /* Align input to the right of this column */
+}
+
+.property-value-column .form-input { /* Style for inputs/selects in this column */
+  width: 100%; /* Make input take full width of its column */
+  max-width: 250px; /* Optional: max width for very wide modals */
+}
+
 .modal-actions {
   display: flex;
   gap: 10px;
   justify-content: flex-end;
-  margin-top: 30px;
+  margin-top: 25px; /* Increased space before actions */
   padding-top: 20px;
   border-top: 1px solid #e0e0e0;
 }

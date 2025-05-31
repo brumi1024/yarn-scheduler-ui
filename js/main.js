@@ -63,6 +63,79 @@ const GLOBAL_CONFIG_CATEGORIES = [
     // Add other groups and their properties
 ];
 
+let liveRawSchedulerConf = null; // To store fetched scheduler-conf data for queues
+const Q_PATH_PLACEHOLDER = '<queue_path>';
+
+const QUEUE_CONFIG_CATEGORIES = [
+    {
+        groupName: 'Core Properties',
+        properties: {
+            // Capacity Mode selector in the modal will drive the input for 'capacity'.
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.capacity`]: {
+                displayName: 'Capacity',
+                description: 'Guaranteed resource capacity (e.g., "10%", "2w", "[memory=2048,vcores=2]"). Format depends on selected Capacity Mode.',
+                type: 'string', // Actual input type handled by modal logic based on Capacity Mode
+                defaultValue: '10%' 
+            },
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-capacity`]: {
+                displayName: 'Maximum Capacity',
+                description: 'Maximum resource capacity the queue can use (e.g., "100%", "[memory=4096,vcores=4]").',
+                type: 'string', // Actual input type handled by modal logic
+                defaultValue: '100%'
+            },
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.state`]: {
+                displayName: 'State',
+                description: 'Operational state of the queue.',
+                type: 'enum',
+                options: ['RUNNING', 'STOPPED'],
+                defaultValue: 'RUNNING'
+            }
+        }
+    },
+    {
+        groupName: 'Resource Limits & Management',
+        properties: {
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.user-limit-factor`]: {
+                displayName: 'User Limit Factor',
+                description: 'Multiplier for per-user resource limits within this queue.',
+                type: 'number',
+                step: '0.1', // Suggests a numeric input with steps
+                defaultValue: '1'
+            },
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-am-resource-percent`]: {
+                displayName: 'Max AM Resource Percent',
+                description: 'Maximum percentage of this queue\'s resources for Application Masters (e.g., 0.1 for 10%).',
+                type: 'percentage', // Input type number, step 0.01, min 0, max 1
+                defaultValue: '0.1'
+            },
+             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.max-parallel-apps`]: { // Example of another common property
+                displayName: 'Maximum Parallel Apps',
+                description: 'Maximum number of applications that can run concurrently in this queue.',
+                type: 'number',
+                defaultValue: '' // YARN often has a large internal default, empty means "use YARN default"
+            }
+        }
+    },
+    {
+        groupName: 'Advanced Settings',
+        properties: {
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.ordering-policy`]: {
+                displayName: 'Ordering Policy',
+                description: 'Policy for ordering applications (e.g., fifo, fair, utilization).',
+                type: 'enum',
+                options: ['fifo', 'fair', 'utilization'],
+                defaultValue: 'fifo' 
+            },
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.disable_preemption`]: { // Example boolean
+                displayName: 'Disable Preemption',
+                description: 'Whether preemption is disabled for this queue.',
+                type: 'boolean',
+                defaultValue: 'false'
+            }
+        }
+    }
+];
+
 // Create global API instance
 const api = new YarnSchedulerAPI(window.location.origin || '', true);
 
@@ -311,26 +384,27 @@ async function saveGlobalSchedulerSettings() {
 }
 
 function refreshQueues() {
-    const totalChanges = pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
+    const totalQueueChanges = pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
     const activeTabId = document.querySelector('.nav-tab.active')?.getAttribute('data-tab');
 
-    if (activeTabId === 'queue-config-content' && totalChanges > 0) {
-        if (!confirm('You have pending queue changes. Refreshing will discard them. Continue?')) {
-            return;
+    let confirmDiscard = true;
+
+    if (activeTabId === 'queue-config-content' && totalQueueChanges > 0) {
+        confirmDiscard = confirm('You have pending queue changes. Refreshing will discard them. Continue?');
+        if (confirmDiscard) {
+            pendingChanges.clear();
+            pendingAdditions.clear();
+            pendingDeletions.clear();
+            if (typeof updateBatchControls === "function") updateBatchControls();
         }
-        pendingChanges.clear();
-        pendingAdditions.clear();
-        pendingDeletions.clear();
-        updateBatchControls();
-    }
-    
-    if (isGlobalConfigEditMode && activeTabId === 'scheduler-config-content') {
-         if (!confirm('You are in edit mode for global settings. Refreshing will discard unsaved changes. Continue?')) {
-            return;
-        }
+    } else if (isGlobalConfigEditMode && activeTabId === 'scheduler-config-content') {
+         confirmDiscard = confirm('You are in edit mode for global settings. Refreshing will discard unsaved changes. Continue?');
     }
 
+    if (!confirmDiscard) return;
+
     if (activeTabId === 'queue-config-content') {
+        liveRawSchedulerConf = null; // Clear cache for queue specific raw configs
         api.loadSchedulerConfiguration();
     } else if (activeTabId === 'scheduler-config-content') {
         globalSchedulerSettings = null; 
