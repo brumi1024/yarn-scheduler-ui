@@ -14,10 +14,16 @@ function parseSchedulerConfig(conf) {
   const map = new Map()
   Object.values(conf.data.property).forEach(
       v => map.set(v.name.replace("yarn.scheduler.capacity.", ""), v.value))
+  function safeGet(key, map) {
+    if (!map.has(key)) {
+      throw new Error(`Missing config for path: ${key}`);
+    }
+    return map.get(key)
+  }
   return {
     map: map,
-    capacity: path => map.get(path+".capacity"),
-    maxCapacity: path => map.get(path+".max-capacity"),
+    capacity: path => safeGet(path+".capacity", map),
+    maxCapacity: path => safeGet(path+".maximum-capacity", map),
     detectMode: value => {
       if (!isNaN(Number(value))) {
         return CAPACITY_MODES.PERCENTAGE

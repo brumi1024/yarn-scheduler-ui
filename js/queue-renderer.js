@@ -225,29 +225,7 @@ function createQueueCard(queue, level) {
   // --- Capacity Section ---
   const capacitySection = document.createElement("div");
   capacitySection.className = "queue-capacity-section";
-
-  const mode =
-    pendingChange?.capacityMode || queue.capacityMode || "percentage";
-  const displayCapacity = pendingChange?.capacity || queue.capacity;
-  const maxCapacity = pendingChange?.maxCapacity || queue.maxCapacity;
-
-  // TODO cleanup where the capacity comes from
-  // Get the correct weight value - prioritize pending changes
-  let weightValue;
-  if (mode === "weight") {
-    // For weight mode, the weight value could be in different places depending on the change state
-    weightValue =
-      pendingChange?.capacity ||
-      queue.weight ||
-      queue.capacity;
-  } else {
-    weightValue = pendingChange?.weight || queue.weight;
-  }
-
-  capacitySection.innerHTML = createCapacityDisplay(
-    formatCapacityDisplay(displayCapacity, mode, weightValue),
-    maxCapacity
-  );
+  capacitySection.innerHTML = displayCapacity(queue.path) + displayMaxCapacity(queue.path)
 
   // Assemble the card
   card.appendChild(titleBar);
@@ -256,6 +234,49 @@ function createQueueCard(queue, level) {
   card.appendChild(capacitySection);
 
   return card;
+}
+
+function displayCapacity(queuePath) {
+  const value = window.schedulerConfig.capacity(queuePath)
+  const mode = window.schedulerConfig.detectMode(value)
+  const displayValue = window.schedulerConfig.display(mode, value)
+  if (mode === CAPACITY_MODES.PERCENTAGE || mode === CAPACITY_MODES.WEIGHT) {
+    return oneRowDisplay("Capacity", displayValue)
+  } else {
+    return multyRowDisplay("Capacity", displayValue)
+  }
+}
+
+function displayMaxCapacity(queuePath) {
+  const value = window.schedulerConfig.maxCapacity(queuePath)
+  const mode = window.schedulerConfig.detectMode(value)
+  const displayValue = window.schedulerConfig.display(mode, value)
+  if (mode === CAPACITY_MODES.PERCENTAGE || mode === CAPACITY_MODES.WEIGHT) {
+    return oneRowDisplay("Max Capacity", displayValue)
+  } else {
+    return multyRowDisplay("Max Capacity", displayValue)
+  }
+}
+
+function oneRowDisplay(label, displayValue) {
+  return `<div class="capacity-section">
+    <div class="capacity-section-title">${label}:</div>
+    <div class="resource-raw">${displayValue}</div>
+  </div>`
+}
+
+function multyRowDisplay(label, displayValue) {
+  let html = '<div class="capacity-section">';
+  html += '<div class="capacity-section-title">' + label + ':</div>';
+  html += '<div class="resource-list">';
+  displayValue.forEach(element => {
+    html += `<div class="resource-item">
+                <span class="resource-key">${element[0]}:</span>
+                <span class="resource-value">${element[1]}</span>
+            </div>`;
+  })
+  html += "</div></div>";
+  return html
 }
 
 function createQueueLabels(queue, pendingChange) {
@@ -304,90 +325,6 @@ function createQueueLabels(queue, pendingChange) {
   }
 
   return labels.join("");
-}
-
-// Add this helper function before createQueueCard
-function formatCapacityDisplay(capacity, mode, weight) {
-  switch (mode) {
-    case "percentage":
-      return `${parseFloat(capacity || 0).toFixed(1)}%`;
-    case "weight":
-      return `${parseFloat(weight || capacity || 0)}w`;
-    case "absolute":
-    case "vector":
-      return capacity; // Keep original format for processing
-    default:
-      return capacity || "0";
-  }
-}
-
-// New function to handle absolute/vector capacity display
-function createCapacityDisplay(capacity, maxCapacity) {
-  const parseAbsoluteCapacity = (capStr) => {
-    if (!capStr) return [];
-
-    // Remove brackets if present
-    let cleanStr = capStr.toString().trim();
-
-    if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
-      cleanStr = cleanStr.slice(1, -1);
-    }
-
-    // Split by comma and parse key=value pairs
-    return cleanStr
-      .split(",")
-      .map((pair) => {
-        const [key, value] = pair.split("=").map((s) => s.trim());
-        return { key, value };
-      })
-      .filter((item) => item.key && item.value);
-  };
-
-  const currentResources = parseAbsoluteCapacity(capacity);
-  const maxResources = parseAbsoluteCapacity(maxCapacity);
-
-  let html = '<div class="absolute-capacity-display">';
-
-  // Current capacity section
-  if (currentResources.length > 0) {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Capacity:</div>';
-    html += '<div class="resource-list">';
-    currentResources.forEach((resource) => {
-      html += `<div class="resource-item">
-                <span class="resource-key">${resource.key}:</span>
-                <span class="resource-value">${resource.value}</span>
-            </div>`;
-    });
-    html += "</div></div>";
-  } else {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Capacity:</div>';
-    html += '<div class="resource-raw">' + (capacity || "N/A") + "</div>";
-    html += "</div>";
-  }
-
-  // Max capacity section
-  if (maxResources.length > 0) {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Max Capacity:</div>';
-    html += '<div class="resource-list">';
-    maxResources.forEach((resource) => {
-      html += `<div class="resource-item">
-                <span class="resource-key">${resource.key}:</span>
-                <span class="resource-value">${resource.value}</span>
-            </div>`;
-    });
-    html += "</div></div>";
-  } else {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Max Capacity:</div>';
-    html += '<div class="resource-raw">' + (maxCapacity || "N/A") + "</div>";
-    html += "</div>";
-  }
-
-  html += "</div>";
-  return html;
 }
 
 function renderQueueTree() {
