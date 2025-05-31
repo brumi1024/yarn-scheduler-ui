@@ -2,9 +2,6 @@
 let queueData = null;
 let availablePartitions = [''];
 let currentPartition = '';
-let pendingChanges = new Map();
-let pendingAdditions = new Map();
-let pendingDeletions = new Set();
 let currentEditQueue = null;
 let queueElements = new Map();
 let currentSearchTerm = '';
@@ -26,14 +23,11 @@ window.addEventListener('DOMContentLoaded', function() {
 
 // Global functions for HTML onclick handlers
 function refreshQueues() {
-    const totalChanges = pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
-    if (totalChanges > 0) {
+    if (0 < pendingChanges.size()) {
         if (!confirm('You have pending changes. Refreshing will discard them. Continue?')) {
             return;
         }
         pendingChanges.clear();
-        pendingAdditions.clear();
-        pendingDeletions.clear();
     }
 
     api.loadSchedulerConfiguration();
@@ -42,8 +36,6 @@ function refreshQueues() {
 function discardChanges() {
     if (confirm('Are you sure you want to discard all pending changes?')) {
         pendingChanges.clear();
-        pendingAdditions.clear();
-        pendingDeletions.clear();
         renderQueueTree();
     }
 }

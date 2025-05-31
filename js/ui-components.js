@@ -33,17 +33,10 @@ function showContent(show = true) {
 }
 
 function showError(message, duration = 8000) {
-  console.error(message);
   // Hide loading first
   hideLoading();
 
-  // Show content if there are staged changes
-  const hasChanges =
-    (window.pendingChanges && window.pendingChanges.size > 0) ||
-    (window.pendingAdditions && window.pendingAdditions.size > 0) ||
-    (window.pendingDeletions && window.pendingDeletions.size > 0);
-
-  if (hasChanges) {
+  if (0 < pendingChanges.size()) {
     showContent(true);
   }
 
@@ -136,19 +129,16 @@ function updateBatchControls() {
   const batchValidation = document.getElementById("batch-validation");
   const applyBtn = document.getElementById("apply-changes-btn");
 
-  const changeCount =
-    pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
-
-  if (changeCount > 0) {
+  if (0 < pendingChanges.size()) {
     batchControls.classList.add("show");
 
     let infoText = [];
-    if (pendingChanges.size > 0)
-      infoText.push(`${pendingChanges.size} modified`);
-    if (pendingAdditions.size > 0)
-      infoText.push(`${pendingAdditions.size} added`);
-    if (pendingDeletions.size > 0)
-      infoText.push(`${pendingDeletions.size} deleted`);
+    if (0 < pendingChanges.count(UPDATE))
+      infoText.push(`${pendingChanges.count(UPDATE)} modified`);
+    if (0 < pendingChanges.count(ADD))
+      infoText.push(`${pendingChanges.count(ADD)} added`);
+    if (0 < pendingChanges.count(DELETE))
+      infoText.push(`${pendingChanges.count(DELETE)} deleted`);
 
     batchInfo.textContent = infoText.join(", ");
 

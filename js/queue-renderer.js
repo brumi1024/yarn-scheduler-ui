@@ -3,14 +3,14 @@ function calculateMaxDepth(queue, currentDepth = 0) {
 
   // Check existing children
   Object.values(queue.children).forEach((child) => {
-    if (!pendingDeletions.has(child.path)) {
+    if (!pendingChanges.checkState(child.path, DELETE)) {
       const childDepth = calculateMaxDepth(child, currentDepth + 1);
       maxDepth = Math.max(maxDepth, childDepth);
     }
   });
 
   // Check pending additions at this level
-  Array.from(pendingAdditions.values()).forEach((newQueue) => {
+  pendingChanges.iter(ADD).forEach((newQueue) => {
     if (newQueue.parentPath === queue.path) {
       const childDepth = calculateMaxDepth(newQueue, currentDepth + 1);
       maxDepth = Math.max(maxDepth, childDepth);
@@ -48,12 +48,12 @@ function queueMatchesSearch(queue, searchTerm) {
 function getAllChildren(queue) {
   // Existing children (from backend)
   const children = Object.values(queue.children).filter(
-    (child) => !pendingDeletions.has(child.path)
+    (child) => !pendingChanges.checkState(child.path, DELETE)
   );
   // Newly staged children (from pendingAdditions)
-  const newChildren = Array.from(pendingAdditions.values()).filter(
+  const newChildren = pendingChanges.iter(ADD).filter(
     (newQueue) =>
-      newQueue.parentPath === queue.path && !pendingDeletions.has(newQueue.path)
+      newQueue.parentPath === queue.path && !pendingChanges.checkState(newQueue.path, DELETE)
   );
   return [...children, ...newChildren];
 }
@@ -136,14 +136,19 @@ function createQueueCard(queue, level) {
   const card = document.createElement("div");
   card.className = "queue-card";
 
-  const pendingChange = pendingChanges.get(queue.path);
-  const isNewQueue = pendingAdditions.has(queue.path);
-  const isToBeDeleted = pendingDeletions.has(queue.path);
+  if (pendingChanges.checkState(queue.path, ADD)) {
+    card.classList.add("new-queue");
+  }
 
-  // Add styling for different states
-  if (isNewQueue) card.classList.add("new-queue");
-  else if (isToBeDeleted) card.classList.add("to-be-deleted");
-  else if (pendingChange) card.classList.add("pending-changes");
+  if (pendingChanges.checkState(queue.path, DELETE)) {
+    card.classList.add("to-be-deleted");
+  }
+
+  if (pendingChanges.checkState(queue.path, UPDATE)) {
+    card.classList.add("pending-changes");
+  }
+
+  pendingChange = pendingChanges.get(queue.path)
 
   // Set data attributes for reference
   card.setAttribute("data-queue-path", queue.path);
@@ -426,53 +431,53 @@ function renderQueueTree() {
   updateBatchControls();
 }
 
-function renderMinimap() {
-  const minimap = document.getElementById("minimap");
-  minimap.innerHTML = "";
-
-  // Show a simplified view of all queues
-  function addToMinimap(queue, depth = 0) {
-    if (pendingDeletions.has(queue.path)) return;
-
-    const queueMini = document.createElement("div");
-    queueMini.className = "minimap-queue";
-
-    let displayCapacity;
-    if (queue.capacityMode === "weight") {
-      displayCapacity = queue.effectiveCapacity || queue.absoluteCapacity || 20;
-    } else {
-      displayCapacity =
-        pendingChanges.get(queue.path)?.capacity || queue.capacity;
-    }
-
-    queueMini.style.height = `${Math.max(displayCapacity * 0.8, 10)}%`;
-    queueMini.style.opacity = Math.max(1 - depth * 0.2, 0.3);
-
-    if (pendingAdditions.has(queue.path)) {
-      queueMini.style.background = "#28a745";
-    } else if (pendingChanges.has(queue.path)) {
-      queueMini.style.background = "#ffc107";
-    }
-
-    minimap.appendChild(queueMini);
-
-    // Add children
-    Object.values(queue.children).forEach((child) => {
-      addToMinimap(child, depth + 1);
-    });
-
-    // Add new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
-      if (newQueue.parentPath === queue.path) {
-        addToMinimap(newQueue, depth + 1);
-      }
-    });
-  }
-
-  if (queueData) {
-    addToMinimap(queueData);
-  }
-}
+// function renderMinimap() {
+//   const minimap = document.getElementById("minimap");
+//   minimap.innerHTML = "";
+//
+//   // Show a simplified view of all queues
+//   function addToMinimap(queue, depth = 0) {
+//     if (pendingDeletions.has(queue.path)) return;
+//
+//     const queueMini = document.createElement("div");
+//     queueMini.className = "minimap-queue";
+//
+//     let displayCapacity;
+//     if (queue.capacityMode === "weight") {
+//       displayCapacity = queue.effectiveCapacity || queue.absoluteCapacity || 20;
+//     } else {
+//       displayCapacity =
+//         pendingChanges.get(queue.path)?.capacity || queue.capacity;
+//     }
+//
+//     queueMini.style.height = `${Math.max(displayCapacity * 0.8, 10)}%`;
+//     queueMini.style.opacity = Math.max(1 - depth * 0.2, 0.3);
+//
+//     if (pendingAdditions.has(queue.path)) {
+//       queueMini.style.background = "#28a745";
+//     } else if (!pendingChanges.checkState(queue.path, undefined)) {
+//       queueMini.style.background = "#ffc107";
+//     }
+//
+//     minimap.appendChild(queueMini);
+//
+//     // Add children
+//     Object.values(queue.children).forEach((child) => {
+//       addToMinimap(child, depth + 1);
+//     });
+//
+//     // Add new children
+//     Array.from(pendingAdditions.values()).forEach((newQueue) => {
+//       if (newQueue.parentPath === queue.path) {
+//         addToMinimap(newQueue, depth + 1);
+//       }
+//     });
+//   }
+//
+//   if (queueData) {
+//     addToMinimap(queueData);
+//   }
+// }
 
 function canQueueBeDeleted(queuePath) {
   if (queuePath === "root") {
@@ -485,7 +490,7 @@ function canQueueBeDeleted(queuePath) {
   }
 
   const hasChildren = Object.keys(queue.children).length > 0;
-  const hasNewChildren = Array.from(pendingAdditions.values()).some(
+  const hasNewChildren = pendingChanges.iter(ADD).some(
     (newQueue) => newQueue.parentPath === queuePath
   );
 
@@ -501,7 +506,7 @@ function canQueueBeDeleted(queuePath) {
   // Check if all existing children are marked for deletion
   const existingChildren = Object.values(queue.children);
   const allChildrenMarkedForDeletion = existingChildren.every((child) =>
-    pendingDeletions.has(child.path)
+    pendingChanges.checkState(child.path, DELETE)
   );
 
   if (allChildrenMarkedForDeletion) {
@@ -509,7 +514,7 @@ function canQueueBeDeleted(queuePath) {
   }
 
   const activeChildren = existingChildren.filter(
-    (child) => !pendingDeletions.has(child.path)
+    (child) => !pendingChanges.checkState(child.path, DELETE)
   );
   return {
     canDelete: false,
