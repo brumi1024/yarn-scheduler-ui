@@ -1,15 +1,14 @@
 function calculateMaxDepth(queue, currentDepth = 0) {
+  if (!queue) return currentDepth; 
   let maxDepth = currentDepth;
 
-  // Check existing children
   Object.values(queue.children).forEach((child) => {
-    if (!pendingDeletions.has(child.path)) {
-      const childDepth = calculateMaxDepth(child, currentDepth + 1);
-      maxDepth = Math.max(maxDepth, childDepth);
-    }
+    const childDepth = calculateMaxDepth(child, currentDepth + 1);
+    maxDepth = Math.max(maxDepth, childDepth);
   });
 
-  // Check pending additions at this level
+  // Pending additions: These are structurally part of the tree.
+  // If a newQueue was marked for deletion, it would have been removed from pendingAdditions.
   Array.from(pendingAdditions.values()).forEach((newQueue) => {
     if (newQueue.parentPath === queue.path) {
       const childDepth = calculateMaxDepth(newQueue, currentDepth + 1);
@@ -22,7 +21,6 @@ function calculateMaxDepth(queue, currentDepth = 0) {
 
 function sortQueues(queues) {
   if (currentSort === "capacity") {
-    // Sort by effectiveCapacity (or fallback to capacity), descending
     return queues.slice().sort((a, b) => {
       const aCap =
         a.effectiveCapacity !== undefined ? a.effectiveCapacity : a.capacity;
@@ -31,7 +29,6 @@ function sortQueues(queues) {
       return (bCap || 0) - (aCap || 0);
     });
   } else if (currentSort === "name") {
-    // Sort by name, ascending
     return queues.slice().sort((a, b) => a.name.localeCompare(b.name));
   }
   return queues;
@@ -46,11 +43,8 @@ function queueMatchesSearch(queue, searchTerm) {
 }
 
 function getAllChildren(queue) {
-  // Existing children (from backend)
-  const children = Object.values(queue.children).filter(
-    (child) => !pendingDeletions.has(child.path)
-  );
-  // Newly staged children (from pendingAdditions)
+  const children = Object.values(queue.children);
+
   const newChildren = Array.from(pendingAdditions.values()).filter(
     (newQueue) =>
       newQueue.parentPath === queue.path && !pendingDeletions.has(newQueue.path)
@@ -58,13 +52,11 @@ function getAllChildren(queue) {
   return [...children, ...newChildren];
 }
 
-// Recursively collect all matching queues and their ancestors for display
 function collectVisibleQueues(queue, searchTerm, ancestors = []) {
   let matches = queueMatchesSearch(queue, searchTerm);
   let visibleDescendants = [];
 
-  // Check children recursively
-  Object.values(getAllChildren(queue)).forEach((child) => {
+  getAllChildren(queue).forEach((child) => {
     const result = collectVisibleQueues(
       child,
       searchTerm,
@@ -75,7 +67,9 @@ function collectVisibleQueues(queue, searchTerm, ancestors = []) {
     }
   });
 
-  // If this queue matches or has any matching descendants, it's visible
+  // A queue is visible if it matches the search, or has visible descendants.
+  // If it's marked for deletion, this visibility rule still applies.
+  // If search is empty, 'matches' is true, so all queues (including deleted ones) become visible.
   let visible = matches || visibleDescendants.length > 0;
 
   return {
@@ -87,13 +81,13 @@ function collectVisibleQueues(queue, searchTerm, ancestors = []) {
   };
 }
 
-// Update getQueuesAtLevel to use the search filter
 function getQueuesAtLevel(
   level,
-  queue = queueData,
+  queue = window.queueData,
   currentLevel = 0,
   searchTerm = currentSearchTerm
 ) {
+  if (!queue) return [];
   let visibleTree = collectVisibleQueues(queue, searchTerm);
   let result = [];
 
@@ -114,7 +108,8 @@ function renderLevelHeaders() {
   const levelHeadersContainer = document.getElementById("level-headers");
   levelHeadersContainer.innerHTML = "";
 
-  const maxDepth = calculateMaxDepth(queueData);
+  if (!window.queueData) return;
+  const maxDepth = calculateMaxDepth(window.queueData);
 
   for (let i = 0; i <= maxDepth; i++) {
     const header = document.createElement("div");
@@ -125,8 +120,7 @@ function renderLevelHeaders() {
 }
 
 function highlightMatch(text, searchTerm) {
-  if (!searchTerm) return text;
-  // Escape special regex characters in searchTerm
+  if (!searchTerm || !text) return text || "";
   const safeTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
   const re = new RegExp(safeTerm, "ig");
   return text.replace(re, (match) => `<mark>${match}</mark>`);
@@ -140,20 +134,20 @@ function createQueueCard(queue, level) {
   const isNewQueue = pendingAdditions.has(queue.path);
   const isToBeDeleted = pendingDeletions.has(queue.path);
 
-  // Add styling for different states
-  if (isNewQueue) card.classList.add("new-queue");
-  else if (isToBeDeleted) card.classList.add("to-be-deleted");
-  else if (pendingChange) card.classList.add("pending-changes");
+  if (isNewQueue && !isToBeDeleted) {
+    card.classList.add("new-queue");
+  } else if (isToBeDeleted) {
+    card.classList.add("to-be-deleted");
+  } else if (pendingChange) {
+    card.classList.add("pending-changes");
+  }
 
-  // Set data attributes for reference
   card.setAttribute("data-queue-path", queue.path);
   card.setAttribute("data-level", level);
 
-  // --- Title Bar ---
   const titleBar = document.createElement("div");
   titleBar.className = "queue-header";
 
-  // Queue name (clickable for edit)
   const nameEl = document.createElement("span");
   nameEl.className = "queue-name";
   nameEl.innerHTML = highlightMatch(queue.name, currentSearchTerm);
@@ -163,7 +157,6 @@ function createQueueCard(queue, level) {
     openEditModal(findQueueByPath(queue.path));
   };
 
-  // Info button - moved to right side with submenu styling
   const infoBtn = document.createElement("button");
   infoBtn.className = "queue-info-btn";
   infoBtn.innerHTML = `
@@ -180,11 +173,33 @@ function createQueueCard(queue, level) {
     openInfoModal(findQueueByPath(queue.path));
   };
 
-  // Actions menu
   const actionsMenu = document.createElement("span");
   actionsMenu.className = "queue-actions-menu";
 
   const deletionStatus = canQueueBeDeleted(queue.path);
+  let deleteButtonHTML = "";
+  if (queue.path !== "root") {
+    if (isToBeDeleted) {
+      deleteButtonHTML = `<div class="dropdown-item disabled" title="Marked for deletion.">Marked for Deletion</div>`;
+    } else {
+      deleteButtonHTML = `<div class="dropdown-item ${
+        deletionStatus.canDelete ? "" : "disabled"
+      }" 
+            onclick="${
+              deletionStatus.canDelete
+                ? `markQueueForDeletion('${queue.path}')`
+                : ""
+            }"
+            title="${
+              deletionStatus.canDelete
+                ? "Delete this queue"
+                : deletionStatus.reason
+            }">
+            Delete Queue
+          </div>`;
+    }
+  }
+
   actionsMenu.innerHTML = `
     <button class="queue-menu-btn" aria-label="Queue actions" tabindex="0" onclick="toggleQueueDropdown(event, '${queue.path}')">
       <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -196,15 +211,10 @@ function createQueueCard(queue, level) {
     <div class="queue-dropdown" id="dropdown-${queue.path}">
       <div class="dropdown-item" onclick="openEditModal(findQueueByPath('${queue.path}'))">Edit Queue</div>
       <div class="dropdown-item" onclick="openAddQueueModalWithParent('${queue.path}')">Add Child Queue</div>
-      ${queue.path !== "root" ? `<div class="dropdown-item ${deletionStatus.canDelete ? "" : "disabled"}" 
-        onclick="${deletionStatus.canDelete ? `markQueueForDeletion('${queue.path}')` : ""}"
-        title="${deletionStatus.canDelete ? "Delete this queue" : deletionStatus.reason}">
-        Delete Queue ${deletionStatus.canDelete ? "" : "(disabled)"}
-      </div>` : ""}
+      ${deleteButtonHTML}
     </div>
   `;
 
-  // Create a wrapper for the buttons on the right
   const buttonGroup = document.createElement("div");
   buttonGroup.className = "queue-button-group";
   buttonGroup.appendChild(infoBtn);
@@ -213,43 +223,37 @@ function createQueueCard(queue, level) {
   titleBar.appendChild(nameEl);
   titleBar.appendChild(buttonGroup);
 
-  // --- Divider ---
   const divider = document.createElement("hr");
   divider.className = "queue-card-divider";
 
-  // --- Label Area ---
   const labelArea = document.createElement("div");
   labelArea.className = "queue-label-area";
   labelArea.innerHTML = createQueueLabels(queue, pendingChange);
 
-  // --- Capacity Section ---
   const capacitySection = document.createElement("div");
   capacitySection.className = "queue-capacity-section";
 
   const mode =
     pendingChange?.capacityMode || queue.capacityMode || "percentage";
-  const displayCapacity = pendingChange?.capacity || queue.capacity;
-  const maxCapacity = pendingChange?.maxCapacity || queue.maxCapacity;
-
-  // TODO cleanup where the capacity comes from
-  // Get the correct weight value - prioritize pending changes
-  let weightValue;
-  if (mode === "weight") {
-    // For weight mode, the weight value could be in different places depending on the change state
-    weightValue =
-      pendingChange?.capacity ||
-      queue.weight ||
-      queue.capacity;
-  } else {
-    weightValue = pendingChange?.weight || queue.weight;
-  }
+  const displayCapacity =
+    pendingChange?.capacity !== undefined
+      ? pendingChange.capacity
+      : queue.capacity;
+  const maxCapacity =
+    pendingChange?.maxCapacity !== undefined
+      ? pendingChange.maxCapacity
+      : queue.maxCapacity;
+  let weightValue =
+    mode === "weight"
+      ? pendingChange?.capacity || queue.weight || queue.capacity
+      : pendingChange?.weight || queue.weight;
 
   capacitySection.innerHTML = createCapacityDisplay(
     formatCapacityDisplay(displayCapacity, mode, weightValue),
-    maxCapacity
+    maxCapacity,
+    mode
   );
 
-  // Assemble the card
   card.appendChild(titleBar);
   card.appendChild(divider);
   card.appendChild(labelArea);
@@ -260,16 +264,14 @@ function createQueueCard(queue, level) {
 
 function createQueueLabels(queue, pendingChange) {
   const labels = [];
-
-  // Get current values (pending changes override original values)
   const mode =
     pendingChange?.capacityMode || queue.capacityMode || "percentage";
   const state = pendingChange?.state || queue.state || "RUNNING";
-  const autoCreation =
+  const autoCreationEnabled =
+    queue.autoCreateChildQueueEnabled === true ||
     queue.autoCreationEligibility === "on" ||
     queue.autoCreationEligibility === "enabled";
 
-  // Capacity Mode Tag
   const modeIcons = {
     percentage: "📊",
     weight: "⚖️",
@@ -277,7 +279,6 @@ function createQueueLabels(queue, pendingChange) {
     vector: "📐",
     flexible: "🔄",
   };
-
   const modeIcon = modeIcons[mode] || "📊";
   labels.push(
     `<span class="queue-tag tag-mode" title="Capacity Mode: ${mode}">${modeIcon} ${
@@ -285,7 +286,6 @@ function createQueueLabels(queue, pendingChange) {
     }</span>`
   );
 
-  // State Tag
   if (state === "STOPPED") {
     labels.push(
       `<span class="queue-tag tag-state tag-stopped" title="Queue State: Stopped">🛑 Stopped</span>`
@@ -296,111 +296,110 @@ function createQueueLabels(queue, pendingChange) {
     );
   }
 
-  // Auto-Creation Tag
-  if (autoCreation) {
+  if (autoCreationEnabled) {
     labels.push(
       `<span class="queue-tag tag-auto-create" title="Auto Queue Creation Enabled">⚡ Auto-Create</span>`
     );
   }
-
   return labels.join("");
 }
 
-// Add this helper function before createQueueCard
 function formatCapacityDisplay(capacity, mode, weight) {
   switch (mode) {
     case "percentage":
       return `${parseFloat(capacity || 0).toFixed(1)}%`;
     case "weight":
-      return `${parseFloat(weight || capacity || 0)}w`;
+      const weightStr = String(weight || capacity || 0);
+      return weightStr.endsWith("w")
+        ? weightStr
+        : `${parseFloat(weightStr).toFixed(1)}w`;
     case "absolute":
     case "vector":
-      return capacity; // Keep original format for processing
+      return capacity;
     default:
-      return capacity || "0";
+      return String(capacity || "0");
   }
 }
 
-// New function to handle absolute/vector capacity display
-function createCapacityDisplay(capacity, maxCapacity) {
-  const parseAbsoluteCapacity = (capStr) => {
-    if (!capStr) return [];
-
-    // Remove brackets if present
-    let cleanStr = capStr.toString().trim();
-
+function createCapacityDisplay(capacityStr, maxCapacityStr, mode) {
+  const parseResources = (resStr) => {
+    if (!resStr || typeof resStr !== "string") return null;
+    let cleanStr = resStr.trim();
     if (cleanStr.startsWith("[") && cleanStr.endsWith("]")) {
       cleanStr = cleanStr.slice(1, -1);
     }
+    if (!cleanStr) return null;
 
-    // Split by comma and parse key=value pairs
     return cleanStr
       .split(",")
       .map((pair) => {
         const [key, value] = pair.split("=").map((s) => s.trim());
-        return { key, value };
+        return { key, value: value || "" };
       })
-      .filter((item) => item.key && item.value);
+      .filter((item) => item.key);
   };
 
-  const currentResources = parseAbsoluteCapacity(capacity);
-  const maxResources = parseAbsoluteCapacity(maxCapacity);
+  let html = "";
+  if (mode === "absolute" || mode === "vector") {
+    html += '<div class="absolute-capacity-display">';
+    const currentResources = parseResources(capacityStr);
+    html +=
+      '<div class="capacity-section"><div class="capacity-section-title">Capacity:</div>';
+    if (currentResources && currentResources.length > 0) {
+      html += '<div class="resource-list">';
+      currentResources.forEach((r) => {
+        html += `<div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}</span></div>`;
+      });
+      html += "</div>";
+    } else {
+      html += `<div class="resource-raw">${capacityStr || "N/A"}</div>`;
+    }
+    html += "</div>";
 
-  let html = '<div class="absolute-capacity-display">';
-
-  // Current capacity section
-  if (currentResources.length > 0) {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Capacity:</div>';
-    html += '<div class="resource-list">';
-    currentResources.forEach((resource) => {
-      html += `<div class="resource-item">
-                <span class="resource-key">${resource.key}:</span>
-                <span class="resource-value">${resource.value}</span>
-            </div>`;
-    });
+    const maxResources = parseResources(maxCapacityStr);
+    html +=
+      '<div class="capacity-section"><div class="capacity-section-title">Max Capacity:</div>';
+    if (maxResources && maxResources.length > 0) {
+      html += '<div class="resource-list">';
+      maxResources.forEach((r) => {
+        html += `<div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}</span></div>`;
+      });
+      html += "</div>";
+    } else {
+      const maxCapDisplay =
+        maxCapacityStr && !String(maxCapacityStr).startsWith("[")
+          ? `${parseFloat(maxCapacityStr).toFixed(1)}%`
+          : maxCapacityStr || "N/A";
+      html += `<div class="resource-raw">${maxCapDisplay}</div>`;
+    }
     html += "</div></div>";
   } else {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Capacity:</div>';
-    html += '<div class="resource-raw">' + (capacity || "N/A") + "</div>";
+    html += '<div class="capacity-display">';
+    html += `<div class="capacity-row"><span class="capacity-label">Capacity:</span><span class="capacity-value">${
+      capacityStr || "N/A"
+    }</span></div>`;
+    if (maxCapacityStr !== undefined && maxCapacityStr !== null) {
+      html += `<div class="capacity-row"><span class="capacity-label">Max Capacity:</span><span class="capacity-value">${parseFloat(
+        maxCapacityStr
+      ).toFixed(1)}%</span></div>`;
+    }
     html += "</div>";
   }
-
-  // Max capacity section
-  if (maxResources.length > 0) {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Max Capacity:</div>';
-    html += '<div class="resource-list">';
-    maxResources.forEach((resource) => {
-      html += `<div class="resource-item">
-                <span class="resource-key">${resource.key}:</span>
-                <span class="resource-value">${resource.value}</span>
-            </div>`;
-    });
-    html += "</div></div>";
-  } else {
-    html += '<div class="capacity-section">';
-    html += '<div class="capacity-section-title">Max Capacity:</div>';
-    html += '<div class="resource-raw">' + (maxCapacity || "N/A") + "</div>";
-    html += "</div>";
-  }
-
-  html += "</div>";
   return html;
 }
 
 function renderQueueTree() {
-  console.log("renderQueueTree called, queueData:", queueData);
-  if (!queueData) return;
+  if (!window.queueData) {
+    console.warn("renderQueueTree called but queueData is not available.");
+    return;
+  }
 
   const treeContainer = document.getElementById("queue-tree");
   treeContainer.innerHTML = "";
   queueElements.clear();
 
-  const maxDepth = calculateMaxDepth(queueData);
+  const maxDepth = calculateMaxDepth(window.queueData);
 
-  // Create columns for each level with consistent width
   for (let level = 0; level <= maxDepth; level++) {
     const column = document.createElement("div");
     column.className = "queue-column";
@@ -416,21 +415,19 @@ function renderQueueTree() {
     treeContainer.appendChild(column);
   }
 
-  // Draw arrows after elements are positioned
   setTimeout(() => {
-    drawArrows();
+    if (typeof drawArrows === "function") drawArrows();
   }, CONFIG.TIMEOUTS.ARROW_RENDER);
 
   renderLevelHeaders();
-  // renderMinimap();
-  updateBatchControls();
+  if (typeof updateBatchControls === "function") updateBatchControls();
 }
 
 function renderMinimap() {
   const minimap = document.getElementById("minimap");
+  if (!minimap) return;
   minimap.innerHTML = "";
 
-  // Show a simplified view of all queues
   function addToMinimap(queue, depth = 0) {
     if (pendingDeletions.has(queue.path)) return;
 
@@ -445,8 +442,11 @@ function renderMinimap() {
         pendingChanges.get(queue.path)?.capacity || queue.capacity;
     }
 
-    queueMini.style.height = `${Math.max(displayCapacity * 0.8, 10)}%`;
-    queueMini.style.opacity = Math.max(1 - depth * 0.2, 0.3);
+    queueMini.style.height = `${Math.max(
+      parseFloat(displayCapacity) * 0.8,
+      10
+    )}%`;
+    queueMini.style.opacity = String(Math.max(1 - depth * 0.2, 0.3));
 
     if (pendingAdditions.has(queue.path)) {
       queueMini.style.background = "#28a745";
@@ -456,70 +456,48 @@ function renderMinimap() {
 
     minimap.appendChild(queueMini);
 
-    // Add children
-    Object.values(queue.children).forEach((child) => {
-      addToMinimap(child, depth + 1);
-    });
-
-    // Add new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
-      if (newQueue.parentPath === queue.path) {
-        addToMinimap(newQueue, depth + 1);
-      }
-    });
+    getAllChildren(queue).forEach((child) => addToMinimap(child, depth + 1));
   }
 
-  if (queueData) {
-    addToMinimap(queueData);
+  if (window.queueData) {
+    addToMinimap(window.queueData);
   }
 }
 
 function canQueueBeDeleted(queuePath) {
   if (queuePath === "root") {
-    return { canDelete: false, reason: "Cannot delete root queue" };
+    return { canDelete: false, reason: "Cannot delete root queue." };
   }
 
   const queue = findQueueByPath(queuePath);
   if (!queue) {
-    return { canDelete: false, reason: "Queue not found" };
+    console.warn("canQueueBeDeleted: Queue not found for path", queuePath);
+    return { canDelete: false, reason: "Queue not found." };
   }
 
-  const hasChildren = Object.keys(queue.children).length > 0;
-  const hasNewChildren = Array.from(pendingAdditions.values()).some(
-    (newQueue) => newQueue.parentPath === queuePath
-  );
-
-  if (!hasChildren && !hasNewChildren) {
-    return { canDelete: true, reason: "No children" };
-  }
-
-  // Check if there are new children
-  if (hasNewChildren) {
-    return { canDelete: false, reason: "Has pending new child queues" };
-  }
-
-  // Check if all existing children are marked for deletion
-  const existingChildren = Object.values(queue.children);
-  const allChildrenMarkedForDeletion = existingChildren.every((child) =>
-    pendingDeletions.has(child.path)
-  );
-
-  if (allChildrenMarkedForDeletion) {
-    return { canDelete: true, reason: "All children marked for deletion" };
-  }
-
-  const activeChildren = existingChildren.filter(
+  const activeExistingChildren = Object.values(queue.children).filter(
     (child) => !pendingDeletions.has(child.path)
   );
-  return {
-    canDelete: false,
-    reason: `Has active child queues: ${activeChildren
+
+  const activeNewChildren = Array.from(pendingAdditions.values()).filter(
+    (newQueue) =>
+      newQueue.parentPath === queuePath && !pendingDeletions.has(newQueue.path)
+  );
+
+  if (activeExistingChildren.length > 0 || activeNewChildren.length > 0) {
+    const activeChildrenNames = [
+      ...activeExistingChildren,
+      ...activeNewChildren,
+    ]
       .map((c) => c.name)
-      .join(", ")}`,
-  };
+      .join(", ");
+    return {
+      canDelete: false,
+      reason: `Cannot delete: has active child queues (${activeChildrenNames}).`,
+    };
+  }
+
+  return { canDelete: true, reason: "" };
 }
 
 window.renderQueueTree = renderQueueTree;
-window.createQueueCard = createQueueCard;
-window.calculateMaxDepth = calculateMaxDepth;
-window.getQueuesAtLevel = getQueuesAtLevel;

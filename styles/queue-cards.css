@@ -87,7 +87,7 @@
 }
 .queue-card.validation-error {
   border-left: 4px solid #dc3545;
-  background: #fbf3f3;
+  background: #fbf3f3; /* This is also used by to-be-deleted, good for consistency */
 }
 .queue-card.new-queue {
   border-left: 4px solid #28a745;
@@ -95,8 +95,8 @@
 }
 .queue-card.to-be-deleted {
   border-left: 4px solid #dc3545;
-  background: #fbf3f3;
-  opacity: 0.75;
+  background: #fbf3f3; /* Light red tint */
+  /* opacity: 0.75; */ /* Removed opacity to make it more like new-queue styling */
 }
 
 /* Updated header layout */
