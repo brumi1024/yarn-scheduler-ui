@@ -230,7 +230,7 @@ function initializeEventHandlers() {
   
   // Modal outside click listeners
   const editModal = document.getElementById("edit-modal");
-  if (editModal && typeof closeModal === 'function') { // closeModal is now effectively closeEditModal from modal-helpers.js
+  if (editModal && typeof closeEditModal === 'function') {
     editModal.addEventListener("click", function (e) { if (e.target === this) closeModal(); });
   }
 
