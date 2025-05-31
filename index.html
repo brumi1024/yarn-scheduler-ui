@@ -79,17 +79,23 @@
       </div>
 
       <div id="scheduler-config-content" class="tab-pane" style="display: none;">
-        <div class="controls"> <div class="tab-title-header">Global Scheduler Settings</div>
+        <div class="controls"> 
+          <div class="tab-title-header">Global Scheduler Settings</div>
+          <div id="global-config-actions" style="margin-left: auto; display: flex; gap: 10px;">
+            <button class="btn btn-secondary" id="edit-global-config-btn" onclick="toggleGlobalConfigEditMode(true)">Edit Settings</button>
+            <button class="btn btn-success" id="save-global-config-btn" onclick="saveGlobalSchedulerSettings()" style="display:none;">Save Changes</button>
+            <button class="btn btn-secondary" id="cancel-global-config-btn" onclick="toggleGlobalConfigEditMode(false)" style="display:none;">Cancel</button>
+          </div>
         </div>
         <div id="global-scheduler-settings-container" style="padding: 20px;">
-          <p>This section will display global scheduler configurations that are not specific to any queue.</p>
+           <p>This section will display global scheduler configurations that are not specific to any queue.</p>
         </div>
       </div>
 
       <div id="placement-rules-content" class="tab-pane" style="display: none;">
         <div class="controls">
           <div class="tab-title-header">Placement Rules</div>
-        </div>
+           </div>
         <div style="padding: 20px;">
             <p>Placement rules configuration will be displayed here. (Not yet implemented)</p>
         </div>
@@ -98,7 +104,7 @@
       <div id="node-labels-content" class="tab-pane" style="display: none;">
          <div class="controls">
           <div class="tab-title-header">Node Labels</div>
-        </div>
+           </div>
         <div style="padding: 20px;">
             <p>Node labels configuration will be displayed here. (Not yet implemented)</p>
         </div>
@@ -134,7 +140,6 @@
         <div id="edit-form-container"></div>
       </div>
     </div>
-
     <div class="modal" id="add-queue-modal">
       <div class="modal-content">
         <div class="modal-header">
@@ -146,7 +151,6 @@
         <div id="add-form-container"></div>
       </div>
     </div>
-
     <div class="modal" id="info-modal">
       <div class="modal-content">
         <div class="modal-header">
