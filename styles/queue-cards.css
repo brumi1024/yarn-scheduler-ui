@@ -1,8 +1,9 @@
 .level-headers {
   display: flex;
   margin-bottom: 20px;
-  gap: 120px; /* Slightly increased to match wider cards */
+  gap: 120px;
   justify-content: flex-start;
+  padding-top: 10px;
 }
 
 .level-header {
@@ -16,7 +17,7 @@
 
 .queue-tree {
   display: flex;
-  gap: 120px; /* Increased to match header spacing */
+  gap: 120px; 
   align-items: flex-start;
   position: relative;
   min-width: fit-content;
