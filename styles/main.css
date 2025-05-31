@@ -86,7 +86,7 @@ body {
 .main-content {
   padding: 0; /* Changed from 20px, tab panes will handle internal padding */
   background: #f8f9fa;
-  min-height: calc(100vh - 120px); /* Adjusted for header and controls height */
+  min-height: calc(100vh - var(--header-height) - var(--controls-height)); /* Adjusted for header and controls height */
   position: relative;
   overflow-x: auto; /* For queue tree if it overflows */
 }
