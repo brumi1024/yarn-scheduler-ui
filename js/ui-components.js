@@ -34,19 +34,6 @@ function showContent(show = true) {
 
 function showError(message, duration = 8000) {
   console.error(message);
-  // Hide loading first
-  hideLoading();
-
-  // Show content if there are staged changes
-  const hasChanges =
-    (window.pendingChanges && window.pendingChanges.size > 0) ||
-    (window.pendingAdditions && window.pendingAdditions.size > 0) ||
-    (window.pendingDeletions && window.pendingDeletions.size > 0);
-
-  if (hasChanges) {
-    showContent(true);
-  }
-
   if (typeof showNotification === "function") {
     return showNotification(message, "error", duration);
   }
@@ -138,9 +125,15 @@ function updateBatchControls() {
 
   const changeCount =
     pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
+  
+  const activeTab = document.querySelector('.nav-tab.active');
+  const isQueueConfigTabActive = activeTab && activeTab.getAttribute('data-tab') === 'queue-config-content';
 
-  if (changeCount > 0) {
+
+  if (changeCount > 0 && isQueueConfigTabActive) { // Only show for queue config tab
     batchControls.classList.add("show");
+    batchControls.style.display = 'flex';
+
 
     let infoText = [];
     if (pendingChanges.size > 0)
@@ -165,6 +158,7 @@ function updateBatchControls() {
     }
   } else {
     batchControls.classList.remove("show");
+    batchControls.style.display = 'none';
   }
 }
 
@@ -231,6 +225,16 @@ function initializeEventHandlers() {
     .addEventListener("change", function (e) {
       executeSorting(e.target.value);
     });
+  
+  // Tab switching logic
+  const navTabs = document.querySelectorAll('.nav-tab');
+  navTabs.forEach(tab => {
+      tab.addEventListener('click', function() {
+          const targetTabId = this.getAttribute('data-tab');
+          switchTab(targetTabId);
+      });
+  });
+
   // Close modals when clicking outside
   document.getElementById("edit-modal").addEventListener("click", function (e) {
     if (e.target === this) {
@@ -245,12 +249,24 @@ function initializeEventHandlers() {
         closeAddQueueModal();
       }
     });
+  
+  document
+    .getElementById("info-modal")
+    .addEventListener("click", function (e) {
+      if (e.target === this) {
+        closeInfoModal();
+      }
+    });
+
 
   // Close dropdowns when clicking outside
-  document.addEventListener("click", () => {
-    document.querySelectorAll(".queue-dropdown").forEach((dropdown) => {
-      dropdown.classList.remove("show");
-    });
+  document.addEventListener("click", (event) => {
+    // Check if the click is outside of any .queue-menu-btn and its associated .queue-dropdown
+     if (!event.target.closest('.queue-menu-btn') && !event.target.closest('.queue-dropdown')) {
+        document.querySelectorAll(".queue-dropdown.show").forEach((dropdown) => {
+            dropdown.classList.remove("show");
+        });
+    }
   });
 }
 
@@ -279,3 +295,6 @@ window.showInfo = showInfo;
 window.dismissNotification = dismissNotification;
 window.initializeEventHandlers = initializeEventHandlers;
 window.toggleQueueDropdown = toggleQueueDropdown;
+window.updateBatchControls = updateBatchControls; // Make sure this is global if called from elsewhere
+window.extractPartitions = extractPartitions;
+window.populatePartitionSelector = populatePartitionSelector;
