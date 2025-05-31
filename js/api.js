@@ -138,6 +138,9 @@ class YarnSchedulerAPI {
         : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
       const data = response.data;
 
+      queueStateStore.updateConf(await this.getSchedulerConf())
+      queueStateStore.updateQueues(data.scheduler.schedulerInfo)
+
       if (data.scheduler && data.scheduler.schedulerInfo) {
         const schedulerInfo = data.scheduler.schedulerInfo;
 
@@ -156,6 +159,7 @@ class YarnSchedulerAPI {
         throw new Error("Invalid scheduler data received");
       }
     } catch (error) {
+      console.log(error)
       showError(`Failed to load queue configuration: ${error.message}`);
     }
   }
