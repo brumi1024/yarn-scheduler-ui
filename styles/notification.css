@@ -3,7 +3,7 @@
   position: fixed;
   top: 80px; /* Below the search bar and controls */
   right: 20px;
-  z-index: 1000;
+  z-index: 2000;
   max-width: 400px;
 }
 

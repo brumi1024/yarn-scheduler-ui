@@ -214,54 +214,38 @@ function executeSorting(sortValue) {
 }
 
 function initializeEventHandlers() {
-  document
-    .getElementById("search-input")
-    .addEventListener("input", function (e) {
-      searchQueues(e.target.value);
+  const searchInput = document.getElementById("search-input");
+  if (searchInput) {
+    searchInput.addEventListener("input", function (e) {
+      if (typeof searchQueues === 'function') searchQueues(e.target.value); // searchQueues from queue-renderer.js
     });
+  }
 
-  document
-    .getElementById("sort-select")
-    .addEventListener("change", function (e) {
-      executeSorting(e.target.value);
+  const sortSelect = document.getElementById("sort-select");
+  if (sortSelect) {
+    sortSelect.addEventListener("change", function (e) {
+      if (typeof executeSorting === 'function') executeSorting(e.target.value); // executeSorting from queue-renderer.js
     });
+  }
   
-  // Tab switching logic
-  const navTabs = document.querySelectorAll('.nav-tab');
-  navTabs.forEach(tab => {
-      tab.addEventListener('click', function() {
-          const targetTabId = this.getAttribute('data-tab');
-          switchTab(targetTabId);
-      });
-  });
+  // Modal outside click listeners
+  const editModal = document.getElementById("edit-modal");
+  if (editModal && typeof closeEditModal === 'function') {
+    editModal.addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+  }
 
-  // Close modals when clicking outside
-  document.getElementById("edit-modal").addEventListener("click", function (e) {
-    if (e.target === this) {
-      closeModal();
-    }
-  });
-
-  document
-    .getElementById("add-queue-modal")
-    .addEventListener("click", function (e) {
-      if (e.target === this) {
-        closeAddQueueModal();
-      }
-    });
+  const addQueueModal = document.getElementById("add-queue-modal");
+  if (addQueueModal && typeof closeAddQueueModal === 'function') { // from modal-helpers.js
+    addQueueModal.addEventListener("click", function (e) { if (e.target === this) closeAddQueueModal(); });
+  }
   
-  document
-    .getElementById("info-modal")
-    .addEventListener("click", function (e) {
-      if (e.target === this) {
-        closeInfoModal();
-      }
-    });
-
+  const infoModal = document.getElementById("info-modal");
+  if (infoModal && typeof closeInfoModal === 'function') { // from modal-helpers.js
+    infoModal.addEventListener("click", function (e) { if (e.target === this) closeInfoModal(); });
+  }
 
   // Close dropdowns when clicking outside
   document.addEventListener("click", (event) => {
-    // Check if the click is outside of any .queue-menu-btn and its associated .queue-dropdown
      if (!event.target.closest('.queue-menu-btn') && !event.target.closest('.queue-dropdown')) {
         document.querySelectorAll(".queue-dropdown.show").forEach((dropdown) => {
             dropdown.classList.remove("show");

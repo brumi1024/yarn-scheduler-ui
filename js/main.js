@@ -1,431 +1,92 @@
-// Global state
-let queueData = null;
-let availablePartitions = [''];
+// --- Global State Variables ---
+let queueData = null; // Populated by api.loadSchedulerConfiguration
+let availablePartitions = ['']; // Populated by extractPartitions (likely in ui-components.js or queue-renderer.js)
 let currentPartition = '';
-let pendingChanges = new Map();
-let pendingAdditions = new Map();
-let pendingDeletions = new Set();
-let currentEditQueue = null;
-let queueElements = new Map();
+
+// Staging changes for queues
+let pendingChanges = new Map();    // { queuePath -> {yarnPropName: value, _ui_capacityMode: mode} }
+let pendingAdditions = new Map();  // { queuePath -> newQueueDataForStore object }
+let pendingDeletions = new Set();  // { queuePath }
+
+// Staging/State for Modals
+let currentEditQueue = null; // Stores the queue object being edited
+
+// Cache for fetched configurations
+let liveRawSchedulerConf = null;    // Map of all queue config key-values from scheduler-conf
+let globalSchedulerSettings = null; // Map of global config key-values from scheduler-conf
+let isGlobalConfigEditMode = false; // Boolean flag for global config edit state
+
+// UI state
+let queueElements = new Map(); // For mapping queue paths to their DOM elements (used by arrow-renderer)
 let currentSearchTerm = '';
-let currentSort = 'capacity';
-let globalSchedulerSettings = null; 
-let isGlobalConfigEditMode = false; // State for edit mode
+let currentSort = 'capacity'; // Default sort for queue tree
 
-// Metadata for global scheduler configurations
-const GLOBAL_CONFIG_CATEGORIES = [
-    {
-        groupName: 'General Scheduler Settings',
-        properties: {
-            'yarn.scheduler.capacity.schedule-asynchronously.enable': {
-                displayName: 'Asynchronous Scheduler',
-                description: 'Enabling this option decouples the scheduling from Node Heartbeats, significantly improving latency.',
-                type: 'boolean',
-                defaultValue: 'false'
-            },
-            'yarn.scheduler.capacity.node-locality-delay': {
-                displayName: 'Node Locality Delay',
-                description: 'Number of scheduling opportunities missed before relaxing locality to node-local. Set to -1 for off.',
-                type: 'number',
-                defaultValue: '40'
-            }
-        }
-    },
-    {
-        groupName: 'Global Application Management',
-        properties: {
-            'yarn.scheduler.capacity.maximum-am-resource-percent': {
-                displayName: 'Max AM Resource Percent (Global)',
-                description: 'Maximum percentage of cluster resources that can be used for Application Masters. Applies if not overridden by queue-specific settings.',
-                type: 'percentage',
-                defaultValue: '0.1'
-            }
-            // Example: if there was a global maximum-applications setting
-            // 'yarn.scheduler.capacity.maximum-applications': {
-            //     displayName: 'Maximum Applications (Global)',
-            //     description: 'Total number of applications that can be active or pending in the cluster.',
-            //     type: 'number',
-            //     defaultValue: '10000'
-            // }
-        }
-    },
-    {
-        groupName: 'Global Queue Defaults',
-        properties: {
-            'yarn.scheduler.capacity.user-limit-factor': {
-                displayName: 'User Limit Factor (Global Default)',
-                description: 'Default factor for calculating user resource limits within queues. Queues can override this.',
-                type: 'number',
-                defaultValue: '1'
-            }
-        }
+// --- API Instance ---
+// api.js must be loaded before main.js
+const api = new YarnSchedulerAPI(window.location.origin || '', true); // Set true for mocks, false for live
+
+// --- Basic Initialization ---
+window.addEventListener('DOMContentLoaded', async () => {
+    // Ensure UI component functions are available
+    if (typeof showLoading !== 'function' || typeof hideLoading !== 'function' || typeof showError !== 'function') {
+        console.error("Core UI functions (showLoading, hideLoading, showError) are not defined. Check script loading order for ui-components.js.");
+        // Fallback simple alerts
+        window.showLoading = (msg) => console.log("Loading:", msg);
+        window.hideLoading = () => console.log("Hide loading.");
+        window.showError = (msg) => console.error("Error:", msg);
     }
-    // Add other groups and their properties
-];
-
-let liveRawSchedulerConf = null; // To store fetched scheduler-conf data for queues
-const Q_PATH_PLACEHOLDER = '<queue_path>';
-
-const QUEUE_CONFIG_CATEGORIES = [
-    {
-        groupName: 'Core Properties',
-        properties: {
-            // Capacity Mode selector in the modal will drive the input for 'capacity'.
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.capacity`]: {
-                displayName: 'Capacity',
-                description: 'Guaranteed resource capacity (e.g., "10%", "2w", "[memory=2048,vcores=2]"). Format depends on selected Capacity Mode.',
-                type: 'string', // Actual input type handled by modal logic based on Capacity Mode
-                defaultValue: '10%' 
-            },
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-capacity`]: {
-                displayName: 'Maximum Capacity',
-                description: 'Maximum resource capacity the queue can use (e.g., "100%", "[memory=4096,vcores=4]").',
-                type: 'string', // Actual input type handled by modal logic
-                defaultValue: '100%'
-            },
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.state`]: {
-                displayName: 'State',
-                description: 'Operational state of the queue.',
-                type: 'enum',
-                options: ['RUNNING', 'STOPPED'],
-                defaultValue: 'RUNNING'
-            }
-        }
-    },
-    {
-        groupName: 'Resource Limits & Management',
-        properties: {
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.user-limit-factor`]: {
-                displayName: 'User Limit Factor',
-                description: 'Multiplier for per-user resource limits within this queue.',
-                type: 'number',
-                step: '0.1', // Suggests a numeric input with steps
-                defaultValue: '1'
-            },
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-am-resource-percent`]: {
-                displayName: 'Max AM Resource Percent',
-                description: 'Maximum percentage of this queue\'s resources for Application Masters (e.g., 0.1 for 10%).',
-                type: 'percentage', // Input type number, step 0.01, min 0, max 1
-                defaultValue: '0.1'
-            },
-             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.max-parallel-apps`]: { // Example of another common property
-                displayName: 'Maximum Parallel Apps',
-                description: 'Maximum number of applications that can run concurrently in this queue.',
-                type: 'number',
-                defaultValue: '' // YARN often has a large internal default, empty means "use YARN default"
-            }
-        }
-    },
-    {
-        groupName: 'Advanced Settings',
-        properties: {
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.ordering-policy`]: {
-                displayName: 'Ordering Policy',
-                description: 'Policy for ordering applications (e.g., fifo, fair, utilization).',
-                type: 'enum',
-                options: ['fifo', 'fair', 'utilization'],
-                defaultValue: 'fifo' 
-            },
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.disable_preemption`]: { // Example boolean
-                displayName: 'Disable Preemption',
-                description: 'Whether preemption is disabled for this queue.',
-                type: 'boolean',
-                defaultValue: 'false'
-            }
-        }
-    }
-];
-
-// Create global API instance
-const api = new YarnSchedulerAPI(window.location.origin || '', true);
-
-window.addEventListener('DOMContentLoaded', function() {
+    
     showLoading('Initializing application...');
     try {
-        api.loadSchedulerConfiguration().then(() => {
-            switchTab('queue-config-content'); // Activate default tab
-        });
-        initializeEventHandlers();
+        // Initial data load for queue structure (populates window.queueData)
+        // loadSchedulerConfiguration also calls renderQueueTree via switchTab or directly
+        if (typeof api.loadSchedulerConfiguration === 'function') {
+            await api.loadSchedulerConfiguration(); 
+        } else {
+            showError("api.loadSchedulerConfiguration is not defined. Check api.js");
+        }
+
+        // Initialize event handlers
+        // initializeTabNavigation from tab-handler.js
+        // initializeEventHandlers from ui-components.js (for non-tab general UI like search, sort, modal bg clicks)
+        if (typeof initializeTabNavigation === 'function') initializeTabNavigation();
+        else console.error("initializeTabNavigation not found. Check tab-handler.js");
+
+        if (typeof initializeEventHandlers === 'function') initializeEventHandlers();
+        else console.error("initializeEventHandlers not found. Check ui-components.js or event-handlers.js");
+        
+        // Activate the default tab after basic setup
+        // switchTab is defined in tab-handler.js
+        if (typeof switchTab === 'function') {
+            const initialActiveTab = document.querySelector('.nav-tab.active');
+            if (initialActiveTab && initialActiveTab.getAttribute('data-tab')) {
+                switchTab(initialActiveTab.getAttribute('data-tab'));
+            } else if (document.querySelectorAll('.nav-tab').length > 0 && document.querySelectorAll('.nav-tab')[0].getAttribute('data-tab')) {
+                // Fallback if no tab is marked active in HTML, activate the first one
+                switchTab(document.querySelectorAll('.nav-tab')[0].getAttribute('data-tab'));
+            } else {
+                // Absolute fallback if no tabs have data-tab or are active
+                console.warn("No active tab could be determined. Defaulting display might be needed.");
+                // Manually ensure at least queue-config-content is shown if it exists
+                const queueConfigPane = document.getElementById('queue-config-content');
+                if (queueConfigPane) {
+                    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+                    queueConfigPane.style.display = 'block';
+                    queueConfigPane.classList.add('active');
+                    const qTab = document.querySelector('.nav-tab[data-tab="queue-config-content"]');
+                    if(qTab) qTab.classList.add('active');
+                    if (typeof renderQueueTree === 'function' && window.queueData) renderQueueTree();
+                }
+                hideLoading();
+            }
+        } else {
+            console.error("switchTab function not defined. UI might not initialize correctly.");
+            hideLoading(); // Hide loading even if switchTab isn't there
+        }
+
     } catch (error) {
         showError(`Failed to initialize application: ${error.message}`);
         console.error('Application initialization failed:', error);
+        hideLoading(); 
     }
 });
-
-function switchTab(targetTabId) {
-    const navTabs = document.querySelectorAll('.nav-tab');
-    const tabPanes = document.querySelectorAll('.tab-pane');
-    const queueControls = document.getElementById('queue-config-controls');
-    // const batchControls = document.getElementById('batch-controls'); // Handled by updateBatchControls
-    const globalConfigActions = document.getElementById('global-config-actions');
-
-    let activeTabFound = false;
-
-    navTabs.forEach(tab => {
-        if (tab.getAttribute('data-tab') === targetTabId) {
-            tab.classList.add('active');
-            activeTabFound = true;
-        } else {
-            tab.classList.remove('active');
-        }
-    });
-
-    if (!activeTabFound && navTabs.length > 0) {
-        navTabs[0].classList.add('active');
-        targetTabId = navTabs[0].getAttribute('data-tab');
-    }
-    
-    tabPanes.forEach(pane => {
-        if (pane.id === targetTabId) {
-            pane.style.display = 'block';
-            pane.classList.add('active');
-        } else {
-            pane.style.display = 'none';
-            pane.classList.remove('active');
-        }
-    });
-
-    if (queueControls) queueControls.style.display = (targetTabId === 'queue-config-content' ? 'flex' : 'none');
-    updateBatchControls(); 
-    if (globalConfigActions) globalConfigActions.style.visibility = (targetTabId === 'scheduler-config-content' ? 'visible' : 'hidden');
-
-
-    if (targetTabId === 'queue-config-content') {
-        if (queueData) renderQueueTree();
-        showContent(true); 
-    } else if (targetTabId === 'scheduler-config-content') {
-        isGlobalConfigEditMode = false; 
-        renderSchedulerConfigurationPage();
-        hideLoading();
-    } else if (targetTabId === 'placement-rules-content') {
-        console.log("Placement Rules tab selected");
-        hideLoading();
-    } else if (targetTabId === 'node-labels-content') {
-        console.log("Node Labels tab selected");
-        hideLoading();
-    }
-}
-
-async function renderSchedulerConfigurationPage() {
-    const container = document.getElementById('global-scheduler-settings-container');
-    if (!container) return;
-
-    const editBtn = document.getElementById('edit-global-config-btn');
-    const saveBtn = document.getElementById('save-global-config-btn');
-    const cancelBtn = document.getElementById('cancel-global-config-btn');
-
-    if (isGlobalConfigEditMode) {
-        if (editBtn) editBtn.style.display = 'none';
-        if (saveBtn) saveBtn.style.display = 'inline-block';
-        if (cancelBtn) cancelBtn.style.display = 'inline-block';
-    } else {
-        if (editBtn) editBtn.style.display = 'inline-block';
-        if (saveBtn) saveBtn.style.display = 'none';
-        if (cancelBtn) cancelBtn.style.display = 'none';
-    }
-    
-    showLoading('Loading global scheduler settings...');
-    container.innerHTML = ''; 
-
-    try {
-        if (!globalSchedulerSettings) {
-            const rawConf = await api.getSchedulerConf(); //
-            if (rawConf && rawConf.property) {
-                globalSchedulerSettings = new Map(rawConf.property.map(p => [p.name, p.value]));
-            } else {
-                globalSchedulerSettings = new Map();
-                showWarning("Could not fetch live global settings, or none are set. Displaying defaults."); //
-            }
-        }
-
-        if (GLOBAL_CONFIG_CATEGORIES.length === 0) {
-            container.innerHTML = '<p>No global scheduler settings categories are defined in the UI.</p>';
-            if (editBtn) editBtn.disabled = true;
-            hideLoading();
-            return;
-        }
-        if (editBtn) editBtn.disabled = false;
-        
-        let html = ''; 
-
-        GLOBAL_CONFIG_CATEGORIES.forEach(group => {
-            if (Object.keys(group.properties).length > 0) {
-                html += `<div class="config-group">`;
-                html += `<h3 class="config-group-title">${group.groupName}</h3>`;
-
-                for (const propName in group.properties) {
-                    if (Object.hasOwnProperty.call(group.properties, propName)) {
-                        const metadata = group.properties[propName];
-                        const liveValue = globalSchedulerSettings.get(propName);
-                        const currentValue = liveValue !== undefined ? liveValue : metadata.defaultValue;
-                        const isDefaultUsed = liveValue === undefined;
-
-                        const inputId = `global-config-${propName.replace(/\./g, '-')}`;
-                        const displayNameSuffix = isDefaultUsed && !isGlobalConfigEditMode ? ' <em class="default-value-indicator">(default)</em>' : '';
-
-                        html += `<div class="config-item" data-property-name="${propName}">
-                                    <div class="config-item-col-left">
-                                        <div class="config-display-name">${metadata.displayName}${displayNameSuffix}</div>
-                                        <div class="config-yarn-property">${propName}</div>
-                                    </div>
-                                    <div class="config-item-col-middle config-description">
-                                        ${metadata.description}
-                                    </div>
-                                    <div class="config-item-col-right config-item-value-control">`;
-
-                        if (isGlobalConfigEditMode) {
-                            const originalValueForEdit = currentValue; 
-                            if (metadata.type === "boolean") {
-                                html += `<select id="${inputId}" class="config-value-input" data-original-value="${originalValueForEdit}">
-                                            <option value="true" ${currentValue === "true" ? "selected" : ""}>true</option>
-                                            <option value="false" ${currentValue === "false" ? "selected" : ""}>false</option>
-                                         </select>`;
-                            } else if (metadata.type === "number" || metadata.type === "percentage") {
-                                html += `<input type="number" id="${inputId}" class="config-value-input" value="${currentValue}" data-original-value="${originalValueForEdit}" ${metadata.type === "percentage" ? 'step="0.01"' : ''}>`;
-                            } else { 
-                                html += `<input type="text" id="${inputId}" class="config-value-input" value="${currentValue}" data-original-value="${originalValueForEdit}">`;
-                            }
-                        } else {
-                            html += `<span class="config-value-display">${currentValue}</span>`;
-                        }
-                        html += `       </div> 
-                                  </div>`; 
-                    }
-                }
-                html += `</div>`; // Close config-group
-            }
-        });
-        
-        if (html === '') { // Handles case where categories are defined but all have empty properties
-            container.innerHTML = '<p>No global scheduler settings are configured for display.</p>';
-            if (editBtn) editBtn.disabled = true;
-        } else {
-            container.innerHTML = html;
-        }
-        hideLoading();
-
-    } catch (error) {
-        container.innerHTML = `<p>Error loading global scheduler settings: ${error.message}</p>`;
-        showError(`Failed to render global scheduler settings: ${error.message}`); //
-        hideLoading();
-    }
-}
-
-function toggleGlobalConfigEditMode(editMode) {
-    isGlobalConfigEditMode = editMode;
-    renderSchedulerConfigurationPage();
-}
-
-async function saveGlobalSchedulerSettings() {
-    const globalUpdatesPayload = { params: {} };
-    let changesMade = 0;
-
-    if (!globalSchedulerSettings) {
-        try {
-            const rawConf = await api.getSchedulerConf(); //
-            if (rawConf && rawConf.property) {
-                globalSchedulerSettings = new Map(rawConf.property.map(p => [p.name, p.value]));
-            } else {
-                globalSchedulerSettings = new Map();
-            }
-        } catch (e) {
-            globalSchedulerSettings = new Map(); 
-            showError("Could not verify current settings before saving. Proceeding with UI values."); //
-        }
-    }
-
-    const configItems = document.querySelectorAll('#global-scheduler-settings-container .config-item');
-    configItems.forEach(item => {
-        const propName = item.getAttribute('data-property-name');
-        const inputElement = item.querySelector('.config-value-input'); 
-        
-        // Check if propName exists in any of the defined categories and their properties
-        let metadataExists = false;
-        for (const group of GLOBAL_CONFIG_CATEGORIES) {
-            if (group.properties[propName]) {
-                metadataExists = true;
-                break;
-            }
-        }
-
-        if (inputElement && metadataExists) {
-            const newValue = inputElement.value;
-            const originalValueDisplayed = inputElement.getAttribute('data-original-value'); 
-
-            if (newValue !== originalValueDisplayed) {
-                globalUpdatesPayload.params[propName] = newValue;
-                changesMade++;
-            }
-        }
-    });
-
-    if (changesMade === 0) {
-        showInfo("No changes to save."); //
-        toggleGlobalConfigEditMode(false); 
-        return;
-    }
-
-    showLoading("Saving global settings..."); //
-    try {
-        const response = await api.makeConfigurationUpdateApiCall({ globalUpdates: [globalUpdatesPayload] }); //
-        if (response && response.status === 200 && typeof response.data === "string" && response.data.includes("successfully applied")) {
-            showSuccess("Global settings saved successfully!"); //
-            globalSchedulerSettings = null; 
-            toggleGlobalConfigEditMode(false); 
-        } else {
-            const errorMessage = response && response.data ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data)) : "Unknown error";
-            showError(`Failed to save global settings: ${errorMessage}`); //
-        }
-    } catch (error) {
-        showError(`Error saving global settings: ${error.message}`); //
-    } finally {
-        hideLoading();
-    }
-}
-
-function refreshQueues() {
-    const totalQueueChanges = pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
-    const activeTabId = document.querySelector('.nav-tab.active')?.getAttribute('data-tab');
-
-    let confirmDiscard = true;
-
-    if (activeTabId === 'queue-config-content' && totalQueueChanges > 0) {
-        confirmDiscard = confirm('You have pending queue changes. Refreshing will discard them. Continue?');
-        if (confirmDiscard) {
-            pendingChanges.clear();
-            pendingAdditions.clear();
-            pendingDeletions.clear();
-            if (typeof updateBatchControls === "function") updateBatchControls();
-        }
-    } else if (isGlobalConfigEditMode && activeTabId === 'scheduler-config-content') {
-         confirmDiscard = confirm('You are in edit mode for global settings. Refreshing will discard unsaved changes. Continue?');
-    }
-
-    if (!confirmDiscard) return;
-
-    if (activeTabId === 'queue-config-content') {
-        liveRawSchedulerConf = null; // Clear cache for queue specific raw configs
-        api.loadSchedulerConfiguration();
-    } else if (activeTabId === 'scheduler-config-content') {
-        globalSchedulerSettings = null; 
-        isGlobalConfigEditMode = false; 
-        renderSchedulerConfigurationPage(); 
-    }
-}
-
-function discardChanges() { 
-    if (confirm('Are you sure you want to discard all pending queue changes?')) {
-        pendingChanges.clear();
-        pendingAdditions.clear();
-        pendingDeletions.clear();
-        renderQueueTree(); 
-        updateBatchControls(); 
-    }
-}
-
-// Export functions to the global window object
-window.api = api;
-window.refreshQueues = refreshQueues;
-window.discardChanges = discardChanges;
-window.toggleGlobalConfigEditMode = toggleGlobalConfigEditMode;
-window.saveGlobalSchedulerSettings = saveGlobalSchedulerSettings;
