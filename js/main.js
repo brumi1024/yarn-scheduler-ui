@@ -6,7 +6,6 @@ let pendingChanges = new Map();
 let pendingAdditions = new Map();
 let pendingDeletions = new Set();
 let currentEditQueue = null;
-let queueElements = new Map();
 let currentSearchTerm = '';
 let currentSort = 'capacity';
 let globalSchedulerSettings = null; 

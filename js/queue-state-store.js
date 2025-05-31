@@ -61,7 +61,9 @@ function allQueue() {
     for (const [key, _] of _changes.entries()) {
         allPath.push(key)
     }
-    return allPath.map(getQueue)
+    const res = new Map()
+    allPath.forEach(p => res.set(p, getQueue(p)))
+    return res
 }
 
 function getQueue(path) {
@@ -92,6 +94,10 @@ function getQueue(path) {
 
     if (change && change.maxCapacity) {
         queue.maxCapacity = change.maxCapacity
+    }
+
+    if (change && change.parentPath) {
+        queue.parentPath = change.parentPath
     }
 
     const capacityMode = detectMode(queue.capacity);

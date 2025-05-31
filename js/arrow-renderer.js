@@ -1,3 +1,31 @@
+window.drawArrows = (queueElements, queues) => {
+  const svg = document.getElementById("arrow-svg");
+  svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>";
+  const svgRect = svg.getBoundingClientRect();
+
+  queues.values().forEach(q => {
+    const queueRect = queueElements.get(q.queuePath).getBoundingClientRect();
+    q.queues?.queue?.forEach(child => {
+      const childRect = queueElements.get(child.queuePath).getBoundingClientRect();
+      console.log(parent.queuePath + " => " + child.queuePath)
+      drawArrowToChild(queueRect, childRect, svgRect, svg);
+    })
+    if (q.parentPath) {
+      const parentRect = queueElements.get(q.parentPath).getBoundingClientRect();
+      drawArrowToChild(parentRect, queueRect, svgRect, svg);
+    }
+  })
+
+  queues.values().forEach(parent => {
+    const parentRect = queueElements.get(parent.queuePath).getBoundingClientRect();
+    parent.queues?.queue?.forEach(child => {
+      const childRect = queueElements.get(child.queuePath).getBoundingClientRect();
+      console.log(parent.queuePath + " => " + child.queuePath)
+      drawArrowToChild(parentRect, childRect, svgRect, svg);
+    })
+  })
+}
+
 function drawArrowToChild(parentRect, childRect, svgRect, svg) {
   // Calculate center Y for both boxes, relative to the SVG container
   const startY = parentRect.top + parentRect.height / 2 - svgRect.top;
@@ -23,42 +51,3 @@ function drawArrowToChild(parentRect, childRect, svgRect, svg) {
   path.setAttribute("marker-end", "url(#arrowhead)");
   svg.appendChild(path);
 }
-
-function drawArrows() {
-  const svg = document.getElementById("arrow-svg");
-  svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>";
-
-  // Use the bounding rect of the SVG overlay, not the queue-tree
-  const svgRect = svg.getBoundingClientRect();
-
-  function drawArrowsForQueue(queue) {
-    const parentElement = queueElements.get(queue.path);
-    if (!parentElement) return;
-
-    const parentRect = parentElement.getBoundingClientRect();
-
-    // Draw arrows to existing children
-    Object.values(queue.children).forEach((child) => {
-      if (pendingDeletions.has(child.path)) return;
-      const childElement = queueElements.get(child.path);
-      if (!childElement) return;
-      const childRect = childElement.getBoundingClientRect();
-      drawArrowToChild(parentRect, childRect, svgRect, svg);
-      drawArrowsForQueue(child);
-    });
-
-    // Draw arrows to new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
-      if (newQueue.parentPath !== queue.path) return;
-      const childElement = queueElements.get(newQueue.path);
-      if (!childElement) return;
-      const childRect = childElement.getBoundingClientRect();
-      drawArrowToChild(parentRect, childRect, svgRect, svg);
-      drawArrowsForQueue(newQueue);
-    });
-  }
-
-  drawArrowsForQueue(queueData);
-}
-
-window.drawArrows = drawArrows;
