@@ -133,27 +133,6 @@ function switchTab(targetTabId) {
     }
 }
 
-
-function getEditableGlobalProperties(properties) {
-    if (!properties) return [];
-    return properties.filter(prop => {
-        const name = prop.name;
-        if (name.includes('mutation-api.version') || 
-            (name.startsWith('yarn.scheduler.capacity.root.') && name.split('.').length > 4) || // specific sub-queue properties
-            (name.startsWith('yarn.scheduler.capacity.root.') && name.split('.').length <=4 && !GLOBAL_CONFIG_METADATA[name]) // root queue's own direct properties unless explicitly in metadata
-           ) {
-            return false; 
-        }
-        if (GLOBAL_CONFIG_METADATA[name]) { // If we have metadata, consider it editable
-            return true;
-        }
-        // Fallback for properties not in metadata but potentially global and editable
-        // Be cautious with this rule; ideally, all editable globals should have metadata.
-        return !name.includes(".root.") && name.startsWith('yarn.scheduler.capacity.');
-    });
-}
-
-
 async function renderSchedulerConfigurationPage() {
     const container = document.getElementById('global-scheduler-settings-container');
     if (!container) return;
