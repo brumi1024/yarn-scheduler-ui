@@ -66,6 +66,10 @@ class YarnSchedulerAPI {
     return { data: json };
   }
 
+  async getMockConf() {
+    return await this.getMock(API_ENDPOINTS.SCHEDULER_CONF)
+  }
+
   async makeRequestWithRetry(
     endpoint,
     options = {},
@@ -136,8 +140,13 @@ class YarnSchedulerAPI {
       const response = this.useMocks
         ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
         : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
-      const data = response.data;
 
+      const conf = this.useMocks
+          ? await this.getMock(API_ENDPOINTS.SCHEDULER_CONF)
+          : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_CONF);
+      window.schedulerConfig = parseSchedulerConfig(conf)
+
+      const data = response.data;
       if (data.scheduler && data.scheduler.schedulerInfo) {
         const schedulerInfo = data.scheduler.schedulerInfo;
 

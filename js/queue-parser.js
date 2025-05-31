@@ -10,6 +10,44 @@ const QUEUE_TYPES = {
   LEAF: "leaf",
 };
 
+function parseSchedulerConfig(conf) {
+  const map = new Map()
+  Object.values(conf.data.property).forEach(
+      v => map.set(v.name.replace("yarn.scheduler.capacity.", ""), v.value))
+  function safeGet(key, map) {
+    if (!map.has(key)) {
+      throw new Error(`Missing config for path: ${key}`);
+    }
+    return map.get(key)
+  }
+  return {
+    map: map,
+    capacity: path => safeGet(path+".capacity", map),
+    maxCapacity: path => safeGet(path+".maximum-capacity", map),
+    detectMode: value => {
+      if (!isNaN(Number(value))) {
+        return CAPACITY_MODES.PERCENTAGE
+      }
+      if (String(value).endsWith("w")) {
+        return CAPACITY_MODES.WEIGHT
+      }
+      if (String(value).startsWith("[")) {
+        return CAPACITY_MODES.ABSOLUTE
+      }
+      return CAPACITY_MODES.VECTOR //TODO
+    },
+    display: (mode, value) => {
+      if (mode === CAPACITY_MODES.PERCENTAGE) {
+        return value + "%"
+      }
+      if (mode === CAPACITY_MODES.WEIGHT) {
+        return value + "w"
+      }
+      return value.slice(1,-1).split(",").map(v => v.split("="))
+    }
+  }
+}
+
 function determineQueueType(queueInfo) {
   if (!queueInfo) return QUEUE_TYPES.LEAF;
 
@@ -216,3 +254,4 @@ window.QUEUE_TYPES = QUEUE_TYPES;
 window.parseSchedulerData = parseSchedulerData;
 window.parseCapacityVector = parseCapacityVector;
 window.detectCapacityMode = detectCapacityMode;
+window.parseSchedulerConfig = parseSchedulerConfig
