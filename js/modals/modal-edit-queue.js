@@ -303,7 +303,7 @@ function stageQueueChanges() {
     }
 
     if (typeof renderQueueTree === "function") renderQueueTree();
-    if (typeof closeModal === "function") closeModal(); // closeModal is now closeEditModal via modal-helpers.js
+    if (typeof closeEditModal === "function") closeEditModal();
 }
 
 
