@@ -83,9 +83,169 @@ body {
   background: white;
 }
 
+.main-content {
+  padding: 0; /* Changed from 20px, tab panes will handle internal padding */
+  background: #f8f9fa;
+  min-height: calc(100vh - var(--header-height) - var(--controls-height)); /* Adjusted for header and controls height */
+  position: relative;
+  overflow-x: auto; /* For queue tree if it overflows */
+}
+
+.tab-pane {
+  display: none; /* Hidden by default */
+}
+
+.tab-pane.active {
+  display: block; /* Shown when active */
+}
+
+/* Style for the title within the 'controls' bar on tabs like Scheduler Config */
+.tab-title-header {
+  font-size: 18px;
+  font-weight: 600;
+  color: #333;
+  padding: 0;
+  margin: 0;
+  flex-grow: 1;
+  display: flex;
+  align-items: center;
+}
+
+/* Styles for the scheduler config page elements, styled like Queue Info Modal */
+.config-group {
+  background: #f8f9fa;
+  border-radius: 6px;
+  box-shadow: none;
+  margin-bottom: 16px;
+  padding: 15px;
+  border-left: 3px solid #007bff; /* Accent border */
+  border-top: 1px solid #dee2e6; /* Added border */
+  border-right: 1px solid #dee2e6; /* Added border */
+  border-bottom: 1px solid #dee2e6; /* Added border */
+}
+
+.config-group-title {
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+  margin: 0 0 10px 0;
+  padding-bottom: 8px;
+  border-bottom: 1px solid #e0e0e0;
+}
+
+.config-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #dee2e6;
+}
+
+.config-item:last-child {
+  border-bottom: none;
+}
+
+/* Column for Display Name and YARN Property */
+.config-item-col-left {
+  flex: 0 0 20%;
+  display: flex;
+  flex-direction: column;
+  padding-right: 15px;
+  justify-content: center;
+  position: relative;
+}
+
+.config-display-name {
+  font-size: 1rem;
+  font-weight: 500;
+  color: #212529;
+  line-height: 1.4;
+  margin-bottom: 2px;
+}
+
+.config-display-name .default-value-indicator {
+  font-size: 0.8em;
+  font-weight: normal;
+  color: #888;
+  margin-left: 5px;
+}
+
+.config-yarn-property {
+  font-size: 0.75rem;
+  color: #868e96;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  line-height: 1.3;
+  word-break: break-all;
+}
+
+/* Column for Description */
+.config-item-col-middle {
+  flex: 1 1 auto;
+  font-size: 0.85rem;
+  color: #5a5a5a;
+  padding-left: 15px; /* Added padding-left to create space from the left border */
+  padding-right: 15px; /* Space to the next line */
+  line-height: 1.5;
+  text-align: left;
+  position: relative; /* For pseudo-element positioning */
+}
+
+.config-item-col-left::after, 
+.config-item-col-middle::after { /* Combined rule for both pseudo-elements */
+  content: '';
+  position: absolute;
+  top: 10%; /* Was 15%, makes the line taller */
+  bottom: 10%; /* Was 15%, makes the line taller */
+  right: 0; 
+  width: 1px;
+  background: linear-gradient(to bottom, 
+    rgba(222, 226, 230, 0),  /* Transparent start */
+    #dee2e6 20%,             /* Solid part starts sooner (was 30%) */
+    #dee2e6 80%,             /* Solid part ends later (was 70%) */
+    rgba(222, 226, 230, 0)   /* Transparent end */
+  );
+}
+
+/* Column for Value/Input Control */
+.config-item-col-right {
+  flex: 0 0 20%;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding-left: 15px; /* Added padding-left to create space from the middle border */
+}
+
+.config-value-input {
+  padding: 6px 8px;
+  border: 1px solid #ced4da;
+  border-radius: 4px;
+  font-size: 0.875rem;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  width: 100%;
+  max-width: 220px;
+  box-sizing: border-box;
+}
+
+.config-value-input:focus {
+  outline: none;
+  border-color: #80bdff;
+  box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.config-value-display {
+  display: block; /* Ensures width and text-align are respected */
+  color: #212529;
+  font-family: "SF Mono", "Monaco", "Consolas", monospace;
+  font-size: 0.875rem;
+  padding: 6px 0px; /* Similar vertical padding to input */
+  width: 100%; /* Takes full width of its container column part */
+  max-width: 220px; /* Consistent max width with input */
+  box-sizing: border-box;
+  word-break: break-all;
+}
+
 .refresh-btn {
   position: fixed;
-  top: 100px;
+  top: 100px; /* Adjusted if header/controls height changes, might need to be dynamic */
   right: 30px;
   background: white;
   border: 1px solid #ccc;
@@ -97,6 +257,7 @@ body {
   align-items: center;
   justify-content: center;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+  z-index: 100; /* Ensure it's above other content if overlapping */
 }
 
 .refresh-btn:hover {
@@ -145,85 +306,4 @@ body {
 .btn:disabled {
   background: #6c757d;
   cursor: not-allowed;
-}
-
-.main-content {
-  padding: 0; /* Remove padding from main-content as tab-panes will handle it or their content */
-  background: #f8f9fa;
-  min-height: calc(100vh - 120px); 
-  position: relative;
-  overflow-x: auto; /* Kept for queue-tree if needed */
-}
-
-.tab-pane {
-  display: none; /* Hidden by default */
-}
-
-.tab-pane.active {
-  display: block; /* Shown when active */
-}
-
-.tab-title-header {
-  font-size: 18px; 
-  font-weight: 600;
-  color: #333;
-  padding: 0; /* Adjusted padding as .controls already has padding */
-  margin: 0; /* Ensure no extra margins */
-  flex-grow: 1; /* Allows the title to take available space if needed */
-  display: flex;
-  align-items: center; /* Vertically center if .controls has a fixed height */
-}
-
-/* Styles for the scheduler config page elements */
-#scheduler-config-content h2 {
-  margin-bottom: 20px;
-  color: #333;
-  font-size: 24px;
-  border-bottom: 2px solid #007bff;
-  padding-bottom: 10px;
-}
-
-.config-group {
-  background: #fff;
-  border-radius: 8px;
-  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
-  margin-bottom: 25px;
-  padding: 20px;
-  border-left: 4px solid #007bff; /* Accent color */
-}
-
-.config-group-title {
-  font-size: 18px;
-  font-weight: 600;
-  color: #0056b3; /* Darker blue for titles */
-  margin-bottom: 15px;
-  padding-bottom: 10px;
-  border-bottom: 1px solid #e0e0e0;
-}
-
-.config-item {
-  display: flex;
-  justify-content: space-between;
-  padding: 10px 0;
-  border-bottom: 1px solid #f0f0f0;
-  font-size: 14px;
-}
-
-.config-item:last-child {
-  border-bottom: none;
-}
-
-.config-key {
-  font-weight: 500;
-  color: #555;
-  flex-basis: 60%;
-  word-break: break-all; /* Break long keys */
-}
-
-.config-value {
-  color: #333;
-  font-family: "SF Mono", "Monaco", "Consolas", monospace;
-  flex-basis: 35%;
-  text-align: right;
-  word-break: break-all; /* Break long values */
 }
