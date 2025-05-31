@@ -196,8 +196,8 @@ function createAddForm() {
 }
 
 function findQueueByPath(path) {
-  if (pendingAdditions.has(path)) {
-    return pendingAdditions.get(path);
+  if (pendingChanges.checkState(path, ADD)) {
+    return pendingChanges.safeGet(path);
   }
 
   function search(queue) {
@@ -216,15 +216,15 @@ function getAllParentQueues() {
   const parents = [];
 
   function collect(queue) {
-    if (!pendingDeletions.has(queue.path)) {
+    if (pendingChanges.checkState(queue.path, DELETE)) {
       parents.push({ path: queue.path, name: queue.name });
     }
     // Recurse into children
     Object.values(queue.children).forEach((child) => {
       collect(child);
     });
-    // Recurse into new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
+
+    pendingChanges.iter(DELETE).forEach((newQueue) => {
       if (newQueue.parentPath === queue.path) {
         collect(newQueue);
       }
@@ -344,7 +344,7 @@ function addNewQueue() {
   const newQueuePath = `${parentPath}.${queueName}`;
 
   // Check if queue already exists
-  if (findQueueByPath(newQueuePath) || pendingAdditions.has(newQueuePath)) {
+  if (findQueueByPath(newQueuePath) || pendingChanges.checkState(newQueuePath, ADD)) {
     showWarning("A queue with this name already exists");
     return;
   }
@@ -372,7 +372,7 @@ function addNewQueue() {
     children: {},
   };
 
-  pendingAdditions.set(newQueuePath, newQueue);
+  pendingChanges.doAdd(newQueuePath, newQueue)
 
   console.log("Added new queue:", newQueue);
 
@@ -444,7 +444,7 @@ function stageQueueChanges() {
   }
 
   if (hasChanges) {
-    pendingChanges.set(currentEditQueue.path, changes);
+    pendingChanges.doUpdate(currentEditQueue.path, changes);
     console.log("Staged changes for", currentEditQueue.path, ":", changes);
     showSuccess(`Changes staged for queue "${currentEditQueue.name}"`);
     renderQueueTree();
@@ -461,15 +461,9 @@ async function applyAllChanges() {
     showWarning(`Cannot apply changes: ${errors.join(", ")}`);
     return;
   }
-
-  // Store a backup of pending changes in case we need to restore them
-  const backupChanges = new Map(pendingChanges);
-  const backupAdditions = new Map(pendingAdditions);
-  const backupDeletions = new Set(pendingDeletions);
-
   // Prepare deletions, additions, updates...
-  const deletions = Array.from(pendingDeletions);
-  const additions = Array.from(pendingAdditions.values()).map((newQueue) => {
+  const deletions = pendingChanges.iter(DELETE);
+  const additions = pendingChange.iter(ADD).map((newQueue) => {
     const params = {};
     if (newQueue.capacity !== undefined) params["capacity"] = newQueue.capacity;
     if (newQueue.maxCapacity !== undefined)
@@ -481,7 +475,7 @@ async function applyAllChanges() {
     };
   });
 
-  const updates = Array.from(pendingChanges.entries()).map(
+  const updates = pendingChanges.iter(UPDATE).map(
     ([queuePath, changes]) => {
       const params = {};
       Object.entries(changes).forEach(([key, value]) => {
@@ -516,8 +510,6 @@ async function applyAllChanges() {
     ) {
       // Success - clear pending changes and reload
       pendingChanges.clear();
-      pendingAdditions.clear();
-      pendingDeletions.clear();
 
       // Show reloading message
       showLoading("Reloading configuration...");
@@ -528,16 +520,6 @@ async function applyAllChanges() {
       // Show success notification
       showSuccess("Configuration changes applied successfully!");
     } else {
-      // Failed - restore the staged changes and show error notification
-      pendingChanges.clear();
-      pendingAdditions.clear();
-      pendingDeletions.clear();
-
-      // Restore from backup
-      backupChanges.forEach((value, key) => pendingChanges.set(key, value));
-      backupAdditions.forEach((value, key) => pendingAdditions.set(key, value));
-      backupDeletions.forEach((value) => pendingDeletions.add(value));
-
       // Re-render the queue tree to show the restored staged changes
       renderQueueTree();
       showContent(true);
@@ -564,15 +546,6 @@ async function applyAllChanges() {
       console.warn("YARN validation failed. Response:", response);
     }
   } catch (error) {
-    // Network or other error - restore the staged changes
-    pendingChanges.clear();
-    pendingAdditions.clear();
-    pendingDeletions.clear();
-
-    // Restore from backup
-    backupChanges.forEach((value, key) => pendingChanges.set(key, value));
-    backupAdditions.forEach((value, key) => pendingAdditions.set(key, value));
-    backupDeletions.forEach((value) => pendingDeletions.add(value));
 
     // Re-render the queue tree to show the restored staged changes
     renderQueueTree();
@@ -595,20 +568,20 @@ function markQueueForDeletion(queuePath) {
 
   // Check if queue has children
   const hasChildren = Object.keys(queue.children).length > 0;
-  const hasNewChildren = Array.from(pendingAdditions.values()).some(
+  const hasNewChildren = pendingChanges.iter(ADD).some(
     (newQueue) => newQueue.parentPath === queuePath
   );
 
   // If queue has children, check if ALL children are marked for deletion or are new queues
   if (hasChildren || hasNewChildren) {
     const existingChildren = Object.values(queue.children);
-    const newChildren = Array.from(pendingAdditions.values()).filter(
+    const newChildren = pendingChanges.iter(ADD).filter(
       (newQueue) => newQueue.parentPath === queuePath
     );
 
     // Check if all existing children are marked for deletion
     const allExistingChildrenMarkedForDeletion = existingChildren.every(
-      (child) => pendingDeletions.has(child.path)
+      (child) => pendingChanges.checkState(child.path, DELETE)
     );
 
     // If there are new children that aren't being deleted, we can't delete the parent
@@ -622,7 +595,7 @@ function markQueueForDeletion(queuePath) {
     // If not all existing children are marked for deletion, show appropriate message
     if (!allExistingChildrenMarkedForDeletion) {
       const activeChildren = existingChildren.filter(
-        (child) => !pendingDeletions.has(child.path)
+        (child) => !pendingChanges.checkState(child.path, DELETE)
       );
       if (activeChildren.length === 1) {
         showWarning(
@@ -659,16 +632,16 @@ function markQueueForDeletion(queuePath) {
   }
 
   // Mark the queue for deletion
-  if (pendingAdditions.has(queuePath)) {
+  if (pendingChanges.checkState(queuePath, ADD)) {
     // If it's a new queue, just remove it from additions
-    pendingAdditions.delete(queuePath);
+    pendingChanges.delete(queuePath);
   } else {
     // If it's an existing queue, mark it for deletion
-    pendingDeletions.add(queuePath);
+    pendingChanges.doDelete(queuePath);
   }
 
   // Remove any pending changes for this queue
-  pendingChanges.delete(queuePath);
+  pendingChanges.doDelete(queuePath);
 
   console.log("Marked queue for deletion:", queuePath);
   showSuccess(`Queue "${queue.name}" marked for deletion`);

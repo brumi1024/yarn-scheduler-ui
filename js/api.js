@@ -156,6 +156,7 @@ class YarnSchedulerAPI {
         throw new Error("Invalid scheduler data received");
       }
     } catch (error) {
+      console.log(error)
       showError(`Failed to load scheduler configuration: ${error.message}`);
     }
   }

@@ -39,7 +39,7 @@ function drawArrows() {
 
     // Draw arrows to existing children
     Object.values(queue.children).forEach((child) => {
-      if (pendingDeletions.has(child.path)) return;
+      if (pendingChanges.checkState(child.path, DELETE)) return;
       const childElement = queueElements.get(child.path);
       if (!childElement) return;
       const childRect = childElement.getBoundingClientRect();
@@ -48,7 +48,7 @@ function drawArrows() {
     });
 
     // Draw arrows to new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
+    pendingChanges.iter(ADD).forEach((newQueue) => {
       if (newQueue.parentPath !== queue.path) return;
       const childElement = queueElements.get(newQueue.path);
       if (!childElement) return;

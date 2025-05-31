@@ -44,7 +44,7 @@ function validateCapacityTotals() {
       let hasPercentageChildren = false;
 
       Object.values(queue.children).forEach((child) => {
-        if (!pendingDeletions.has(child.path)) {
+        if (!pendingChanges.checkState(child.path, DELETE)) {
           const pendingChange = pendingChanges.get(child.path);
           const capacity = pendingChange?.capacity ?? child.capacity;
           const mode = pendingChange?.capacityMode ?? child.capacityMode;
@@ -56,7 +56,7 @@ function validateCapacityTotals() {
         }
       });
 
-      Array.from(pendingAdditions.values()).forEach((newQueue) => {
+      pendingChanges.iter(ADD).forEach((newQueue) => {
         if (
           newQueue.parentPath === queue.path &&
           newQueue.capacityMode === "percentage"
