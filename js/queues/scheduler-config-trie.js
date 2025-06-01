@@ -3,11 +3,11 @@
  */
 class SchedulerTrieNode {
     constructor(segment = '') {
-        this.segment = segment; // The name of this part of the queue path (e.g., "default", "sales")
-        this.properties = new Map(); // Stores actual config key-value pairs for this queue (e.g., {'capacity': '20%', 'state': 'RUNNING'})
-        this.children = new Map();   // Maps the next queue path segment (string) to another SchedulerTrieNode
-        this.isQueue = false;        // True if this node represents a fully defined queue with properties
-        this.fullPath = '';          // The full path from root to this queue (e.g., "root.default")
+        this.segment = segment;
+        this.properties = new Map();
+        this.children = new Map();
+        this.isQueue = false; // Will be true if explicitly defined by a 'queues' property or is root
+        this.fullPath = '';
     }
 }
 
@@ -16,50 +16,117 @@ class SchedulerTrieNode {
  */
 class SchedulerConfigTrie {
     constructor() {
-        this.rootNode = new SchedulerTrieNode('root'); // The root of the Trie always represents the "root" queue
-        this.rootNode.isQueue = true; // Mark root as a queue by default
-        this.rootNode.fullPath = 'root';
-        this.globalProperties = new Map(); // For configurations not tied to a specific queue path
+        this.rootNode = null;
+        this.globalProperties = new Map();
+
+        // Special properties that need to be handled differently
+        this.specialPropertyKeywords = new Set([
+            // Node Labels
+            "accessible-node-labels",
+            // AQCv1
+            "leaf-queue-template",
+            // AQCv2
+            "template",
+            "parent-template",
+            "leaf-template",
+        ]);
+        this.prefix = "yarn.scheduler.capacity.";
     }
 
     /**
-     * Inserts a property from the SCHEDULER_CONF into the Trie.
-     * @param {string} configKey - The full YARN property key (e.g., "yarn.scheduler.capacity.root.default.capacity").
-     * @param {string} value - The value of the property.
+     * Initializes the Trie from the flat list of scheduler properties.
+     * This is the main entry point to build the Trie.
      */
-    insertProperty(configKey, value) {
-        const prefix = "yarn.scheduler.capacity.";
-        if (!configKey.startsWith(prefix)) {
-            // Optionally handle or log non-capacity scheduler properties if necessary
-            return;
-        }
+    initializeFromConfig(schedulerConfProperties) {
+        this.rootNode = new SchedulerTrieNode('root');
+        this.rootNode.isQueue = true; // Root is always a queue
+        this.rootNode.fullPath = 'root';
+        this.globalProperties = new Map();
 
-        const anPath = configKey.substring(prefix.length); // e.g., "root.default.capacity" or "some-global-setting"
+        const queueDefinitions = new Map(); // Map<String(parentPath), Set<String(childName)>>
+        const otherProperties = [];      // Array of { originalKey: string, prefixlessPropertyName: string,// value: string }
 
-        if (anPath.startsWith("root")) {
-            const parts = anPath.split('.'); // e.g., ["root", "default", "capacity"]
-            const propertyName = parts.pop(); // e.g., "capacity"
-            const queuePathSegments = parts;  // e.g., ["root", "default"] or ["root"] for root's direct properties
+        // Pass 1: Separate '<queue-path>.queues' properties to mimic how CS intializes the queues,
+        // and collect all other properties.
+        for (const prop of schedulerConfProperties) {
+            const configKey = prop.name;
+            const value = prop.value;
 
-            let currentNode = this.rootNode;
-            // The first segment queuePathSegments[0] is "root".
-            // We iterate starting from its children, so loop from index 1.
-            for (let i = 1; i < queuePathSegments.length; i++) {
-                const segment = queuePathSegments[i];
-                if (!currentNode.children.has(segment)) {
-                    const newNode = new SchedulerTrieNode(segment);
-                    newNode.fullPath = `${currentNode.fullPath}.${segment}`;
-                    currentNode.children.set(segment, newNode);
-                }
-                currentNode = currentNode.children.get(segment);
+            if (!configKey.startsWith(this.prefix)) continue; // Skip non-matching properties
+            const prefixlessPropertyName = configKey.substring(this.prefix.length);
+
+            // Separate global properties (those not starting with 'root') from queue-specific properties.
+            if (!prefixlessPropertyName.startsWith("root")) {
+                this.globalProperties.set(configKey, value);
+                continue;
             }
-            // currentNode now points to the correct queue node (or rootNode itself if path was just "root")
-            currentNode.isQueue = true; // Any node that has properties is effectively a queue
-            currentNode.properties.set(propertyName, value);
-        } else {
-            // Assumed to be a global property if it doesn't start with "root"
-            this.globalProperties.set(anPath, value);
+
+            if (prefixlessPropertyName.endsWith(".queues")) {
+                const parentPath = prefixlessPropertyName.substring(0, prefixlessPropertyName.length - ".queues".length);
+                // Ensure parentPath is valid (e.g. "root" or "root.subqueue")
+                if (parentPath.length > 0 && (parentPath === "root" || parentPath.startsWith("root."))) {
+                    const children = new Set(value.split(',').map(q => q.trim()));
+                    queueDefinitions.set(parentPath, children);
+                } else {
+                    console.warn(`Malformed 'queues' property key: ${configKey}`);
+                }
+            }
+            otherProperties.push({ originalKey: configKey, prefixlessPropertyName: prefixlessPropertyName, value: value });
+
         }
+
+        // Pass 2: Build the Trie skeleton based ONLY on 'queues' definitions.
+        this._buildTrieSkeleton(this.rootNode, "root", queueDefinitions);
+
+        // Pass 3: Assign all other properties to the existing queue nodes in the Trie.
+        for (const prop of otherProperties) {
+            this._assignPropertyToTrie(prop.prefixlessPropertyName, prop.originalKey, prop.value);
+        }
+    }
+
+    _buildTrieSkeleton(parentNode, parentPathKey, queuesDefinitions) {
+        const childNames = queuesDefinitions.get(parentPathKey);
+        if (childNames) {
+            for (const childName of childNames) {
+                // Only create child if it doesn't exist (though with 'queues' defining structure, this is less likely an issue)
+                if (!parentNode.children.has(childName)) {
+                    const newNode = new SchedulerTrieNode(childName);
+                    newNode.fullPath = `${parentPathKey}.${childName}`;
+                    newNode.isQueue = true; // Mark as an actual queue as per 'queues' definition
+                    parentNode.children.set(childName, newNode);
+                    this._buildTrieSkeleton(newNode, newNode.fullPath, queuesDefinitions); // Recurse
+                }
+            }
+        }
+    }
+
+    _assignPropertyToTrie(prefixlessPropertyName, originalKey, value) {
+        const parts = prefixlessPropertyName.split('.'); // e.g., ["root", "test", "accessible-node-labels", "GPU", "capacity"]
+        let currentNode = this.rootNode;
+        let lastConfirmedQueueNode = this.rootNode;
+        let depthOfLastConfirmedQueue = 0; // Depth in 'parts' array (0 is 'root')
+
+        // Find the deepest existing Trie node that matches the first part of prefixlessPropertyName.
+        // These nodes would have been created by _buildTrieSkeleton and marked isQueue=true.
+        for (let i = 1; i < parts.length; i++) { // Start checking from children of root
+            const segment = parts[i];
+            if (currentNode.children.has(segment)) {
+                const childNode = currentNode.children.get(segment);
+                if (childNode.isQueue) { // Crucial: only traverse through confirmed queues
+                    currentNode = childNode;
+                    lastConfirmedQueueNode = currentNode;
+                    depthOfLastConfirmedQueue = i;
+                } else {
+                    // Child node exists in Trie but wasn't marked as a queue
+                    // This means the path diverges from the explicit queue hierarchy.
+                    break;
+                }
+            } else {
+                // Segment not found as a child, so the property belongs to 'lastConfirmedQueueNode'.
+                break;
+            }
+        }
+        lastConfirmedQueueNode.properties.set(originalKey, value);
     }
 
     /**
@@ -69,81 +136,64 @@ class SchedulerConfigTrie {
      */
     getQueueNode(queuePath) {
         const segments = queuePath.split('.');
-        if (segments.length === 0 || segments[0] !== 'root') {
+        if (segments.length === 0 || segments[0] !== 'root') return null;
+        let currentNode = this.rootNode;
+        for (let i = 1; i < segments.length; i++) {
+            const segment = segments[i];
+            if (!currentNode.children.has(segment)) return null;
+            currentNode = currentNode.children.get(segment);
+        }
+        return currentNode;
+    }
+
+    // buildQueueHierarchyObject: This method now simply translates the Trie (built strictly by 'queues')
+    // into the desired JS object structure. All properties, including complex ones, are already on the correct nodes.
+    buildQueueHierarchyObject(trieNode = this.rootNode, parentPathString = null) {
+        if (!trieNode || !trieNode.isQueue) { // Process only nodes that were marked as actual queues
             return null;
         }
 
-        let currentNode = this.rootNode;
-        for (let i = 1; i < segments.length; i++) { // Start from 1 as rootNode is segments[0]
-            const segment = segments[i];
-            if (!currentNode.children.has(segment)) {
-                return null; // Path does not exist
-            }
-            currentNode = currentNode.children.get(segment);
-        }
-        return currentNode.isQueue ? currentNode : null;
-    }
-
-    /**
-     * Builds a plain JavaScript object hierarchy from the Trie.
-     * @param {SchedulerTrieNode} node - The current Trie node to process.
-     * @param {string | null} parentPath - The path of the parent queue.
-     * @returns {Object} A queue object representing the hierarchy.
-     */
-    buildQueueHierarchyObject(node = this.rootNode, parentPath = null) {
-        const queueObject = {
-            name: node.segment,
-            path: node.fullPath,
-            parentPath: parentPath,
+        const finalQueueObject = {
+            name: trieNode.segment,
+            path: trieNode.fullPath,
+            parentPath: parentPathString,
             children: {},
-            properties: new Map(node.properties), // Convert Map to plain object
-            // UI-specific fields like capacityMode, state, etc., will be derived here or by rendering logic
+            properties: new Map(trieNode.properties), // All props are already correctly assigned
+            capacityMode: CAPACITY_MODES.PERCENTAGE,  // Default
+            state: 'RUNNING', // Default
         };
 
-        // Example: Derive capacityMode from properties
-        const capString = node.properties.get('capacity');
-        if (capString) {
-            if (String(capString).endsWith('w')) queueObject.capacityMode = 'weight';
-            else if (String(capString).startsWith('[')) queueObject.capacityMode = 'absolute'; // Or 'vector' based on further parsing
-            else queueObject.capacityMode = 'percentage';
-        } else {
-            // Fallback to a default or derive from metadata if capacity is not explicitly set
-            // For example, find default in QUEUE_CONFIG_CATEGORIES for '...capacity'
-            // const capDefaultMeta = QUEUE_CONFIG_CATEGORIES.flatMap(cat => Object.values(cat.properties)).find(p => p.displayName === 'Capacity');
-            // const capDefault = capDefaultMeta ? capDefaultMeta.defaultValue : '0%';
-            // Similar logic for default mode from capDefault string. For now, just a basic default:
-            queueObject.capacityMode = 'percentage';
-        }
-        // Example: Derive state
-        queueObject.state = node.properties.get('state') || 'RUNNING'; // Default to RUNNING if not specified
+        // The 'queues' property on the trieNode defines the children for the hierarchy object
+        const childQueueNames = new Set(trieNode.children.keys());
 
-        // Example: Derive autoCreateChildQueueEnabled
-        const autoCreateEnabledProp = node.properties.get('auto-create-child-queue.enabled'); // Ensure exact property name match
-        queueObject.autoCreateChildQueueEnabled = autoCreateEnabledProp === 'true';
-
-
-        // Recursively build children. The `queues` property is key for defining the hierarchy.
-        const childrenNamesString = node.properties.get('queues');
-        if (childrenNamesString) {
-            childrenNamesString.split(',').forEach(childSegment => {
-                const trimmedChildName = childSegment.trim();
-                const childNode = node.children.get(trimmedChildName);
-                if (childNode && childNode.isQueue) { // Ensure child exists in Trie and is a queue
-                    queueObject.children[trimmedChildName] = this.buildQueueHierarchyObject(childNode, node.fullPath);
-                } else {
-                    // console.warn(`Queue ${node.fullPath} lists child ${trimmedChildName} in its 'queues' property, but this child has no properties of its own or doesn't exist.`);
-                    // Optionally create a minimal placeholder if necessary, but typically SCHEDULER_CONF would define children with their own props.
-                }
-            });
-        } else {
-            // Fallback: If 'queues' property is missing, but Trie nodes exist as children, build them.
-            // This handles cases where hierarchy might be implied by path structure even if 'queues' prop is absent for a parent.
-            for (const [childName, childNode] of node.children.entries()) {
-                if (childNode.isQueue) { // Process only if the child node is a recognized queue
-                    queueObject.children[childName] = this.buildQueueHierarchyObject(childNode, node.fullPath);
-                }
+        for (const childName of childQueueNames) {
+            const childTrieNode = trieNode.children.get(childName);
+            if (childTrieNode && childTrieNode.isQueue) { // Check if child exists in Trie and is a queue
+                finalQueueObject.children[childName] = this.buildQueueHierarchyObject(childTrieNode, trieNode.fullPath);
+            } else {
+                // console.warn(`Queue ${trieNode.fullPath} lists child '${childName}' but it's not found in Trie or not marked as a queue.`);
             }
         }
-        return queueObject;
+
+        // Derive top-level convenience fields from the properties map
+        const capString = finalQueueObject.properties.get('capacity');
+        if (capString !== undefined) {
+            finalQueueObject.capacity = capString;
+            if (String(capString).endsWith('w')) finalQueueObject.capacityMode = CAPACITY_MODES.WEIGHT;
+            else if (String(capString).startsWith('[')) finalQueueObject.capacityMode = CAPACITY_MODES.ABSOLUTE;
+            else finalQueueObject.capacityMode = CAPACITY_MODES.PERCENTAGE;
+        } else {
+            finalQueueObject.capacity = '0%'; // Default capacity if not specified
+            finalQueueObject.capacityMode = CAPACITY_MODES.PERCENTAGE;
+        }
+
+        const stateStr = finalQueueObject.properties.get('state');
+        if (stateStr !== undefined) finalQueueObject.state = stateStr; else finalQueueObject.state = 'RUNNING';
+
+        finalQueueObject.maxCapacity = finalQueueObject.properties.get('maximum-capacity');
+        finalQueueObject.autoCreateChildQueueEnabled = finalQueueObject.properties.get('auto-create-child-queue.enabled') === 'true';
+        // finalQueueObject.accessibleNodeLabels = finalQueueObject.properties.get('accessible-node-labels');
+
+        return finalQueueObject;
     }
 }

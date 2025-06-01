@@ -1,8 +1,3 @@
-// Depends on global functions: getAllParentQueues (from modal-helpers.js), 
-// validateQueueName, validateCapacity (from validation.js), showWarning, showSuccess,
-// findQueueByPath, pendingAdditions, renderQueueTree, closeAddQueueModal (from modal-helpers.js),
-// QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER (from main.js)
-
 function openAddQueueModal() {
   const addFormContainer = document.getElementById("add-form-container");
   addFormContainer.innerHTML = createAddFormHTML(); 
