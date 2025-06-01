@@ -1,4 +1,5 @@
 // --- Global State Variables ---
+let schedulerTrie = new SchedulerConfigTrie(); // Populated by api.loadSchedulerConfiguration
 let queueData = null; // Populated by api.loadSchedulerConfiguration
 let availablePartitions = ['']; // Populated by extractPartitions (likely in ui-components.js or queue-renderer.js)
 let currentPartition = '';

@@ -24,41 +24,73 @@ function drawArrowToChild(parentRect, childRect, svgRect, svg) {
   svg.appendChild(path);
 }
 
-function drawArrows() {
-  const svg = document.getElementById("arrow-svg");
-  svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>";
+function drawArrowsForQueue(queue) {
+  // ---- START ADDED GUARD ----
+  if (!queue || typeof queue.path !== 'string') {
+    // console.warn("drawArrowsForQueue: Attempted to draw arrows for a null or invalid queue object:", queue);
+    return;
+  }
+  // ---- END ADDED GUARD ----
 
-  // Use the bounding rect of the SVG overlay, not the queue-tree
-  const svgRect = svg.getBoundingClientRect();
+  const parentElement = queueElements.get(queue.path); // Line 35 from original error
+  if (!parentElement) {
+    // console.warn(`drawArrowsForQueue: Parent element not found for queue path "${queue.path}". Arrows might be incomplete.`);
+    return;
+  }
 
-  function drawArrowsForQueue(queue) {
-    const parentElement = queueElements.get(queue.path);
-    if (!parentElement) return;
+  const svg = document.getElementById("arrow-svg"); // Ensure svg is accessible here
+  const svgRect = svg.getBoundingClientRect(); // And svgRect
 
-    const parentRect = parentElement.getBoundingClientRect();
+  const parentRect = parentElement.getBoundingClientRect();
 
-    // Draw arrows to existing children
+  // Draw arrows to existing children
+  if (queue.children && typeof queue.children === 'object') {
     Object.values(queue.children).forEach((child) => {
-      if (pendingDeletions.has(child.path)) return;
-      const childElement = queueElements.get(child.path);
-      if (!childElement) return;
-      const childRect = childElement.getBoundingClientRect();
-      drawArrowToChild(parentRect, childRect, svgRect, svg);
-      drawArrowsForQueue(child);
-    });
-
-    // Draw arrows to new children
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
-      if (newQueue.parentPath !== queue.path) return;
-      const childElement = queueElements.get(newQueue.path);
-      if (!childElement) return;
-      const childRect = childElement.getBoundingClientRect();
-      drawArrowToChild(parentRect, childRect, svgRect, svg);
-      drawArrowsForQueue(newQueue);
+      // The recursive call drawArrowsForQueue(child) will be protected by the guard at its start.
+      if (child && typeof child.path === 'string' && !pendingDeletions.has(child.path)) {
+        const childElement = queueElements.get(child.path);
+        if (childElement) {
+          const childRect = childElement.getBoundingClientRect();
+          drawArrowToChild(parentRect, childRect, svgRect, svg);
+          drawArrowsForQueue(child); // Recursive call
+        }
+      }
     });
   }
 
-  drawArrowsForQueue(queueData);
+
+  // Draw arrows to new children
+  if (typeof pendingAdditions !== 'undefined' && pendingAdditions instanceof Map) {
+    Array.from(pendingAdditions.values()).forEach((newQueue) => {
+      if (newQueue && newQueue.parentPath === queue.path) { // Check if newQueue and newQueue.parentPath exist
+        const childElement = queueElements.get(newQueue.path);
+        if (childElement) {
+          const childRect = childElement.getBoundingClientRect();
+          drawArrowToChild(parentRect, childRect, svgRect, svg);
+          drawArrowsForQueue(newQueue); // Recursive call for newly added children that might have their own pending children
+        }
+      }
+    });
+  }
+}
+
+function drawArrows() {
+  // ---- START ADDED GUARD ----
+  if (!window.queueData) {
+    // console.warn("drawArrows: window.queueData is not available. Skipping arrow rendering.");
+    return;
+  }
+  // ---- END ADDED GUARD ----
+
+  const svg = document.getElementById("arrow-svg");
+  if (!svg) { // Ensure SVG element exists
+      // console.error("drawArrows: SVG element 'arrow-svg' not found.");
+      return;
+  }
+  svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>"; // Clear previous arrows except defs
+
+  // Initial call to the recursive function
+  drawArrowsForQueue(window.queueData);
 }
 
 window.drawArrows = drawArrows;
