@@ -64,6 +64,12 @@ const QUEUE_CONFIG_CATEGORIES = [
                 description: 'Whether preemption is disabled for this queue.',
                 type: 'boolean',
                 defaultValue: 'false'
+            },
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.auto-create-child-queue.enabled`]: {
+                displayName: 'Auto-Create Child Queue',
+                description: 'Whether to automatically create child queues when applications are submitted to this queue.',
+                type: 'boolean',
+                defaultValue: 'false'
             }
             // Add other queue-specific properties here
         }

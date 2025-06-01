@@ -5,14 +5,12 @@ function openAddQueueModal() {
   const parentSelect = document.getElementById("parent-queue-select");
   parentSelect.innerHTML = ""; 
 
-  const parents = (typeof getAllParentQueues === "function") ? getAllParentQueues() : [{path: 'root', name: 'root'}]; 
+  const parents = (typeof getAllParentQueues === "function") ? getAllParentQueues() : [{path: 'root', name: 'root'}];
   parents.forEach((parent) => {
-    if (!pendingDeletions.has(parent.path)) { 
         const option = document.createElement("option");
         option.value = parent.path;
         option.textContent = parent.path;
         parentSelect.appendChild(option);
-    }
   });
 
   if (parentSelect.options.length > 0 && parentSelect.value === '') {
@@ -94,6 +92,7 @@ function addNewQueue() {
     const parentPath = document.getElementById("parent-queue-select").value;
     const queueNameInput = document.getElementById("new-queue-name");
     const queueName = queueNameInput.value.trim();
+    // ... (get other values from the simple add form: capacityMode, capacityValue, maxCapacityValue, state) ...
     const capacityMode = document.getElementById("new-capacity-mode").value;
     const capacityInput = document.getElementById("new-queue-capacity");
     let capacityValue = capacityInput.value.trim();
@@ -101,20 +100,22 @@ function addNewQueue() {
     let maxCapacityValue = maxCapacityInput.value.trim();
     const state = document.getElementById("new-queue-state").value;
 
-    const nameError = validateQueueName(queueName);
+
+    // --- Validations (existing logic is good) ---
+    const nameError = validateQueueName(queueName); // Assumes validateQueueName is global
     if (nameError) {
         if (typeof showWarning === "function") showWarning(nameError);
         queueNameInput.focus();
         return;
     }
-
+    // ... (format capacityValue, maxCapacityValue based on mode; validate them - existing logic is good) ...
     // Ensure capacityValue format matches mode for validation and storage
     if (capacityMode === 'percentage' && !capacityValue.endsWith('%')) {
         capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + '%';
     } else if (capacityMode === 'weight' && !capacityValue.endsWith('w')) {
         capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + 'w';
     } else if (capacityMode === 'absolute' && !(capacityValue.startsWith('[') && capacityValue.endsWith(']'))) {
-        if (capacityValue.trim() === '') capacityValue = '[memory=1024,vcores=1]';
+        if (capacityValue.trim() === '') capacityValue = '[memory=1024,vcores=1]'; // Default if empty
         else capacityValue = `[${capacityValue.replace(/[\[\]]/g, '')}]`;
     }
 
@@ -123,120 +124,100 @@ function addNewQueue() {
         maxCapacityValue = `${(parseFloat(maxCapacityValue) || 100).toFixed(1)}%`;
     }
 
-    const capacityErrors = validateCapacity(capacityValue, capacityMode);
+    const capacityErrors = validateCapacity(capacityValue, capacityMode); // Assumes validateCapacity is global
     if (capacityErrors.length > 0) {
         if (typeof showWarning === "function") showWarning(`Capacity validation error: ${capacityErrors.join(", ")}`);
         capacityInput.focus();
         return;
     }
-    // Basic validation for max capacity (can be expanded)
     if (maxCapacityValue.trim() === '') {
         if (typeof showWarning === "function") showWarning("Maximum Capacity cannot be empty.");
         maxCapacityInput.focus();
         return;
     }
 
-
     const newQueuePath = parentPath === "root" ? `root.${queueName}` : `${parentPath}.${queueName}`;
 
-    if ((queueStateStore.getQueueHierarchy() && findQueueByPath(newQueuePath, queueStateStore.getQueueHierarchy())) || pendingAdditions.has(newQueuePath)) {
-        if (typeof showWarning === "function") showWarning("A queue with this name already exists at this path.");
+    // Check for existing queue (using queueStateStore which knows about Trie and pendingAdditions)
+    if (queueStateStore && queueStateStore.getQueue(newQueuePath)) {
+        if (typeof showWarning === "function") showWarning("A queue with this name already exists at this path or is staged for addition.");
         return;
     }
 
-    // ---- START NEW: Create a 'properties' Map for the new queue ----
-    const simplePropertiesMap = new Map();
-    simplePropertiesMap.set('capacity', capacityValue);
-    simplePropertiesMap.set('maximum-capacity', maxCapacityValue);
-    simplePropertiesMap.set('state', state);
-    // Add other relevant default properties that createQueueCard might expect,
-    // similar to how buildQueueHierarchyObject sets them up.
-    // These would come from QUEUE_CONFIG_CATEGORIES.
+
+    // --- Enhanced Property Initialization ---
+    const newQueueProperties = new Map();
+    const apiParams = {}; // For the YARN API call
+
+    // Set values from the form first
+    newQueueProperties.set('capacity', capacityValue);
+    newQueueProperties.set('maximum-capacity', maxCapacityValue); // Use consistent simple key
+    newQueueProperties.set('state', state);
+    // ... (add any other properties directly settable from a simplified add form)
+
+    // Iterate QUEUE_CONFIG_CATEGORIES to set all other properties to their defaults
+    // and to populate apiParams correctly.
     if (typeof QUEUE_CONFIG_CATEGORIES !== 'undefined') {
-        QUEUE_CONFIG_CATEGORIES.forEach(category => {
+        (QUEUE_CONFIG_CATEGORIES || []).forEach(category => {
             for (const placeholderPropName in category.properties) {
-                const propDef = category.properties[placeholderPropName];
-                // Extract the simple key (e.g., 'user-limit-factor' from '...<queue_path>.user-limit-factor')
-                const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
-                
-                if (!simplePropertiesMap.has(simpleKey) && propDef.defaultValue !== undefined) {
-                    // Handle special default for 'ordering-policy' for parent queues
-                    if (simpleKey === 'ordering-policy' && parentPath !== null) { // Assuming root is not null for this check
-                         // Parent queues typically default to 'utilization' or 'fair', leaves to 'fifo'
-                         // For simplicity, let's use a common default or skip if complex.
-                         // The metadata default 'fifo' might be for leaves.
-                         // Let's stick to propDef.defaultValue for now unless more specific logic is added.
-                        simplePropertiesMap.set(simpleKey, propDef.defaultValue);
-                    } else if (simpleKey !== 'capacity' && simpleKey !== 'maximum-capacity' && simpleKey !== 'state') {
-                         simplePropertiesMap.set(simpleKey, propDef.defaultValue);
+                if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
+                    const propDef = category.properties[placeholderPropName];
+                    const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
+                    const fullYarnName = placeholderPropName.replace(Q_PATH_PLACEHOLDER || '<queue_path>', newQueuePath);
+
+                    // For apiParams, always use the fullYarnName
+                    // For newQueueProperties, always use the simpleKey
+
+                    if (simpleKey === 'capacity') {
+                        apiParams[fullYarnName] = capacityValue;
+                        // newQueueProperties already set
+                    } else if (simpleKey === 'maximum-capacity') { // Match the key used above
+                        apiParams[fullYarnName] = maxCapacityValue;
+                        // newQueueProperties already set
+                    } else if (simpleKey === 'state') {
+                        apiParams[fullYarnName] = state;
+                        // newQueueProperties already set
+                    } else {
+                        // If not set by the simple form, use default for both properties map and API params
+                        if (!newQueueProperties.has(simpleKey)) {
+                            newQueueProperties.set(simpleKey, propDef.defaultValue);
+                        }
+                        // Ensure API params also get the default if not one of the main form fields
+                        // (or if it was, it would have been overwritten by specific value already)
+                        apiParams[fullYarnName] = newQueueProperties.get(simpleKey); // Use the resolved value
                     }
                 }
             }
         });
+    } else { // Fallback if QUEUE_CONFIG_CATEGORIES is not available (should not happen in production)
+        apiParams[`yarn.scheduler.capacity.${newQueuePath}.capacity`] = capacityValue;
+        apiParams[`yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`] = maxCapacityValue;
+        apiParams[`yarn.scheduler.capacity.${newQueuePath}.state`] = state;
     }
-     // Ensure some critical defaults if not covered by metadata iteration for some reason
-    if (!simplePropertiesMap.has('user-limit-factor')) simplePropertiesMap.set('user-limit-factor', '1');
-    if (!simplePropertiesMap.has('maximum-am-resource-percent')) simplePropertiesMap.set('maximum-am-resource-percent', '0.1');
-    // ---- END NEW ----
+
 
     const newQueueDataForStore = {
         name: queueName,
         path: newQueuePath,
         parentPath: parentPath,
-        // Keep direct fields for potential immediate use or easier debugging,
-        // but queue-card.js should primarily rely on the 'properties' Map.
-        capacity: capacityValue,
-        maxCapacity: maxCapacityValue,
-        state: state,
         children: {}, // New queues don't have children initially
-        capacityMode: capacityMode, // This is important for card rendering logic
+        capacityMode: capacityMode, // Crucial for formatter and UI
 
-        properties: simplePropertiesMap, // Assign the Map here
+        // Core properties directly for convenience (will also be in the map below)
+        // These should reflect what's in newQueueProperties
+        capacity: newQueueProperties.get('capacity'),
+        maxCapacity: newQueueProperties.get('maximum-capacity'),
+        state: newQueueProperties.get('state'),
 
-        // params object will hold the full YARN property paths and values for the API call
-        params: {}
+        properties: newQueueProperties, // This map now contains all defined props with form values or defaults
+        params: apiParams               // Params for the API call, also comprehensive
     };
 
-    // Populate newQueueDataForStore.params for the API call (full YARN paths)
-    // This part uses the QUEUE_CONFIG_CATEGORIES to ensure all necessary YARN props are included
-    if (typeof QUEUE_CONFIG_CATEGORIES !== 'undefined') {
-        QUEUE_CONFIG_CATEGORIES.forEach(category => {
-            for (const placeholderPropName in category.properties) {
-                const propDef = category.properties[placeholderPropName];
-                const actualPropNameFull = placeholderPropName.replace(Q_PATH_PLACEHOLDER, newQueuePath);
-
-                if (placeholderPropName.endsWith('.capacity')) {
-                    newQueueDataForStore.params[actualPropNameFull] = capacityValue;
-                } else if (placeholderPropName.endsWith('.maximum-capacity')) {
-                    newQueueDataForStore.params[actualPropNameFull] = maxCapacityValue;
-                } else if (placeholderPropName.endsWith('.state')) {
-                    newQueueDataForStore.params[actualPropNameFull] = state;
-                } else if (propDef.defaultValue !== undefined && propDef.defaultValue !== '') {
-                    // Only add other metadata defaults if not one of the core ones already set by form
-                     if (newQueueDataForStore.params[actualPropNameFull] === undefined) { // Check if not already set
-                         newQueueDataForStore.params[actualPropNameFull] = propDef.defaultValue;
-                     }
-                }
-            }
-        });
-    }
-    // Ensure core params are definitely set in 'params' if not covered by loop (e.g., if metadata is minimal)
-    const yarnCapacityPath = `yarn.scheduler.capacity.${newQueuePath}.capacity`;
-    const yarnMaxCapacityPath = `yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`;
-    const yarnStatePath = `yarn.scheduler.capacity.${newQueuePath}.state`;
-
-    if (!newQueueDataForStore.params[yarnCapacityPath]) newQueueDataForStore.params[yarnCapacityPath] = capacityValue;
-    if (!newQueueDataForStore.params[yarnMaxCapacityPath]) newQueueDataForStore.params[yarnMaxCapacityPath] = maxCapacityValue;
-    if (!newQueueDataForStore.params[yarnStatePath]) newQueueDataForStore.params[yarnStatePath] = state;
-
-
-    pendingAdditions.set(newQueuePath, newQueueDataForStore);
-    // console.log("Staged new queue for addition:", newQueueDataForStore);
-    if (typeof showSuccess === "function") showSuccess(`New queue "${queueName}" staged for addition.`);
-
-    if (typeof renderQueueTree === "function") renderQueueTree(); // Line 171 from original error stack
-    if (typeof updateBatchControls === "function") updateBatchControls();
-    if (typeof closeAddQueueModal === "function") closeAddQueueModal();
+    queueStateStore.doAdd(newQueuePath, { newQueueData: newQueueDataForStore });
+    showSuccess(`New queue "${queueName}" staged for addition.`);
+    renderQueueTree();
+    updateBatchControls();
+    closeAddQueueModal(); // from modal-helpers.js
 }
 
 window.openAddQueueModal = openAddQueueModal;

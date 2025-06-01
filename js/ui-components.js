@@ -121,42 +121,47 @@ function updateBatchControls() {
   const batchValidation = document.getElementById("batch-validation");
   const applyBtn = document.getElementById("apply-changes-btn");
 
-  const changeCount =
-    pendingChanges.size + pendingAdditions.size + pendingDeletions.size;
-  
+  if (!queueStateStore || !batchControls || !batchInfo || !batchValidation || !applyBtn) {
+    // Silently return or log error if critical elements/store are missing
+    // console.warn("Batch control elements or queueStateStore not found.");
+    if(batchControls) batchControls.classList.remove("show"); // Hide if it was visible
+    return;
+  }
+
+  // Get counts from QueueStateStore
+  const modifiedCount = queueStateStore.countUpdate();
+  const addedCount = queueStateStore.countAdd();
+  const deletedCount = queueStateStore.countDelete();
+  const changeCount = modifiedCount + addedCount + deletedCount;
+
   const activeTab = document.querySelector('.nav-tab.active');
   const isQueueConfigTabActive = activeTab && activeTab.getAttribute('data-tab') === 'queue-config-content';
 
-
-  if (changeCount > 0 && isQueueConfigTabActive) { // Only show for queue config tab
+  if (changeCount > 0 && isQueueConfigTabActive) {
     batchControls.classList.add("show");
-    batchControls.style.display = 'flex';
-
+    batchControls.style.display = 'flex'; // Ensure display is flex if class was just added
 
     let infoText = [];
-    if (pendingChanges.size > 0)
-      infoText.push(`${pendingChanges.size} modified`);
-    if (pendingAdditions.size > 0)
-      infoText.push(`${pendingAdditions.size} added`);
-    if (pendingDeletions.size > 0)
-      infoText.push(`${pendingDeletions.size} deleted`);
+    if (modifiedCount > 0) infoText.push(`${modifiedCount} modified`);
+    if (addedCount > 0) infoText.push(`${addedCount} added`);
+    if (deletedCount > 0) infoText.push(`${deletedCount} deleted`);
+    batchInfo.textContent = infoText.length > 0 ? infoText.join(", ") : "No changes";
 
-    batchInfo.textContent = infoText.join(", ");
 
     const errors = validatePendingChanges();
+
     if (errors.length === 0) {
-      batchValidation.textContent = "All changes valid ✓ (Mixed modes allowed)";
+      batchValidation.textContent = "All changes valid ✓"; // Removed (Mixed modes allowed) as it's a detail
       batchValidation.className = "batch-validation valid";
       applyBtn.disabled = false;
     } else {
-      const errorText = errors.map((e) => e.message || e.error).join(", ");
+      const errorText = errors.map(e => e.message || e.error || String(e)).join(", ");
       batchValidation.textContent = `Validation errors: ${errorText}`;
-      batchValidation.className = "batch-validation";
+      batchValidation.className = "batch-validation"; // Assuming default style is for error
       applyBtn.disabled = true;
     }
   } else {
     batchControls.classList.remove("show");
-    batchControls.style.display = 'none';
   }
 }
 

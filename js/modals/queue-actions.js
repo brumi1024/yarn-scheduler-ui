@@ -20,100 +20,111 @@ function markQueueForDeletion(queuePath) {
     return;
   }
 
-  if (pendingAdditions.has(queuePath)) {
-    pendingAdditions.delete(queuePath); 
-    if (typeof showSuccess === "function") showSuccess(`New queue "${queue.name}" removed from staging.`);
+  if (queueStateStore.isStateAdd(queuePath)) {
+      queueStateStore.deleteChange(queuePath);
+      showSuccess(`New queue "${queue.name}" removed from staging.`);
   } else {
-    pendingDeletions.add(queuePath);
-    if (typeof showSuccess === "function") showSuccess(`Queue "${queue.name}" marked for deletion.`);
+      queueStateStore.doDelete(queuePath);
+      showSuccess(`Queue "${queue.name}" marked for deletion.`);
   }
-  
-  pendingChanges.delete(queuePath); // Remove any pending modifications for this queue
 
-  if (typeof renderQueueTree === "function") renderQueueTree();
-  if (typeof updateBatchControls === "function") updateBatchControls();
+  renderQueueTree();
+  updateBatchControls();
 }
 
 async function applyAllChanges() {
-    const validationErrors = (typeof validatePendingChanges === 'function') ? validatePendingChanges() : []; 
+    const validationErrors = (typeof validatePendingChanges === 'function') ? validatePendingChanges() : [];
     if (validationErrors.length > 0) {
-        if (typeof showWarning === "function") showWarning(`Cannot apply changes: ${validationErrors.join(", ")}`);
+        if (typeof showWarning === "function") showWarning(`Cannot apply changes: ${validationErrors.map(e => e.message || e).join(", ")}`);
         return;
     }
 
-    const backupChanges = new Map(pendingChanges);
-    const backupAdditions = new Map(pendingAdditions);
-    const backupDeletions = new Set(pendingDeletions);
+    if (!queueStateStore) {
+        showError("Error: QueueStateStore not available to apply changes.");
+        return;
+    }
 
-    const deletions = Array.from(pendingDeletions);
-    const additions = Array.from(pendingAdditions.values()).map((newQueue) => {
-        return {
-            queueName: newQueue.path, 
-            params: newQueue.params || {} 
-        };
-    });
-
-    const updates = [];
-    pendingChanges.forEach((changes, queuePath) => {
-        const paramsForAPI = {};
-        let hasApiRelevantChanges = false;
-        for (const keyInChanges in changes) {
-            if (keyInChanges !== '_ui_capacityMode') { 
-                paramsForAPI[keyInChanges] = changes[keyInChanges];
-                hasApiRelevantChanges = true;
-            }
-        }
-        if (hasApiRelevantChanges) {
-            updates.push({
-                queueName: queuePath,
-                params: paramsForAPI
-            });
-        }
-    });
+    // Get staged changes from QueueStateStore
+    const deletions = queueStateStore.getStagedDeletions();
+    const additions = queueStateStore.getStagedAdditionsForApi();
+    const updates = queueStateStore.getStagedUpdatesForApi();
 
     if (deletions.length === 0 && additions.length === 0 && updates.length === 0) {
         if (typeof showInfo === "function") showInfo("No staged queue changes to apply.");
         return;
     }
-    
+
+    // Backup strategy in case of API failure (optional, but good for UX)
+    // This is complex if the store's internal state needs backup/restore.
+    // For now, we'll rely on re-fetching configuration on failure.
+
     if (typeof showLoading === "function") showLoading("Applying queue configuration changes...");
     try {
+        // api.makeConfigurationUpdateApiCall should be available globally or through an api module instance
         const response = await api.makeConfigurationUpdateApiCall({ deletions, additions, updates });
 
         if (response && response.status == 200 && typeof response.data === "string" && response.data.toLowerCase().includes("successfully applied")) {
-            pendingChanges.clear();
-            pendingAdditions.clear();
-            pendingDeletions.clear();
-            liveRawSchedulerConf = null; 
-            
-            if (typeof showLoading === "function") showLoading("Reloading queue configuration...");
-            await api.loadSchedulerConfiguration(); 
-            if (typeof showSuccess === "function") showSuccess("Queue configuration changes applied successfully!");
-        } else {
-            pendingChanges.clear(); backupChanges.forEach((v, k) => pendingChanges.set(k, v));
-            pendingAdditions.clear(); backupAdditions.forEach((v, k) => pendingAdditions.set(k, v));
-            pendingDeletions.clear(); backupDeletions.forEach(v => pendingDeletions.add(v));
-            
-            if (typeof renderQueueTree === "function") renderQueueTree();
+            queueStateStore.clear(); // Clear staged changes from the store
+            liveRawSchedulerConf = null; // Invalidate cache for scheduler-conf
 
+            if (typeof showLoading === "function") showLoading("Reloading queue configuration...");
+            // api.loadSchedulerConfiguration() reloads Trie, re-renders tree, updates UI
+            await api.loadSchedulerConfiguration();
+            showSuccess("Queue configuration changes applied successfully!");
+        } else {
+            // API call failed or didn't confirm success
             let errorMessage = "Configuration update failed or validation error from YARN.";
-            // ... (error message parsing as before) ...
+            if (response && response.data) {
+                // Attempt to parse YARN's XML error if applicable, or just show the string
+                // This part can be complex depending on YARN's error response format
+                errorMessage = typeof response.data === 'string' ? response.data : JSON.stringify(response.data);
+                // Basic check for common YARN error structures might go here.
+                if (errorMessage.includes("ViolatedCapacityConstraintException") || errorMessage.includes("InvalidCapacityPercentageException")) {
+                    errorMessage = "YARN Validation Error: Capacity constraints violated. Please check queue capacities.";
+                }
+            }
             if (typeof showError === "function") showError(`YARN update failed: ${errorMessage}`);
             console.warn("YARN update/validation failed. Response:", response);
+            // Do NOT clear store on failure, user might want to retry or adjust.
+            // Re-render tree to show current pending state.
+           renderQueueTree();
         }
     } catch (error) {
-        pendingChanges.clear(); backupChanges.forEach((v, k) => pendingChanges.set(k, v));
-        pendingAdditions.clear(); backupAdditions.forEach((v, k) => pendingAdditions.set(k, v));
-        pendingDeletions.clear(); backupDeletions.forEach(v => pendingDeletions.add(v));
-        if (typeof renderQueueTree === "function") renderQueueTree();
-        
         if (typeof showError === "function") showError(`Failed to apply changes: ${error.message}`);
         console.error("Apply changes failed:", error);
+        // Re-render tree to show current pending state.
+        if (typeof renderQueueTree === "function") renderQueueTree();
     } finally {
         if (typeof hideLoading === "function") hideLoading();
+        if (typeof updateBatchControls === "function") updateBatchControls(); // Update based on store state
+    }
+}
+
+function discardChanges() {
+    if (queueStateStore && (queueStateStore.countAdd() > 0 || queueStateStore.countDelete() > 0 || queueStateStore.countUpdate() > 0 )) {
+        if (confirm("Are you sure you want to discard all pending changes?")) {
+            queueStateStore.clear();
+            if (typeof showInfo === "function") showInfo("All pending changes have been discarded.");
+            if (typeof renderQueueTree === "function") renderQueueTree();
+            if (typeof updateBatchControls === "function") updateBatchControls();
+        }
+    } else {
+        if (typeof showInfo === "function") showInfo("No pending changes to discard.");
+    }
+}
+
+function undoMarkQueueForDeletion(queuePath) {
+    if (queueStateStore && queueStateStore.isStateDelete(queuePath)) {
+        queueStateStore.deleteChange(queuePath); // Removes the DELETE_OP entry
+        if (typeof showSuccess === "function") showSuccess(`Deletion undone for queue "${queuePath.split('.').pop()}".`);
+        if (typeof renderQueueTree === "function") renderQueueTree();
         if (typeof updateBatchControls === "function") updateBatchControls();
+    } else {
+        if (typeof showWarning === "function") showWarning("Queue was not marked for deletion.");
     }
 }
 
 window.markQueueForDeletion = markQueueForDeletion;
 window.applyAllChanges = applyAllChanges;
+window.discardChanges = discardChanges;
+window.undoMarkQueueForDeletion = undoMarkQueueForDeletion;

@@ -1,6 +1,3 @@
-// Depends on global: showError, findQueueByPath, pendingChanges, liveRawSchedulerConf, 
-// QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER, detectCapacityMode (from queue-parser.js)
-
 function openInfoModal(queue) {
     if (!queue) {
         if (typeof showError === "function") showError("Cannot show info: Queue data missing.");
@@ -16,15 +13,6 @@ function createInfoFormHTML(queue) {
     let html = `<div class="queue-info-container">`;
     const pendingChange = pendingChanges.get(queue.path) || {};
     const currentLiveConf = liveRawSchedulerConf || new Map(); // Use liveRawSchedulerConf
-
-    // Helper to get display value for info modal
-    function getInfoDisplayValue(propPlaceholder, queueObjKey, defaultValue) {
-        const actualYarnPath = propPlaceholder.replace(Q_PATH_PLACEHOLDER, queue.path);
-        if (pendingChange[actualYarnPath] !== undefined) return pendingChange[actualYarnPath];
-        if (currentLiveConf.has(actualYarnPath)) return currentLiveConf.get(actualYarnPath);
-        if (queue[queueObjKey] !== undefined) return String(queue[queueObjKey]); // From parsed scheduler info
-        return defaultValue;
-    }
     
     // Basic Info Section (Hardcoded for now, can be derived from a "basic info" category in metadata)
     html += `<div class="info-section">
