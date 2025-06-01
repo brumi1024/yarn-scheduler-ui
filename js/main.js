@@ -1,6 +1,6 @@
 // --- Global State Variables ---
 let schedulerTrie = new SchedulerConfigTrie(); // Populated by api.loadSchedulerConfiguration
-let availablePartitions = ['']; // Populated by extractPartitions (likely in ui-components.js or queue-renderer.js)
+let availablePartitions = ['']; // TODO node label handling
 let currentPartition = '';
 
 // Staging changes for queues
@@ -22,7 +22,6 @@ let currentSearchTerm = '';
 let currentSort = 'capacity'; // Default sort for queue tree
 
 // --- API Instance ---
-// api.js must be loaded before main.js
 const api = new YarnSchedulerAPI(window.location.origin || '', true); // Set true for mocks, false for live
 
 // --- Basic Initialization ---
