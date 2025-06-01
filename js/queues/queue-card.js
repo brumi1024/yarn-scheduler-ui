@@ -8,11 +8,11 @@ window.createQueueCard = (queue) => {
     const isNewQueue = pendingAdditions.has(queuePath);
     const isToBeDeleted = pendingDeletions.has(queuePath);
 
-    if (isNewQueue && !isToBeDeleted) {
+    if (queueStateStore.isStateAdd(queuePath)) {
         card.classList.add("new-queue");
-    } else if (isToBeDeleted) {
+    } else if (queueStateStore.isStateDelete(queuePath)) {
         card.classList.add("to-be-deleted");
-    } else if (Object.keys(pendingChange).length > 0) { // Check if pendingChange object is not empty
+    } else if (queueStateStore.isStateUpdate(queuePath)) { // Check if pendingChange object is not empty
         card.classList.add("pending-changes");
     }
 
