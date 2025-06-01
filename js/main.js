@@ -13,7 +13,6 @@ let currentEditQueue = null; // Stores the queue object being edited
 
 // Cache for fetched configurations
 let liveRawSchedulerConf = null;    // Map of all queue config key-values from scheduler-conf
-let globalSchedulerSettings = null; // Map of global config key-values from scheduler-conf
 let isGlobalConfigEditMode = false; // Boolean flag for global config edit state
 
 // UI state

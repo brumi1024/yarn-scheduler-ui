@@ -50,8 +50,6 @@ function createNotificationContainer() {
   return container;
 }
 
-let loadingNotification = null;
-
 function showNotification(message, type = "info", duration = 5000) {
   const container = createNotificationContainer();
 

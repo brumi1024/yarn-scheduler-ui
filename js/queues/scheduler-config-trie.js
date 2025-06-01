@@ -30,6 +30,7 @@ class SchedulerConfigTrie {
             "parent-template",
             "leaf-template",
         ]);
+        this.prefix = "yarn.scheduler.capacity.";
     }
 
     /**
@@ -50,14 +51,13 @@ class SchedulerConfigTrie {
         for (const prop of schedulerConfProperties) {
             const configKey = prop.name;
             const value = prop.value;
-            const prefix = "yarn.scheduler.capacity.";
 
-            if (!configKey.startsWith(prefix)) continue; // Skip non-matching properties
-            const prefixlessPropertyName = configKey.substring(prefix.length);
+            if (!configKey.startsWith(this.prefix)) continue; // Skip non-matching properties
+            const prefixlessPropertyName = configKey.substring(this.prefix.length);
 
             // Separate global properties (those not starting with 'root') from queue-specific properties.
             if (!prefixlessPropertyName.startsWith("root")) {
-                this.globalProperties.set(prefixlessPropertyName, value);
+                this.globalProperties.set(configKey, value);
                 continue;
             }
 
@@ -80,7 +80,7 @@ class SchedulerConfigTrie {
 
         // Pass 3: Assign all other properties to the existing queue nodes in the Trie.
         for (const prop of otherProperties) {
-            this._assignPropertyToTrie(prop.prefixlessPropertyName, prop.value, prop.originalKey);
+            this._assignPropertyToTrie(prop.prefixlessPropertyName, prop.originalKey, prop.value);
         }
     }
 
@@ -100,7 +100,7 @@ class SchedulerConfigTrie {
         }
     }
 
-    _assignPropertyToTrie(prefixlessPropertyName, value, originalKeyForDebug = '') {
+    _assignPropertyToTrie(prefixlessPropertyName, originalKey, value) {
         const parts = prefixlessPropertyName.split('.'); // e.g., ["root", "test", "accessible-node-labels", "GPU", "capacity"]
         let currentNode = this.rootNode;
         let lastConfirmedQueueNode = this.rootNode;
@@ -126,12 +126,7 @@ class SchedulerConfigTrie {
                 break;
             }
         }
-
-        // The propertyName is the part of prefixlessPropertyName that extends beyond the path of lastConfirmedQueueNode.
-        // parts[0...depthOfLastConfirmedQueue] is the path of lastConfirmedQueueNode.
-        // So, propertyName starts from parts[depthOfLastConfirmedQueue + 1].
-        const propertyName = parts.slice(depthOfLastConfirmedQueue + 1).join('.');
-        lastConfirmedQueueNode.properties.set(propertyName, value);
+        lastConfirmedQueueNode.properties.set(originalKey, value);
     }
 
     /**
@@ -169,9 +164,7 @@ class SchedulerConfigTrie {
         };
 
         // The 'queues' property on the trieNode defines the children for the hierarchy object
-        const childQueueNames = new Set(
-            (trieNode.properties.get('queues') || '').split(',').map(q => q.trim()).filter(q => q)
-        );
+        const childQueueNames = new Set(trieNode.children.keys());
 
         for (const childName of childQueueNames) {
             const childTrieNode = trieNode.children.get(childName);

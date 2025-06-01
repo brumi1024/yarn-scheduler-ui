@@ -144,10 +144,7 @@ class YarnSchedulerAPI {
             schedulerTrie.initializeFromConfig(schedulerConfProperties);
             queueStateStore.setSchedulerTrie(schedulerTrie);
 
-            // 4. Store global settings (can also be accessed via schedulerTrie.globalProperties)
-            window.globalSchedulerSettings = new Map(queueStateStore.getGlobalProperties());
-
-            // 5. Fetch and Store SCHEDULER_INFO for the Info Modal
+            // 4. Fetch and Store SCHEDULER_INFO for the Info Modal
             const infoResponse = this.useMocks
                 ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
                 : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);

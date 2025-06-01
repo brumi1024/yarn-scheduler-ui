@@ -1,7 +1,3 @@
-// Depends on global variables: currentEditQueue, liveRawSchedulerConf, api, pendingChanges,
-// QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER, detectCapacityMode (from queue-parser.js)
-// and global functions: showError, showWarning, showInfo, showSuccess, closeEditModal, renderQueueTree.
-
 async function openEditModal(queue) {
   if (!queue) {
     if (typeof showError === "function")
@@ -204,19 +200,19 @@ async function openEditModal(queue) {
         formHTML += `<select class="form-input" id="${inputId}" data-original-value="${originalValueForInput}" data-yarn-prop="${actualPropName}">`;
         (propDef.options || []).forEach((opt) => {
           formHTML += `<option value="${opt}" ${
-            originalValueForInput == opt ? "selected" : ""
+            originalValueForInput === opt ? "selected" : ""
           }>${opt}</option>`;
         });
         formHTML += `</select>`;
       } else if (propDef.type === "boolean") {
         formHTML += `<select class="form-input" id="${inputId}" data-original-value="${originalValueForInput}" data-yarn-prop="${actualPropName}">
                                 <option value="true" ${
-                                  originalValueForInput == "true"
+                                  originalValueForInput === "true"
                                     ? "selected"
                                     : ""
                                 }>true</option>
                                 <option value="false" ${
-                                  originalValueForInput == "false"
+                                  originalValueForInput === "false"
                                     ? "selected"
                                     : ""
                                 }>false</option>

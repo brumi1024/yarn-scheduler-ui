@@ -22,7 +22,7 @@
     },
     {
       "name": "yarn.scheduler.capacity.root.TEST_B.FOO.queues",
-      "value": "m7kIjsqti2rNMvvCejwXoCd9c1mxMj4V"
+      "value": "capacity"
     },
     {
       "name": "yarn.scheduler.capacity.root.maximum-capacity",
@@ -33,7 +33,7 @@
       "value": "100"
     },
     {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.m7kIjsqti2rNMvvCejwXoCd9c1mxMj4V.maximum-capacity",
+      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity.maximum-capacity",
       "value": "100"
     },
     {
@@ -111,6 +111,10 @@
     {
       "name": "yarn.scheduler.capacity.schedule-asynchronously.enable",
       "value": "true"
+    },
+    {
+      "name": "yarn.scheduler.capacity.node-locality-delay",
+      "value": "70"
     },
     {
       "name": "yarn.scheduler.capacity.root.TEST_B.queues",

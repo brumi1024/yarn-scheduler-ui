@@ -1,8 +1,3 @@
-// Depends on global: confirm, pendingAdditions, pendingDeletions, pendingChanges, 
-// showError, showSuccess, showInfo, showWarning, renderQueueTree, updateBatchControls,
-// validatePendingChanges (from validation.js), api (from api.js), liveRawSchedulerConf,
-// findQueueByPath (from modal-helpers.js), canQueueBeDeleted (from queue-renderer.js)
-
 function markQueueForDeletion(queuePath) {
   if (queuePath === "root") {
     if (typeof showWarning === "function") showWarning("Cannot delete root queue.");

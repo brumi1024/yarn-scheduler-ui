@@ -1,22 +1,3 @@
-// getEditableGlobalProperties (if still needed separately, or logic incorporated into render)
-function getEditableGlobalProperties(properties) {
-    if (!properties) return [];
-    return properties.filter(prop => {
-        const name = prop.name;
-        if (name.includes('mutation-api.version') || 
-            (name.startsWith('yarn.scheduler.capacity.root.') && name.split('.').length > 4) || 
-            (name.startsWith('yarn.scheduler.capacity.root.') && name.split('.').length <=4 && !GLOBAL_CONFIG_CATEGORIES.flatMap(g=>Object.keys(g.properties)).includes(name))
-           ) {
-            return false; 
-        }
-        if (GLOBAL_CONFIG_CATEGORIES.flatMap(g=>Object.keys(g.properties)).includes(name)) {
-            return true;
-        }
-        return !name.includes(".root.") && name.startsWith('yarn.scheduler.capacity.');
-    });
-}
-
-
 async function renderSchedulerConfigurationPage() {
     const container = document.getElementById('global-scheduler-settings-container');
     if (!container) return;
@@ -39,16 +20,6 @@ async function renderSchedulerConfigurationPage() {
     container.innerHTML = ''; 
 
     try {
-        if (globalSchedulerSettings === null) { // Check specifically for null
-            const rawConf = await api.getSchedulerConf();
-            if (rawConf && rawConf.property) {
-                globalSchedulerSettings = new Map(rawConf.property.map(p => [p.name, p.value]));
-            } else {
-                globalSchedulerSettings = new Map();
-                if(typeof showWarning === 'function') showWarning("Could not fetch live global settings, or none are set. Displaying defaults.");
-            }
-        }
-
         let hasAnyConfigToShow = GLOBAL_CONFIG_CATEGORIES.some(cat => Object.keys(cat.properties).length > 0);
         if (!hasAnyConfigToShow) {
             container.innerHTML = '<p>No global scheduler settings categories are defined in the UI metadata.</p>';
@@ -66,7 +37,7 @@ async function renderSchedulerConfigurationPage() {
                 for (const propName in group.properties) {
                     if (Object.hasOwnProperty.call(group.properties, propName)) {
                         const metadata = group.properties[propName];
-                        const liveValue = globalSchedulerSettings.get(propName);
+                        const liveValue = queueStateStore.getGlobalProperties().get(propName);
                         const currentValue = liveValue !== undefined ? liveValue : metadata.defaultValue;
                         const isDefaultUsed = liveValue === undefined;
                         const inputId = `global-config-${propName.replace(/\./g, '-')}`;
@@ -124,19 +95,9 @@ function toggleGlobalConfigEditMode(editMode) {
 }
 
 async function saveGlobalSchedulerSettings() {
+
     const globalUpdatesPayload = { params: {} };
     let changesMade = 0;
-
-    if (globalSchedulerSettings === null) { // Ensure settings are loaded if trying to save without viewing first
-        try {
-            const rawConf = await api.getSchedulerConf();
-            globalSchedulerSettings = rawConf && rawConf.property ? new Map(rawConf.property.map(p => [p.name, p.value])) : new Map();
-        } catch (e) {
-            globalSchedulerSettings = new Map();
-            if(typeof showError === 'function') showError("Could not confirm current settings before saving. Please try again.");
-            return;
-        }
-    }
 
     const configItems = document.querySelectorAll('#global-scheduler-settings-container .config-item');
     configItems.forEach(item => {
@@ -163,7 +124,6 @@ async function saveGlobalSchedulerSettings() {
         const response = await api.makeConfigurationUpdateApiCall({ globalUpdates: [globalUpdatesPayload] });
         if (response && response.status === 200 && typeof response.data === "string" && response.data.toLowerCase().includes("successfully applied")) {
             if(typeof showSuccess === 'function') showSuccess("Global settings saved successfully!");
-            globalSchedulerSettings = null; 
             toggleGlobalConfigEditMode(false); 
         } else {
             const errorMessage = response && response.data ? (typeof response.data === 'string' ? response.data : JSON.stringify(response.data)) : "Unknown error";
