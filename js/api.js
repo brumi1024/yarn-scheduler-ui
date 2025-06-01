@@ -65,7 +65,7 @@ class YarnSchedulerAPI {
     let json = await resp.json();
     return { data: json };
   }
-  
+
   async makeRequestWithRetry(
     endpoint,
     options = {},
@@ -133,34 +133,79 @@ class YarnSchedulerAPI {
   async loadSchedulerConfiguration() {
     showLoading("Loading queue configuration...");
     try {
-      const response = this.useMocks
+      // 1. Fetch SCHEDULER_CONF data
+      const confResponse = await this.getSchedulerConf(); // This method already exists and fetches from SCHEDULER_CONF
+      const schedulerConfProperties = confResponse.property || [];
+
+      // 2. Instantiate and populate the Trie
+      schedulerTrie = new SchedulerConfigTrie();
+      schedulerConfProperties.forEach((prop) => {
+        schedulerTrie.insertProperty(prop.name, prop.value);
+      });
+
+      // 3. Generate window.queueData from the Trie
+      if (
+        typeof queueStateStore !== "undefined" &&
+        typeof queueStateStore.setSchedulerTrie === "function"
+      ) {
+        queueStateStore.setSchedulerTrie(schedulerTrie);
+      } else {
+        console.error(
+          "queueStateStore or queueStateStore.setSchedulerTrie is not available!"
+        );
+      }
+      // 4. Store global settings (can also be accessed via schedulerTrie.globalProperties)
+      // The global variable 'globalSchedulerSettings' in main.js should be updated here.
+      // For directness, other modules can access schedulerTrie.globalProperties if the trie instance is global,
+      // or we update main.js's globalSchedulerSettings.
+      if (
+        window.main &&
+        typeof window.main.setGlobalSchedulerSettings === "function"
+      ) {
+        window.main.setGlobalSchedulerSettings(schedulerTrie.globalProperties); // Or create such a setter
+      } else {
+        // Fallback: directly set a global if main.js's variable is accessible or handle as per your app structure
+        window.globalSchedulerSettings = schedulerTrie.globalProperties;
+      }
+
+      // 5. Fetch and Store SCHEDULER_INFO for the Info Modal
+      // (No change to fetching, just where it's primarily used)
+      const infoResponse = this.useMocks
         ? await this.getMock(API_ENDPOINTS.SCHEDULER_INFO)
         : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_INFO);
-      const data = response.data;
 
-      queueStateStore.updateConf(await this.getSchedulerConf())
-      queueStateStore.updateQueues(data.scheduler.schedulerInfo)
+      window.rawSchedulerInfo = infoResponse.data; // Store for Info Modal
 
-      if (data.scheduler && data.scheduler.schedulerInfo) {
-        const schedulerInfo = data.scheduler.schedulerInfo;
-
-        if (schedulerInfo.type !== "capacityScheduler") {
-          throw new Error(`Unsupported scheduler type: ${schedulerInfo.type}`);
-        }
-
-        queueData = parseSchedulerData(schedulerInfo);
-        window.queueData = queueData; // Ensure global access
-
-        extractPartitions(schedulerInfo);
-        populatePartitionSelector();
-        renderQueueTree(); // Render the queue tree for the default tab
-        // showContent(true); // showContent is now handled by tab switching
-      } else {
-        throw new Error("Invalid scheduler data received");
+      // 6. Update UI (existing calls)
+      // The original queue-parser.js is no longer the primary source for window.queueData hierarchy.
+      // extractPartitions and populatePartitionSelector likely used SCHEDULER_INFO,
+      // they might need to be adapted or use window.rawSchedulerInfo if partitions are not in SCHEDULER_CONF.
+      // For now, assuming they might still work or will be adapted in Phase 2.
+      if (
+        typeof extractPartitions === "function" &&
+        window.rawSchedulerInfo &&
+        window.rawSchedulerInfo.scheduler &&
+        window.rawSchedulerInfo.scheduler.schedulerInfo
+      ) {
+        extractPartitions(window.rawSchedulerInfo.scheduler.schedulerInfo);
       }
+      if (typeof populatePartitionSelector === "function") {
+        populatePartitionSelector();
+      }
+      if (typeof renderQueueTree === "function") {
+        renderQueueTree(); // Render the queue tree based on new Trie-derived window.queueData
+      }
+      // showContent(true); // Managed by tab switcher
+
+      // 7. Cleanup calls to old queueStateStore population for conf and hierarchy
+      // queueStateStore.updateConf(...) is replaced by Trie
+      // queueStateStore.updateQueues(...) is replaced by Trie-derived window.queueData
+      // The queueStateStore will still be used for pending changes (_changes map).
     } catch (error) {
-      console.log(error)
+      console.error("Error in loadSchedulerConfiguration:", error); // Log the error
       showError(`Failed to load queue configuration: ${error.message}`);
+    } finally {
+      // hideLoading(); // hideLoading is usually called by switchTab or the function that calls this.
     }
   }
 
@@ -168,13 +213,13 @@ class YarnSchedulerAPI {
   async getSchedulerConf() {
     // showLoading("Loading global scheduler settings..."); // Loading message handled by calling function
     try {
-        const response = this.useMocks
-            ? await this.getMock(API_ENDPOINTS.SCHEDULER_CONF)
-            : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_CONF);
-        return response.data;
+      const response = this.useMocks
+        ? await this.getMock(API_ENDPOINTS.SCHEDULER_CONF)
+        : await this.makeRequestWithRetry(API_ENDPOINTS.SCHEDULER_CONF);
+      return response.data;
     } catch (error) {
-        showError(`Failed to load scheduler-conf: ${error.message}`);
-        throw error; // Re-throw to be caught by caller
+      showError(`Failed to load scheduler-conf: ${error.message}`);
+      throw error; // Re-throw to be caught by caller
     }
   }
 

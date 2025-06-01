@@ -6,3 +6,10 @@ const CONFIG = {
     API_RETRY: 5000,
   },
 };
+
+const CAPACITY_MODES = {
+  VECTOR: "vector",
+  WEIGHT: "weight",
+  ABSOLUTE: "absolute",
+  PERCENTAGE: "percentage",
+};

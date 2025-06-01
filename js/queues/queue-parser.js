@@ -1,10 +1,3 @@
-const CAPACITY_MODES = {
-  VECTOR: "vector",
-  WEIGHT: "weight",
-  ABSOLUTE: "absolute",
-  PERCENTAGE: "percentage",
-};
-
 const QUEUE_TYPES = {
   PARENT: "parent",
   LEAF: "leaf",

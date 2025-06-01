@@ -231,7 +231,7 @@ function initializeEventHandlers() {
   // Modal outside click listeners
   const editModal = document.getElementById("edit-modal");
   if (editModal && typeof closeEditModal === 'function') {
-    editModal.addEventListener("click", function (e) { if (e.target === this) closeModal(); });
+    editModal.addEventListener("click", function (e) { if (e.target === this) closeEditModal(); });
   }
 
   const addQueueModal = document.getElementById("add-queue-modal");

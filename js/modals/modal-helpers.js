@@ -2,7 +2,7 @@
  * Finds a queue by its path in the main queueData or pendingAdditions.
  * Assumes window.queueData and pendingAdditions (from main.js) are globally accessible.
  */
-function findQueueByPath(path, currentQueue = window.queueData) {
+function findQueueByPath(path, currentQueue = queueStateStore.getQueueHierarchy()) {
     if (!currentQueue) return null;
     if (currentQueue.path === path) return currentQueue;
 
@@ -48,7 +48,7 @@ function closeInfoModal() {
  * Gets all parent queues for populating dropdowns.
  * Iterates through window.queueData and pendingAdditions, avoiding duplicates and deleted queues.
  */
-function getAllParentQueues(currentQueue = window.queueData, collectedPaths = new Set()) {
+function getAllParentQueues(currentQueue = queueStateStore.getQueueHierarchy(), collectedPaths = new Set()) {
     if (!currentQueue || collectedPaths.has(currentQueue.path)) return [];
     
     let parents = [];
