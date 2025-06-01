@@ -31,7 +31,6 @@ class SchedulerConfigTrie {
         const prefix = "yarn.scheduler.capacity.";
         if (!configKey.startsWith(prefix)) {
             // Optionally handle or log non-capacity scheduler properties if necessary
-            // console.warn(`Skipping non-capacity config or malformed key: ${configKey}`);
             return;
         }
 
