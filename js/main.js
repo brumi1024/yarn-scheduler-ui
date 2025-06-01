@@ -3,14 +3,6 @@ let queueData = null; // Populated by api.loadSchedulerConfiguration
 let availablePartitions = ['']; // Populated by extractPartitions (likely in ui-components.js or queue-renderer.js)
 let currentPartition = '';
 
-// Staging changes for queues
-let pendingChanges = new Map();    // { queuePath -> {yarnPropName: value, _ui_capacityMode: mode} }
-let pendingAdditions = new Map();  // { queuePath -> newQueueDataForStore object }
-let pendingDeletions = new Set();  // { queuePath }
-
-// Staging/State for Modals
-let currentEditQueue = null; // Stores the queue object being edited
-
 // Cache for fetched configurations
 let liveRawSchedulerConf = null;    // Map of all queue config key-values from scheduler-conf
 let globalSchedulerSettings = null; // Map of global config key-values from scheduler-conf
