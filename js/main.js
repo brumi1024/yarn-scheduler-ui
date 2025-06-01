@@ -1,6 +1,5 @@
 // --- Global State Variables ---
 let schedulerTrie = new SchedulerConfigTrie(); // Populated by api.loadSchedulerConfiguration
-let queueData = null; // Populated by api.loadSchedulerConfiguration
 let availablePartitions = ['']; // Populated by extractPartitions (likely in ui-components.js or queue-renderer.js)
 let currentPartition = '';
 
@@ -39,7 +38,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     showLoading('Initializing application...');
     try {
-        // Initial data load for queue structure (populates window.queueData)
+        // Initial data load for queue structure (populates the scheduler state store)
         // loadSchedulerConfiguration also calls renderQueueTree via switchTab or directly
         if (typeof api.loadSchedulerConfiguration === 'function') {
             await api.loadSchedulerConfiguration(); 
@@ -76,7 +75,7 @@ window.addEventListener('DOMContentLoaded', async () => {
                     queueConfigPane.classList.add('active');
                     const qTab = document.querySelector('.nav-tab[data-tab="queue-config-content"]');
                     if(qTab) qTab.classList.add('active');
-                    if (typeof renderQueueTree === 'function' && window.queueData) renderQueueTree();
+                    if (typeof renderQueueTree === 'function' && queueStateStore.getQueueHierarchy()) renderQueueTree();
                 }
                 hideLoading();
             }

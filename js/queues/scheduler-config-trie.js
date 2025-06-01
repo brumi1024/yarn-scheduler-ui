@@ -85,7 +85,7 @@ class SchedulerConfigTrie {
     }
 
     /**
-     * Builds a plain JavaScript object hierarchy from the Trie, suitable for window.queueData.
+     * Builds a plain JavaScript object hierarchy from the Trie.
      * @param {SchedulerTrieNode} node - The current Trie node to process.
      * @param {string | null} parentPath - The path of the parent queue.
      * @returns {Object} A queue object representing the hierarchy.
@@ -96,7 +96,7 @@ class SchedulerConfigTrie {
             path: node.fullPath,
             parentPath: parentPath,
             children: {},
-            properties: Object.fromEntries(node.properties), // Convert Map to plain object
+            properties: new Map(node.properties), // Convert Map to plain object
             // UI-specific fields like capacityMode, state, etc., will be derived here or by rendering logic
         };
 

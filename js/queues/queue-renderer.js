@@ -1,5 +1,5 @@
 function calculateMaxDepth(queue, currentDepth = 0) {
-  if (!queue) return currentDepth; 
+  if (!queue) return currentDepth;
   let maxDepth = currentDepth;
 
   Object.values(queue.children).forEach((child) => {
@@ -22,10 +22,18 @@ function calculateMaxDepth(queue, currentDepth = 0) {
 function sortQueues(queues) {
   if (currentSort === "capacity") {
     return queues.slice().sort((a, b) => {
-      const aCap =
-        a.effectiveCapacity !== undefined ? a.effectiveCapacity : a.capacity;
-      const bCap =
-        b.effectiveCapacity !== undefined ? b.effectiveCapacity : b.capacity;
+      // Helper to parse capacity string (could be %, w, or absolute) to a comparable number
+      // For simplicity, this example just parses float and ignores mode for sorting value.
+      // You might need a more sophisticated parsing if modes need different weightings.
+      const getComparableCapacity = (queue) => {
+        const capStr = queue.properties
+          ? queue.properties.get("capacity")
+          : "0";
+        // Basic parsing, might need refinement based on how you want to compare different modes
+        return parseFloat(capStr) || 0;
+      };
+      const aCap = getComparableCapacity(a);
+      const bCap = getComparableCapacity(b);
       return (bCap || 0) - (aCap || 0);
     });
   } else if (currentSort === "name") {
@@ -83,7 +91,7 @@ function collectVisibleQueues(queue, searchTerm, ancestors = []) {
 
 function getQueuesAtLevel(
   level,
-  queue = window.queueData,
+  queue = queueStateStore.getQueueHierarchy(),
   currentLevel = 0,
   searchTerm = currentSearchTerm
 ) {
@@ -108,8 +116,8 @@ function renderLevelHeaders() {
   const levelHeadersContainer = document.getElementById("level-headers");
   levelHeadersContainer.innerHTML = "";
 
-  if (!window.queueData) return;
-  const maxDepth = calculateMaxDepth(window.queueData);
+  if (!queueStateStore.getQueueHierarchy()) return;
+  const maxDepth = calculateMaxDepth(queueStateStore.getQueueHierarchy());
 
   for (let i = 0; i <= maxDepth; i++) {
     const header = document.createElement("div");
@@ -120,39 +128,47 @@ function renderLevelHeaders() {
 }
 
 function renderQueueTree() {
-  if (!window.queueData) { 
+  if (!queueStateStore.getQueueHierarchy()) {
     console.warn("renderQueueTree called but queueData is not available.");
     return;
   }
   // Ensure liveRawSchedulerConf is loaded if not already, for card display fallbacks
   if (liveRawSchedulerConf === null) {
-      api.getSchedulerConf().then(rawConfData => { // Assuming api.getSchedulerConf is defined
-          if (rawConfData && rawConfData.property) {
-              liveRawSchedulerConf = new Map(rawConfData.property.map(p => [p.name, p.value]));
-          } else {
-              liveRawSchedulerConf = new Map();
-          }
-          proceedWithRendering();
-      }).catch(() => {
-          liveRawSchedulerConf = new Map(); // Ensure it's a map on error
-          showError("Could not fetch scheduler-conf for card display. Some values might be incorrect.");
-          proceedWithRendering();
+    api
+      .getSchedulerConf()
+      .then((rawConfData) => {
+        // Assuming api.getSchedulerConf is defined
+        if (rawConfData && rawConfData.property) {
+          liveRawSchedulerConf = new Map(
+            rawConfData.property.map((p) => [p.name, p.value])
+          );
+        } else {
+          liveRawSchedulerConf = new Map();
+        }
+        proceedWithRendering();
+      })
+      .catch(() => {
+        liveRawSchedulerConf = new Map(); // Ensure it's a map on error
+        showError(
+          "Could not fetch scheduler-conf for card display. Some values might be incorrect."
+        );
+        proceedWithRendering();
       });
   } else {
-      proceedWithRendering();
+    proceedWithRendering();
   }
 
   function proceedWithRendering() {
     const treeContainer = document.getElementById("queue-tree");
     treeContainer.innerHTML = "";
-    queueElements.clear(); 
+    queueElements.clear();
 
-    const maxDepth = calculateMaxDepth(window.queueData); 
+    const maxDepth = calculateMaxDepth(queueStateStore.getQueueHierarchy());
 
     for (let level = 0; level <= maxDepth; level++) {
       const column = document.createElement("div");
       column.className = "queue-column";
-      const queuesAtLevel = sortQueues(getQueuesAtLevel(level)); 
+      const queuesAtLevel = sortQueues(getQueuesAtLevel(level));
       queuesAtLevel.forEach((queue) => {
         const card = window.createQueueCard(queue, level);
         column.appendChild(card);
@@ -162,8 +178,8 @@ function renderQueueTree() {
     }
 
     setTimeout(() => {
-      if (typeof drawArrows === "function") drawArrows(); 
-    }, CONFIG.TIMEOUTS.ARROW_RENDER); 
+      if (typeof drawArrows === "function") drawArrows();
+    }, CONFIG.TIMEOUTS.ARROW_RENDER);
 
     renderLevelHeaders();
     if (typeof updateBatchControls === "function") updateBatchControls();
@@ -176,27 +192,36 @@ function canQueueBeDeleted(queuePath) {
     return { canDelete: false, reason: "Cannot delete root queue." };
   }
 
-  const queue = findQueueByPath(queuePath); 
+  const queue = findQueueByPath(queuePath);
   if (!queue) {
     console.warn("canQueueBeDeleted: Queue not found for path", queuePath);
     return { canDelete: false, reason: "Queue not found." };
   }
 
   const activeExistingChildren = Object.values(queue.children).filter(
-    child => !pendingDeletions.has(child.path)
+    (child) => !pendingDeletions.has(child.path)
   );
 
   const activeNewChildren = Array.from(pendingAdditions.values()).filter(
-    newQueue => newQueue.parentPath === queuePath && !pendingDeletions.has(newQueue.path)
+    (newQueue) =>
+      newQueue.parentPath === queuePath && !pendingDeletions.has(newQueue.path)
   );
-  
+
   if (activeExistingChildren.length > 0 || activeNewChildren.length > 0) {
-      const activeChildrenNames = [...activeExistingChildren, ...activeNewChildren].map(c => c.name).join(", ");
-      return { canDelete: false, reason: `Cannot delete: has active child queues (${activeChildrenNames}).` };
+    const activeChildrenNames = [
+      ...activeExistingChildren,
+      ...activeNewChildren,
+    ]
+      .map((c) => c.name)
+      .join(", ");
+    return {
+      canDelete: false,
+      reason: `Cannot delete: has active child queues (${activeChildrenNames}).`,
+    };
   }
 
   return { canDelete: true, reason: "" };
 }
 
 window.renderQueueTree = renderQueueTree;
-window.canQueueBeDeleted
+window.canQueueBeDeleted;

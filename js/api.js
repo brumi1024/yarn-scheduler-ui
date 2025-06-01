@@ -144,8 +144,16 @@ class YarnSchedulerAPI {
       });
 
       // 3. Generate window.queueData from the Trie
-      window.queueData = schedulerTrie.buildQueueHierarchyObject();
-
+      if (
+        typeof queueStateStore !== "undefined" &&
+        typeof queueStateStore.setSchedulerTrie === "function"
+      ) {
+        queueStateStore.setSchedulerTrie(schedulerTrie);
+      } else {
+        console.error(
+          "queueStateStore or queueStateStore.setSchedulerTrie is not available!"
+        );
+      }
       // 4. Store global settings (can also be accessed via schedulerTrie.globalProperties)
       // The global variable 'globalSchedulerSettings' in main.js should be updated here.
       // For directness, other modules can access schedulerTrie.globalProperties if the trie instance is global,

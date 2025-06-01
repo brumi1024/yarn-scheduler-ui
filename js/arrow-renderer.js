@@ -25,16 +25,14 @@ function drawArrowToChild(parentRect, childRect, svgRect, svg) {
 }
 
 function drawArrowsForQueue(queue) {
-  // ---- START ADDED GUARD ----
   if (!queue || typeof queue.path !== 'string') {
-    // console.warn("drawArrowsForQueue: Attempted to draw arrows for a null or invalid queue object:", queue);
+    console.warn("drawArrowsForQueue: Attempted to draw arrows for a null or invalid queue object:", queue);
     return;
   }
-  // ---- END ADDED GUARD ----
 
   const parentElement = queueElements.get(queue.path); // Line 35 from original error
   if (!parentElement) {
-    // console.warn(`drawArrowsForQueue: Parent element not found for queue path "${queue.path}". Arrows might be incomplete.`);
+    console.warn(`drawArrowsForQueue: Parent element not found for queue path "${queue.path}". Arrows might be incomplete.`);
     return;
   }
 
@@ -46,7 +44,6 @@ function drawArrowsForQueue(queue) {
   // Draw arrows to existing children
   if (queue.children && typeof queue.children === 'object') {
     Object.values(queue.children).forEach((child) => {
-      // The recursive call drawArrowsForQueue(child) will be protected by the guard at its start.
       if (child && typeof child.path === 'string' && !pendingDeletions.has(child.path)) {
         const childElement = queueElements.get(child.path);
         if (childElement) {
@@ -75,22 +72,20 @@ function drawArrowsForQueue(queue) {
 }
 
 function drawArrows() {
-  // ---- START ADDED GUARD ----
-  if (!window.queueData) {
-    // console.warn("drawArrows: window.queueData is not available. Skipping arrow rendering.");
+  if (!queueStateStore.getQueueHierarchy()) {
+    console.warn("drawArrows: queueStateStore.getQueueHierarchy() is not available. Skipping arrow rendering.");
     return;
   }
-  // ---- END ADDED GUARD ----
 
   const svg = document.getElementById("arrow-svg");
   if (!svg) { // Ensure SVG element exists
-      // console.error("drawArrows: SVG element 'arrow-svg' not found.");
+      console.error("drawArrows: SVG element 'arrow-svg' not found.");
       return;
   }
   svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>"; // Clear previous arrows except defs
 
   // Initial call to the recursive function
-  drawArrowsForQueue(window.queueData);
+  drawArrowsForQueue(queueStateStore.getQueueHierarchy());
 }
 
 window.drawArrows = drawArrows;

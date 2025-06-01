@@ -49,7 +49,7 @@ function switchTab(targetTabId) {
 
     // Call render functions for specific tabs when they are switched to
     if (targetTabId === 'queue-config-content') {
-        if (typeof renderQueueTree === 'function' && window.queueData) renderQueueTree(); // renderQueueTree from queue-renderer.js
+        if (typeof renderQueueTree === 'function' && queueStateStore.getQueueHierarchy()) renderQueueTree(); // renderQueueTree from queue-renderer.js
         if (typeof showContent === 'function') showContent(true); // Assuming showContent manages general content visibility
         if (typeof hideLoading === 'function') hideLoading(); // Ensure loading is hidden
     } else if (targetTabId === 'scheduler-config-content') {

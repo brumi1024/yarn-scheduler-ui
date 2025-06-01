@@ -97,78 +97,150 @@ function onNewCapacityModeChange() {
 
 function addNewQueue() {
     const parentPath = document.getElementById("parent-queue-select").value;
-    const queueName = document.getElementById("new-queue-name").value.trim();
+    const queueNameInput = document.getElementById("new-queue-name");
+    const queueName = queueNameInput.value.trim();
     const capacityMode = document.getElementById("new-capacity-mode").value;
-    let capacityValue = document.getElementById("new-queue-capacity").value.trim();
-    let maxCapacityValue = document.getElementById("new-queue-max-capacity").value.trim(); 
+    const capacityInput = document.getElementById("new-queue-capacity");
+    let capacityValue = capacityInput.value.trim();
+    const maxCapacityInput = document.getElementById("new-queue-max-capacity");
+    let maxCapacityValue = maxCapacityInput.value.trim();
     const state = document.getElementById("new-queue-state").value;
 
-    const nameError = validateQueueName(queueName); 
-    if (nameError) { if (typeof showWarning === "function") showWarning(nameError); return; }
+    const nameError = validateQueueName(queueName);
+    if (nameError) {
+        if (typeof showWarning === "function") showWarning(nameError);
+        queueNameInput.focus();
+        return;
+    }
 
     // Ensure capacityValue format matches mode for validation and storage
-    if (capacityMode === 'percentage' && !capacityValue.endsWith('%')) capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + '%';
-    else if (capacityMode === 'weight' && !capacityValue.endsWith('w')) capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + 'w';
-    else if (capacityMode === 'absolute' && !(capacityValue.startsWith('[') && capacityValue.endsWith(']'))) {
-        if(capacityValue.trim() === '') capacityValue = '[memory=1024,vcores=1]'; // Default if empty
-        else capacityValue = `[${capacityValue.replace(/[\[\]]/g, '')}]`; // Basic wrap
+    if (capacityMode === 'percentage' && !capacityValue.endsWith('%')) {
+        capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + '%';
+    } else if (capacityMode === 'weight' && !capacityValue.endsWith('w')) {
+        capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + 'w';
+    } else if (capacityMode === 'absolute' && !(capacityValue.startsWith('[') && capacityValue.endsWith(']'))) {
+        if (capacityValue.trim() === '') capacityValue = '[memory=1024,vcores=1]';
+        else capacityValue = `[${capacityValue.replace(/[\[\]]/g, '')}]`;
     }
-    
+
     // Max capacity: if not absolute, assume percentage.
     if (!maxCapacityValue.startsWith('[') && !maxCapacityValue.endsWith('%')) {
         maxCapacityValue = `${(parseFloat(maxCapacityValue) || 100).toFixed(1)}%`;
     }
-    
-    const capacityErrors = validateCapacity(capacityValue, capacityMode); 
-    if (capacityErrors.length > 0) { if (typeof showWarning === "function") showWarning(`Capacity validation error: ${capacityErrors.join(", ")}`); return; }
+
+    const capacityErrors = validateCapacity(capacityValue, capacityMode);
+    if (capacityErrors.length > 0) {
+        if (typeof showWarning === "function") showWarning(`Capacity validation error: ${capacityErrors.join(", ")}`);
+        capacityInput.focus();
+        return;
+    }
+    // Basic validation for max capacity (can be expanded)
+    if (maxCapacityValue.trim() === '') {
+        if (typeof showWarning === "function") showWarning("Maximum Capacity cannot be empty.");
+        maxCapacityInput.focus();
+        return;
+    }
+
 
     const newQueuePath = parentPath === "root" ? `root.${queueName}` : `${parentPath}.${queueName}`;
 
-    if (findQueueByPath(newQueuePath) || pendingAdditions.has(newQueuePath)) {
-        if (typeof showWarning === "function") showWarning("A queue with this name already exists at this path."); return;
+    if ((queueStateStore.getQueueHierarchy() && findQueueByPath(newQueuePath, queueStateStore.getQueueHierarchy())) || pendingAdditions.has(newQueuePath)) {
+        if (typeof showWarning === "function") showWarning("A queue with this name already exists at this path.");
+        return;
     }
+
+    // ---- START NEW: Create a 'properties' Map for the new queue ----
+    const simplePropertiesMap = new Map();
+    simplePropertiesMap.set('capacity', capacityValue);
+    simplePropertiesMap.set('maximum-capacity', maxCapacityValue);
+    simplePropertiesMap.set('state', state);
+    // Add other relevant default properties that createQueueCard might expect,
+    // similar to how buildQueueHierarchyObject sets them up.
+    // These would come from QUEUE_CONFIG_CATEGORIES.
+    if (typeof QUEUE_CONFIG_CATEGORIES !== 'undefined') {
+        QUEUE_CONFIG_CATEGORIES.forEach(category => {
+            for (const placeholderPropName in category.properties) {
+                const propDef = category.properties[placeholderPropName];
+                // Extract the simple key (e.g., 'user-limit-factor' from '...<queue_path>.user-limit-factor')
+                const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
+                
+                if (!simplePropertiesMap.has(simpleKey) && propDef.defaultValue !== undefined) {
+                    // Handle special default for 'ordering-policy' for parent queues
+                    if (simpleKey === 'ordering-policy' && parentPath !== null) { // Assuming root is not null for this check
+                         // Parent queues typically default to 'utilization' or 'fair', leaves to 'fifo'
+                         // For simplicity, let's use a common default or skip if complex.
+                         // The metadata default 'fifo' might be for leaves.
+                         // Let's stick to propDef.defaultValue for now unless more specific logic is added.
+                        simplePropertiesMap.set(simpleKey, propDef.defaultValue);
+                    } else if (simpleKey !== 'capacity' && simpleKey !== 'maximum-capacity' && simpleKey !== 'state') {
+                         simplePropertiesMap.set(simpleKey, propDef.defaultValue);
+                    }
+                }
+            }
+        });
+    }
+     // Ensure some critical defaults if not covered by metadata iteration for some reason
+    if (!simplePropertiesMap.has('user-limit-factor')) simplePropertiesMap.set('user-limit-factor', '1');
+    if (!simplePropertiesMap.has('maximum-am-resource-percent')) simplePropertiesMap.set('maximum-am-resource-percent', '0.1');
+    // ---- END NEW ----
 
     const newQueueDataForStore = {
         name: queueName,
         path: newQueuePath,
         parentPath: parentPath,
-        // These are primarily for card rendering if needed before first save/reload
-        capacity: capacityValue, 
-        maxCapacity: maxCapacityValue, 
+        // Keep direct fields for potential immediate use or easier debugging,
+        // but queue-card.js should primarily rely on the 'properties' Map.
+        capacity: capacityValue,
+        maxCapacity: maxCapacityValue,
         state: state,
-        children: {}, 
-        capacityMode: capacityMode, 
-        // Params for the API call
-        params: {} 
+        children: {}, // New queues don't have children initially
+        capacityMode: capacityMode, // This is important for card rendering logic
+
+        properties: simplePropertiesMap, // Assign the Map here
+
+        // params object will hold the full YARN property paths and values for the API call
+        params: {}
     };
-    
-    // Populate params for API from QUEUE_CONFIG_CATEGORIES defaults + core values from form
-    QUEUE_CONFIG_CATEGORIES.forEach(category => {
-        for (const placeholderPropName in category.properties) {
-            const propDef = category.properties[placeholderPropName];
-            const actualPropNameFull = placeholderPropName.replace(Q_PATH_PLACEHOLDER, newQueuePath);
-            
-            if (placeholderPropName.endsWith('.capacity')) newQueueDataForStore.params[actualPropNameFull] = capacityValue;
-            else if (placeholderPropName.endsWith('.maximum-capacity')) newQueueDataForStore.params[actualPropNameFull] = maxCapacityValue;
-            else if (placeholderPropName.endsWith('.state')) newQueueDataForStore.params[actualPropNameFull] = state;
-            else if (propDef.defaultValue !== undefined && propDef.defaultValue !== '') {
-                 // Only add other metadata defaults if not one of the core ones already set
-                if (!newQueueDataForStore.params[actualPropNameFull]) {
-                     newQueueDataForStore.params[actualPropNameFull] = propDef.defaultValue;
+
+    // Populate newQueueDataForStore.params for the API call (full YARN paths)
+    // This part uses the QUEUE_CONFIG_CATEGORIES to ensure all necessary YARN props are included
+    if (typeof QUEUE_CONFIG_CATEGORIES !== 'undefined') {
+        QUEUE_CONFIG_CATEGORIES.forEach(category => {
+            for (const placeholderPropName in category.properties) {
+                const propDef = category.properties[placeholderPropName];
+                const actualPropNameFull = placeholderPropName.replace(Q_PATH_PLACEHOLDER, newQueuePath);
+
+                if (placeholderPropName.endsWith('.capacity')) {
+                    newQueueDataForStore.params[actualPropNameFull] = capacityValue;
+                } else if (placeholderPropName.endsWith('.maximum-capacity')) {
+                    newQueueDataForStore.params[actualPropNameFull] = maxCapacityValue;
+                } else if (placeholderPropName.endsWith('.state')) {
+                    newQueueDataForStore.params[actualPropNameFull] = state;
+                } else if (propDef.defaultValue !== undefined && propDef.defaultValue !== '') {
+                    // Only add other metadata defaults if not one of the core ones already set by form
+                     if (newQueueDataForStore.params[actualPropNameFull] === undefined) { // Check if not already set
+                         newQueueDataForStore.params[actualPropNameFull] = propDef.defaultValue;
+                     }
                 }
             }
-        }
-    });
-    // Ensure core params are definitely set if not covered by loop (e.g. if metadata is minimal)
-    if (!newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.capacity`]) newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.capacity`] = capacityValue;
-    if (!newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`]) newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`] = maxCapacityValue;
-    if (!newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.state`]) newQueueDataForStore.params[`yarn.scheduler.capacity.${newQueuePath}.state`] = state;
+        });
+    }
+    // Ensure core params are definitely set in 'params' if not covered by loop (e.g., if metadata is minimal)
+    const yarnCapacityPath = `yarn.scheduler.capacity.${newQueuePath}.capacity`;
+    const yarnMaxCapacityPath = `yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`;
+    const yarnStatePath = `yarn.scheduler.capacity.${newQueuePath}.state`;
+
+    if (!newQueueDataForStore.params[yarnCapacityPath]) newQueueDataForStore.params[yarnCapacityPath] = capacityValue;
+    if (!newQueueDataForStore.params[yarnMaxCapacityPath]) newQueueDataForStore.params[yarnMaxCapacityPath] = maxCapacityValue;
+    if (!newQueueDataForStore.params[yarnStatePath]) newQueueDataForStore.params[yarnStatePath] = state;
+
 
     pendingAdditions.set(newQueuePath, newQueueDataForStore);
-    console.log("Staged new queue for addition:", newQueueDataForStore);
+    // console.log("Staged new queue for addition:", newQueueDataForStore);
     if (typeof showSuccess === "function") showSuccess(`New queue "${queueName}" staged for addition.`);
 
-    if (typeof renderQueueTree === "function") renderQueueTree();
+    if (typeof renderQueueTree === "function") renderQueueTree(); // Line 171 from original error stack
+    if (typeof updateBatchControls === "function") updateBatchControls();
     if (typeof closeAddQueueModal === "function") closeAddQueueModal();
 }
 

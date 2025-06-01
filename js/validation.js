@@ -82,8 +82,8 @@ function validateCapacityTotals() {
     }
   }
 
-  if (window.queueData) {
-    checkParentQueue(window.queueData);
+  if (queueStateStore.getQueueHierarchy()) {
+    checkParentQueue(queueStateStore.getQueueHierarchy());
   }
 
   return errors;
