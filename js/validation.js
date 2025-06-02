@@ -1,32 +1,35 @@
 function validateQueueName(name) {
-    if (!name || name.trim().length === 0) {
+    if (!name) {
         return "Queue name is required";
     }
-
-    if (!/^[a-zA-Z0-9_-]+$/.test(name.trim())) {
+    const trimmedName = name.trim();
+    if (trimmedName.length === 0) {
+        return "Queue name is required";
+    }
+    if (!/^[a-zA-Z0-9_-]+$/.test(trimmedName)) {
         return "Queue name can only contain letters, numbers, underscores, and hyphens";
     }
-
     return null;
 }
 
 function validateCapacity(capacity, mode) {
     const errors = [];
+    const capacityStr = capacity != null ? capacity.toString() : '';
 
     if (mode === "weight") {
-        if (!capacity.toString().endsWith("w")) {
+        if (!capacityStr.endsWith("w")) {
             errors.push('Weight capacity must end with "w"');
         }
     } else if (mode === "absolute") {
-        const capacityStr = capacity.toString().trim();
-        if (!capacityStr.startsWith("[") || !capacityStr.endsWith("]")) {
+        const trimmedCapacityStr = capacityStr.trim();
+        if (!trimmedCapacityStr.startsWith("[") || !trimmedCapacityStr.endsWith("]")) {
             errors.push("Absolute capacity must be enclosed in brackets []");
         }
-        if (capacityStr === "[]") {
+        if (trimmedCapacityStr === "[]") {
             errors.push("Absolute capacity cannot be empty");
         }
     } else if (mode === "percentage") {
-        const num = parseFloat(capacity);
+        const num = parseFloat(capacityStr);
         if (isNaN(num) || num < 0 || num > 100) {
             errors.push("Percentage capacity must be between 0 and 100");
         }
@@ -44,19 +47,15 @@ function validateCapacityTotals() {
     const errors = [];
     if (!viewDataFormatter) {
         console.warn("validateCapacityTotals: ViewDataFormatter not available.");
-        // errors.push({ message: "Validation system error: Formatter not available." }); // Optional
-        return errors; // Cannot perform validation without the formatter
+        return errors;
     }
 
     const formattedHierarchyRoot = viewDataFormatter.getFormattedQueueHierarchy();
     if (!formattedHierarchyRoot) {
-        // No hierarchy, so no totals to validate, or an error occurred fetching it.
-        // Depending on desired behavior, could return empty errors or an error if root is expected.
         return errors;
     }
 
     function checkParentFormattedQueue(formattedParentQueue) {
-        // Only proceed if the parent queue itself is not marked for deletion
         if (formattedParentQueue.isDeleted) {
             return;
         }
@@ -66,18 +65,15 @@ function validateCapacityTotals() {
             let hasPercentageChildren = false;
 
             Object.values(formattedParentQueue.children).forEach((formattedChildQueue) => {
-                // Skip children that are marked for deletion in the formatted object
                 if (formattedChildQueue.isDeleted) {
                     return;
                 }
 
-                // Values are already effective/pending, directly from the formatted object
-                const childCapacityStr = String(formattedChildQueue.capacity); // e.g., "10%", "5w", "[mem=1,vc=1]"
+                const childCapacityStr = String(formattedChildQueue.capacity);
                 const childMode = formattedChildQueue.effectiveCapacityMode;
 
                 if (childMode === CAPACITY_MODES.PERCENTAGE) {
                     hasPercentageChildren = true;
-                    // Ensure '%' is removed if present before parsing, though formatter might provide numeric for percentage if desired
                     totalPercentageCapacity += parseFloat(childCapacityStr.replace('%', '')) || 0;
                 }
             });
@@ -88,9 +84,8 @@ function validateCapacityTotals() {
                 });
             }
 
-            // Recursively check children that are parents
             Object.values(formattedParentQueue.children).forEach((child) => {
-                if (child.children && Object.keys(child.children).length > 0) { // Only recurse if child is a parent
+                if (!child.isDeleted && child.children && Object.keys(child.children).length > 0) { // Check !child.isDeleted here too
                     checkParentFormattedQueue(child);
                 }
             });
@@ -106,7 +101,6 @@ function validateCapacityTotals() {
  * @returns {Array<Object>} An array of error objects.
  */
 function validatePendingChanges() {
-    // This function might be expanded in the future to include other types of validations.
     return validateCapacityTotals();
 }
 

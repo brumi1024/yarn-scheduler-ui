@@ -27,7 +27,7 @@ window.createQueueCard = (formattedQueue) => {
 
   const nameEl = document.createElement("span");
   nameEl.className = "queue-name";
-  nameEl.innerHTML = highlightMatch(formattedQueue.displayName, window.currentSearchTerm || '');
+  nameEl.innerHTML = highlightMatch(formattedQueue.displayName, currentSearchTerm || '');
   nameEl.title = formattedQueue.displayNameTitle; // e.g., "root.default (Click to edit)"
   nameEl.onclick = (e) => {
     e.stopPropagation();
