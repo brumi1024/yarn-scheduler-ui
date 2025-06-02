@@ -67,9 +67,9 @@ window.createQueueCard = (formattedQueue) => {
                 Undo Delete
               </div>`;
     } else {
-      deleteButtonHTML = `<div class="dropdown-item ${formattedQueue.canBeDeleted ? "" : "disabled"}" 
-                onclick="${formattedQueue.canBeDeleted ? `markQueueForDeletion('${formattedQueue.path}')` : ""}"
-                title="${formattedQueue.canBeDeleted ? "Delete this queue" : formattedQueue.deletionReason}">
+      deleteButtonHTML = `<div class="dropdown-item ${formattedQueue.canBeDeletedForDropdown ? "" : "disabled"}" 
+                onclick="${formattedQueue.canBeDeletedForDropdown ? `markQueueForDeletion('${formattedQueue.path}')` : ""}"
+                title="${formattedQueue.canBeDeletedForDropdown ? "Delete this queue" : formattedQueue.deletionReason}">
                 Delete Queue
               </div>`;
     }
