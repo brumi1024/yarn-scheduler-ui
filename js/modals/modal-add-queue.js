@@ -1,3 +1,13 @@
+/**
+ * Opens the "Add Queue" modal and sets up its initial state by populating the parent queue dropdown,
+ * updating the form content, and applying default selection logic.
+ *
+ * The method retrieves a list of parent queues and populates the corresponding dropdown menu
+ * with options. If no parent queue is explicitly selected, a default selection is applied.
+ * Additionally, it invokes a callback to adjust the UI or logic based on the new capacity mode.
+ *
+ * @return {void} This method does not return a value.
+ */
 function openAddQueueModal() {
   const addFormContainer = document.getElementById("add-form-container");
   addFormContainer.innerHTML = createAddFormHTML(); 
@@ -23,15 +33,27 @@ function openAddQueueModal() {
   document.getElementById("add-queue-modal").classList.add("show");
 }
 
+/**
+ * Opens the "Add Queue" modal and sets the provided parent path to the "parent-queue-select" element, if available.
+ *
+ * @param {string} parentPath - The path value to be set as the selected parent in the modal's dropdown.
+ * @return {void} This function does not return any value.
+ */
 function openAddQueueModalWithParent(parentPath) {
   openAddQueueModal();
   const parentSelect = document.getElementById("parent-queue-select");
   if (parentSelect) parentSelect.value = parentPath;
 }
 
+/**
+ * Generates the HTML string for an "Add Queue" form, providing a user interface
+ * to configure and create a new queue with various attributes such as parent queue,
+ * name, capacity mode, capacity, maximum capacity, and state.
+ *
+ * @return {string} The HTML string representing the "Add Queue" form, including form fields, labels, and action buttons.
+ */
+// TODO: Consider using the same structure as the edit form so that queues can be created with custom properties
 function createAddFormHTML() {
-  // This form is still mostly hardcoded but could be made metadata-driven
-  // using a subset of QUEUE_CONFIG_CATEGORIES if desired for more consistency.
   return `
         <form id="add-queue-form">
             <div class="form-group">
@@ -75,6 +97,12 @@ function createAddFormHTML() {
     `;
 }
 
+/**
+ * Handles the change event for the new capacity mode select element.
+ * This function adjusts the capacity input field value based on the selected capacity mode.
+ *
+ * @return {void} This method does not return a value.
+ */
 function onNewCapacityModeChange() {
   const modeSelect = document.getElementById("new-capacity-mode");
   const capacityInput = document.getElementById("new-queue-capacity");
@@ -88,11 +116,21 @@ function onNewCapacityModeChange() {
   }
 }
 
+/**
+ * Adds a new queue to the queue state with the configuration provided by the user.
+ * The method performs input validations for queue name, capacity, and maximum capacity,
+ * ensuring all required fields are correctly formatted and valid. It also stages the
+ * new queue for addition by updating the queue state store and ensuring duplication is avoided.
+ *
+ * If the inputs are invalid, appropriate warnings are displayed, and the process is halted.
+ * On successful staging, updates the UI to reflect the added queue and closes the modal form.
+ *
+ * @return {void} This method does not return a value, but modifies the queue state store and UI components.
+ */
 function addNewQueue() {
     const parentPath = document.getElementById("parent-queue-select").value;
     const queueNameInput = document.getElementById("new-queue-name");
     const queueName = queueNameInput.value.trim();
-    // ... (get other values from the simple add form: capacityMode, capacityValue, maxCapacityValue, state) ...
     const capacityMode = document.getElementById("new-capacity-mode").value;
     const capacityInput = document.getElementById("new-queue-capacity");
     let capacityValue = capacityInput.value.trim();
@@ -100,16 +138,13 @@ function addNewQueue() {
     let maxCapacityValue = maxCapacityInput.value.trim();
     const state = document.getElementById("new-queue-state").value;
 
-
-    // --- Validations (existing logic is good) ---
-    const nameError = validateQueueName(queueName); // Assumes validateQueueName is global
+    // Validations
+    const nameError = validateQueueName(queueName);
     if (nameError) {
-        if (typeof showWarning === "function") showWarning(nameError);
+        showWarning(nameError);
         queueNameInput.focus();
         return;
     }
-    // ... (format capacityValue, maxCapacityValue based on mode; validate them - existing logic is good) ...
-    // Ensure capacityValue format matches mode for validation and storage
     if (capacityMode === 'percentage' && !capacityValue.endsWith('%')) {
         capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + '%';
     } else if (capacityMode === 'weight' && !capacityValue.endsWith('w')) {
@@ -124,104 +159,70 @@ function addNewQueue() {
         maxCapacityValue = `${(parseFloat(maxCapacityValue) || 100).toFixed(1)}%`;
     }
 
-    const capacityErrors = validateCapacity(capacityValue, capacityMode); // Assumes validateCapacity is global
+    const capacityErrors = validateCapacity(capacityValue, capacityMode);
     if (capacityErrors.length > 0) {
-        if (typeof showWarning === "function") showWarning(`Capacity validation error: ${capacityErrors.join(", ")}`);
+        showWarning(`Capacity validation error: ${capacityErrors.join(", ")}`);
         capacityInput.focus();
         return;
     }
     if (maxCapacityValue.trim() === '') {
-        if (typeof showWarning === "function") showWarning("Maximum Capacity cannot be empty.");
+        showWarning("Maximum Capacity cannot be empty.");
         maxCapacityInput.focus();
         return;
     }
 
     const newQueuePath = parentPath === "root" ? `root.${queueName}` : `${parentPath}.${queueName}`;
 
-    // Check for existing queue (using queueStateStore which knows about Trie and pendingAdditions)
-    if (queueStateStore && queueStateStore.getQueue(newQueuePath)) {
-        if (typeof showWarning === "function") showWarning("A queue with this name already exists at this path or is staged for addition.");
+    if (queueStateStore.getQueue(newQueuePath)) {
+        showWarning("A queue with this name already exists at this path or is staged for addition.");
         return;
     }
 
-
-    // --- Enhanced Property Initialization ---
     const newQueueProperties = new Map();
-    const apiParams = {}; // For the YARN API call
+    const apiParams = {};
 
-    // Set values from the form first
+    // TODO: Do we need the shortened names for properties?
     newQueueProperties.set('capacity', capacityValue);
-    newQueueProperties.set('maximum-capacity', maxCapacityValue); // Use consistent simple key
+    newQueueProperties.set('maximum-capacity', maxCapacityValue);
     newQueueProperties.set('state', state);
-    // ... (add any other properties directly settable from a simplified add form)
 
     // Iterate QUEUE_CONFIG_CATEGORIES to set all other properties to their defaults
     // and to populate apiParams correctly.
-    if (typeof QUEUE_CONFIG_CATEGORIES !== 'undefined') {
-        (QUEUE_CONFIG_CATEGORIES || []).forEach(category => {
-            for (const placeholderPropName in category.properties) {
-                if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
-                    const propDef = category.properties[placeholderPropName];
-                    const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
-                    const fullYarnName = placeholderPropName.replace(Q_PATH_PLACEHOLDER || '<queue_path>', newQueuePath);
+    (QUEUE_CONFIG_CATEGORIES || []).forEach(category => {
+        for (const placeholderPropName in category.properties) {
+            if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
+                const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
+                const fullYarnName = placeholderPropName.replace(Q_PATH_PLACEHOLDER, newQueuePath);
 
-                    // For apiParams, always use the fullYarnName
-                    // For newQueueProperties, always use the simpleKey
-
-                    if (simpleKey === 'capacity') {
-                        apiParams[fullYarnName] = capacityValue;
-                        // newQueueProperties already set
-                    } else if (simpleKey === 'maximum-capacity') { // Match the key used above
-                        apiParams[fullYarnName] = maxCapacityValue;
-                        // newQueueProperties already set
-                    } else if (simpleKey === 'state') {
-                        apiParams[fullYarnName] = state;
-                        // newQueueProperties already set
-                    } else {
-                        // If not set by the simple form, use default for both properties map and API params
-                        if (!newQueueProperties.has(simpleKey)) {
-                            newQueueProperties.set(simpleKey, propDef.defaultValue);
-                        }
-                        // Ensure API params also get the default if not one of the main form fields
-                        // (or if it was, it would have been overwritten by specific value already)
-                        apiParams[fullYarnName] = newQueueProperties.get(simpleKey); // Use the resolved value
-                    }
-                }
+                apiParams[fullYarnName] = newQueueProperties.get(simpleKey);
             }
-        });
-    } else { // Fallback if QUEUE_CONFIG_CATEGORIES is not available (should not happen in production)
-        apiParams[`yarn.scheduler.capacity.${newQueuePath}.capacity`] = capacityValue;
-        apiParams[`yarn.scheduler.capacity.${newQueuePath}.maximum-capacity`] = maxCapacityValue;
-        apiParams[`yarn.scheduler.capacity.${newQueuePath}.state`] = state;
-    }
-
+        }
+    });
 
     const newQueueDataForStore = {
         name: queueName,
         path: newQueuePath,
         parentPath: parentPath,
         children: {}, // New queues don't have children initially
-        capacityMode: capacityMode, // Crucial for formatter and UI
+        capacityMode: capacityMode,
 
-        // Core properties directly for convenience (will also be in the map below)
-        // These should reflect what's in newQueueProperties
+        // TODO: do we need these explicitly?
         capacity: newQueueProperties.get('capacity'),
         maxCapacity: newQueueProperties.get('maximum-capacity'),
         state: newQueueProperties.get('state'),
 
-        properties: newQueueProperties, // This map now contains all defined props with form values or defaults
-        params: apiParams               // Params for the API call, also comprehensive
+        properties: newQueueProperties,
+        params: apiParams
     };
 
     queueStateStore.doAdd(newQueuePath, { newQueueData: newQueueDataForStore });
     showSuccess(`New queue "${queueName}" staged for addition.`);
     renderQueueTree();
     updateBatchControls();
-    closeAddQueueModal(); // from modal-helpers.js
+    closeAddQueueModal();
 }
 
 window.openAddQueueModal = openAddQueueModal;
 window.openAddQueueModalWithParent = openAddQueueModalWithParent;
-// closeAddQueueModal is in modal-helpers.js
 window.addNewQueue = addNewQueue;
 window.onNewCapacityModeChange = onNewCapacityModeChange;
