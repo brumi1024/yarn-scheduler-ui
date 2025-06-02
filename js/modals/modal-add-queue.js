@@ -15,7 +15,7 @@ function openAddQueueModal() {
   const parentSelect = document.getElementById("parent-queue-select");
   parentSelect.innerHTML = ""; 
 
-  const parents = (typeof getAllParentQueues === "function") ? getAllParentQueues() : [{path: 'root', name: 'root'}];
+  const parents = getAllParentQueues()
   parents.forEach((parent) => {
         const option = document.createElement("option");
         option.value = parent.path;

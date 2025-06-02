@@ -1,19 +1,22 @@
 let currentEditQueuePath = null; // Store path instead of the whole object
 
+/**
+ * Opens the edit modal for a queue and dynamically generates the content based on the queue's properties.
+ * This method ensures proper validation before allowing modifications, dynamically creates form elements,
+ * and displays relevant information in an interactive modal window.
+ *
+ * @param {string} queuePath - The unique path identifier of the queue to be edited.
+ * @return {Promise<void>} A promise that resolves when the modal is successfully opened and content is set.
+ */
 async function openEditModal(queuePath) {
-    if (!viewDataFormatter) {
-        if (typeof showError === 'function') showError("Cannot edit: ViewDataFormatter not available.");
-        return;
-    }
-
     const formattedQueue = viewDataFormatter.getFormattedQueue(queuePath);
 
     if (!formattedQueue) {
-        if (typeof showError === 'function') showError(`Cannot edit: Queue data not found for ${queuePath}.`);
+        showError(`Cannot edit: Queue data not found for ${queuePath}.`);
         return;
     }
     if (formattedQueue.isDeleted) {
-        if (typeof showWarning === 'function') showWarning("Cannot edit a queue marked for deletion.");
+        showWarning("Cannot edit a queue marked for deletion.");
         return;
     }
 
@@ -70,7 +73,7 @@ async function openEditModal(queuePath) {
                  </div>`;
 
     // Dynamic properties from QUEUE_CONFIG_CATEGORIES
-    (QUEUE_CONFIG_CATEGORIES || []).forEach((category) => {
+    QUEUE_CONFIG_CATEGORIES.forEach((category) => {
         formHTML += `<h4 class="form-category-title">${category.groupName}</h4>`;
         for (const placeholderPropName in category.properties) {
             if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
@@ -147,13 +150,22 @@ async function openEditModal(queuePath) {
         capacityModeSelect.addEventListener("change", () => {
             handleCapacityInputChangeOnModeChange(queuePath, 'edit');
         });
-        // Trigger initial formatting if needed, though formattedQueue should provide the correct initial string
-        // handleCapacityInputChangeOnModeChange(queuePath, 'edit');
     }
 
     document.getElementById("edit-modal").classList.add("show");
 }
 
+/**
+ * Stages changes made to the queue form and updates the pending modification store with any meaningful edits.
+ *
+ * This method captures and compares the form's current input values against their original states to determine
+ * if there are any meaningful changes. If changes are detected, it merges them with previously pending modifications
+ * and updates the queue state store. Additionally, it handles UI-specific hints, like capacity mode changes, and
+ * handles any required transformations for specific input fields.
+ *
+ * @return {void} This function does not return anything. It either updates the internal state with staged changes
+ * or logs corresponding messages if no changes were detected or if the necessary elements are missing.
+ */
 function stageQueueChanges() {
     if (!currentEditQueuePath) {
         console.error("No queue path being edited.");
@@ -192,7 +204,7 @@ function stageQueueChanges() {
         let newValue = inputElement.value;
         const originalValueDisplayedInModal = inputElement.getAttribute("data-original-value");
 
-        // Re-format capacity field based on the *potentially new* capacity mode before comparison
+        // Re-format the capacity field based on the *potentially new* capacity mode before comparison
         const modeForComparison = uiHintsFromThisSession["_ui_capacityMode"] || originalCapacityModeDisplayed;
         if (fullYarnPropName.endsWith(".capacity")) {
             // Use the formatter's method (assuming it's accessible or replicated here)
@@ -200,7 +212,7 @@ function stageQueueChanges() {
         } else if (fullYarnPropName.endsWith(".maximum-capacity")) {
             newValue = QueueViewDataFormatter.prototype._ensureMaxCapacityFormat(newValue, modeForComparison, originalValueDisplayedInModal);
         }
-        // Add similar for other type-specific formatting if required (e.g. boolean "true"/"false")
+        // Add similar for other type-specific formatting if required (e.g., boolean "true"/"false")
 
         if (newValue !== originalValueDisplayedInModal) {
             hasMeaningfulChangesInThisSession = true;
@@ -225,16 +237,24 @@ function stageQueueChanges() {
         showInfo("No new changes detected to stage.");
     }
 
-    if (typeof renderQueueTree === 'function') renderQueueTree();
-    if (typeof updateBatchControls === 'function') updateBatchControls();
+    renderQueueTree();
+    updateBatchControls();
     closeEditModal();
 }
 
-// Helper to reformat capacity input when mode changes
-// Mode can be 'edit' or 'add' to target correct modal elements
+/**
+ * Handles changes in the capacity input field when the mode (weight, percentage, or absolute)
+ * is changed in a modal dialog. It adjusts the input value formatting based on the selected mode.
+ *
+ * @param {string} queuePath - The path of the queue for which capacity is being configured.
+ * @param {string} [modalTypePrefix='edit'] - The modal type prefix to determine the input and mode
+ *                                             element IDs. Defaults to 'edit'.
+ * @return {void} This function does not return a value.
+ */
 function handleCapacityInputChangeOnModeChange(queuePath, modalTypePrefix = 'edit') {
     const modeSelect = document.getElementById(`${modalTypePrefix}-capacity-mode`);
-    const capacityInput = document.getElementById(`${modalTypePrefix === 'edit' ? `edit-queue-yarn.scheduler.capacity.${queuePath}.capacity` : 'new-queue-capacity'}`);
+    const capacityInput = document.getElementById(`${modalTypePrefix === 'edit' ? 
+        `edit-queue-yarn.scheduler.capacity.${queuePath}.capacity` : 'new-queue-capacity'}`);
 
     if (!modeSelect || !capacityInput) return;
 
@@ -259,12 +279,12 @@ function handleCapacityInputChangeOnModeChange(queuePath, modalTypePrefix = 'edi
     if (newMode === "weight") formattedVal = numericVal.toFixed(1) + "w";
     else if (newMode === "percentage") formattedVal = numericVal.toFixed(1) + "%";
     else if (newMode === "absolute") {
-        // If original was absolute, try to keep it, else default
-        formattedVal = (currentValStr.startsWith("[") && currentValStr.endsWith("]")) ? currentValStr : "[memory=1024,vcores=1]";
+        // If the original was absolute, try to keep it, else default
+        formattedVal = (currentValStr.startsWith("[") && currentValStr.endsWith("]")) ?
+            currentValStr : "[memory=1024,vcores=1]";
     }
     capacityInput.value = formattedVal;
 }
-
 
 window.openEditModal = openEditModal;
 window.stageQueueChanges = stageQueueChanges;
