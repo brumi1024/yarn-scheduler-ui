@@ -1,88 +1,88 @@
 // --- Global State Variables ---
-let schedulerTrie = new SchedulerConfigTrie(); // Populated by api.loadSchedulerConfiguration
-let availablePartitions = ['']; // TODO node label handling
-let currentPartition = '';
+let availablePartitions = [''];
+let currentPartition = ''; // TODO: This needs to be used by partition selector logic
 let queueStateStore = null;
 let viewDataFormatter = null;
 
-// Staging changes for queues
-let pendingChanges = new Map();    // TODO only used in modal-info-queue, refactor it
-
 // Staging/State for Modals
-let currentEditQueue = null; // Stores the queue object being edited
+let currentEditQueuePath = null;
 
 // Cache for fetched configurations
-let liveRawSchedulerConf = null;    // Map of all queue config key-values from scheduler-conf
-let isGlobalConfigEditMode = false; // Boolean flag for global config edit state
+let liveRawSchedulerConf = null;    // Stores raw key-value from /ws/v1/cluster/scheduler-conf (live server state)
+let isGlobalConfigEditMode = false;
 
 // UI state
-let queueElements = new Map(); // For mapping queue paths to their DOM elements (used by arrow-renderer)
+let queueElements = new Map();
 let currentSearchTerm = '';
-let currentSort = 'capacity'; // Default sort for queue tree
+let currentSort = 'capacity';
 
 // --- API Instance ---
-const api = new YarnSchedulerAPI(window.location.origin || '', true); // Set true for mocks, false for live
+// Assuming CONFIG.USE_MOCKS is defined in config.js
+const api = new YarnSchedulerAPI(window.location.origin || '', true);
 
 // --- Basic Initialization ---
 window.addEventListener('DOMContentLoaded', async () => {
     // Ensure UI component functions are available
     if (typeof showLoading !== 'function' || typeof hideLoading !== 'function' || typeof showError !== 'function') {
-        console.error("Core UI functions (showLoading, hideLoading, showError) are not defined. Check script loading order for ui-components.js.");
-        // Fallback simple alerts
+        console.error("Core UI functions (showLoading, hideLoading, showError) are not defined.");
         window.showLoading = (msg) => console.log("Loading:", msg);
         window.hideLoading = () => console.log("Hide loading.");
         window.showError = (msg) => console.error("Error:", msg);
     }
-    
+
     showLoading('Initializing application...');
     try {
         queueStateStore = new QueueStateStore();
-        viewDataFormatter = new QueueViewDataFormatter(queueStateStore, QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER);
-        // Initial data load for queue structure (populates the scheduler state store)
-        // loadSchedulerConfiguration also calls renderQueueTree via switchTab or directly
-        await api.loadSchedulerConfiguration();
+        viewDataFormatter = new QueueViewDataFormatter(queueStateStore);
 
-        // Initialize event handlers
-        // initializeTabNavigation from tab-handler.js
-        // initializeEventHandlers from ui-components.js (for non-tab general UI like search, sort, modal bg clicks)
+        await api.loadSchedulerConfiguration(); // This initializes Trie in store & loads rawSchedulerInfo
+
         if (typeof initializeTabNavigation === 'function') initializeTabNavigation();
-        else console.error("initializeTabNavigation not found. Check tab-handler.js");
+        else console.error("initializeTabNavigation not found.");
 
         if (typeof initializeEventHandlers === 'function') initializeEventHandlers();
-        else console.error("initializeEventHandlers not found. Check ui-components.js or event-handlers.js");
-        
-        // Activate the default tab after basic setup
-        // switchTab is defined in tab-handler.js
+        else console.error("initializeEventHandlers not found.");
+
         if (typeof switchTab === 'function') {
-            const initialActiveTab = document.querySelector('.nav-tab.active');
-            if (initialActiveTab && initialActiveTab.getAttribute('data-tab')) {
-                switchTab(initialActiveTab.getAttribute('data-tab'));
-            } else if (document.querySelectorAll('.nav-tab').length > 0 && document.querySelectorAll('.nav-tab')[0].getAttribute('data-tab')) {
-                // Fallback if no tab is marked active in HTML, activate the first one
-                switchTab(document.querySelectorAll('.nav-tab')[0].getAttribute('data-tab'));
+            const navTabs = document.querySelectorAll('.nav-tab');
+            const activeHtmlTab = document.querySelector('.nav-tab.active');
+            let targetTabIdToActivate = null;
+
+            if (activeHtmlTab && activeHtmlTab.getAttribute('data-tab')) {
+                targetTabIdToActivate = activeHtmlTab.getAttribute('data-tab');
+            } else if (navTabs.length > 0 && navTabs[0].getAttribute('data-tab')) {
+                targetTabIdToActivate = navTabs[0].getAttribute('data-tab');
+                navTabs.forEach(t => t.classList.remove('active')); // Clear any stray actives
+                navTabs[0].classList.add('active'); // Mark the first as active
+            }
+
+            if (targetTabIdToActivate) {
+                switchTab(targetTabIdToActivate);
             } else {
-                // Absolute fallback if no tabs have data-tab or are active
-                console.warn("No active tab could be determined. Defaulting display might be needed.");
-                // Manually ensure at least queue-config-content is shown if it exists
+                console.warn("No active tab could be determined. Attempting to default to queue-config.");
                 const queueConfigPane = document.getElementById('queue-config-content');
                 if (queueConfigPane) {
-                    document.querySelectorAll('.tab-pane').forEach(p => p.style.display = 'none');
+                    document.querySelectorAll('.tab-pane').forEach(p => {
+                        p.style.display = 'none';
+                        p.classList.remove('active');
+                    });
                     queueConfigPane.style.display = 'block';
                     queueConfigPane.classList.add('active');
                     const qTab = document.querySelector('.nav-tab[data-tab="queue-config-content"]');
                     if(qTab) qTab.classList.add('active');
-                    if (typeof renderQueueTree === 'function' && queueStateStore.getQueueHierarchy()) renderQueueTree();
+
+                    renderQueueTree();
                 }
-                hideLoading();
+                hideLoading(); // Ensure loading is hidden in this fallback
             }
         } else {
             console.error("switchTab function not defined. UI might not initialize correctly.");
-            hideLoading(); // Hide loading even if switchTab isn't there
+            hideLoading();
         }
 
     } catch (error) {
         showError(`Failed to initialize application: ${error.message}`);
         console.error('Application initialization failed:', error);
-        hideLoading(); 
+        hideLoading();
     }
 });

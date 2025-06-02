@@ -272,6 +272,26 @@ function toggleQueueDropdown(event, queuePath) {
   if (dropdown) dropdown.classList.toggle("show");
 }
 
+/**
+ * Refreshes queue data by reloading and re-rendering the scheduler configuration.
+ * This method provides user feedback through loading, success, or error messages
+ * depending on the execution outcome.
+ *
+ * @return {Promise<void>} A promise that resolves when the queue data refresh is complete.
+ */
+async function refreshQueues() {
+  if (typeof showLoading === 'function') showLoading('Refreshing queue data...');
+  try {
+    await api.loadSchedulerConfiguration();
+    showSuccess('Queue data refreshed.');
+  } catch (e) {
+    showError('Failed to refresh queue data: ' + e.message);
+  } finally {
+    hideLoading();
+  }
+}
+window.refreshQueues = refreshQueues;
+
 // Expose to global scope
 window.showNotification = showNotification;
 window.showSuccess = showSuccess;

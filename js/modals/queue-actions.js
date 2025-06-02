@@ -10,14 +10,14 @@ function markQueueForDeletion(queuePath) {
         showWarning("Cannot delete root queue.");
         return;
     }
-    const queue = findQueueByPath(queuePath);
+
+    const queue = queueStateStore.getQueue(queuePath);
     if (!queue) {
         showError("Queue not found, cannot mark for deletion.");
         return;
     }
 
-    // canQueueBeDeleted is from queue-renderer.js
-    const deletionStatus = checkDeletability(queuePath, queueStateStore);
+    const deletionStatus =  checkDeletability(queuePath, queueStateStore);
     if (!deletionStatus.canDelete) {
         showWarning(deletionStatus.reason || "This queue cannot be deleted.");
         return;

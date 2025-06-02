@@ -1,5 +1,3 @@
-let currentEditQueuePath = null; // Store path instead of the whole object
-
 /**
  * Opens the edit modal for a queue and dynamically generates the content based on the queue's properties.
  * This method ensures proper validation before allowing modifications, dynamically creates form elements,
@@ -9,31 +7,31 @@ let currentEditQueuePath = null; // Store path instead of the whole object
  * @return {Promise<void>} A promise that resolves when the modal is successfully opened and content is set.
  */
 async function openEditModal(queuePath) {
-    const formattedQueue = viewDataFormatter.getFormattedQueue(queuePath);
+    const formattedQueue = viewDataFormatter.getFormattedQueue(queuePath); // viewDataFormatter is global
 
     if (!formattedQueue) {
-        showError(`Cannot edit: Queue data not found for ${queuePath}.`);
+        if (typeof showError === 'function') showError(`Cannot edit: Queue data not found for ${queuePath}.`);
         return;
     }
     if (formattedQueue.isDeleted) {
-        showWarning("Cannot edit a queue marked for deletion.");
+        if (typeof showWarning === 'function') showWarning("Cannot edit a queue marked for deletion.");
         return;
     }
 
-    currentEditQueuePath = queuePath; // Store the path
+    currentEditQueuePath = queuePath;
     const editFormContainer = document.getElementById("edit-form-container");
     if (!editFormContainer) {
         console.error("Edit form container not found in modal.");
         return;
     }
-    editFormContainer.innerHTML = ""; // Clear previous form
+    editFormContainer.innerHTML = "";
 
     const modalTitle = document.getElementById("modal-title");
     if (modalTitle) modalTitle.textContent = `Edit Queue: ${formattedQueue.displayName}`;
 
     let formHTML = `<form id="edit-queue-form" data-queue-path="${queuePath}">`;
 
-    // Static info: Name and Path
+    // Static info: Name and Path (using formattedQueue.displayName and formattedQueue.path)
     formHTML += `<div class="form-group static-info-group">
                     <div class="property-details-column">
                         <div class="property-display-name"><span>Queue Name</span></div>
@@ -53,21 +51,21 @@ async function openEditModal(queuePath) {
                     </div>
                  </div>`;
 
-    // Capacity Mode Dropdown
+    // Capacity Mode Dropdown (using formattedQueue.effectiveCapacityMode)
     const effectiveMode = formattedQueue.effectiveCapacityMode;
     formHTML += `<div class="form-group property-edit-item">
                     <div class="property-details-column">
                         <div class="property-display-name">
                             <span>Capacity Mode</span>
-                            <span class="info-icon" title="Determines how queue capacity is specified...">ⓘ</span>
+                            <span class="info-icon" title="Determines how queue capacity is specified (Percentage, Weight, or Absolute Resources).">ⓘ</span>
                         </div>
                         <div class="property-yarn-name">- UI Helper -</div>
                     </div>
                     <div class="property-value-column">
                         <select class="form-input" id="edit-capacity-mode" data-original-mode="${effectiveMode}">
-                            <option value="percentage" ${effectiveMode === "percentage" ? "selected" : ""}>Percentage (%)</option>
-                            <option value="weight" ${effectiveMode === "weight" ? "selected" : ""}>Weight (w)</option>
-                            <option value="absolute" ${effectiveMode === "absolute" ? "selected" : ""}>Absolute Resources</option>
+                            <option value="${CAPACITY_MODES.PERCENTAGE}" ${effectiveMode === CAPACITY_MODES.PERCENTAGE ? "selected" : ""}>Percentage (%)</option>
+                            <option value="${CAPACITY_MODES.WEIGHT}" ${effectiveMode === CAPACITY_MODES.WEIGHT ? "selected" : ""}>Weight (w)</option>
+                            <option value="${CAPACITY_MODES.ABSOLUTE}" ${effectiveMode === CAPACITY_MODES.ABSOLUTE ? "selected" : ""}>Absolute Resources</option>
                         </select>
                     </div>
                  </div>`;
@@ -79,24 +77,20 @@ async function openEditModal(queuePath) {
             if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
                 const propDef = category.properties[placeholderPropName];
                 const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
-                const actualPropName = placeholderPropName.replace(Q_PATH_PLACEHOLDER || '<queue_path>', queuePath);
+                const actualPropName = placeholderPropName.replace(Q_PATH_PLACEHOLDER, queuePath);
                 const inputId = `edit-queue-${actualPropName.replace(/\./g, "-")}`;
 
-                // Get the value from the formattedQueue object.
-                // formattedQueue.properties contains the effective values (base + pending + defaults).
-                let currentValue = formattedQueue.properties.get(actualPropName);
-                if (currentValue === undefined) { // Should ideally be handled by formatter setting default
+                // Get the pre-formatted value from formattedQueue (either directly or from propertiesForEditModal)
+                let currentValue = formattedQueue[simpleKey];
+                if (currentValue === undefined && formattedQueue.propertiesForEditModal && formattedQueue.propertiesForEditModal.has(simpleKey)) {
+                    currentValue = formattedQueue.propertiesForEditModal.get(simpleKey);
+                }
+                // If still undefined, use metadata default (formatter should ideally handle this)
+                if (currentValue === undefined) {
                     currentValue = propDef.defaultValue;
                 }
-
-                // The formatter should have already ensured `currentValue` for capacity/maxCapacity
-                // is in the correct string format for display according to `effectiveCapacityMode`.
-                // So, `formattedQueue.capacity` and `formattedQueue.maxCapacity` (top-level) can be used here.
-                if (simpleKey === 'capacity') {
-                    currentValue = formattedQueue.capacity; // Use the pre-formatted one
-                } else if (simpleKey === 'maximumCapacity') { // Match simpleKey used in formatter
-                    currentValue = formattedQueue.maxCapacity; // Use the pre-formatted one
-                }
+                // Ensure string for value attribute, especially for numbers/booleans
+                currentValue = (currentValue === null || currentValue === undefined) ? "" : String(currentValue);
 
 
                 formHTML += `<div class="form-group property-edit-item">
@@ -109,7 +103,6 @@ async function openEditModal(queuePath) {
                                 </div>
                                 <div class="property-value-column">`;
 
-                // Input field generation (similar to original, but 'currentValue' is now from formattedQueue)
                 if (propDef.type === "enum") {
                     formHTML += `<select class="form-input" id="${inputId}" data-original-value="${currentValue}" data-yarn-prop="${actualPropName}">`;
                     (propDef.options || []).forEach(opt => {
@@ -117,18 +110,29 @@ async function openEditModal(queuePath) {
                     });
                     formHTML += `</select>`;
                 } else if (propDef.type === "boolean") {
-                    formHTML += `<select class="form-input" id="${inputId}" data-original-value="${String(currentValue)}" data-yarn-prop="${actualPropName}">
-                                    <option value="true" ${String(currentValue) === "true" ? "selected" : ""}>true</option>
-                                    <option value="false" ${String(currentValue) === "false" ? "selected" : ""}>false</option>
+                    formHTML += `<select class="form-input" id="${inputId}" data-original-value="${currentValue}" data-yarn-prop="${actualPropName}">
+                                    <option value="true" ${currentValue === "true" ? "selected" : ""}>true</option>
+                                    <option value="false" ${currentValue === "false" ? "selected" : ""}>false</option>
                                  </select>`;
-                } else if (propDef.type === "number" || propDef.type === "percentage" && !(simpleKey === 'capacity' || simpleKey === 'maximumCapacity')) {
-                    // Capacity/MaxCapacity are handled as text due to their complex formats (%)w][)
-                    // Other percentages (like max-am-resource-percent) are 0-1 decimals.
-                    const numSpecificAttrs = (propDef.type === "percentage")
-                        ? `min="0" max="1" step="${propDef.step || '0.01'}"`
-                        : (propDef.step ? `step="${propDef.step}"` : '');
-                    formHTML += `<input type="number" class="form-input" id="${inputId}" value="${currentValue}" data-original-value="${currentValue}" data-yarn-prop="${actualPropName}" ${numSpecificAttrs}>`;
-                } else { // Default to text input (covers capacity, maxCapacity, general strings)
+                } else if (propDef.type === "number" || (propDef.type === "percentage" && simpleKey !== 'maximum-am-resource-percent' /* This is 0-1 */)) {
+                    // Capacity and max-capacity are text due to formats like "10%", "5w", "[...]".
+                    // Other numbers or specific percentages (like max-am-resource-percent which is 0-1) use type="number".
+                    let inputType = "text"; // Default to text
+                    let stepAttr = "";
+                    let minMaxAttr = "";
+
+                    if (simpleKey === 'capacity' || simpleKey === 'maximum-capacity') {
+                        inputType = "text"; // Handled as text due to complex formats
+                    } else if (propDef.type === "number") {
+                        inputType = "number";
+                        if (propDef.step) stepAttr = `step="${propDef.step}"`;
+                    } else if (propDef.type === "percentage") { // e.g. max-am-resource-percent
+                        inputType = "number";
+                        stepAttr = `step="${propDef.step || '0.01'}"`;
+                        minMaxAttr = `min="0" max="1"`; // Percentages like max-am-resource are 0-1
+                    }
+                    formHTML += `<input type="${inputType}" class="form-input" id="${inputId}" value="${currentValue}" data-original-value="${currentValue}" data-yarn-prop="${actualPropName}" ${stepAttr} ${minMaxAttr}>`;
+                } else { // Default to text input (covers capacity, maxCapacity which are complex strings, general strings)
                     formHTML += `<input type="text" class="form-input" id="${inputId}" value="${currentValue}" data-original-value="${currentValue}" data-yarn-prop="${actualPropName}">`;
                 }
                 formHTML += `   </div></div>`;
@@ -144,10 +148,10 @@ async function openEditModal(queuePath) {
 
     editFormContainer.innerHTML = formHTML;
 
-    // Add event listener for capacity mode change to reformat capacity input
     const capacityModeSelect = document.getElementById("edit-capacity-mode");
     if (capacityModeSelect) {
         capacityModeSelect.addEventListener("change", () => {
+            // Pass the queuePath to correctly identify the capacity input field's data-yarn-prop
             handleCapacityInputChangeOnModeChange(queuePath, 'edit');
         });
     }
@@ -155,17 +159,7 @@ async function openEditModal(queuePath) {
     document.getElementById("edit-modal").classList.add("show");
 }
 
-/**
- * Stages changes made to the queue form and updates the pending modification store with any meaningful edits.
- *
- * This method captures and compares the form's current input values against their original states to determine
- * if there are any meaningful changes. If changes are detected, it merges them with previously pending modifications
- * and updates the queue state store. Additionally, it handles UI-specific hints, like capacity mode changes, and
- * handles any required transformations for specific input fields.
- *
- * @return {void} This function does not return anything. It either updates the internal state with staged changes
- * or logs corresponding messages if no changes were detected or if the necessary elements are missing.
- */
+
 function stageQueueChanges() {
     if (!currentEditQueuePath) {
         console.error("No queue path being edited.");
@@ -179,40 +173,41 @@ function stageQueueChanges() {
     }
 
     const queuePath = currentEditQueuePath;
-    let changesFromThisSession = {}; // Holds YARN props: {yarn.prop.name: value}
-    let uiHintsFromThisSession = {};   // Holds UI hints like {_ui_capacityMode: mode}
-    let hasMeaningfulChangesInThisSession = false; // Tracks if actual data values changed
+    let changesFromThisSession = {};
+    let uiHintsFromThisSession = {};
+    let hasMeaningfulChangesInThisSession = false;
 
     const capacityModeSelect = document.getElementById("edit-capacity-mode");
     const newCapacityMode = capacityModeSelect.value;
     const originalCapacityModeDisplayed = capacityModeSelect.getAttribute("data-original-mode");
 
-    // Check if capacity mode itself changed
     if (newCapacityMode !== originalCapacityModeDisplayed) {
         uiHintsFromThisSession["_ui_capacityMode"] = newCapacityMode;
-        // A mode change is a meaningful change even if other values revert to original *under the new mode*
         hasMeaningfulChangesInThisSession = true;
     }
 
-    // Iterate form inputs to find changes from this specific edit session
     form.querySelectorAll("input.form-input, select.form-input").forEach((inputElement) => {
-        if (inputElement.id === "edit-capacity-mode") return;
+        if (inputElement.id === "edit-capacity-mode") return; // Skip mode selector itself
 
         const fullYarnPropName = inputElement.getAttribute("data-yarn-prop");
         if (!fullYarnPropName) return;
 
         let newValue = inputElement.value;
         const originalValueDisplayedInModal = inputElement.getAttribute("data-original-value");
+        const modeForSaving = uiHintsFromThisSession["_ui_capacityMode"] || originalCapacityModeDisplayed;
 
-        // Re-format the capacity field based on the *potentially new* capacity mode before comparison
-        const modeForComparison = uiHintsFromThisSession["_ui_capacityMode"] || originalCapacityModeDisplayed;
-        if (fullYarnPropName.endsWith(".capacity")) {
-            // Use the formatter's method (assuming it's accessible or replicated here)
-            newValue = QueueViewDataFormatter.prototype._ensureCapacityFormat(newValue, modeForComparison, originalValueDisplayedInModal);
-        } else if (fullYarnPropName.endsWith(".maximum-capacity")) {
-            newValue = QueueViewDataFormatter.prototype._ensureMaxCapacityFormat(newValue, modeForComparison, originalValueDisplayedInModal);
+        // Re-format capacity/max-capacity based on the *final selected mode* before saving to store.
+        // This ensures the stored raw value matches the intended mode.
+        // We need an instance of QueueViewDataFormatter or access to its helper methods.
+        // Assuming viewDataFormatter is global for now.
+        if (viewDataFormatter && typeof viewDataFormatter._ensureCapacityFormat === 'function') {
+            if (fullYarnPropName.endsWith(".capacity")) {
+                newValue = viewDataFormatter._ensureCapacityFormat(newValue, modeForSaving, originalValueDisplayedInModal);
+            } else if (fullYarnPropName.endsWith(".maximum-capacity")) {
+                newValue = viewDataFormatter._ensureMaxCapacityFormat(newValue, modeForSaving, originalValueDisplayedInModal);
+            }
         }
-        // Add similar for other type-specific formatting if required (e.g., boolean "true"/"false")
+
 
         if (newValue !== originalValueDisplayedInModal) {
             hasMeaningfulChangesInThisSession = true;
@@ -221,15 +216,11 @@ function stageQueueChanges() {
     });
 
     if (hasMeaningfulChangesInThisSession || Object.keys(uiHintsFromThisSession).length > 0) {
-        // Fetch the *cumulative* pending modifications already in the store for this queue
-        const existingCumulativePendingMods = queueStateStore.getPendingModifications(queuePath);
-
-        // Merge changes from this session onto the existing cumulative pending mods
-        // Changes from this session take precedence for the keys they modify.
+        const existingCumulativePendingMods = queueStateStore.getPendingModifications(queuePath); // queueStateStore is global
         const newCumulativePendingMods = {
             ...existingCumulativePendingMods,
             ...changesFromThisSession,
-            ...uiHintsFromThisSession // UI hints also override previous ones
+            ...uiHintsFromThisSession
         };
         queueStateStore.doUpdate(queuePath, newCumulativePendingMods);
         showSuccess(`Changes staged for queue "${queuePath.split('.').pop()}"`);
@@ -237,54 +228,71 @@ function stageQueueChanges() {
         showInfo("No new changes detected to stage.");
     }
 
-    renderQueueTree();
-    updateBatchControls();
-    closeEditModal();
+    if (typeof renderQueueTree === 'function') renderQueueTree(); // renderQueueTree is global
+    if (typeof updateBatchControls === 'function') updateBatchControls(); // updateBatchControls is global
+    if (typeof closeEditModal === 'function') closeEditModal(); // closeEditModal is global
 }
 
-/**
- * Handles changes in the capacity input field when the mode (weight, percentage, or absolute)
- * is changed in a modal dialog. It adjusts the input value formatting based on the selected mode.
- *
- * @param {string} queuePath - The path of the queue for which capacity is being configured.
- * @param {string} [modalTypePrefix='edit'] - The modal type prefix to determine the input and mode
- *                                             element IDs. Defaults to 'edit'.
- * @return {void} This function does not return a value.
- */
+
 function handleCapacityInputChangeOnModeChange(queuePath, modalTypePrefix = 'edit') {
     const modeSelect = document.getElementById(`${modalTypePrefix}-capacity-mode`);
-    const capacityInput = document.getElementById(`${modalTypePrefix === 'edit' ? 
-        `edit-queue-yarn.scheduler.capacity.${queuePath}.capacity` : 'new-queue-capacity'}`);
+    // The capacity input ID is dynamic based on queuePath for edit modal
+    const capacityInputId = modalTypePrefix === 'edit' ?
+        `edit-queue-yarn.scheduler.capacity.${queuePath}.capacity` :
+        'new-queue-capacity'; // For add modal
+    const capacityInput = document.getElementById(capacityInputId);
 
-    if (!modeSelect || !capacityInput) return;
+    if (!modeSelect || !capacityInput) {
+        console.warn("Capacity mode select or input not found for mode change handler.");
+        return;
+    }
 
     const newMode = modeSelect.value;
-    let currentValStr = capacityInput.value;
-    let numericVal = parseFloat(currentValStr); // Try to get a number
+    let currentValStr = capacityInput.value.trim();
+    let numericVal = parseFloat(currentValStr); // Base numeric part
 
-    if (isNaN(numericVal)) { // If input is not a number (e.g. "[memory=...]" or "10w")
+    // Attempt to extract numeric value if current value has suffix or is absolute
+    if (isNaN(numericVal)) {
         if (currentValStr.endsWith('w') || currentValStr.endsWith('%')) {
             numericVal = parseFloat(currentValStr.slice(0, -1));
-        } else if (currentValStr.startsWith('[')) { // If absolute, try to extract a primary value or use default
+        } else if (currentValStr.startsWith('[')) {
             const memMatch = currentValStr.match(/memory=([0-9.]+)/);
-            numericVal = memMatch ? parseFloat(memMatch[1]) : (newMode === 'weight' ? 1.0 : 10.0);
-        } else { // Cannot parse, use a sensible default
-            numericVal = (newMode === 'weight' ? 1.0 : (newMode === 'percentage' ? 10.0 : 0));
+            numericVal = memMatch ? parseFloat(memMatch[1]) : (newMode === CAPACITY_MODES.WEIGHT ? 1.0 : 10.0); // Fallback numeric part
+        } else {
+            numericVal = (newMode === CAPACITY_MODES.WEIGHT ? 1.0 : (newMode === CAPACITY_MODES.PERCENTAGE ? 10.0 : 0));
         }
     }
-    if (isNaN(numericVal)) numericVal = (newMode === 'weight' ? 1.0 : (newMode === 'percentage' ? 10.0 : 0));
-
+    if (isNaN(numericVal)) numericVal = (newMode === CAPACITY_MODES.WEIGHT ? 1.0 : (newMode === CAPACITY_MODES.PERCENTAGE ? 10.0 : 0));
 
     let formattedVal = "";
-    if (newMode === "weight") formattedVal = numericVal.toFixed(1) + "w";
-    else if (newMode === "percentage") formattedVal = numericVal.toFixed(1) + "%";
-    else if (newMode === "absolute") {
-        // If the original was absolute, try to keep it, else default
-        formattedVal = (currentValStr.startsWith("[") && currentValStr.endsWith("]")) ?
-            currentValStr : "[memory=1024,vcores=1]";
+    // Use formatter's methods if available (assuming viewDataFormatter is global)
+    if (viewDataFormatter && typeof viewDataFormatter._ensureCapacityFormat === 'function') {
+        // Create a temporary default based on new mode if currentValStr was e.g. absolute and new mode is percentage
+        let tempDefaultForMode = viewDataFormatter._getDefaultCapacityValue(newMode);
+        let valueToFormat = numericVal;
+        if ((modeSelect.getAttribute('data-current-mode') === CAPACITY_MODES.ABSOLUTE && newMode !== CAPACITY_MODES.ABSOLUTE) ||
+            (newMode === CAPACITY_MODES.PERCENTAGE && numericVal > 100) ||
+            (newMode === CAPACITY_MODES.ABSOLUTE && currentValStr.indexOf('=') === -1) /* not a vector format */
+        ) {
+            valueToFormat = parseFloat(tempDefaultForMode) || (newMode === CAPACITY_MODES.PERCENTAGE ? 10.0 : 1.0);
+            if (newMode === CAPACITY_MODES.ABSOLUTE) { // if forcing default for absolute
+                capacityInput.value = tempDefaultForMode;
+                modeSelect.setAttribute('data-current-mode', newMode);
+                return;
+            }
+        }
+        formattedVal = viewDataFormatter._ensureCapacityFormat(valueToFormat, newMode, tempDefaultForMode);
+    } else { // Fallback to simpler formatting if formatter methods not available
+        if (newMode === CAPACITY_MODES.PERCENTAGE) formattedVal = numericVal.toFixed(1) + "%";
+        else if (newMode === CAPACITY_MODES.WEIGHT) formattedVal = numericVal.toFixed(1) + "w";
+        else if (newMode === CAPACITY_MODES.ABSOLUTE) {
+            formattedVal = (currentValStr.startsWith("[") && currentValStr.endsWith("]")) ? currentValStr : `[memory=${Math.round(numericVal)},vcores=1]`; // Simple absolute
+        }
     }
     capacityInput.value = formattedVal;
+    modeSelect.setAttribute('data-current-mode', newMode); // Store current mode for next change
 }
+
 
 window.openEditModal = openEditModal;
 window.stageQueueChanges = stageQueueChanges;
