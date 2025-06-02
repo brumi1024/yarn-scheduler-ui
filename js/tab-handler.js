@@ -40,9 +40,8 @@ function switchTab(targetTabId) {
     if (queueControls) {
         queueControls.style.display = (targetTabId === 'queue-config-content' ? 'flex' : 'none');
     }
-    if (typeof updateBatchControls === 'function') { // updateBatchControls from ui-components.js
-        updateBatchControls(); 
-    }
+    updateBatchControls();
+
     if (globalConfigActions) { // Assuming globalConfigActions is specific to the global config tab's header
         globalConfigActions.style.visibility = (targetTabId === 'scheduler-config-content' ? 'visible' : 'hidden');
     }

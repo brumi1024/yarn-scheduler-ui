@@ -24,68 +24,68 @@ function drawArrowToChild(parentRect, childRect, svgRect, svg) {
   svg.appendChild(path);
 }
 
-function drawArrowsForQueue(queue) {
-  if (!queue || typeof queue.path !== 'string') {
-    console.warn("drawArrowsForQueue: Attempted to draw arrows for a null or invalid queue object:", queue);
+/**
+ * Recursively draws arrows for a formatted queue node and its effective children.
+ * @param {Object} formattedQueueNode - The formatted queue node from QueueViewDataFormatter.
+ * @param {SVGElement} svg - The SVG container.
+ * @param {DOMRect} svgRect - The bounding rect of the SVG container.
+ */
+function drawArrowsForFormattedQueue(formattedQueueNode, svg, svgRect) {
+  if (!formattedQueueNode || typeof formattedQueueNode.path !== 'string' || formattedQueueNode.isDeleted) {
+    // Don't draw arrows from or to a deleted queue, or if node is invalid
     return;
   }
 
-  const parentElement = queueElements.get(queue.path); // Line 35 from original error
+  const parentElement = queueElements.get(formattedQueueNode.path);
   if (!parentElement) {
-    console.warn(`drawArrowsForQueue: Parent element not found for queue path "${queue.path}". Arrows might be incomplete.`);
     return;
   }
-
-  const svg = document.getElementById("arrow-svg"); // Ensure svg is accessible here
-  const svgRect = svg.getBoundingClientRect(); // And svgRect
-
   const parentRect = parentElement.getBoundingClientRect();
 
-  // Draw arrows to existing children
-  if (queue.children && typeof queue.children === 'object') {
-    Object.values(queue.children).forEach((child) => {
-      if (child && typeof child.path === 'string' && !pendingDeletions.has(child.path)) {
-        const childElement = queueElements.get(child.path);
+  if (formattedQueueNode.children && typeof formattedQueueNode.children === 'object') {
+    Object.values(formattedQueueNode.children).forEach((formattedChildNode) => {
+      // formattedChildNode is already an effective child (not deleted, could be new)
+      if (formattedChildNode && typeof formattedChildNode.path === 'string' && !formattedChildNode.isDeleted) {
+        const childElement = queueElements.get(formattedChildNode.path);
         if (childElement) {
           const childRect = childElement.getBoundingClientRect();
-          drawArrowToChild(parentRect, childRect, svgRect, svg);
-          drawArrowsForQueue(child); // Recursive call
-        }
-      }
-    });
-  }
-
-
-  // Draw arrows to new children
-  if (typeof pendingAdditions !== 'undefined' && pendingAdditions instanceof Map) {
-    Array.from(pendingAdditions.values()).forEach((newQueue) => {
-      if (newQueue && newQueue.parentPath === queue.path) { // Check if newQueue and newQueue.parentPath exist
-        const childElement = queueElements.get(newQueue.path);
-        if (childElement) {
-          const childRect = childElement.getBoundingClientRect();
-          drawArrowToChild(parentRect, childRect, svgRect, svg);
-          drawArrowsForQueue(newQueue); // Recursive call for newly added children that might have their own pending children
+          drawArrowToChild(parentRect, childRect, svgRect, svg); // Existing helper
+          drawArrowsForFormattedQueue(formattedChildNode, svg, svgRect); // Recursive call with formatted child
         }
       }
     });
   }
 }
 
+/**
+ * Main function to draw all arrows on the queue tree.
+ * Uses the formatted hierarchy from QueueViewDataFormatter.
+ */
 function drawArrows() {
-  if (!queueStateStore.getQueueHierarchy()) {
-    console.warn("drawArrows: queueStateStore.getQueueHierarchy() is not available. Skipping arrow rendering.");
+  if (!viewDataFormatter) {
+    console.warn("drawArrows: ViewDataFormatter not available. Skipping arrow rendering.");
+    return;
+  }
+
+  const formattedHierarchyRoot = viewDataFormatter.getFormattedQueueHierarchy();
+  if (!formattedHierarchyRoot) {
     return;
   }
 
   const svg = document.getElementById("arrow-svg");
-  if (!svg) { // Ensure SVG element exists
-      console.error("drawArrows: SVG element 'arrow-svg' not found.");
-      return;
+  if (!svg) {
+    console.error("drawArrows: SVG element 'arrow-svg' not found.");
+    return;
   }
-  svg.innerHTML = svg.innerHTML.split("</defs>")[0] + "</defs>"; // Clear previous arrows except defs
+  // Clear previous arrows except defs
+  // Ensure marker definition is preserved
+  const defsMatch = svg.innerHTML.match(/<defs>.*?<\/defs>/s);
+  svg.innerHTML = defsMatch ? defsMatch[0] : '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#666" /></marker></defs>';
 
-  // Initial call to the recursive function
-  drawArrowsForQueue(queueStateStore.getQueueHierarchy());
+
+  const svgRect = svg.getBoundingClientRect();
+
+  drawArrowsForFormattedQueue(formattedHierarchyRoot, svg, svgRect);
 }
 
 window.drawArrows = drawArrows;

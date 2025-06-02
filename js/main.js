@@ -2,11 +2,11 @@
 let schedulerTrie = new SchedulerConfigTrie(); // Populated by api.loadSchedulerConfiguration
 let availablePartitions = ['']; // TODO node label handling
 let currentPartition = '';
+let queueStateStore = null;
+let viewDataFormatter = null;
 
 // Staging changes for queues
-let pendingChanges = new Map();    // { queuePath -> {yarnPropName: value, _ui_capacityMode: mode} }
-let pendingAdditions = new Map();  // { queuePath -> newQueueDataForStore object }
-let pendingDeletions = new Set();  // { queuePath }
+let pendingChanges = new Map();    // TODO only used in modal-info-queue, refactor it
 
 // Staging/State for Modals
 let currentEditQueue = null; // Stores the queue object being edited
@@ -36,13 +36,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     
     showLoading('Initializing application...');
     try {
+        queueStateStore = new QueueStateStore();
+        viewDataFormatter = new QueueViewDataFormatter(queueStateStore, QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER);
         // Initial data load for queue structure (populates the scheduler state store)
         // loadSchedulerConfiguration also calls renderQueueTree via switchTab or directly
-        if (typeof api.loadSchedulerConfiguration === 'function') {
-            await api.loadSchedulerConfiguration(); 
-        } else {
-            showError("api.loadSchedulerConfiguration is not defined. Check api.js");
-        }
+        await api.loadSchedulerConfiguration();
 
         // Initialize event handlers
         // initializeTabNavigation from tab-handler.js

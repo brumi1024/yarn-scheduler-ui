@@ -11,30 +11,13 @@ class QueueStateStore {
 
     // --- Private Helper Methods (by convention or using # if desired) ---
     _crtElement(op, change) {
-        return { op: op, change: change };
+        return {op: op, change: change};
     }
 
     _iter(op) {
         return Array.from(this._changes.entries())
             .filter(entry => entry[1].op === op)
-            .map(entry => ({ path: entry[0], data: entry[1] })); // Return more structured data
-    }
-
-    _displayCapacity(mode, value) {
-        if (value === undefined || value === null) return "N/A";
-        const capMode = mode || CAPACITY_MODES.PERCENTAGE; // Default to percentage if mode is undefined
-
-        switch (capMode) {
-            case CAPACITY_MODES.PERCENTAGE:
-                return String(value).endsWith('%') ? value : `${parseFloat(value) || 0}%`;
-            case CAPACITY_MODES.WEIGHT:
-                return String(value).endsWith('w') ? value : `${parseFloat(value) || 0}w`;
-            case CAPACITY_MODES.ABSOLUTE:
-            case CAPACITY_MODES.VECTOR:
-                return String(value); // Assumes value is already like "[memory=...]" or a specific vector string
-            default:
-                return String(value);
-        }
+            .map(entry => ({path: entry[0], data: entry[1]})); // Return more structured data
     }
 
     _getAllQueuePathsFromHierarchy(currentQueueNode, pathsSet) {
@@ -47,6 +30,60 @@ class QueueStateStore {
         }
     }
 
+    /**
+     * Private helper to recursively find a queue node within a plain hierarchy object.
+     * This hierarchy object is the one returned by _schedulerTrieInstance.buildQueueHierarchyObject().
+     * @param {string} path - The path of the queue to find.
+     * @param {Object} currentQueueNode - The current node in the hierarchy to search from.
+     * @returns {Object|null} The queue node if found, otherwise null.
+     */
+    _findNodeInRawHierarchy(path, currentQueueNode) {
+        if (!currentQueueNode) {
+            return null;
+        }
+        if (currentQueueNode.path === path) {
+            return currentQueueNode;
+        }
+        if (currentQueueNode.children) {
+            for (const childName in currentQueueNode.children) {
+                // Ensure it's a direct property, not from prototype
+                if (Object.prototype.hasOwnProperty.call(currentQueueNode.children, childName)) {
+                    const found = this._findNodeInRawHierarchy(path, currentQueueNode.children[childName]);
+                    if (found) {
+                        return found;
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    _syncConvenienceFieldsOnBlueprint(blueprint) {
+        if (!blueprint || !(blueprint.properties instanceof Map)) return;
+
+        const props = blueprint.properties;
+        const path = blueprint.path; // Path of the new queue
+
+        // Define full YARN names for common convenience properties
+        const capFullName = `yarn.scheduler.capacity.${path}.capacity`;
+        const maxCapFullName = `yarn.scheduler.capacity.${path}.maximum-capacity`;
+        const stateFullName = `yarn.scheduler.capacity.${path}.state`;
+        // Add others if your blueprint structure has more (e.g., userLimitFactor)
+
+        if (props.has(capFullName)) blueprint.capacity = props.get(capFullName);
+        if (props.has(maxCapFullName)) blueprint.maxCapacity = props.get(maxCapFullName);
+        if (props.has(stateFullName)) blueprint.state = props.get(stateFullName);
+
+        // Ensure capacityMode (UI hint) is consistent
+        if (blueprint.capacityMode === undefined && blueprint.capacity !== undefined) {
+            const capStr = String(blueprint.capacity);
+            if (capStr.endsWith('w')) blueprint.capacityMode = CAPACITY_MODES.WEIGHT;
+            else if (capStr.startsWith('[')) blueprint.capacityMode = CAPACITY_MODES.ABSOLUTE;
+            else blueprint.capacityMode = CAPACITY_MODES.PERCENTAGE;
+        } else if (blueprint.capacityMode === undefined) {
+            blueprint.capacityMode = CAPACITY_MODES.PERCENTAGE;
+        }
+    }
 
     // --- Public API ---
     setSchedulerTrie(trieInstance) {
@@ -67,100 +104,90 @@ class QueueStateStore {
         return this._cachedQueueHierarchy;
     }
 
+    /**
+     * Retrieves the effective state of a queue, including pending changes.
+     * @param {string} path - The full path of the queue.
+     * @returns {Object|null} The queue object with changes applied, or null if not found.
+     */
     getQueue(path) {
-        const hierarchy = this.getQueueHierarchy();
-        let baseQueue = null;
-
-        if (hierarchy && typeof findQueueByPath === 'function') { // findQueueByPath from modal-helpers.js
-            baseQueue = findQueueByPath(path, hierarchy);
+        const rawHierarchy = this.getQueueHierarchy();
+        let baseQueueNodeFromTrie = null;
+        if (rawHierarchy) {
+            baseQueueNodeFromTrie = this._findNodeInRawHierarchy(path, rawHierarchy);
         }
 
-        const stagedChangeEntry = this._changes.get(path); // entry is {op, change}
+        const stagedChangeEntry = this._changes.get(path);
         let queueToReturn = null;
 
-        if (baseQueue) {
-            queueToReturn = JSON.parse(JSON.stringify(baseQueue)); // Deep clone
-            if (baseQueue.properties instanceof Map) {
-                queueToReturn.properties = new Map(Object.entries(baseQueue.properties));
-            } else {
-                queueToReturn.properties = new Map(Object.entries(baseQueue.properties || {}));
-            }
-        } else if (stagedChangeEntry && stagedChangeEntry.op === ADD_OP) {
-            const newQueueBlueprint = stagedChangeEntry.change.newQueueData || stagedChangeEntry.change;
+        if (stagedChangeEntry && stagedChangeEntry.op === ADD_OP) {
+            const newQueueBlueprint = stagedChangeEntry.change.newQueueData;
+            // Clone the blueprint. It should be self-consistent due to _syncConvenienceFieldsOnBlueprint.
             queueToReturn = JSON.parse(JSON.stringify(newQueueBlueprint));
+            // Restore the 'properties' as a Map instance (with full YARN names)
             if (newQueueBlueprint.properties instanceof Map) {
-                queueToReturn.properties = new Map(Object.entries(newQueueBlueprint.properties));
+                queueToReturn.properties = new Map(newQueueBlueprint.properties);
             } else {
                 queueToReturn.properties = new Map(Object.entries(newQueueBlueprint.properties || {}));
             }
+            queueToReturn.changeStatus = ADD_OP;
+            // Ensure essential fields like children, level are present
             queueToReturn.children = queueToReturn.children || {};
-            queueToReturn.path = queueToReturn.path || path;
-        } else {
-            return null;
-        }
+            queueToReturn.level = (queueToReturn.path || "").split(".").length - 1;
 
-        if (stagedChangeEntry) {
-            queueToReturn.changeStatus = stagedChangeEntry.op;
-            const changeData = stagedChangeEntry.change;
 
-            if ((stagedChangeEntry.op === UPDATE_OP || stagedChangeEntry.op === ADD_OP) && changeData) {
-                const modifications = (stagedChangeEntry.op === ADD_OP) 
-                                      ? (changeData.params || changeData.properties) // For ADD, props are in .params for API, or .properties for card
-                                      : changeData.modifications; // For UPDATE, they are in .modifications
+        } else if (baseQueueNodeFromTrie) {
+            queueToReturn = JSON.parse(JSON.stringify(baseQueueNodeFromTrie));
+            if (baseQueueNodeFromTrie.properties instanceof Map) {
+                queueToReturn.properties = new Map(baseQueueNodeFromTrie.properties);
+            } else {
+                queueToReturn.properties = new Map(Object.entries(baseQueueNodeFromTrie.properties || {}));
+            }
+            queueToReturn.children = queueToReturn.children || {};
+            queueToReturn.level = (queueToReturn.path || "").split(".").length - 1;
 
+            if (stagedChangeEntry && stagedChangeEntry.op === UPDATE_OP) {
+                queueToReturn.changeStatus = UPDATE_OP;
+                const modifications = stagedChangeEntry.change; // Cumulative, full YARN names
                 if (modifications) {
-                    // Ensure queueToReturn.properties is a Map
-                    if (!(queueToReturn.properties instanceof Map)) {
-                        queueToReturn.properties = new Map(Object.entries(queueToReturn.properties || {}));
-                    }
-
-                    for (const keyInModifications in modifications) {
-                        const value = modifications[keyInModifications];
-                        if (keyInModifications === '_ui_capacityMode') {
-                            queueToReturn.capacityMode = value;
-                        } else {
-                            let simpleKey = keyInModifications;
-                            // Check if keyInModifications is a full YARN path
-                            if (keyInModifications.startsWith(`yarn.scheduler.capacity.`)) {
-                                if (keyInModifications.startsWith(`yarn.scheduler.capacity.${queueToReturn.path}.`)) {
-                                    simpleKey = keyInModifications.substring(`yarn.scheduler.capacity.${queueToReturn.path}.`.length);
-                                } else { // Could be a new property for a new queue, extract last part
-                                    simpleKey = keyInModifications.substring(keyInModifications.lastIndexOf('.') + 1);
-                                }
+                    for (const fullYarnPropName in modifications) {
+                        if (Object.hasOwnProperty.call(modifications, fullYarnPropName)) {
+                            const value = modifications[fullYarnPropName];
+                            if (fullYarnPropName === '_ui_capacityMode') {
+                                queueToReturn.capacityMode = value;
+                            } else {
+                                queueToReturn.properties.set(fullYarnPropName, value);
                             }
-                            queueToReturn.properties.set(simpleKey, value);
-                            if (simpleKey === 'capacity') queueToReturn.capacity = value;
-                            if (simpleKey === 'state') queueToReturn.state = value;
-                            if (simpleKey === 'maximum-capacity') queueToReturn.maxCapacity = value;
                         }
                     }
+                    // After applying updates to .properties, sync convenience fields
+                    this._syncConvenienceFieldsOnBlueprint(queueToReturn); // Re-use helper
                 }
+            } else if (stagedChangeEntry && stagedChangeEntry.op === DELETE_OP) {
+                queueToReturn.changeStatus = DELETE_OP;
+            } else {
+                queueToReturn.changeStatus = "UNCHANGED";
             }
         } else {
-            queueToReturn.changeStatus = "UNCHANGED";
+            return null; // Not in Trie, not a pending ADD
         }
-        
-        // Update top-level convenience fields and display strings from properties
-        queueToReturn.capacity = queueToReturn.properties.get('capacity');
-        queueToReturn.state = queueToReturn.properties.get('state');
-        queueToReturn.maxCapacity = queueToReturn.properties.get('maximum-capacity');
 
-        let currentMode = queueToReturn.capacityMode;
-        if (currentMode === undefined && queueToReturn.capacity !== undefined) {
-            const capStr = String(queueToReturn.capacity);
-            if (capStr.endsWith('w')) currentMode = CAPACITY_MODES.WEIGHT;
-            else if (capStr.startsWith('[')) currentMode = CAPACITY_MODES.ABSOLUTE;
-            else currentMode = CAPACITY_MODES.PERCENTAGE;
-            queueToReturn.capacityMode = currentMode;
+        // Final check for capacityMode if still not set (e.g. for UNCHANGED queues from Trie)
+        if (!queueToReturn.capacityMode && queueToReturn.properties) {
+            const capFullName = `yarn.scheduler.capacity.${path}.capacity`;
+            const capVal = queueToReturn.properties.get(capFullName);
+            if (capVal !== undefined) {
+                const capStr = String(capVal);
+                if (capStr.endsWith('w')) queueToReturn.capacityMode = CAPACITY_MODES.WEIGHT;
+                else if (capStr.startsWith('[')) queueToReturn.capacityMode = CAPACITY_MODES.ABSOLUTE;
+                else queueToReturn.capacityMode = CAPACITY_MODES.PERCENTAGE;
+            } else {
+                queueToReturn.capacityMode = CAPACITY_MODES.PERCENTAGE; // Overall default
+            }
         }
-        
-        queueToReturn.capacityDisplay = this._displayCapacity(currentMode, queueToReturn.capacity);
-        queueToReturn.level = queueToReturn.path ? queueToReturn.path.split(".").length - 1 : 0;
-
         return queueToReturn;
     }
 
-    allQueue() {
+    getAllQueues() {
         const hierarchy = this.getQueueHierarchy();
         const allPaths = new Set();
 
@@ -177,38 +204,187 @@ class QueueStateStore {
             .filter(q => q !== null);
     }
 
+    /**
+     * Retrieves the current pending modifications for a queue if it's marked for UPDATE.
+     * @param {string} path - The queue path.
+     * @returns {object} A clone of the pending modifications, or an empty object.
+     */
+    getPendingModifications(path) {
+        const entry = this._changes.get(path);
+        if (entry && entry.op === UPDATE_OP && entry.change) {
+            // Return a clone to prevent direct modification of the store's internal object
+            return {...entry.change};
+        }
+        return {}; // No pending updates or not an update operation
+    }
+
     // --- Staged Change Management Methods ---
     doAdd(path, changeData) { // changeData should be { newQueueData: object }
         this._changes.set(path, this._crtElement(ADD_OP, changeData));
     }
 
-    doDelete(path) { // No extensive changeData needed, path is key
-        this._changes.set(path, this._crtElement(DELETE_OP, { path: path }));
+    /**
+     * Stages an update for a queue. The changeData should be the
+     * complete set of all currently pending modifications.
+     * @param {string} path - The queue path.
+     * @param {object} modificationsFromEdit - The full set of pending modifications for this queue.
+     */
+    doUpdate(path, modificationsFromEdit) {
+        const existingEntry = this._changes.get(path);
+
+        if (existingEntry && existingEntry.op === ADD_OP) {
+            // --- Editing a PENDING NEW QUEUE ---
+            const blueprintToUpdate = existingEntry.change.newQueueData;
+
+            // Ensure properties map exists on the blueprint
+            if (!(blueprintToUpdate.properties instanceof Map)) {
+                blueprintToUpdate.properties = new Map(Object.entries(blueprintToUpdate.properties || {}));
+            }
+
+            // Apply modifications from the edit session to this blueprint
+            for (const fullYarnPropName in modificationsFromEdit) {
+                if (Object.hasOwnProperty.call(modificationsFromEdit, fullYarnPropName)) {
+                    const value = modificationsFromEdit[fullYarnPropName];
+                    if (fullYarnPropName === '_ui_capacityMode') {
+                        blueprintToUpdate.capacityMode = value; // Update UI hint on blueprint
+                    } else {
+                        // Update the properties map (which has full YARN names)
+                        blueprintToUpdate.properties.set(fullYarnPropName, value);
+                    }
+                }
+            }
+
+            // IMPORTANT: Sync top-level convenience fields on the blueprint from its updated properties map
+            // This ensures the blueprint itself is consistent.
+            this._syncConvenienceFieldsOnBlueprint(blueprintToUpdate);
+
+            // Re-stage as ADD_OP with the *updated* newQueueData (blueprintToUpdate)
+            this._changes.set(path, this._crtElement(ADD_OP, {newQueueData: blueprintToUpdate}));
+
+        } else {
+            // --- Editing an EXISTING QUEUE (from Trie) or staging a new update for one ---
+            // modificationsFromEdit here is already the *new cumulative set* of pending changes for this path,
+            // as prepared by stageQueueChanges in modal-edit-queue.js.
+
+            if (!modificationsFromEdit || Object.keys(modificationsFromEdit).length === 0) {
+                // If modifications are empty, it means all changes were reverted. Clear pending update.
+                const entry = this._changes.get(path);
+                if (entry && entry.op === UPDATE_OP) {
+                    this.deleteChange(path);
+                }
+                return;
+            }
+            this._changes.set(path, this._crtElement(UPDATE_OP, modificationsFromEdit));
+        }
     }
 
-    doUpdate(path, changeData) { // changeData should be { modifications: object }
-        this._changes.set(path, this._crtElement(UPDATE_OP, changeData));
+    // deleteChange should also clear any pending UPDATE for the same path if called for ADD/DELETE op.
+    doDelete(path) {
+        // If there was a pending ADD, simply remove it.
+        // If there were pending UPDATEs, mark for DELETE. DELETE takes precedence.
+        const currentChange = this._changes.get(path);
+        if (currentChange && currentChange.op === ADD_OP) {
+            this._changes.delete(path);
+        } else {
+            this._changes.set(path, this._crtElement(DELETE_OP, {path: path}));
+        }
     }
 
     deleteChange(path) {
         return this._changes.delete(path);
     }
 
-    isStateAdd(path) { return this._changes.get(path)?.op === ADD_OP; }
-    isStateDelete(path) { return this._changes.get(path)?.op === DELETE_OP; }
-    isStateUpdate(path) { return this._changes.get(path)?.op === UPDATE_OP; }
+    isStateAdd(path) {
+        return this._changes.get(path)?.op === ADD_OP;
+    }
 
-    countAdd() { return this._iter(ADD_OP).length; }
-    countDelete() { return this._iter(DELETE_OP).length; }
-    countUpdate() { return this._iter(UPDATE_OP).length; }
+    isStateDelete(path) {
+        return this._changes.get(path)?.op === DELETE_OP;
+    }
 
-    size() { return this._changes.size; }
+    isStateUpdate(path) {
+        return this._changes.get(path)?.op === UPDATE_OP;
+    }
 
+    countAdd() {
+        return this._iter(ADD_OP).length;
+    }
+
+    countDelete() {
+        return this._iter(DELETE_OP).length;
+    } // Counts actual DELETE_OP entries
+    countUpdate() {
+        return this._iter(UPDATE_OP).length;
+    }
+
+    size() {
+        return this._changes.size;
+    }
+
+    /**
+     * Returns an array of queue paths marked for deletion.
+     * @returns {string[]}
+     */
+    getStagedDeletions() {
+        const deletions = [];
+        for (const [path, entry] of this._changes.entries()) {
+            if (entry.op === DELETE_OP) {
+                deletions.push(path);
+            }
+        }
+        return deletions;
+    }
+
+    /**
+     * Returns an array of new queues formatted for the API.
+     * Each object will have { queueName: fullPath, params: apiParams }.
+     * @returns {Array<Object>}
+     */
+    getStagedAdditionsForApi() {
+        const additions = [];
+        for (const entry of this._changes.values()) {
+            if (entry.op === ADD_OP && entry.change && entry.change.newQueueData) {
+                const newQueue = entry.change.newQueueData;
+                additions.push({
+                    queueName: newQueue.path, // API expects the full path here for new queues
+                    params: newQueue.params || {} // 'params' should hold full YARN prop names
+                });
+            }
+        }
+        return additions;
+    }
+
+    /**
+     * Returns an array of updated queues formatted for the API.
+     * Each object will have { queueName: fullPath, params: cumulativeModifications }.
+     * @returns {Array<Object>}
+     */
+    getStagedUpdatesForApi() {
+        const updates = [];
+        for (const [path, entry] of this._changes.entries()) {
+            if (entry.op === UPDATE_OP && entry.change) {
+                // 'entry.change' should be the cumulative modifications object
+                // Filter out internal UI hints like _ui_capacityMode before sending to API
+                const apiParams = {...entry.change};
+                delete apiParams._ui_capacityMode; // Example of removing UI-specific hint
+
+                if (Object.keys(apiParams).length > 0) { // Only include if there are actual param changes
+                    updates.push({
+                        queueName: path,
+                        params: apiParams
+                    });
+                }
+            }
+        }
+        return updates;
+    }
+
+    /**
+     * Clears all staged changes.
+     */
     clear() {
         this._changes.clear();
-        // _cachedQueueHierarchy is usually invalidated by setSchedulerTrie,
-        // but if clear means full reset without new data, clearing cache might be good too.
-        // For now, it's mainly for clearing pending user edits.
+        // console.log("QueueStateStore: All staged changes cleared.");
     }
 
     // Getter for global properties from the Trie
@@ -220,7 +396,3 @@ class QueueStateStore {
         return this._schedulerTrieInstance.globalProperties;
     }
 }
-
-// Instantiate and export the single instance
-const queueStateStore = new QueueStateStore();
-window.queueStateStore = queueStateStore;

@@ -1,82 +1,71 @@
 /**
- * Finds a queue by its path in the main queueData or pendingAdditions.
- * Assumes window.queueData and pendingAdditions (from main.js) are globally accessible.
+ * Finds a queue by its path using the QueueStateStore.
+ * The store is responsible for checking the Trie and pending additions.
+ * @param {string} path - The full path of the queue.
+ * @returns {Object|null} The queue object if found, otherwise null.
  */
-function findQueueByPath(path, currentQueue = queueStateStore.getQueueHierarchy()) {
-    if (!currentQueue) return null;
-    if (currentQueue.path === path) return currentQueue;
-
-    if (currentQueue.children) {
-        for (const childName in currentQueue.children) {
-            const found = findQueueByPath(path, currentQueue.children[childName]);
-            if (found) return found;
-        }
-    }
-    const pendingQueue = pendingAdditions.get(path);
-    if (pendingQueue && pendingQueue.path === path) {
-        return pendingQueue;
-    }
-    return null;
+function findQueueByPath(path) { // Removed currentQueue param, always uses store
+    return queueStateStore.getQueue(path);
 }
 
 /**
- * Closes the Edit Queue modal.
+ * Closes the edit modal by removing the "show" class from the modal element
+ * and resets the currentEditQueue to null.
  */
 function closeEditModal() {
-  const modal = document.getElementById("edit-modal");
-  if (modal) modal.classList.remove("show");
-  currentEditQueue = null; // currentEditQueue is a global variable for modal state
+    const modal = document.getElementById("edit-modal");
+    if (modal) modal.classList.remove("show");
+    currentEditQueue = null; // currentEditQueue is a global variable for modal state
 }
 
 /**
- * Closes the Add Queue modal.
+ * Closes the "Add Queue" modal by removing the "show" class from its element.
+ *
  */
 function closeAddQueueModal() {
-  const modal = document.getElementById("add-queue-modal");
-  if (modal) modal.classList.remove("show");
+    const modal = document.getElementById("add-queue-modal");
+    if (modal) modal.classList.remove("show");
 }
 
 /**
- * Closes the Info Queue modal.
+ * Closes the information modal by removing the "show" class
+ * from the modal element with the ID "info-modal".
  */
 function closeInfoModal() {
-  const modal = document.getElementById("info-modal");
-  if (modal) modal.classList.remove("show");
+    const modal = document.getElementById("info-modal");
+    if (modal) modal.classList.remove("show");
 }
 
 /**
- * Gets all parent queues for populating dropdowns.
- * Iterates through window.queueData and pendingAdditions, avoiding duplicates and deleted queues.
+ * Retrieves a list of all parent queues available in the queue state store.
+ * Ensures that the returned queues are valid, not marked for deletion, and include a fallback entry for a 'root'
+ * queue when necessary.
+ *
+ * @return {Array<{path: string, name: string}>} An array of objects representing parent queues,
+ * where each object contains the `path` and `name` of a queue. If the queue state store is unavailable or no valid
+ * queues exist, a fallback containing only the 'root' queue is returned.
  */
-function getAllParentQueues(currentQueue = queueStateStore.getQueueHierarchy(), collectedPaths = new Set()) {
-    if (!currentQueue || collectedPaths.has(currentQueue.path)) return [];
-    
-    let parents = [];
-    if (!pendingDeletions.has(currentQueue.path)) {
-         parents.push({ path: currentQueue.path, name: currentQueue.name });
-         collectedPaths.add(currentQueue.path);
+function getAllParentQueues() {
+    if (!queueStateStore) {
+        console.error("getAllParentQueues: QueueStateStore not available.");
+        showError("Error: Queue data system is not available.");
+        return [{path: 'root', name: 'root'}]; // Minimal fallback
     }
 
-    if (currentQueue.children) {
-        for (const childName in currentQueue.children) {
-            parents = parents.concat(getAllParentQueues(currentQueue.children[childName], collectedPaths));
-        }
+    const allEffectiveQueues = queueStateStore.getAllQueues();
+
+    const parentQueues = allEffectiveQueues
+        .filter(q => q && !queueStateStore.isStateDelete(q.path)) // Explicitly ensure not marked for deletion
+        .map(q => ({path: q.path, name: q.name || q.path.split('.').pop()})) // Ensure name is present
+        .sort((a, b) => a.path.localeCompare(b.path));
+
+    // Ensure 'root' is always an option if not present and no other queues exist
+    if (parentQueues.length === 0 && !parentQueues.some(p => p.path === 'root')) {
+        return [{path: 'root', name: 'root'}];
     }
-    Array.from(pendingAdditions.values()).forEach(newQueue => {
-        if (newQueue.parentPath === currentQueue.path && !collectedPaths.has(newQueue.path)) {
-           parents = parents.concat(getAllParentQueues(newQueue, collectedPaths));
-        }
-    });
-    
-    // Return unique parents by path, ensuring original name is kept
-    return Array.from(new Set(parents.map(p => p.path)))
-                .map(pPath => {
-                    const found = parents.find(p => p.path === pPath);
-                    return { path: found.path, name: found.name };
-                })
-                .sort((a,b) => a.path.localeCompare(b.path)); // Sort for consistency
+
+    return parentQueues;
 }
-
 
 window.findQueueByPath = findQueueByPath;
 window.closeEditModal = closeEditModal;
