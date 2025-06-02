@@ -1,12 +1,14 @@
 /**
- * Switches the active tab and content pane.
- * @param {string} targetTabId - The ID of the content pane to make active.
+ * Switches to the specified target tab by updating the active tab and pane.
+ * Handles the visibility of context-specific controls and invokes specialized render functions for certain tabs.
+ *
+ * @param {string} targetTabId - The identifier of the tab to activate.
+ * @return {void} This function does not return a value.
  */
 function switchTab(targetTabId) {
     const navTabs = document.querySelectorAll('.nav-tab');
     const tabPanes = document.querySelectorAll('.tab-pane');
     const queueControls = document.getElementById('queue-config-controls');
-    // Batch controls visibility is handled by updateBatchControls itself based on active tab
     const globalConfigActions = document.getElementById('global-config-actions');
 
     let activeTabFound = false;
@@ -20,7 +22,6 @@ function switchTab(targetTabId) {
         }
     });
 
-    // Fallback if targetTabId is somehow not found (e.g., on initial load if no tab is pre-marked active)
     if (!activeTabFound && navTabs.length > 0) {
         navTabs[0].classList.add('active');
         targetTabId = navTabs[0].getAttribute('data-tab') || 'queue-config-content'; // Default to queue config
@@ -48,24 +49,26 @@ function switchTab(targetTabId) {
 
     // Call render functions for specific tabs when they are switched to
     if (targetTabId === 'queue-config-content') {
-        if (typeof renderQueueTree === 'function' && queueStateStore.getQueueHierarchy()) renderQueueTree(); // renderQueueTree from queue-renderer.js
-        if (typeof showContent === 'function') showContent(true); // Assuming showContent manages general content visibility
-        if (typeof hideLoading === 'function') hideLoading(); // Ensure loading is hidden
+        if (queueStateStore.getQueueHierarchy()) renderQueueTree();
+        showContent(true);
+        hideLoading();
     } else if (targetTabId === 'scheduler-config-content') {
-        isGlobalConfigEditMode = false; // Reset edit mode when switching to this tab
-        if (typeof renderSchedulerConfigurationPage === 'function') renderSchedulerConfigurationPage(); // From global-config-ui.js
-        if (typeof hideLoading === 'function') hideLoading();
+        isGlobalConfigEditMode = false;
+        renderSchedulerConfigurationPage();
+        hideLoading();
     } else if (targetTabId === 'placement-rules-content') {
-        console.log("Placement Rules tab selected (Not yet implemented).");
-        if (typeof hideLoading === 'function') hideLoading();
+        hideLoading();
     } else if (targetTabId === 'node-labels-content') {
-        console.log("Node Labels tab selected (Not yet implemented).");
-        if (typeof hideLoading === 'function') hideLoading();
+        hideLoading();
     }
 }
 
 /**
- * Initializes event listeners for tab navigation.
+ * Initializes the tab navigation by adding click event listeners to elements
+ * with the class 'nav-tab'. When a tab is clicked, it retrieves the associated
+ * data-tab attribute and switches to the corresponding tab using the `switchTab` function.
+ *
+ * @return {void} This function does not return any value.
  */
 function initializeTabNavigation() {
     const navTabs = document.querySelectorAll('.nav-tab');
