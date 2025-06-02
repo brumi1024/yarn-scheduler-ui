@@ -159,12 +159,12 @@ function checkDeletability(queuePath, store) {
   // We are checking if we can *initiate* a delete. So, if it's already deleted,
   // this specific check isn't for "can it be deleted now" but should have been prevented.
   // However, the formatter handles the "Undo Delete" state. This function is for the "Delete" action.
-  const queueData = store.getQueue(queuePath); // Fetches effective data for the queue itself
-
+  const queueData = store.getQueue(queuePath); // Gets effective queue data
   if (!queueData || store.isStateDelete(queuePath)) {
-    // If it doesn't exist, or is already marked for delete, the "Delete" action isn't applicable.
-    // The UI should show "Undo Delete" for the latter.
-    return { canDelete: false, reason: queueData ? "Queue already marked for deletion." : "Queue not found." };
+    // If already deleted or doesn't exist, "delete" action isn't applicable.
+    // The formatter handles the "Undo Delete" label for already deleted items.
+    // This function is for "can we INITIATE a delete".
+    return { canDelete: false, reason: queueData ? "Queue already marked, or cannot be deleted." : "Queue not found." };
   }
 
   let activeChildCount = 0;
@@ -172,12 +172,11 @@ function checkDeletability(queuePath, store) {
 
   // 1. Check existing children (children present in the base Trie structure for this queue)
   //    queueData.children should represent children from the Trie.
-  if (queueData.children) {
+  if (queueData.children) { // queueData.children are from the Trie snapshot via getQueueHierarchy
     for (const childName in queueData.children) {
-      if (Object.prototype.hasOwnProperty.call(queueData.children, childName)) {
+      if (Object.hasOwnProperty.call(queueData.children, childName)) {
         const childPath = queueData.children[childName].path;
-        // A child is active if it's NOT marked for deletion in the store
-        if (!store.isStateDelete(childPath)) {
+        if (!store.isStateDelete(childPath)) { // Active if not marked for deletion
           activeChildCount++;
           activeChildrenNames.push(childName);
         }
@@ -188,12 +187,14 @@ function checkDeletability(queuePath, store) {
   // 2. Check for newly added children (staged in the store) that are parented to this queuePath
   //    We need a way to iterate _only_ ADD_OPs from the store for this parent.
   //    QueueStateStore._iter(ADD_OP) gives all additions. We filter by parentPath.
-  store._iter(ADD_OP).forEach(entry => { // Assumes _iter is accessible or a public getter exists
-    const newQueue = entry.data.change.newQueueData; // Or however the new queue data is structured
+  store._iter(ADD_OP).forEach(entry => {
+    const newQueue = entry.data.change.newQueueData;
     if (newQueue && newQueue.parentPath === queuePath) {
-      // A newly added queue is considered active (it's not yet marked for deletion itself)
-      activeChildCount++;
-      activeChildrenNames.push(newQueue.name);
+      // A newly added queue is active unless also immediately deleted (unlikely scenario)
+      if (!store.isStateDelete(newQueue.path)) {
+        activeChildCount++;
+        activeChildrenNames.push(newQueue.name);
+      }
     }
   });
 

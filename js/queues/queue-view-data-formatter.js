@@ -1,8 +1,6 @@
 class QueueViewDataFormatter {
-    constructor(queueStateStore, queueConfigMetadata, qPathPlaceholder) {
+    constructor(queueStateStore) {
         this.queueStateStore = queueStateStore;
-        this.QUEUE_CONFIG_CATEGORIES = queueConfigMetadata; // e.g., QUEUE_CONFIG_CATEGORIES
-        this.Q_PATH_PLACEHOLDER = qPathPlaceholder;         // e.g., Q_PATH_PLACEHOLDER
     }
 
     /**
@@ -11,33 +9,41 @@ class QueueViewDataFormatter {
      * @returns {Object|null} The formatted queue object, or null if not found.
      */
     getFormattedQueue(queuePath) {
-        // 1. Get the base queue data with pending property changes already applied by the store.
-        //    QueueStateStore.getQueue() should handle:
-        //    - Retrieving from Trie or pendingAdditions.
-        //    - Cloning the object.
-        //    - Overlaying modifications from pendingChanges onto the properties map.
-        //    - Setting basic fields like 'name', 'path', 'parentPath', 'properties', 'children' (raw),
-        //      'capacityMode' (initial detection), 'state' (from properties).
+        // 1. Get baseQueueData from the store.
+        //    baseQueueData.properties is expected to be a Map with FULL YARN NAMES as keys.
         const baseQueueData = this.queueStateStore.getQueue(queuePath);
 
         if (!baseQueueData) {
-            return null; // Queue genuinely doesn't exist in current state (Trie or pending).
+            return null;
         }
 
-        // 2. Initialize the formattedQueue object (can be a shallow copy for top-level, deep for properties if needed)
-        const formattedQueue = { ...baseQueueData };
-        // Ensure properties is a Map, getQueue should already do this.
-        formattedQueue.properties = new Map(baseQueueData.properties);
+        // 2. Initialize formattedQueue.
+        //    Start with essential non-property fields from baseQueueData.
+        //    The 'properties' map on the final formattedQueue will store simpleKey -> formattedValue.
+        const formattedQueue = {
+            path: baseQueueData.path,
+            name: baseQueueData.name,
+            parentPath: baseQueueData.parentPath,
+            children: baseQueueData.children || {}, // Raw children, to be processed by _formatQueueRecursive
+            level: baseQueueData.level !== undefined ? baseQueueData.level : (baseQueueData.path || "").split(".").length - 1,
+            changeStatus: baseQueueData.changeStatus || "UNCHANGED",
+            // This will be a new Map for simple-keyed formatted properties for the UI model
+            properties: new Map(),
+        };
+
+        // Safely access properties from baseQueueData (which has full YARN names)
+        const basePropsWithFullNames = baseQueueData.properties instanceof Map ?
+            baseQueueData.properties :
+            new Map(Object.entries(baseQueueData.properties || {}));
 
 
-        // 3. Determine UI-specific states and flags
-        const pendingChangeDirect = this.queueStateStore._changes.get(queuePath); // Get the raw change op + data
-        formattedQueue.isNew = pendingChangeDirect?.op === ADD_OP && !(pendingChangeDirect?.change?.isDeletionMarked);
-        formattedQueue.isDeleted = pendingChangeDirect?.op === DELETE_OP;
-        formattedQueue.hasPendingChanges = pendingChangeDirect?.op === UPDATE_OP && !formattedQueue.isDeleted;
+        // 3. Determine UI-specific states and flags from baseQueueData.changeStatus
+        formattedQueue.isNew = (formattedQueue.changeStatus === ADD_OP); // Assuming ADD_OP, UPDATE_OP, DELETE_OP are defined constants
+        formattedQueue.isDeleted = (formattedQueue.changeStatus === DELETE_OP);
+        formattedQueue.hasPendingChanges = (formattedQueue.changeStatus === UPDATE_OP) && !formattedQueue.isDeleted;
         formattedQueue.isRoot = (queuePath === 'root');
-        formattedQueue.level = queuePath.split(".").length - 1;
 
+        // Status class based on these flags (this part of your code was good)
         if (formattedQueue.isDeleted) {
             formattedQueue.statusClass = 'to-be-deleted';
         } else if (formattedQueue.isNew) {
@@ -48,142 +54,117 @@ class QueueViewDataFormatter {
             formattedQueue.statusClass = '';
         }
 
-        // When a queue is marked for deletion, canBeDeleted should be false,
-        // and deletionReason should indicate it's already marked.
-        // However, the dropdown menu needs to change (e.g., "Undo delete").
-        // Let's ensure the formatter sets this clearly.
-        const rawDeletionStatus = (typeof canQueueBeDeleted === 'function') ? canQueueBeDeleted(queuePath, formattedQueue.isDeleted) : { canDelete: !formattedQueue.isRoot && !formattedQueue.isDeleted, reason: "" };
-
-        if (formattedQueue.isDeleted) {
-            formattedQueue.canBeDeleted = false; // Or true, if 'delete' means 'undo delete' action
-            formattedQueue.deletionReason = "Marked for deletion.";
-        } else {
-            formattedQueue.canBeDeleted = rawDeletionStatus.canDelete;
-            formattedQueue.deletionReason = rawDeletionStatus.reason;
-        }
-
-        // 4. Determine Effective Capacity Mode (crucial for subsequent formatting)
-        //    Priority: pending _ui_capacityMode > mode on baseQueueData (from store's initial detection) > re-detect.
-        let effectiveMode = pendingChangeDirect?.change?._ui_capacityMode || baseQueueData.capacityMode;
-        if (!effectiveMode) { // Fallback detection if store didn't set it or it's not in pending changes
-            const capString = formattedQueue.properties.get('capacity');
-            effectiveMode = this._detectCapacityModeInternal(capString);
+        // 4. Determine Effective Capacity Mode
+        //    Priority: UI hint from an UPDATE_OP's payload > mode on baseQueueData (if store sets it) > re-detect.
+        const pendingChangeDirectPayload = (formattedQueue.changeStatus === UPDATE_OP && this.queueStateStore._changes.get(queuePath)) ?
+            this.queueStateStore._changes.get(queuePath).change :
+            null;
+        let effectiveMode = pendingChangeDirectPayload?._ui_capacityMode || baseQueueData.capacityMode;
+        if (!effectiveMode) {
+            const capFullName = `yarn.scheduler.capacity.${queuePath}.capacity`;
+            const capString = basePropsWithFullNames.get(capFullName);
+            effectiveMode = this._detectCapacityModeInternal(String(capString));
         }
         formattedQueue.effectiveCapacityMode = effectiveMode;
 
-        // 5. Populate core and metadata-defined properties on formattedQueue
-        //    Iterate QUEUE_CONFIG_CATEGORIES to determine which properties to include and their effective values.
-        //    The `baseQueueData.properties` (from the store) already reflects pending changes for *existing* properties.
-        this.QUEUE_CONFIG_CATEGORIES.forEach(category => {
+
+        // 5. Populate formattedQueue with simple-keyed properties by iterating QUEUE_CONFIG_CATEGORIES
+        (QUEUE_CONFIG_CATEGORIES).forEach(category => {
             for (const placeholderPropName in category.properties) {
                 if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
                     const propDef = category.properties[placeholderPropName];
-                    // Determine the simple key (e.g., 'capacity') and the full YARN property name
                     const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
-                    const fullYarnName = placeholderPropName.replace(this.Q_PATH_PLACEHOLDER, queuePath);
+                    const fullYarnName = placeholderPropName.replace(Q_PATH_PLACEHOLDER, queuePath);
 
-                    let effectiveValue;
+                    let rawEffectiveValue;
 
-                    // Priority for getting the value:
-                    // 1. Pending changes for the full YARN property name (most specific)
-                    const pendingChangeForFullYarnName = pendingChangeDirect?.change?.[fullYarnName];
-                    // 2. Value from baseQueueData.properties (which store should have updated with pending simpleKey changes)
-                    const valueFromStoreProps = formattedQueue.properties.get(simpleKey);
+                    // Priority for getting the raw value:
+                    // 1. From pendingChangeDirectPayload (for UPDATE_OP, already has fullYarnName as key)
+                    if (pendingChangeDirectPayload && pendingChangeDirectPayload[fullYarnName] !== undefined) {
+                        rawEffectiveValue = pendingChangeDirectPayload[fullYarnName];
+                    }
+                        // 2. From basePropsWithFullNames (from store's getQueue().properties which has full YARN names)
+                    //    This covers Trie values for existing queues and initial values for ADD_OP queues.
+                    else if (basePropsWithFullNames.has(fullYarnName)) {
+                        rawEffectiveValue = basePropsWithFullNames.get(fullYarnName);
+                    }
                     // 3. Default value from metadata
-                    const defaultValueFromMetadata = propDef.defaultValue;
-
-                    if (pendingChangeForFullYarnName !== undefined) {
-                        effectiveValue = pendingChangeForFullYarnName;
-                    } else if (valueFromStoreProps !== undefined) {
-                        effectiveValue = valueFromStoreProps;
-                    } else {
-                        effectiveValue = defaultValueFromMetadata;
+                    else {
+                        rawEffectiveValue = propDef.defaultValue;
                     }
 
-                    // Ensure correct format for specific properties like 'capacity' and 'maximumCapacity'
-                    // based on the effectiveCapacityMode.
+                    // Format this rawEffectiveValue for UI display
+                    let formattedValue = rawEffectiveValue;
                     if (simpleKey === 'capacity') {
-                        effectiveValue = this._ensureCapacityFormat(effectiveValue, formattedQueue.effectiveCapacityMode, defaultValueFromMetadata);
-                    } else if (simpleKey === 'maximumCapacity') { // Ensure your simpleKey in metadata matches this
-                        effectiveValue = this._ensureMaxCapacityFormat(effectiveValue, formattedQueue.effectiveCapacityMode, defaultValueFromMetadata);
+                        formattedValue = this._ensureCapacityFormat(rawEffectiveValue, formattedQueue.effectiveCapacityMode, propDef.defaultValue);
+                    } else if (simpleKey === 'maximum-capacity') { // Ensure consistent simpleKey
+                        formattedValue = this._ensureMaxCapacityFormat(rawEffectiveValue, formattedQueue.effectiveCapacityMode, propDef.defaultValue);
+                    } else if (propDef.type === 'boolean' && typeof rawEffectiveValue !== 'string' && rawEffectiveValue !== undefined) {
+                        formattedValue = String(rawEffectiveValue);
                     }
-                    // Add other specific property formatting if needed (e.g., for boolean strings 'true'/'false')
+                    // Add other specific property formatting if needed
 
-                    // Store this effective value in the properties map (using simpleKey)
-                    formattedQueue.properties.set(simpleKey, effectiveValue);
-
-                    // Also set as a top-level convenience field on formattedQueue if desired
-                    // (e.g., formattedQueue.capacity, formattedQueue.state).
-                    // You can choose a naming convention (e.g., camelCase from simpleKey if it has hyphens).
-                    // For direct mapping:
-                    formattedQueue[simpleKey] = effectiveValue;
+                    // Set as a top-level simple-keyed property on the formattedQueue object
+                    formattedQueue[simpleKey] = formattedValue;
+                    // Also populate the new 'properties' map on formattedQueue with simpleKey -> formattedValue
+                    formattedQueue.properties.set(simpleKey, formattedValue);
                 }
             }
         });
-        formattedQueue.capacity = formattedQueue.properties.get('capacity');
-        formattedQueue.maxCapacity = formattedQueue.properties.get('maximum-capacity'); // or the simpleKey you use for it
-        formattedQueue.state = formattedQueue.properties.get('state');
 
-        // 6. Calculate Display-Formatted Strings & Values
-        formattedQueue.displayName = baseQueueData.name; // Highlighting can be done by the component
-        formattedQueue.displayNameTitle = `${queuePath} (Click to edit)`;
+        // Ensure main convenience fields like 'capacity', 'maximum-capacity', 'state' reflect the values
+        // now stored with simple keys on formattedQueue object itself (and in its simple-keyed properties map).
+        // These lines are more like assertions now, as the loop above should have set them.
+        formattedQueue.maxCapacity = formattedQueue['maximum-capacity']; // capacity is already set in the loop
 
-        formattedQueue.capacityDisplay = this._formatCapacityForDisplay(
-            formattedQueue.capacity,
-            formattedQueue.effectiveCapacityMode
-        );
-        formattedQueue.maxCapacityDisplay = this._formatMaxCapacityForDisplay(
-            formattedQueue.maxCapacity,
-            formattedQueue.effectiveCapacityMode // Max cap mode is usually relative to parent or absolute
-        );
+        // 6. Calculate other Display-Specific Strings & Values
+        formattedQueue.displayName = formattedQueue.name || formattedQueue.path.split('.').pop();
+        formattedQueue.displayNameTitle = `${formattedQueue.path} (Click to edit)`;
 
-        // For absolute/vector capacities, provide structured data
+        // These use the already formatted simple-keyed properties from formattedQueue
+        formattedQueue.capacityDisplay = formattedQueue.capacity;
+        formattedQueue.maxCapacityDisplay = formattedQueue.maxCapacity;
+
         if (formattedQueue.effectiveCapacityMode === CAPACITY_MODES.ABSOLUTE || formattedQueue.effectiveCapacityMode === CAPACITY_MODES.VECTOR) {
-            formattedQueue.capacityDetails = this._parseResourceVector(formattedQueue.capacity);
-            formattedQueue.maxCapacityDetails = this._parseResourceVector(formattedQueue.maxCapacity);
+            formattedQueue.capacityDetails = this._parseResourceVector(formattedQueue.capacityDisplay);
+            formattedQueue.maxCapacityDetails = this._parseResourceVector(formattedQueue.maxCapacityDisplay);
         }
-        // Include other specific data points needed by info modal
+
+        // Use values from baseQueueData for runtime stats if they are not part of config
         formattedQueue.absoluteUsedCapacityDisplay = (baseQueueData.absoluteUsedCapacity !== undefined ? baseQueueData.absoluteUsedCapacity.toFixed(1) + '%' : 'N/A');
         formattedQueue.numApplications = baseQueueData.numApplications || 0;
-        formattedQueue.queueType = baseQueueData.queueType || (baseQueueData.children && Object.keys(baseQueueData.children).length > 0 ? 'parent' : 'leaf');
+        // queueType should be based on the structure after all pending changes are considered for hierarchy.
+        // The formatter's _formatQueueRecursive will build the children, then we can determine type.
+        // For now, use baseQueueData.queueType or derive simply.
+        // This might be better set after _formatQueueRecursive builds the children for formattedQueue.
+        formattedQueue.queueType = baseQueueData.queueType || (formattedQueue.children && Object.keys(formattedQueue.children).length > 0 ? 'parent' : 'leaf');
 
 
         // 7. Generate UI Labels (tags)
         formattedQueue.uiLabels = this._generateUILabels(formattedQueue);
 
+        // 8. Status Class - already set in point 3.
 
-        // 8. Determine Status Class for card styling
-        if (formattedQueue.isNew) formattedQueue.statusClass = 'new-queue';
-        else if (formattedQueue.isDeleted) formattedQueue.statusClass = 'to-be-deleted';
-        else if (formattedQueue.hasPendingChanges) formattedQueue.statusClass = 'pending-changes';
-        else formattedQueue.statusClass = '';
-
-
-        // 9. Deletion Eligibility
+        // 9. Deletion Eligibility (action labels for dropdown)
+        //    (Using this.checkDeletability which is passed or global)
         if (formattedQueue.isDeleted) {
-            // For a queue ALREADY marked for deletion
-            formattedQueue.canBeDeletedForDropdown = true; // True means the "Undo Delete" action is available
+            formattedQueue.canBeDeletedForDropdown = true; // Action is "Undo Delete"
             formattedQueue.actionLabelForDelete = "Undo Delete";
             formattedQueue.deletionReason = "Marked for deletion.";
         } else if (formattedQueue.isRoot) {
             formattedQueue.canBeDeletedForDropdown = false;
-            formattedQueue.actionLabelForDelete = "Delete Queue"; // Button will be disabled
+            formattedQueue.actionLabelForDelete = "Delete Queue";
             formattedQueue.deletionReason = "Cannot delete root queue.";
-        }
-        else {
-            // For a queue NOT yet marked for deletion, check if it *can* be.
-            // Assume 'checkDeletability' is now a global helper or accessible to the formatter.
-            // It needs the store instance.
-            const eligibility = checkDeletability(queuePath, this.queueStateStore);
+        } else {
+            // Use the checkDeletability helper
+            const eligibility = checkDeletability(queuePath, this.queueStateStore); // Assuming checkDeletability is method or accessible
             formattedQueue.canBeDeletedForDropdown = eligibility.canDelete;
             formattedQueue.actionLabelForDelete = "Delete Queue";
             formattedQueue.deletionReason = eligibility.reason;
         }
 
-        // 10. Raw children object for hierarchy building (to be processed by _formatQueueRecursive)
-        //     The 'children' from baseQueueData are raw. _formatQueueRecursive will handle formatting them.
-        formattedQueue.children = baseQueueData.children || {};
-
+        // 10. Children: formattedQueue.children was initialized from baseQueueData.children (raw).
+        //     _formatQueueRecursive will replace/populate this with formatted children.
 
         return formattedQueue;
     }

@@ -1,35 +1,61 @@
+/**
+ * Marks a queue specified by its path for deletion. If the queue cannot be deleted or is the root queue,
+ * appropriate warnings or errors are shown.
+ *
+ * @param {string} queuePath The path identifying the queue to be marked for deletion.
+ * @return {void} Does not return a value.
+ */
 function markQueueForDeletion(queuePath) {
-  if (queuePath === "root") {
-    if (typeof showWarning === "function") showWarning("Cannot delete root queue.");
-    return;
-  }
-  const queue = findQueueByPath(queuePath); // Assumes findQueueByPath is globally available
-  if (!queue) {
-    if (typeof showError === "function") showError("Queue not found, cannot mark for deletion.");
-    return;
-  }
+    if (queuePath === "root") {
+        showWarning("Cannot delete root queue.");
+        return;
+    }
+    const queue = findQueueByPath(queuePath);
+    if (!queue) {
+        showError("Queue not found, cannot mark for deletion.");
+        return;
+    }
 
-  // canQueueBeDeleted is from queue-renderer.js
-  const deletionStatus = (typeof canQueueBeDeleted === 'function') ? canQueueBeDeleted(queuePath) : { canDelete: true }; 
-  if (!deletionStatus.canDelete) {
-    if (typeof showWarning === "function") showWarning(deletionStatus.reason || "This queue cannot be deleted.");
-    return;
-  }
-  
-  if (!confirm(`Are you sure you want to mark queue "${queue.name}" (${queuePath}) for deletion? This will also remove any staged additions or changes for this queue.`)) {
-    return;
-  }
+    // canQueueBeDeleted is from queue-renderer.js
+    const deletionStatus = checkDeletability(queuePath, queueStateStore);
+    if (!deletionStatus.canDelete) {
+        showWarning(deletionStatus.reason || "This queue cannot be deleted.");
+        return;
+    }
 
-  if (queueStateStore.isStateAdd(queuePath)) {
-      queueStateStore.deleteChange(queuePath);
-      showSuccess(`New queue "${queue.name}" removed from staging.`);
-  } else {
-      queueStateStore.doDelete(queuePath);
-      showSuccess(`Queue "${queue.name}" marked for deletion.`);
-  }
+    if (!confirm(`Are you sure you want to mark queue "${queue.name}" (${queuePath}) for deletion? 
+  This will also remove any staged additions or changes for this queue.`)) {
+        return;
+    }
 
-  renderQueueTree();
-  updateBatchControls();
+    if (queueStateStore.isStateAdd(queuePath)) {
+        queueStateStore.deleteChange(queuePath);
+        showSuccess(`New queue "${queue.name}" removed from staging.`);
+    } else {
+        queueStateStore.doDelete(queuePath);
+        showSuccess(`Queue "${queue.name}" marked for deletion.`);
+    }
+
+    renderQueueTree();
+    updateBatchControls();
+}
+
+/**
+ * Reverses the operation of marking a queue for deletion. If the queue is currently flagged for deletion in the state store,
+ * this function removes the deletion flag, optionally displays a success message, and triggers UI updates.
+ *
+ * @param {string} queuePath - The path of the queue to undo the deletion mark for.
+ * @return {void} This method does not return a value.
+ */
+function undoMarkQueueForDeletion(queuePath) {
+    if (queueStateStore && queueStateStore.isStateDelete(queuePath)) {
+        queueStateStore.deleteChange(queuePath); // Removes the DELETE_OP entry
+        if (typeof showSuccess === "function") showSuccess(`Deletion undone for queue "${queuePath.split('.').pop()}".`);
+        if (typeof renderQueueTree === "function") renderQueueTree();
+        if (typeof updateBatchControls === "function") updateBatchControls();
+    } else {
+        if (typeof showWarning === "function") showWarning("Queue was not marked for deletion.");
+    }
 }
 
 async function applyAllChanges() {
@@ -61,7 +87,7 @@ async function applyAllChanges() {
     if (typeof showLoading === "function") showLoading("Applying queue configuration changes...");
     try {
         // api.makeConfigurationUpdateApiCall should be available globally or through an api module instance
-        const response = await api.makeConfigurationUpdateApiCall({ deletions, additions, updates });
+        const response = await api.makeConfigurationUpdateApiCall({deletions, additions, updates});
 
         if (response && response.status == 200 && typeof response.data === "string" && response.data.toLowerCase().includes("successfully applied")) {
             queueStateStore.clear(); // Clear staged changes from the store
@@ -87,7 +113,7 @@ async function applyAllChanges() {
             console.warn("YARN update/validation failed. Response:", response);
             // Do NOT clear store on failure, user might want to retry or adjust.
             // Re-render tree to show current pending state.
-           renderQueueTree();
+            renderQueueTree();
         }
     } catch (error) {
         if (typeof showError === "function") showError(`Failed to apply changes: ${error.message}`);
@@ -101,7 +127,7 @@ async function applyAllChanges() {
 }
 
 function discardChanges() {
-    if (queueStateStore && (queueStateStore.countAdd() > 0 || queueStateStore.countDelete() > 0 || queueStateStore.countUpdate() > 0 )) {
+    if (queueStateStore && (queueStateStore.countAdd() > 0 || queueStateStore.countDelete() > 0 || queueStateStore.countUpdate() > 0)) {
         if (confirm("Are you sure you want to discard all pending changes?")) {
             queueStateStore.clear();
             if (typeof showInfo === "function") showInfo("All pending changes have been discarded.");
@@ -110,17 +136,6 @@ function discardChanges() {
         }
     } else {
         if (typeof showInfo === "function") showInfo("No pending changes to discard.");
-    }
-}
-
-function undoMarkQueueForDeletion(queuePath) {
-    if (queueStateStore && queueStateStore.isStateDelete(queuePath)) {
-        queueStateStore.deleteChange(queuePath); // Removes the DELETE_OP entry
-        if (typeof showSuccess === "function") showSuccess(`Deletion undone for queue "${queuePath.split('.').pop()}".`);
-        if (typeof renderQueueTree === "function") renderQueueTree();
-        if (typeof updateBatchControls === "function") updateBatchControls();
-    } else {
-        if (typeof showWarning === "function") showWarning("Queue was not marked for deletion.");
     }
 }
 

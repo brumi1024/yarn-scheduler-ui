@@ -181,20 +181,29 @@ function addNewQueue() {
     const newQueueProperties = new Map();
     const apiParams = {};
 
-    // TODO: Do we need the shortened names for properties?
-    newQueueProperties.set('capacity', capacityValue);
-    newQueueProperties.set('maximum-capacity', maxCapacityValue);
-    newQueueProperties.set('state', state);
-
     // Iterate QUEUE_CONFIG_CATEGORIES to set all other properties to their defaults
     // and to populate apiParams correctly.
-    (QUEUE_CONFIG_CATEGORIES || []).forEach(category => {
+    QUEUE_CONFIG_CATEGORIES.forEach(category => {
         for (const placeholderPropName in category.properties) {
             if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
+                const propDef = category.properties[placeholderPropName];
                 const simpleKey = placeholderPropName.substring(placeholderPropName.lastIndexOf('.') + 1);
                 const fullYarnName = placeholderPropName.replace(Q_PATH_PLACEHOLDER, newQueuePath);
 
-                apiParams[fullYarnName] = newQueueProperties.get(simpleKey);
+                let valueToStore;
+                // Prioritize values from the (simple) add form
+                if (simpleKey === 'capacity') {
+                    valueToStore = capacityValue;
+                } else if (simpleKey === 'maximum-capacity') {
+                    valueToStore = maxCapacityValue;
+                } else if (simpleKey === 'state') {
+                    valueToStore = state;
+                } else {
+                    valueToStore = propDef.defaultValue;
+                }
+
+                newQueueProperties.set(fullYarnName, valueToStore);
+                apiParams[fullYarnName] = valueToStore;
             }
         }
     });
@@ -205,11 +214,6 @@ function addNewQueue() {
         parentPath: parentPath,
         children: {}, // New queues don't have children initially
         capacityMode: capacityMode,
-
-        // TODO: do we need these explicitly?
-        capacity: newQueueProperties.get('capacity'),
-        maxCapacity: newQueueProperties.get('maximum-capacity'),
-        state: newQueueProperties.get('state'),
 
         properties: newQueueProperties,
         params: apiParams

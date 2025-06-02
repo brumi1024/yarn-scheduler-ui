@@ -84,7 +84,7 @@ async function openEditModal(queuePath) {
 
                 // Get the value from the formattedQueue object.
                 // formattedQueue.properties contains the effective values (base + pending + defaults).
-                let currentValue = formattedQueue.properties.get(simpleKey);
+                let currentValue = formattedQueue.properties.get(actualPropName);
                 if (currentValue === undefined) { // Should ideally be handled by formatter setting default
                     currentValue = propDef.defaultValue;
                 }
