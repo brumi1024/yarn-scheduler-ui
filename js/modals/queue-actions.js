@@ -10,14 +10,14 @@ function markQueueForDeletion(queuePath) {
         showWarning("Cannot delete root queue.");
         return;
     }
-    const queue = findQueueByPath(queuePath);
+
+    const queue = queueStateStore.getQueue(queuePath);
     if (!queue) {
         showError("Queue not found, cannot mark for deletion.");
         return;
     }
 
-    // canQueueBeDeleted is from queue-renderer.js
-    const deletionStatus = checkDeletability(queuePath, queueStateStore);
+    const deletionStatus =  checkDeletability(queuePath, queueStateStore);
     if (!deletionStatus.canDelete) {
         showWarning(deletionStatus.reason || "This queue cannot be deleted.");
         return;
@@ -84,7 +84,7 @@ async function applyAllChanges() {
     // This is complex if the store's internal state needs backup/restore.
     // For now, we'll rely on re-fetching configuration on failure.
 
-    if (typeof showLoading === "function") showLoading("Applying queue configuration changes...");
+    showLoading("Applying queue configuration changes...");
     try {
         // api.makeConfigurationUpdateApiCall should be available globally or through an api module instance
         const response = await api.makeConfigurationUpdateApiCall({deletions, additions, updates});
@@ -93,7 +93,7 @@ async function applyAllChanges() {
             queueStateStore.clear(); // Clear staged changes from the store
             liveRawSchedulerConf = null; // Invalidate cache for scheduler-conf
 
-            if (typeof showLoading === "function") showLoading("Reloading queue configuration...");
+            showLoading("Reloading queue configuration...");
             // api.loadSchedulerConfiguration() reloads Trie, re-renders tree, updates UI
             await api.loadSchedulerConfiguration();
             showSuccess("Queue configuration changes applied successfully!");
@@ -109,20 +109,20 @@ async function applyAllChanges() {
                     errorMessage = "YARN Validation Error: Capacity constraints violated. Please check queue capacities.";
                 }
             }
-            if (typeof showError === "function") showError(`YARN update failed: ${errorMessage}`);
+            showError(`YARN update failed: ${errorMessage}`);
             console.warn("YARN update/validation failed. Response:", response);
             // Do NOT clear store on failure, user might want to retry or adjust.
             // Re-render tree to show current pending state.
             renderQueueTree();
         }
     } catch (error) {
-        if (typeof showError === "function") showError(`Failed to apply changes: ${error.message}`);
+        showError(`Failed to apply changes: ${error.message}`);
         console.error("Apply changes failed:", error);
         // Re-render tree to show current pending state.
-        if (typeof renderQueueTree === "function") renderQueueTree();
+        renderQueueTree();
     } finally {
-        if (typeof hideLoading === "function") hideLoading();
-        if (typeof updateBatchControls === "function") updateBatchControls(); // Update based on store state
+        hideLoading();
+        updateBatchControls(); // Update based on store state
     }
 }
 
@@ -130,9 +130,9 @@ function discardChanges() {
     if (queueStateStore && (queueStateStore.countAdd() > 0 || queueStateStore.countDelete() > 0 || queueStateStore.countUpdate() > 0)) {
         if (confirm("Are you sure you want to discard all pending changes?")) {
             queueStateStore.clear();
-            if (typeof showInfo === "function") showInfo("All pending changes have been discarded.");
-            if (typeof renderQueueTree === "function") renderQueueTree();
-            if (typeof updateBatchControls === "function") updateBatchControls();
+            showInfo("All pending changes have been discarded.");
+            renderQueueTree();
+            updateBatchControls();
         }
     } else {
         if (typeof showInfo === "function") showInfo("No pending changes to discard.");

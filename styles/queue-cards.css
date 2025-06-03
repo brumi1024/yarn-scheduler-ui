@@ -17,7 +17,7 @@
 
 .queue-tree {
   display: flex;
-  gap: 120px; 
+  gap: 120px;
   align-items: flex-start;
   position: relative;
   min-width: fit-content;

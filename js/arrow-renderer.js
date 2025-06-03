@@ -66,7 +66,6 @@ function drawArrows() {
     console.warn("drawArrows: ViewDataFormatter not available. Skipping arrow rendering.");
     return;
   }
-
   const formattedHierarchyRoot = viewDataFormatter.getFormattedQueueHierarchy();
   if (!formattedHierarchyRoot) {
     return;
@@ -77,15 +76,18 @@ function drawArrows() {
     console.error("drawArrows: SVG element 'arrow-svg' not found.");
     return;
   }
-  // Clear previous arrows except defs
-  // Ensure marker definition is preserved
-  const defsMatch = svg.innerHTML.match(/<defs>.*?<\/defs>/s);
-  svg.innerHTML = defsMatch ? defsMatch[0] : '<defs><marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto"><polygon points="0 0, 10 3.5, 0 7" fill="#666" /></marker></defs>';
 
+  // Clear only previous arrow paths
+  const arrowPaths = svg.querySelectorAll("path.arrow-line");
+  arrowPaths.forEach(path => path.remove());
+
+  // Ensure <defs> exists (it should be static in HTML or added once on init)
+  if (!svg.querySelector("defs #arrowhead")) {
+    console.warn("Arrowhead definition missing in SVG. Arrows may not render correctly.");
+    // Optionally, recreate defs here if it might be missing, though it's better if static in HTML.
+  }
 
   const svgRect = svg.getBoundingClientRect();
-
   drawArrowsForFormattedQueue(formattedHierarchyRoot, svg, svgRect);
 }
-
 window.drawArrows = drawArrows;

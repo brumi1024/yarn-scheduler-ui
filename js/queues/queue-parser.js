@@ -1,211 +1,66 @@
+// File: js/queues/queue-parser.js (Simplified)
+
+// Assuming CAPACITY_MODES is globally available from config.js
+// Assuming QUEUE_TYPES might be useful if directly inspecting schedulerInfo objects elsewhere.
 const QUEUE_TYPES = {
   PARENT: "parent",
   LEAF: "leaf",
 };
 
-function determineQueueType(queueInfo) {
+/**
+ * Determines queue type from a queueInfo object (typically from /ws/v1/cluster/scheduler response).
+ * @param {Object} queueInfo - A queue object from the scheduler info.
+ * @returns {string} QUEUE_TYPES.PARENT or QUEUE_TYPES.LEAF
+ */
+function determineQueueTypeFromSchedulerInfo(queueInfo) {
   if (!queueInfo) return QUEUE_TYPES.LEAF;
-
   const hasChildren =
-    queueInfo.queues?.queue &&
-    (Array.isArray(queueInfo.queues.queue)
-      ? queueInfo.queues.queue.length > 0
-      : true);
-
+      queueInfo.queues?.queue &&
+      (Array.isArray(queueInfo.queues.queue)
+          ? queueInfo.queues.queue.length > 0
+          : true);
   return hasChildren ? QUEUE_TYPES.PARENT : QUEUE_TYPES.LEAF;
 }
 
-function detectCapacityMode(queueInfo) {
-  if (!queueInfo) {
-    return CAPACITY_MODES.PERCENTAGE;
-  }
-
-  if (queueInfo.queueCapacityVectorInfo?.configuredCapacityVector) {
-    return CAPACITY_MODES.VECTOR;
-  }
-
-  if (queueInfo.capacity) {
-    const capacityStr = String(queueInfo.capacity);
-
-    if (capacityStr.includes("w")) {
-      return CAPACITY_MODES.WEIGHT;
-    }
-
-    if (capacityStr.startsWith("[") && capacityStr.endsWith("]")) {
-      return CAPACITY_MODES.ABSOLUTE;
-    }
-  }
-
-  return CAPACITY_MODES.PERCENTAGE;
-}
-
+/**
+ * Parses a YARN resource vector string (e.g., "[memory=1024,vcores=1]")
+ * into an array of resource objects.
+ * @param {string} capacityString - The resource vector string.
+ * @returns {{isVector: boolean, entries?: Array<{resourceName: string, resourceValue: number}>, value?: any, formatted: string, error?: string}}
+ */
 function parseCapacityVector(capacityString) {
-  if (!capacityString || typeof capacityString !== "string") {
-    return {
-      isVector: false,
-      value: null,
-      formatted: "",
-    };
+  if (!capacityString || typeof capacityString !== 'string') {
+    return { isVector: false, value: null, formatted: String(capacityString) };
   }
 
-  if (capacityString.startsWith("[") && capacityString.endsWith("]")) {
+  const trimmedStr = capacityString.trim();
+  if (trimmedStr.startsWith('[') && trimmedStr.endsWith(']')) {
+    const vectorContent = trimmedStr.slice(1, -1);
+    if (!vectorContent.trim()) {
+      return { isVector: true, entries: [], formatted: capacityString, error: "Empty vector content" };
+    }
     try {
-      const vectorContent = capacityString.slice(1, -1);
-      if (!vectorContent.trim()) {
-        throw new Error("Empty vector content");
-      }
-
-      const entries = vectorContent.split(",").map((entry) => {
-        const [resource, value] = entry.split("=");
-        if (!resource || !value) {
-          throw new Error(`Invalid vector entry: ${entry}`);
+      const entries = vectorContent.split(',').map((entryStr) => {
+        const parts = entryStr.split('=').map(s => s.trim());
+        if (parts.length !== 2 || !parts[0] || !parts[1]) {
+          throw new Error(`Invalid vector entry: ${entryStr}`);
         }
-        return {
-          resourceName: resource.trim(),
-          resourceValue: parseFloat(value.trim()) || 0,
-        };
+        const resourceValue = parseFloat(parts[1]);
+        if (isNaN(resourceValue)) {
+          throw new Error(`Invalid resource value in entry: ${entryStr}`);
+        }
+        return { resourceName: parts[0], resourceValue: resourceValue };
       });
-
-      return {
-        isVector: true,
-        entries: entries,
-        formatted: capacityString,
-      };
+      return { isVector: true, entries: entries, formatted: capacityString };
     } catch (error) {
-      console.warn(
-        `Failed to parse capacity vector "${capacityString}":`,
-        error.message
-      );
-      return {
-        isVector: false,
-        value: capacityString,
-        formatted: capacityString,
-        error: error.message,
-      };
+      console.warn(`Failed to parse capacity vector "${capacityString}": ${error.message}`);
+      return { isVector: false, value: capacityString, formatted: capacityString, error: error.message };
     }
   }
-
-  return {
-    isVector: false,
-    value: parseFloat(capacityString) || 0,
-    formatted: capacityString,
-  };
+  // Not a vector string in the expected format
+  return { isVector: false, value: capacityString, formatted: capacityString };
 }
 
-function parseSchedulerData(schedulerInfo) {
-  if (!schedulerInfo) {
-    throw new Error("Scheduler info is required");
-  }
-
-  function createQueueDefaults() {
-    return {
-      capacity: 0,
-      maxCapacity: 100,
-      usedCapacity: 0,
-      absoluteCapacity: 0,
-      absoluteMaxCapacity: 100,
-      effectiveCapacity: 0,
-      effectiveMaxCapacity: 100,
-      state: "RUNNING",
-      userLimitFactor: 1,
-      maxApplications: 1000,
-      numApplications: 0,
-      nodeLabels: [],
-      defaultNodeLabelExpression: "",
-      autoCreationEligibility: "off",
-      creationMethod: "static",
-      weight: 0,
-      normalizedWeight: 0,
-      children: {},
-    };
-  }
-
-  function parseQueue(queueInfo, parentPath = "") {
-    if (!queueInfo || !queueInfo.queueName) {
-      throw new Error("Queue info must contain queueName");
-    }
-
-    const queuePath = parentPath
-      ? `${parentPath}.${queueInfo.queueName}`
-      : queueInfo.queueName;
-    const defaults = createQueueDefaults();
-    const capacityMode = detectCapacityMode(queueInfo);
-    const queueType = determineQueueType(queueInfo);
-
-    const queue = {
-      ...defaults,
-      name: queueInfo.queueName,
-      path: queuePath,
-      capacity: parseFloat(queueInfo.capacity) || defaults.capacity,
-      capacityMode,
-      capacityVector: parseCapacityVector(queueInfo.configuredCapacityVector),
-      weight:
-        parseFloat(queueInfo.weight) ||
-        parseFloat(queueInfo.normalizedWeight) ||
-        defaults.weight,
-      normalizedWeight:
-        parseFloat(queueInfo.normalizedWeight) || defaults.normalizedWeight,
-      maxCapacity: parseFloat(queueInfo.maxCapacity) || defaults.maxCapacity,
-      usedCapacity: parseFloat(queueInfo.usedCapacity) || defaults.usedCapacity,
-      absoluteCapacity:
-        parseFloat(queueInfo.absoluteCapacity) || defaults.absoluteCapacity,
-      absoluteMaxCapacity:
-        parseFloat(queueInfo.absoluteMaxCapacity) ||
-        defaults.absoluteMaxCapacity,
-      effectiveCapacity:
-        parseFloat(queueInfo.effectiveCapacity || queueInfo.capacity) ||
-        defaults.effectiveCapacity,
-      effectiveMaxCapacity:
-        parseFloat(queueInfo.effectiveMaxCapacity || queueInfo.maxCapacity) ||
-        defaults.effectiveMaxCapacity,
-      state: queueInfo.state || defaults.state,
-      userLimitFactor:
-        parseFloat(queueInfo.userLimitFactor) || defaults.userLimitFactor,
-      maxApplications:
-        parseInt(queueInfo.maxApplications) || defaults.maxApplications,
-      numApplications:
-        parseInt(queueInfo.numApplications) || defaults.numApplications,
-      nodeLabels: Array.isArray(queueInfo.nodeLabels)
-        ? queueInfo.nodeLabels
-        : defaults.nodeLabels,
-      defaultNodeLabelExpression:
-        queueInfo.defaultNodeLabelExpression ||
-        defaults.defaultNodeLabelExpression,
-      autoCreationEligibility:
-        queueInfo.autoCreationEligibility || defaults.autoCreationEligibility,
-      creationMethod: queueInfo.creationMethod || defaults.creationMethod,
-      queueType,
-      queueCapacityVectorInfo: queueInfo.queueCapacityVectorInfo || null,
-    };
-
-    if (queueInfo.queues?.queue) {
-      const childQueues = Array.isArray(queueInfo.queues.queue)
-        ? queueInfo.queues.queue
-        : [queueInfo.queues.queue];
-
-      childQueues.forEach((childQueue) => {
-        try {
-          const childParsed = parseQueue(childQueue, queuePath);
-          queue.children[childParsed.name] = childParsed;
-        } catch (error) {
-          console.error(`Failed to parse child queue of ${queuePath}:`, error);
-        }
-      });
-    }
-
-    return queue;
-  }
-
-  try {
-    return parseQueue(schedulerInfo);
-  } catch (error) {
-    console.error("Failed to parse scheduler data:", error);
-    throw new Error(`Scheduler data parsing failed: ${error.message}`);
-  }
-}
-
-window.CAPACITY_MODES = CAPACITY_MODES;
-window.QUEUE_TYPES = QUEUE_TYPES;
-window.parseSchedulerData = parseSchedulerData;
-window.parseCapacityVector = parseCapacityVector;
-window.detectCapacityMode = detectCapacityMode;
+// Expose selected utilities if they are used elsewhere or might be in the future.
+window.QUEUE_TYPES = QUEUE_TYPES; // If needed globally
+window.parseCapacityVector = parseCapacityVector; // This is used by QueueViewDataFormatter
