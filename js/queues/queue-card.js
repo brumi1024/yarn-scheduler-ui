@@ -125,50 +125,58 @@ window.createQueueCard = (formattedQueue) => {
 
 /**
  * Creates the HTML for displaying queue capacity information.
- * @param {Object} formattedQueue - The formatted queue object.
+ * Each property (Capacity, Max Capacity) determines its own display style.
+ * @param {Object} formattedQueue - The formatted queue object from QueueViewDataFormatter.
  * @returns {string} HTML string for the capacity display.
  */
 function createCapacityDisplayHTML(formattedQueue) {
-  let html = "";
-  const mode = formattedQueue.effectiveCapacityMode;
+  let capacityBlockHTML = "";
+  let maxCapacityBlockHTML = "";
 
-  if (mode === "absolute" || mode === "vector") {
-    html += '<div class="absolute-capacity-display">';
-    // Current Capacity
-    html += '<div class="capacity-section"><div class="capacity-section-title">Capacity:</div>';
+  // --- Determine HTML for "Capacity" block ---
+  const primaryCapacityMode = formattedQueue.effectiveCapacityMode; // Mode for the 'capacity' property
+
+  if (primaryCapacityMode === CAPACITY_MODES.ABSOLUTE || primaryCapacityMode === CAPACITY_MODES.VECTOR) {
+    capacityBlockHTML = '<div class="absolute-capacity-display">'; // Outer container for this specific block
+    capacityBlockHTML += '  <div class="capacity-section-title">Capacity:</div>';
     if (formattedQueue.capacityDetails && formattedQueue.capacityDetails.length > 0) {
-      html += '<div class="resource-list">';
+      capacityBlockHTML += '    <div class="resource-list">';
       formattedQueue.capacityDetails.forEach(r => {
-        html += `<div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}${r.unit || ''}</span></div>`;
+        capacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}${r.unit || ''}</span></div>`;
       });
-      html += "</div>";
+      capacityBlockHTML += '    </div>';
     } else {
-      html += `<div class="resource-raw">${formattedQueue.capacityDisplay || "N/A"}</div>`;
+      // Fallback if details are empty but mode is absolute (e.g. "[]" or malformed)
+      capacityBlockHTML += `    <div class="resource-raw">${formattedQueue.capacityDisplay || "N/A"}</div>`;
     }
-    html += "</div>";
-
-    // Max Capacity
-    html += '<div class="capacity-section"><div class="capacity-section-title">Max Capacity:</div>';
-    if (formattedQueue.maxCapacityDetails && formattedQueue.maxCapacityDetails.length > 0) {
-      html += '<div class="resource-list">';
-      formattedQueue.maxCapacityDetails.forEach(r => {
-        html += `<div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}${r.unit || ''}</span></div>`;
-      });
-      html += "</div>";
-    } else {
-      // Fallback for max capacity if details are not available but display string is
-      html += `<div class="resource-raw">${formattedQueue.maxCapacityDisplay || "N/A"}</div>`;
-    }
-    html += "</div></div>";
-  } else { // Percentage or Weight mode
-    html += '<div class="capacity-display">';
-    html += `<div class="capacity-row"><span class="capacity-label">Capacity:</span><span class="capacity-value">${formattedQueue.capacityDisplay || "N/A"}</span></div>`;
-    if (formattedQueue.maxCapacityDisplay !== undefined && formattedQueue.maxCapacityDisplay !== null) {
-      html += `<div class="capacity-row"><span class="capacity-label">Max Capacity:</span><span class="capacity-value">${formattedQueue.maxCapacityDisplay}</span></div>`;
-    }
-    html += "</div>";
+    capacityBlockHTML += '</div>';
+  } else {
+    capacityBlockHTML = '<div class="capacity-display">'; // Outer container for this specific block
+    capacityBlockHTML += `  <div class="capacity-row"><span class="capacity-label">Capacity:</span><span class="capacity-value">${formattedQueue.capacityDisplay || "N/A"}</span></div>`;
+    capacityBlockHTML += '</div>';
   }
-  return html;
+
+  // --- Determine HTML for "Maximum Capacity" block (if it exists) ---
+  if (formattedQueue.maxCapacityDisplay !== undefined && formattedQueue.maxCapacityDisplay !== null && String(formattedQueue.maxCapacityDisplay).trim() !== "") {
+    // Check if maxCapacityDisplay was parsed into details (i.e., it's a vector)
+    if (formattedQueue.maxCapacityDetails && formattedQueue.maxCapacityDetails.length > 0) {
+      maxCapacityBlockHTML = '<div class="absolute-capacity-display" style="margin-top: 6px;">'; // Outer container
+      maxCapacityBlockHTML += '  <div class="capacity-section-title">Max Capacity:</div>';
+      maxCapacityBlockHTML += '    <div class="resource-list">';
+      formattedQueue.maxCapacityDetails.forEach(r => {
+        maxCapacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${r.key}:</span><span class="resource-value">${r.value}${r.unit || ''}</span></div>`;
+      });
+      maxCapacityBlockHTML += '    </div>';
+      maxCapacityBlockHTML += '</div>';
+    } else {
+      // Max capacity is NOT a vector, it's a percentage.
+      maxCapacityBlockHTML = '<div class="capacity-display" style="margin-top: 6px;">'; // Outer container
+      maxCapacityBlockHTML += `  <div class="capacity-row"><span class="capacity-label">Max Capacity:</span><span class="capacity-value">${formattedQueue.maxCapacityDisplay}</span></div>`;
+      maxCapacityBlockHTML += '</div>';
+    }
+  }
+
+  return capacityBlockHTML + maxCapacityBlockHTML; // Concatenate the two independently styled blocks
 }
 
 /**

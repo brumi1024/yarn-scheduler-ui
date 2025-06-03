@@ -141,21 +141,10 @@ function addNewQueue() {
         return;
     }
 
-    // Ensure capacityValue and maxCapacityValue strings are correctly formatted for the selected mode
-    // using viewDataFormatter helpers (which are robust).
-    if (typeof viewDataFormatter !== 'undefined') {
-        capacityValue = viewDataFormatter._ensureCapacityFormat(capacityValue, capacityMode, viewDataFormatter._getDefaultCapacityValue(capacityMode));
-        // For max capacity, the "parent mode" isn't directly relevant for a new queue's initial max capacity format;
-        // usually, it's either percentage or absolute. The mode used for its own capacity is more relevant.
-        maxCapacityValue = viewDataFormatter._ensureMaxCapacityFormat(maxCapacityValue, capacityMode, viewDataFormatter._getDefaultMaxCapacityValue(capacityMode));
-    } else { // Fallback basic formatting if formatter not available
-        if (capacityMode === CAPACITY_MODES.PERCENTAGE && !capacityValue.endsWith('%')) capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + '%';
-        else if (capacityMode === CAPACITY_MODES.WEIGHT && !capacityValue.endsWith('w')) capacityValue = (parseFloat(capacityValue) || 0).toFixed(1) + 'w';
-        else if (capacityMode === CAPACITY_MODES.ABSOLUTE && !(capacityValue.startsWith('[') && capacityValue.endsWith(']'))) {
-            capacityValue = (capacityValue.trim() === '') ? '[memory=1024,vcores=1]' : `[${capacityValue.replace(/[\[\]]/g, '')}]`;
-        }
-        if (!maxCapacityValue.startsWith('[') && !maxCapacityValue.endsWith('%')) maxCapacityValue = `${(parseFloat(maxCapacityValue) || 100).toFixed(1)}%`;
-    }
+    capacityValue = viewDataFormatter._ensureCapacityFormat(capacityValue, capacityMode, viewDataFormatter._getDefaultCapacityValue(capacityMode));
+    // For max capacity, the "parent mode" isn't directly relevant for a new queue's initial max capacity format;
+    // usually, it's either percentage or absolute. The mode used for its own capacity is more relevant.
+    maxCapacityValue = viewDataFormatter._ensureMaxCapacityFormat(maxCapacityValue);
 
     const capacityErrors = validateCapacity(capacityValue, capacityMode);
     if (capacityErrors.length > 0) {
@@ -179,24 +168,17 @@ function addNewQueue() {
     // Prepare the 'properties' Map for the new queue data blueprint.
     // This map will store full YARN property names to their raw values.
     const newQueueRawProperties = new Map();
-    // This object is for the API call, ensuring it has the correct full YARN names.
-    // It should only contain properties that are explicitly set or have YARN defaults
-    // that we want to send.
-    const apiParams = {};
 
+    capacityValue = capacityValue.endsWith('%') ? parseFloat(capacityValue) : capacityValue;
+    maxCapacityValue = maxCapacityValue.endsWith('%') ? parseFloat(maxCapacityValue) : maxCapacityValue;
     // Set the core properties based on form input
     const prefix = `yarn.scheduler.capacity.${newQueuePath}.`;
     newQueueRawProperties.set(`${prefix}capacity`, capacityValue);
     newQueueRawProperties.set(`${prefix}maximum-capacity`, maxCapacityValue);
     newQueueRawProperties.set(`${prefix}state`, state);
 
-    apiParams[`${prefix}capacity`] = capacityValue;
-    apiParams[`${prefix}maximum-capacity`] = maxCapacityValue;
-    apiParams[`${prefix}state`] = state;
-
     // Iterate QUEUE_CONFIG_CATEGORIES to set other defined properties to their metadata defaults
     // if they are not the core ones already set above.
-    // QUEUE_CONFIG_CATEGORIES & Q_PATH_PLACEHOLDER are global
     QUEUE_CONFIG_CATEGORIES.forEach(category => {
         for (const placeholderPropName in category.properties) {
             if (Object.hasOwnProperty.call(category.properties, placeholderPropName)) {
@@ -208,7 +190,6 @@ function addNewQueue() {
                 if (simpleKey !== 'capacity' && simpleKey !== 'maximum-capacity' && simpleKey !== 'state') {
                     if (propDef.defaultValue !== undefined) {
                         newQueueRawProperties.set(fullYarnName, String(propDef.defaultValue)); // Ensure string
-                        apiParams[fullYarnName] = String(propDef.defaultValue);
                     }
                 }
             }
@@ -216,16 +197,13 @@ function addNewQueue() {
     });
 
     const newQueueDataForStore = {
-        name: queueName, // Original case
-        path: newQueuePath, // Original case
-        parentPath: parentPath, // Original case
+        name: queueName,
+        path: newQueuePath,
+        parentPath: parentPath,
         properties: newQueueRawProperties, // Map of full YARN names -> raw values
         // The 'children' property will be an empty object for new queues.
         // The '_ui_capacityMode' hint is useful for QueueViewDataFormatter.
-        _ui_capacityMode: capacityMode,
-        // 'params' for the API call. Could be same as properties, or curated.
-        // For add, typically all defined properties are sent.
-        params: apiParams
+        _ui_capacityMode: capacityMode
     };
 
     queueStateStore.doAdd(newQueuePath, { newQueueData: newQueueDataForStore });

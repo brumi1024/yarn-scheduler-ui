@@ -5,17 +5,13 @@
 function openInfoModal(queuePath) {
     // Globals: viewDataFormatter, showError
     if (!queuePath) {
-        if (typeof showError === "function") showError("Cannot show info: Queue path missing.");
-        return;
-    }
-    if (!viewDataFormatter) {
-        if (typeof showError === "function") showError("Cannot show info: Data formatter not available.");
+        showError("Cannot show info: Queue path missing.");
         return;
     }
 
     const formattedQueue = viewDataFormatter.getFormattedQueue(queuePath);
     if (!formattedQueue) {
-        if (typeof showError === "function") showError(`Cannot show info: Queue data not found for ${queuePath}.`);
+        showError(`Cannot show info: Queue data not found for ${queuePath}.`);
         return;
     }
 
@@ -39,17 +35,16 @@ function openInfoModal(queuePath) {
  * @returns {string} HTML string for the info display.
  */
 function createInfoFormHTML(formattedQueue) {
-    // Globals: QUEUE_CONFIG_CATEGORIES, Q_PATH_PLACEHOLDER
     let html = `<div class="queue-info-container">`;
 
     // --- Basic Information Section ---
     html += `<div class="info-section">
                <h3 class="info-section-title">📋 Basic Information</h3>
                <table class="info-table">`;
-    html += `<tr><td class="info-label">Name</td><td class="info-value">${formattedQueue.displayName || formattedQueue.name}</td></tr>`; // Use displayName
+    html += `<tr><td class="info-label">Name</td><td class="info-value">${formattedQueue.displayName || formattedQueue.name}</td></tr>`;
     html += `<tr><td class="info-label">Path</td><td class="info-value">${formattedQueue.path}</td></tr>`;
-    html += `<tr><td class="info-label">State</td><td class="info-value">${formattedQueue.state || 'N/A'}</td></tr>`; // state is now formatted
-    html += `<tr><td class="info-label">Type</td><td class="info-value">${formattedQueue.queueType || 'N/A'}</td></tr>`; // queueType is now set by formatter
+    html += `<tr><td class="info-label">State</td><td class="info-value">${formattedQueue.state || 'N/A'}</td></tr>`;
+    html += `<tr><td class="info-label">Type</td><td class="info-value">${formattedQueue.queueType || 'N/A'}</td></tr>`;
     html += `</table></div>`;
 
     // --- Capacity & Resource Details Section ---

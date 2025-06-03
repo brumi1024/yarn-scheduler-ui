@@ -31,7 +31,6 @@ class QueueStateStore {
     }
 
     // Transforms a SchedulerTrieNode into a basic plain queue object.
-    // No complex UI derivations here.
     _transformTrieNodeToBasicQueueObject(trieNode) {
         if (!trieNode || !trieNode.isQueue) {
             return null;
@@ -123,10 +122,6 @@ class QueueStateStore {
                 baseQueueObject.changeStatus = "UNCHANGED";
             }
         }
-
-        // 'level' can be derived here or by the formatter. Let's keep it basic.
-        // baseQueueObject.level = (baseQueueObject.path || "").split(".").length - 1;
-
         return baseQueueObject;
     }
 
