@@ -165,18 +165,7 @@ function handleCapacityInputChangeOnModeChange(queuePath, modalTypePrefix = 'edi
     }
 
     const newMode = modeSelect.value;
-
-    if (typeof viewDataFormatter !== 'undefined' && typeof viewDataFormatter._getDefaultCapacityValue === 'function') {
-        capacityInput.value = viewDataFormatter._getDefaultCapacityValue(newMode);
-    } else {
-        console.warn("viewDataFormatter._getDefaultCapacityValue not available, using fallback defaults in handleCapacityInputChangeOnModeChange.");
-        switch (newMode) {
-            case CAPACITY_MODES.PERCENTAGE: capacityInput.value = "10.0%"; break;
-            case CAPACITY_MODES.WEIGHT: capacityInput.value = "1.0w"; break;
-            case CAPACITY_MODES.ABSOLUTE: capacityInput.value = "[memory=1024,vcores=1]"; break;
-            default: capacityInput.value = "";
-        }
-    }
+    capacityInput.value = viewDataFormatter._getDefaultCapacityValue(newMode);
 }
 
 
@@ -228,9 +217,9 @@ function stageQueueChanges() {
         let valueToStage = rawNewValue;
 
         if (fullYarnPropName.endsWith(".capacity")) {
-            const capacityErrors = typeof validateCapacity === 'function' ? validateCapacity(rawNewValue, modeForProperty) : [];
+            const capacityErrors = validateCapacity(rawNewValue, modeForProperty);
             if (capacityErrors.length > 0) {
-                if (typeof showWarning === 'function') showWarning(`Invalid Capacity value "${rawNewValue}": ${capacityErrors.join(', ')}`);
+                showWarning(`Invalid Capacity value "${rawNewValue}": ${capacityErrors.join(', ')}`);
                 if (inputElement) inputElement.focus();
                 return;
             }
