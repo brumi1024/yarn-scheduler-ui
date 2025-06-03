@@ -1,186 +1,207 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>YARN Capacity Scheduler Configuration</title>
-    <link rel="stylesheet" href="styles/main.css" />
-    <link rel="stylesheet" href="styles/queue-cards.css" />
-    <link rel="stylesheet" href="styles/modals.css" />
-    <link rel="stylesheet" href="styles/notification.css" />
-  </head>
-  <body>
-    <div class="header">
-      <ul class="nav-tabs">
-        <li class="nav-tab active" data-tab="queue-config-content">Queue Configuration</li>
-        <li class="nav-tab" data-tab="scheduler-config-content">Scheduler Configuration</li>
-        <li class="nav-tab" data-tab="placement-rules-content">Placement Rules</li>
-        <li class="nav-tab" data-tab="node-labels-content">Node Labels</li>
-      </ul>
-    </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>YARN Capacity Scheduler Configuration</title>
+  <link rel="stylesheet" href="styles/main.css" />
+  <link rel="stylesheet" href="styles/queue-cards.css" />
+  <link rel="stylesheet" href="styles/modals.css" />
+  <link rel="stylesheet" href="styles/notification.css" />
+</head>
+<body>
+<div class="header">
+  <ul class="nav-tabs">
+    <li class="nav-tab active" data-tab="queue-config-content">Queue Configuration</li>
+    <li class="nav-tab" data-tab="scheduler-config-content">Scheduler Configuration</li>
+    <li class="nav-tab" data-tab="placement-rules-content">Placement Rules</li>
+    <li class="nav-tab" data-tab="node-labels-content">Node Labels</li>
+  </ul>
+</div>
 
-    <div class="controls" id="queue-config-controls">
-      <div class="partition-selector">
-        <label>Partition</label>
-        <select id="partition-select">
-          <option value="">default</option>
-        </select>
-      </div>
-      <div class="queue-actions">
-        <button class="btn btn-success" onclick="openAddQueueModal()">
-          + Add Queue
-        </button>
-      </div>
-      <div class="search-sort">
-        <input
-          type="text"
-          class="search-box"
-          placeholder="Search queues"
-          id="search-input"
-        />
-        <select class="sort-selector" id="sort-select">
-          <option value="capacity">Capacity - High to Low</option>
-          <option value="name">Name - A to Z</option>
-        </select>
-      </div>
-    </div>
-
-    <div id="notification-container" class="notification-container"></div>
-
-    <div class="main-content">
-      <div
-        id="loading-container"
-        class="loading-container"
-        style="display: none"
-      >
-        <div class="loading-spinner"></div>
-        <div class="loading-text" id="loading-text">
-          Loading scheduler configuration...
-        </div>
-      </div>
-
-      <div id="queue-config-content" class="tab-pane active">
-        <div class="level-headers" id="level-headers"></div>
-        <div class="queue-tree" id="queue-tree"></div>
-        <svg class="arrow-container" id="arrow-svg">
-          <defs>
-            <marker
-              id="arrowhead"
-              markerWidth="10"
-              markerHeight="7"
-              refX="9"
-              refY="3.5"
-              orient="auto"
-            >
-              <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
-            </marker>
-          </defs>
-        </svg>
-      </div>
-
-      <div id="scheduler-config-content" class="tab-pane" style="display: none;">
-        <div class="controls"> 
-          <div class="tab-title-header">Global Scheduler Settings</div>
-          <div id="global-config-actions" style="margin-left: auto; display: flex; gap: 10px;">
-            <button class="btn btn-secondary" id="edit-global-config-btn" onclick="toggleGlobalConfigEditMode(true)">Edit Settings</button>
-            <button class="btn btn-success" id="save-global-config-btn" onclick="saveGlobalSchedulerSettings()" style="display:none;">Save Changes</button>
-            <button class="btn btn-secondary" id="cancel-global-config-btn" onclick="toggleGlobalConfigEditMode(false)" style="display:none;">Cancel</button>
-          </div>
-        </div>
-        <div id="global-scheduler-settings-container" style="padding: 20px;">
-           <p>This section will display global scheduler configurations that are not specific to any queue.</p>
-        </div>
-      </div>
-
-      <div id="placement-rules-content" class="tab-pane" style="display: none;">
-        <div class="controls">
-          <div class="tab-title-header">Placement Rules</div>
-           </div>
-        <div style="padding: 20px;">
-            <p>Placement rules configuration will be displayed here. (Not yet implemented)</p>
-        </div>
-      </div>
-
-      <div id="node-labels-content" class="tab-pane" style="display: none;">
-         <div class="controls">
-          <div class="tab-title-header">Node Labels</div>
-           </div>
-        <div style="padding: 20px;">
-            <p>Node labels configuration will be displayed here. (Not yet implemented)</p>
-        </div>
-      </div>
-    </div>
-
-    <div class="batch-controls" id="batch-controls">
-      <div class="batch-info" id="batch-info">0 changes pending</div>
-      <div class="batch-validation" id="batch-validation"></div>
-      <button class="btn btn-secondary" onclick="discardChanges()">
-        Discard Changes
-      </button>
-      <button
-        class="btn btn-success"
-        id="apply-changes-btn"
-        onclick="applyAllChanges()"
-        disabled
-      >
-        Apply All Changes
-      </button>
-    </div>
-
-    <button class="refresh-btn" onclick="refreshQueues()">
-      <span>🔄</span>
+<div class="controls" id="queue-config-controls">
+  <div class="partition-selector">
+    <label>Partition</label>
+    <select id="partition-select">
+      <option value="">default</option>
+    </select>
+  </div>
+  <div class="queue-actions">
+    <button class="btn btn-success" id="btn-add-queue">
+      + Add Queue
     </button>
+  </div>
+  <div class="search-sort">
+    <input
+            type="text"
+            class="search-box"
+            placeholder="Search queues"
+            id="search-input"
+    />
+    <select class="sort-selector" id="sort-select">
+      <option value="capacity">Capacity - High to Low</option>
+      <option value="name">Name - A to Z</option>
+    </select>
+  </div>
+</div>
 
-    <div class="modal" id="edit-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title" id="modal-title">Edit Queue</h2>
-          <button class="close-btn" onclick="closeEditModal()">&times;</button>
-        </div>
-        <div id="edit-form-container"></div>
-      </div>
-    </div>
-    <div class="modal" id="add-queue-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title">Add New Queue</h2>
-          <button class="close-btn" onclick="closeAddQueueModal()">
-            &times;
-          </button>
-        </div>
-        <div id="add-form-container"></div>
-      </div>
-    </div>
-    <div class="modal" id="info-modal">
-      <div class="modal-content">
-        <div class="modal-header">
-          <h2 class="modal-title">Queue Info</h2>
-          <button class="close-btn" onclick="closeInfoModal()">&times;</button>
-        </div>
-        <div id="info-form-container"></div>
-      </div>
-    </div>
+<div id="notification-container" class="notification-container"></div>
 
-    <script src="js/config/config.js"></script>
-    <script src="js/config/config-metadata-global.js"></script>
-    <script src="js/config/config-metadata-queue.js"></script>
-    <script src="js/queues/queue-view-data-formatter.js"></script>
-    <script src="js/queues/scheduler-config-trie.js"></script>
-    <script src="js/queues/queue-state-store.js"></script>
-    <script src="js/queues/queue-parser.js"></script>
-    <script src="js/validation.js"></script>
-    <script src="js/ui-components.js"></script>
-    <script src="js/queues/queue-card.js"></script>
-    <script src="js/queues/queue-renderer.js"></script>
-    <script src="js/arrow-renderer.js"></script>
-    <script src="js/api.js"></script>
-    <script src="js/modals/modal-helpers.js"></script>
-    <script src="js/modals/modal-info-queue.js"></script>
-    <script src="js/modals/modal-add-queue.js"></script>
-    <script src="js/modals/modal-edit-queue.js"></script>
-    <script src="js/modals/queue-actions.js"></script>
-    <script src="js/tab-handler.js"></script>
-    <script src="js/scheduler-config-ui.js"></script>
-    <script src="js/main.js"></script>
-  </body>
+<div class="main-content" id="main-content">
+  <div
+          id="loading-container"
+          class="loading-container"
+          style="display: none"
+  >
+    <div class="loading-spinner"></div>
+    <div class="loading-text" id="loading-text">
+      Loading scheduler configuration...
+    </div>
+  </div>
+
+  <div id="queue-config-content" class="tab-pane active">
+    <div class="level-headers" id="level-headers"></div>
+    <div class="queue-tree" id="queue-tree"></div>
+    <svg class="arrow-container" id="arrow-svg">
+      <defs>
+        <marker
+                id="arrowhead"
+                markerWidth="10"
+                markerHeight="7"
+                refX="9"
+                refY="3.5"
+                orient="auto"
+        >
+          <polygon points="0 0, 10 3.5, 0 7" fill="#666" />
+        </marker>
+      </defs>
+    </svg>
+  </div>
+
+  <div id="scheduler-config-content" class="tab-pane" style="display: none;">
+    <div class="controls">
+      <div class="tab-title-header">Global Scheduler Settings</div>
+      <div id="global-config-actions" style="margin-left: auto; display: flex; gap: 10px;">
+        <button class="btn btn-secondary" id="edit-global-config-btn">Edit Settings</button>
+        <button class="btn btn-success" id="save-global-config-btn" style="display:none;">Save Changes</button>
+        <button class="btn btn-secondary" id="cancel-global-config-btn" style="display:none;">Cancel</button>
+      </div>
+    </div>
+    <div id="global-scheduler-settings-container" style="padding: 20px;">
+      <p>This section will display global scheduler configurations that are not specific to any queue.</p>
+    </div>
+  </div>
+
+  <div id="placement-rules-content" class="tab-pane" style="display: none;">
+    <div class="controls">
+      <div class="tab-title-header">Placement Rules</div>
+    </div>
+    <div style="padding: 20px;">
+      <p>Placement rules configuration will be displayed here. (Not yet implemented)</p>
+    </div>
+  </div>
+
+  <div id="node-labels-content" class="tab-pane" style="display: none;">
+    <div class="controls">
+      <div class="tab-title-header">Node Labels</div>
+    </div>
+    <div style="padding: 20px;">
+      <p>Node labels configuration will be displayed here. (Not yet implemented)</p>
+    </div>
+  </div>
+</div>
+
+<div class="batch-controls" id="batch-controls" style="display: none;">
+  <div class="batch-info" id="batch-info">0 changes pending</div>
+  <div class="batch-validation" id="batch-validation"></div>
+  <button class="btn btn-secondary" id="btn-discard-changes">
+    Discard Changes
+  </button>
+  <button
+          class="btn btn-success"
+          id="btn-apply-changes"
+          disabled
+  >
+    Apply All Changes
+  </button>
+</div>
+
+<button class="refresh-btn" id="btn-refresh-queues">
+  <span>🔄</span>
+</button>
+
+<!-- Modals -->
+<div class="modal" id="edit-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title" id="modal-title">Edit Queue</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div id="edit-form-container"></div>
+  </div>
+</div>
+
+<div class="modal" id="add-queue-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Add New Queue</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div id="add-form-container"></div>
+  </div>
+</div>
+
+<div class="modal" id="info-modal">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h2 class="modal-title">Queue Info</h2>
+      <button class="close-btn">×</button>
+    </div>
+    <div id="info-form-container"></div>
+  </div>
+</div>
+
+<!-- MVC Framework Scripts -->
+<script src="js/config/config.js"></script>
+<script src="js/config/config-metadata-global.js"></script>
+<script src="js/config/config-metadata-queue.js"></script>
+<script src="js/config/config-metadata-scheduler-info.js"></script>
+<script src="js/config/config-metadata-node-labels.js"></script>
+
+<script src="js/utils/EventEmitter.js"></script>
+<script src="js/utils/DomUtils.js"></script>
+<script src="js/utils/SchedulerConfigTrie.js"></script>
+
+<script src="js/models/AppStateModel.js"></script>
+<script src="js/models/SchedulerConfigModel.js"></script>
+<script src="js/models/SchedulerInfoModel.js"></script>
+
+<script src="js/services/ApiService.js"></script>
+<script src="js/services/ValidationService.js"></script>
+<script src="js/services/ViewDataFormatterService.js"></script>
+
+<script src="js/views/BaseModalView.js"></script>
+<script src="js/views/LoadingView.js"></script>
+<script src="js/views/NotificationView.js"></script>
+<script src="js/views/TabView.js"></script>
+<script src="js/views/ControlsView.js"></script>
+<script src="js/views/BatchControlsView.js"></script>
+<script src="js/views/GlobalConfigView.js"></script>
+<script src="js/views/QueueCardView.js"></script>
+<script src="js/views/QueueTreeView.js"></script>
+
+<script src="js/views/modals/AddQueueModalView.js"></script>
+<script src="js/views/modals/EditQueueModalView.js"></script>
+<script src="js/views/modals/InfoQueueModalView.js"></script>
+
+<script src="js/controllers/MainController.js"></script>
+
+<script>
+  document.addEventListener('DOMContentLoaded', () => {
+    app = new MainController();
+    app.init();
+  });
+</script>
+
+</body>
 </html>

@@ -7,8 +7,10 @@ class AppStateModel extends EventEmitter {
         this._currentTab = 'queue-config-content'; // Default active tab
         this._currentSearchTerm = '';
         this._currentSortCriteria = 'capacity'; // Default sort
-        this._selectedPartition = DEFAULT_PARTITION; // Default partition
+        this._selectedPartition = DEFAULT_PARTITION; // Default partition (empty string)
         this._isGlobalConfigInEditMode = false;
+        this._isLoading = false;
+        this._loadingMessage = '';
     }
 
     // --- Getters ---
@@ -17,6 +19,9 @@ class AppStateModel extends EventEmitter {
     getCurrentSortCriteria() { return this._currentSortCriteria; }
     getSelectedPartition() { return this._selectedPartition; }
     isGlobalConfigInEditMode() { return this._isGlobalConfigInEditMode; }
+    isLoading() { return this._isLoading; }
+    getLoadingMessage() { return this._loadingMessage; }
+
 
     // --- Setters ---
     /**
@@ -73,6 +78,22 @@ class AppStateModel extends EventEmitter {
         if (this._isGlobalConfigInEditMode !== isInEditMode) {
             this._isGlobalConfigInEditMode = isInEditMode;
             this._emit('globalConfigEditModeChanged', isInEditMode);
+        }
+    }
+
+    /**
+     * Sets the loading state of the application.
+     * @param {boolean} isLoading - True if the application is loading, false otherwise.
+     * @param {string} [message=""] - An optional message to display while loading.
+     */
+    setLoading(isLoading, message = "") {
+        const newLoadingState = !!isLoading; // Coerce to boolean
+        const newMessage = newLoadingState ? message : ''; // Clear message if not loading
+
+        if (this._isLoading !== newLoadingState || (newLoadingState && this._loadingMessage !== newMessage)) {
+            this._isLoading = newLoadingState;
+            this._loadingMessage = newMessage;
+            this._emit('loadingStateChanged', { isLoading: this._isLoading, message: this._loadingMessage });
         }
     }
 }

@@ -54,9 +54,6 @@ class SchedulerConfigTrie {
             const value = prop.value;
 
             if (!configKey.startsWith(this._YARN_SCHEDULER_CAPACITY_PREFIX)) {
-                // Could be other YARN properties, or non-scheduler ones.
-                // For this UI, we are mostly interested in capacity scheduler ones.
-                // However, yarn.webservice.mutation-api.version is an example of non-CS prop
                 this.globalProperties.set(configKey, value); // Store it as global for now if outside prefix
                 continue;
             }

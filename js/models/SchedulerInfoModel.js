@@ -70,13 +70,10 @@ class SchedulerInfoModel extends EventEmitter {
 
         function findQueueInInfo(infoNode, targetPath) {
             if (!infoNode) return null;
-            // The `schedulerInfo`'s `queuePath` can sometimes be just the segment.
-            // We rely on full path traversal to ensure correctness.
-            let currentPath = infoNode.queuePath; // Use API provided path for root
+            let currentPath = infoNode.queuePath;
             if (infoNode.queueName !== 'root' && infoNode.parentPath) { // Assuming we can add parentPath
                 currentPath = `${infoNode.parentPath}.${infoNode.queueName}`;
             } else if (infoNode.queueName !== 'root' && !infoNode.parentPath && infoNode.queuePath && infoNode.queuePath.includes('.')) {
-                // if parentPath is not available, use queuePath as is for children if it's full
                 currentPath = infoNode.queuePath;
             }
 
@@ -90,7 +87,6 @@ class SchedulerInfoModel extends EventEmitter {
             if (infoNode.queues && infoNode.queues.queue) {
                 const children = Array.isArray(infoNode.queues.queue) ? infoNode.queues.queue : [infoNode.queues.queue];
                 for (const child of children) {
-                    // Pass parent path for correct full path construction of children
                     child.parentPath = currentPath; // Temporarily augment for recursive search
                     const found = findQueueInInfo(child, targetPath);
                     delete child.parentPath; // Clean up

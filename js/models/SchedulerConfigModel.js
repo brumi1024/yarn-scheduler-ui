@@ -174,7 +174,7 @@ class SchedulerConfigModel extends EventEmitter {
      */
     performStatefulValidation() {
         // This method will be complex and rely on an "effective hierarchy" view.
-        // For now, it's a placeholder. ViewDataFormatterService will be crucial here.
+        // For now, it's a placeholder.
         const errors = [];
         // Example: If adding queue 'root.new.child' but 'root.new' doesn't exist and isn't being added.
         // Example: Check capacity sums at each level of the effective hierarchy.
