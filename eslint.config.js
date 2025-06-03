@@ -18,48 +18,48 @@ export default(
       ],
     },
 
-    // Base ESLint recommended rules
-    js.configs.recommended,
+        // Base ESLint recommended rules
+        js.configs.recommended,
 
-    // Unicorn plugin configurations
-    unicornPlugin.configs.recommended,
+        // Unicorn plugin configurations
+        unicornPlugin.configs.recommended,
 
-    // Configuration for JavaScript files (.js, .jsx)
-    {
-      files: ["**/*.js", "**/*.jsx"],
-      languageOptions: {
-        ecmaVersion: "latest",
-        sourceType: "module",
-        globals: {
-          ...globals.browser,
-          ...globals.node,
-          ...globals.es2021, // Or globals.esNext
-        },
-        parserOptions: {
-          ecmaFeatures: {
-            jsx: true,
+        // Configuration for JavaScript files (.js, .jsx)
+        {
+          files: ["**/*.js", "**/*.jsx"],
+          languageOptions: {
+            ecmaVersion: "latest",
+            sourceType: "module",
+            globals: {
+              ...globals.browser,
+              ...globals.node,
+              ...globals.es2021, // Or globals.esNext
+            },
+            parserOptions: {
+              ecmaFeatures: {
+                jsx: true,
+              },
+            },
+          },
+          rules: {
           },
         },
-      },
-      rules: {
-      },
-    },
 
-    {
-      files: ["**/*.html"],
-      plugins: {
-        html: htmlPlugin,
-      },
-    },
+        {
+          files: ["**/*.html"],
+          plugins: {
+            html: htmlPlugin,
+          },
+        },
 
-    {
-      rules: {
-        'no-console': 'warn',
-        'no-debugger': 'warn',
-      },
-    },
+        {
+          rules: {
+            'no-console': 'warn',
+            'no-debugger': 'warn',
+          },
+        },
 
-    // Prettier config should be LAST to override any conflicting styling rules
-    // from other configs (js.configs.recommended, tseslint, unicorn, etc.)
-    prettierConfig
+        // Prettier config should be LAST to override any conflicting styling rules
+        // from other configs (js.configs.recommended, tseslint, unicorn, etc.)
+        prettierConfig
 );
