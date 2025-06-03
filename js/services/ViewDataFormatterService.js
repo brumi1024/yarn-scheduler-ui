@@ -190,6 +190,9 @@ class ViewDataFormatterService {
         this._populateConfiguredProperties(formattedNode, queuePath, effectiveProperties);
 
         // --- Format Capacities for Display ---
+        let maxCapacityMode = this._isVectorString(String(formattedNode['maximum-capacity'] || '').trim())
+            ? CAPACITY_MODES.ABSOLUTE : CAPACITY_MODES.PERCENTAGE;
+
         formattedNode.capacityDisplay = this._formatCapacityForDisplay(
             formattedNode.capacity,
             formattedNode.effectiveCapacityMode,
@@ -197,7 +200,7 @@ class ViewDataFormatterService {
         );
         formattedNode.maxCapacityDisplay = this._formatCapacityForDisplay(
             formattedNode['maximum-capacity'],
-            CAPACITY_MODES.ABSOLUTE, // Max capacity can be % or vector, treat as absolute for formatting if not clearly %
+            maxCapacityMode, // Max capacity can be % or vector, treat as absolute for formatting if not clearly %
             this._getDefaultMaxCapacityValue(formattedNode.effectiveCapacityMode)
         );
 
@@ -231,6 +234,8 @@ class ViewDataFormatterService {
             const liveQueueInfo = schedulerInfoModel.getQueueRuntimeInfo(queuePath, selectedPartition);
             if (liveQueueInfo) {
                 formattedNode.numApplications = liveQueueInfo.numApplications !== undefined ? liveQueueInfo.numApplications : (liveQueueInfo.numActiveApplications !== undefined ? liveQueueInfo.numActiveApplications + (liveQueueInfo.numPendingApplications || 0) : 0);
+                formattedNode.absoluteCapacity = liveQueueInfo.absoluteCapacity; // Use the raw value for sankey width
+                formattedNode.absoluteCapacityDisplay = liveQueueInfo.absoluteCapacity !== undefined ? `${parseFloat(liveQueueInfo.absoluteCapacity).toFixed(1)}%` : 'N/A';
                 formattedNode.absoluteUsedCapacityDisplay = liveQueueInfo.absoluteUsedCapacity !== undefined ? `${parseFloat(liveQueueInfo.absoluteUsedCapacity).toFixed(1)}%` : 'N/A';
                 formattedNode.liveState = liveQueueInfo.state;
             } else {
@@ -308,7 +313,7 @@ class ViewDataFormatterService {
         return '10.0%';
     }
 
-    _getDefaultMaxCapacityValue(primaryCapacityMode) { // Make this directly usable by views
+    _getDefaultMaxCapacityValue() { // Make this directly usable by views
         return '100.0%';
     }
 
@@ -512,6 +517,7 @@ class ViewDataFormatterService {
             infoData.capacityResourceDetails.push({label: "Max Capacity Breakdown", value: maxCapDet.map(d => `${d.key}: ${d.value}${d.unit||""}`).join(', ')});
         }
 
+        infoData.liveUsage.push({ label: 'Absolute Capacity (Live)', value: targetNode.absoluteCapacityDisplay || 'N/A' });
         infoData.liveUsage.push({ label: 'Absolute Used Capacity (Live)', value: targetNode.absoluteUsedCapacityDisplay || 'N/A' });
         infoData.liveUsage.push({ label: 'Number of Applications (Live)', value: targetNode.numApplications !== undefined ? targetNode.numApplications : 'N/A' });
         if(liveQueueInfo) {

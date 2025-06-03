@@ -69,6 +69,10 @@
       "value": "20"
     },
     {
+      "name": "yarn.scheduler.capacity.root.TEST_B.state",
+      "value": "STOPPED"
+    },
+    {
       "name": "yarn.scheduler.capacity.root.TEST_A.maximum-capacity",
       "value": "80"
     },

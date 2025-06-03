@@ -1,3 +1,8 @@
+const MIN_SANKEY_LINK_WIDTH = 20;    // Minimum width in pixels for a link
+const MAX_SANKEY_LINK_WIDTH = 200;   // Maximum width in pixels for a link
+const DEFAULT_SANKEY_LINK_WIDTH = 40; // Default width if capacity info is unavailable
+const MIN_VISIBLE_SANKEY_WIDTH = 2; // Smallest pixel value to ensure link is drawn
+
 class QueueTreeView extends EventEmitter {
     constructor(appStateModel) {
         super();
@@ -54,7 +59,7 @@ class QueueTreeView extends EventEmitter {
         if (!formattedHierarchyRoot) {
             this.treeContainerEl.innerHTML = "<p style='text-align:center; padding:20px;'>No queue data loaded.</p>";
             this._renderLevelHeaders(-1);
-            this._emit('treeRendered', { hasContent: false });
+            this._emit('treeRendered', {hasContent: false});
             return;
         }
 
@@ -71,10 +76,10 @@ class QueueTreeView extends EventEmitter {
             const cardElement = QueueCardView.createCardElement(formattedHierarchyRoot, "", (eventName, queuePath) => {
                 this._emit(eventName, queuePath);
             });
-            if(columnContainers[0]) columnContainers[0].appendChild(cardElement);
+            if (columnContainers[0]) columnContainers[0].appendChild(cardElement);
             this.queueElements.set(formattedHierarchyRoot.path, cardElement);
 
-            this._emit('treeRendered', { hasContent: true });
+            this._emit('treeRendered', {hasContent: true});
             return; // No connectors to draw if only root
         }
 
@@ -84,7 +89,7 @@ class QueueTreeView extends EventEmitter {
         if (searchTermLC && !this._doesNodeOrDescendantMatch(formattedHierarchyRoot, searchTermLC, visibilityMemo)) {
             this.treeContainerEl.innerHTML = "<p style='text-align:center; padding:20px;'>No queues match your search criteria.</p>";
             this._renderLevelHeaders(-1);
-            this._emit('treeRendered', { hasContent: false });
+            this._emit('treeRendered', {hasContent: false});
             return;
         }
 
@@ -128,7 +133,7 @@ class QueueTreeView extends EventEmitter {
             this._scheduleConnectorDraw(formattedHierarchyRoot);
         }
 
-        this._emit('treeRendered', { hasContent: maxActualDepthRendered >= 0 || formattedHierarchyRoot.path === 'root' });
+        this._emit('treeRendered', {hasContent: maxActualDepthRendered >= 0 || formattedHierarchyRoot.path === 'root'});
     }
 
     _scheduleConnectorDraw(hierarchyRootToDraw) {
@@ -143,7 +148,7 @@ class QueueTreeView extends EventEmitter {
                 // console.warn("QueueTreeView: SVG container has no dimensions, connectors might be misdrawn.");
                 // Could add a single retry attempt here if needed.
             }
-            if(this.queueElements.size > 0) {
+            if (this.queueElements.size > 0) {
                 this._actualDrawRecursive(hierarchyRootToDraw, svgRect, this.arrowSvgEl);
             }
         }, CONFIG.TIMEOUTS.ARROW_RENDER + 50); // Slightly increased delay
@@ -174,14 +179,21 @@ class QueueTreeView extends EventEmitter {
     }
 
     _drawSankeyLinkToChild(parentRect, childRect, svgRect, svgContainer, childNode) {
-        const linkThickness = 60;
+        // Calculate dynamic link width based on childNode.absoluteCapacity (live info)
+        let dynamicWidth = DEFAULT_SANKEY_LINK_WIDTH;
+        if (childNode && typeof childNode.absoluteCapacity === 'number' && !isNaN(childNode.absoluteCapacity)) {
+            const capacityPercent = Math.max(0, Math.min(100, childNode.absoluteCapacity)) / 100.0; // Normalize 0-1
+            dynamicWidth = MIN_SANKEY_LINK_WIDTH + (MAX_SANKEY_LINK_WIDTH - MIN_SANKEY_LINK_WIDTH) * capacityPercent;
+        }
+        // Ensure the width is at least a minimally visible amount
+        dynamicWidth = Math.max(MIN_VISIBLE_SANKEY_WIDTH, dynamicWidth);
 
         const startY = parentRect.top + parentRect.height / 2 - svgRect.top;
         const endY = childRect.top + childRect.height / 2 - svgRect.top;
         const startX = parentRect.right - svgRect.left;
         const endX = childRect.left - svgRect.left;
 
-        if (startX >= endX - linkThickness) { // Ensure there's space for the link
+        if (startX >= endX - dynamicWidth) { // Ensure there's space for the link
             // console.warn(`Skipping link from ${childNode.parentPath} to ${childNode.path} due to layout.`);
             return;
         }
@@ -196,10 +208,10 @@ class QueueTreeView extends EventEmitter {
         const c2x = endX - (endX - startX) * 0.35;
 
         const d = [
-            `M ${startX},${startY - linkThickness / 2}`,
-            `C ${c1x},${startY - linkThickness / 2}, ${c2x},${endY - linkThickness / 2}, ${endX},${endY - linkThickness / 2}`,
-            `L ${endX},${endY + linkThickness / 2}`,
-            `C ${c2x},${endY + linkThickness / 2}, ${c1x},${startY + linkThickness / 2}, ${startX},${startY + linkThickness / 2}`,
+            `M ${startX},${startY - dynamicWidth / 2}`,
+            `C ${c1x},${startY - dynamicWidth / 2}, ${c2x},${endY - dynamicWidth / 2}, ${endX},${endY - dynamicWidth / 2}`,
+            `L ${endX},${endY + dynamicWidth / 2}`,
+            `C ${c2x},${endY + dynamicWidth / 2}, ${c1x},${startY + dynamicWidth / 2}, ${startX},${startY + dynamicWidth / 2}`,
             `Z`
         ].join(" ");
 
@@ -283,7 +295,7 @@ class QueueTreeView extends EventEmitter {
         if (node.children) {
             for (const childSegment in node.children) {
                 const child = node.children[childSegment];
-                if(child && this._doesNodeOrDescendantMatch(child, searchTermLC, memo)) {
+                if (child && this._doesNodeOrDescendantMatch(child, searchTermLC, memo)) {
                     memo.set(node.path, true);
                     return true;
                 }

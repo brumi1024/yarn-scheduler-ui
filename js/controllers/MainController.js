@@ -166,24 +166,24 @@ class MainController {
 
     _tryRenderInitialViews() {
         if (this.schedulerConfigModel.getSchedulerTrieRoot() && this.schedulerInfoModel.getPartitions().length > 0) {
-            this.renderInitialUI(true);
+            this.renderInitialUI();
             this.appStateModel.setLoading(false);
         } else if (!this.schedulerConfigModel.getSchedulerTrieRoot() && this.appStateModel.isLoading()) {
         }
     }
 
-    renderInitialUI(drawConnectorsNow = true) {
+    renderInitialUI() {
         if (this.tabView) this.tabView.render();
-        this._handleTabChange(this.appStateModel.getCurrentTab(), drawConnectorsNow);
+        this._handleTabChange(this.appStateModel.getCurrentTab());
         if (this.controlsView) this.controlsView.render();
         this.renderBatchControls();
     }
 
     renderQueueRelatedViews() {
-        this.renderQueueTreeView(true);
+        this.renderQueueTreeView();
     }
 
-    _handleTabChange(tabId, drawConnectorsOnQueueTab = true) {
+    _handleTabChange(tabId) {
         this.appStateModel.setGlobalConfigEditMode(false);
         if (tabId !== 'queue-config-content' && this.queueTreeView) {
             this.queueTreeView.clearConnectors();
@@ -195,7 +195,7 @@ class MainController {
 
         switch (tabId) {
             case 'queue-config-content':
-                this.renderQueueTreeView(drawConnectorsOnQueueTab);
+                this.renderQueueTreeView();
                 break;
             case 'scheduler-config-content':
                 this.renderGlobalConfigView();
@@ -206,7 +206,7 @@ class MainController {
         }
     }
 
-    renderQueueTreeView(drawConnectors = true) {
+    renderQueueTreeView() {
         if (!this.queueTreeView || !this.schedulerConfigModel.getSchedulerTrieRoot()) {
             if (this.queueTreeView) this.queueTreeView.render(null, false);
             return;
@@ -215,7 +215,7 @@ class MainController {
             this.schedulerConfigModel, this.schedulerInfoModel, this.appStateModel
         );
         if (this.queueTreeView) {
-            this.queueTreeView.render(formattedHierarchy, drawConnectors);
+            this.queueTreeView.render(formattedHierarchy, true);
         }
     }
 

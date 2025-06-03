@@ -17,15 +17,15 @@ const SCHEDULER_INFO_METADATA = {
     absoluteMaxCapacity: { displayName: 'Absolute Max Capacity', unit: '%' },
     absoluteUsedCapacity: { displayName: 'Absolute Used Capacity', unit: '%' },
     numApplications: { displayName: 'Total Applications' },
-    maxParallelApps: { displayName: 'Max Parallel Apps (Live)'}, // From scheduler info if different from conf
+    maxParallelApps: { displayName: 'Max Parallel Apps'}, // From scheduler info if different from conf
     resourcesUsed: { // This is an object in API
-        displayName: 'Resources Used (Live)',
+        displayName: 'Resources Used',
         memory: { displayName: 'Memory Used', unit: 'MB' },
         vCores: { displayName: 'VCores Used' }
     },
-    mode: { displayName: 'Capacity Mode (Live)' }, // As reported by scheduler endpoint
-    weight: { displayName: 'Weight (Live)'},
-    normalizedWeight: {displayName: 'Normalized Weight (Live)'},
+    mode: { displayName: 'Capacity Mode' }, // As reported by scheduler endpoint
+    weight: { displayName: 'Weight'},
+    normalizedWeight: {displayName: 'Normalized Weight'},
 
     // Leaf Queue Specific Info
     numActiveApplications: { displayName: 'Active Applications' },
@@ -35,7 +35,7 @@ const SCHEDULER_INFO_METADATA = {
     reservedContainers: { displayName: 'Reserved Containers' },
     pendingContainers: { displayName: 'Pending Containers' },
     maxApplications: { displayName: 'Max Applications (Queue Limit)' }, // Leaf specific from schedulerInfo
-    userLimitFactor: { displayName: 'User Limit Factor (Live)' }, // Leaf specific from schedulerInfo
+    userLimitFactor: { displayName: 'User Limit Factor' }, // Leaf specific from schedulerInfo
 
     // It might be too verbose to list all from `capacities.queueCapacitiesByPartition`
     // Instead, the Info Modal could summarize or pick the default partition's effective/configured resources.
