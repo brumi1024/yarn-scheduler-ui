@@ -38,11 +38,9 @@ class MainController {
             }
         });
         this.appStateModel.subscribe('loadingStateChanged', ({ isLoading }) => {
-            if (!isLoading && this.appStateModel.getCurrentTab() === 'queue-config-content') {
-                if (this.queueTreeView && this.queueTreeView.getCurrentFormattedHierarchy()) {
+            if (!isLoading && this.appStateModel.getCurrentTab() === 'queue-config-content' && this.queueTreeView && this.queueTreeView.getCurrentFormattedHierarchy()) {
                     this.queueTreeView._scheduleConnectorDraw(this.queueTreeView.getCurrentFormattedHierarchy());
                 }
-            }
         });
 
         // --- SchedulerConfigModel Listeners ---
@@ -187,7 +185,6 @@ class MainController {
         if (this.schedulerConfigModel.getSchedulerTrieRoot() && this.schedulerInfoModel.getPartitions().length > 0) {
             this.renderInitialUI();
             this.appStateModel.setLoading(false);
-        } else if (!this.schedulerConfigModel.getSchedulerTrieRoot() && this.appStateModel.isLoading()) {
         }
     }
 
@@ -213,15 +210,18 @@ class MainController {
         }
 
         switch (tabId) {
-            case 'queue-config-content':
+            case 'queue-config-content': {
                 this.renderQueueTreeView();
                 break;
-            case 'scheduler-config-content':
+            }
+            case 'scheduler-config-content': {
                 this.renderGlobalConfigView();
                 break;
-            default:
+            }
+            default: {
                 console.log(`Switched to tab: ${tabId} (Content View TBD)`);
                 break;
+            }
         }
     }
 
@@ -273,7 +273,7 @@ class MainController {
         if (!this.addQueueModalView) return;
         const parentQueues = this.schedulerConfigModel
             .getAllQueuePaths()
-            .map((p) => ({ path: p, name: p.substring(p.lastIndexOf('.') + 1) || p }));
+            .map((p) => ({ path: p, name: p.slice(Math.max(0, p.lastIndexOf('.') + 1)) || p }));
 
         let effectiveParentPath = parentPath;
         if (!parentQueues.some((p) => p.path === parentPath)) {
@@ -388,55 +388,55 @@ class MainController {
         if (!this.editQueueModalView || this.currentEditQueuePath !== queuePath) return;
 
         const baseTrieNode = this.schedulerConfigModel.getTrieInstance().getQueueNode(queuePath);
-        let tempEffectiveProperties = new Map(baseTrieNode ? baseTrieNode.properties : undefined);
+        const temporaryEffectiveProperties = new Map(baseTrieNode ? baseTrieNode.properties : undefined);
 
         const addEntry = this.schedulerConfigModel
             .getRawPendingChanges()
             .addQueues.find((a) => a.queueName === queuePath);
         if (addEntry) {
-            tempEffectiveProperties.clear();
-            Object.entries(currentFormParams).forEach(([simpleKey, value]) => {
-                if (simpleKey === '_ui_capacityMode') return;
+            temporaryEffectiveProperties.clear();
+            for (const [simpleKey, value] of Object.entries(currentFormParams)) {
+                if (simpleKey === '_ui_capacityMode') continue;
                 const fullKey =
                     this.viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
-                tempEffectiveProperties.set(fullKey, value);
-            });
+                temporaryEffectiveProperties.set(fullKey, value);
+            }
         } else {
             const existingPendingUpdate = this.schedulerConfigModel
                 .getRawPendingChanges()
                 .updateQueues.find((u) => u.queueName === queuePath);
             if (existingPendingUpdate) {
-                Object.entries(existingPendingUpdate.params).forEach(([simpleKey, value]) => {
-                    if (simpleKey === '_ui_capacityMode') return;
+                for (const [simpleKey, value] of Object.entries(existingPendingUpdate.params)) {
+                    if (simpleKey === '_ui_capacityMode') continue;
                     const fullKey =
                         this.viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
                         `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
-                    tempEffectiveProperties.set(fullKey, value);
-                });
+                    temporaryEffectiveProperties.set(fullKey, value);
+                }
             }
-            Object.entries(currentFormParams).forEach(([simpleKey, value]) => {
-                if (simpleKey === '_ui_capacityMode') return;
+            for (const [simpleKey, value] of Object.entries(currentFormParams)) {
+                if (simpleKey === '_ui_capacityMode') continue;
                 const fullKey =
                     this.viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
-                tempEffectiveProperties.set(fullKey, value);
-            });
+                temporaryEffectiveProperties.set(fullKey, value);
+            }
         }
         const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-        tempEffectiveProperties.set(anlFullKey, newLabelsString);
+        temporaryEffectiveProperties.set(anlFullKey, newLabelsString);
 
-        const tempTrieNodeLike = {
+        const temporaryTrieNodeLike = {
             fullPath: queuePath,
             segment: queuePath.split('.').pop(),
-            properties: tempEffectiveProperties,
+            properties: temporaryEffectiveProperties,
             children: baseTrieNode ? baseTrieNode.children : new Map(),
             isQueue: true,
         };
         const mockSchedulerConfigModelForFormatter = {
             getTrieInstance: () => ({
                 getQueueNode: (p) =>
-                    p === queuePath ? tempTrieNodeLike : this.schedulerConfigModel.getTrieInstance().getQueueNode(p),
+                    p === queuePath ? temporaryTrieNodeLike : this.schedulerConfigModel.getTrieInstance().getQueueNode(p),
             }),
             getRawPendingChanges: () => ({ ...this.schedulerConfigModel.getRawPendingChanges() }),
         };
@@ -458,7 +458,7 @@ class MainController {
 
     handleStageQueueChanges(queuePath, formData) {
         const { params } = formData;
-        if (params.hasOwnProperty('capacity')) {
+        if (Object.prototype.hasOwnProperty.call(params,'capacity')) {
             // Also check _ui_capacityMode from params for validation
             const modeForValidation =
                 params._ui_capacityMode ||
@@ -485,7 +485,7 @@ class MainController {
             }
             params.capacity = capacityValidation.value;
         }
-        if (params.hasOwnProperty('maximum-capacity')) {
+        if (Object.prototype.hasOwnProperty.call(params, 'maximum-capacity')) {
             const maxCapMode = this.viewDataFormatterService._isVectorString(params['maximum-capacity'])
                 ? CAPACITY_MODES.ABSOLUTE
                 : CAPACITY_MODES.PERCENTAGE;
@@ -514,7 +514,7 @@ class MainController {
 
     handleDeleteQueue(queuePath) {
         if (
-            window.confirm(
+            globalThis.confirm(
                 `Are you sure you want to mark queue "${queuePath}" for deletion? \nThis will also remove any other staged changes for this queue.`
             )
         ) {
@@ -661,7 +661,7 @@ class MainController {
     handleDiscardAllChanges() {
         if (this.schedulerConfigModel.hasPendingChanges()) {
             if (
-                window.confirm(
+                globalThis.confirm(
                     'Are you sure you want to discard all pending local changes? This action cannot be undone.'
                 )
             ) {
@@ -679,7 +679,7 @@ class MainController {
     async handleRefreshData() {
         if (this.schedulerConfigModel.hasPendingChanges()) {
             if (
-                !window.confirm('Refreshing data from the server will discard any unapplied local changes. Continue?')
+                !globalThis.confirm('Refreshing data from the server will discard any unapplied local changes. Continue?')
             ) {
                 return;
             }

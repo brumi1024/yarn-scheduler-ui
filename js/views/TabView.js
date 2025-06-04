@@ -17,16 +17,16 @@ class TabView extends EventEmitter {
     }
 
     _bindNavTabClicks() {
-        this.navTabs.forEach((tab) => {
+        for (const tab of this.navTabs) {
             tab.addEventListener('click', (event) => {
-                const targetTabId = event.currentTarget.getAttribute('data-tab');
+                const targetTabId = event.currentTarget.dataset.tab;
                 if (targetTabId) {
                     // Emit event for controller to update AppStateModel,
                     // which will then trigger this.render() via subscription.
                     this._emit('tabClicked', targetTabId);
                 }
             });
-        });
+        }
     }
 
     /**
@@ -35,15 +35,15 @@ class TabView extends EventEmitter {
     render() {
         const activeTabId = this.appStateModel.getCurrentTab();
 
-        this.navTabs.forEach((tab) => {
-            tab.classList.toggle('active', tab.getAttribute('data-tab') === activeTabId);
-        });
+        for (const tab of this.navTabs) {
+            tab.classList.toggle('active', tab.dataset.tab === activeTabId);
+        }
 
-        this.tabPanes.forEach((pane) => {
+        for (const pane of this.tabPanes) {
             const paneIsActive = pane.id === activeTabId;
             pane.classList.toggle('active', paneIsActive);
             DomUtils.show(pane, paneIsActive ? 'block' : 'none');
-        });
+        }
         this._updateContextualControls(activeTabId);
     }
 
@@ -56,18 +56,22 @@ class TabView extends EventEmitter {
 
         // Show the relevant one
         switch (activeTabId) {
-            case 'queue-config-content':
+            case 'queue-config-content': {
                 if (this.queueConfigControls) DomUtils.show(this.queueConfigControls, 'flex');
                 break;
-            case 'scheduler-config-content':
+            }
+            case 'scheduler-config-content': {
                 if (this.schedulerConfigControls) DomUtils.show(this.schedulerConfigControls, 'flex');
                 break;
-            case 'placement-rules-content':
+            }
+            case 'placement-rules-content': {
                 if (this.placementRulesControls) DomUtils.show(this.placementRulesControls, 'flex');
                 break;
-            case 'node-labels-content':
+            }
+            case 'node-labels-content': {
                 if (this.nodeLabelsControls) DomUtils.show(this.nodeLabelsControls, 'flex');
                 break;
+            }
         }
     }
 }

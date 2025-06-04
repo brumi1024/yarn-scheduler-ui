@@ -46,16 +46,16 @@ class ApiService {
                     // YARN PUT errors are often XML
                     try {
                         const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(responseText, 'application/xml');
-                        const exceptionNode = xmlDoc.querySelector('RemoteException > exception');
-                        const messageNode = xmlDoc.querySelector('RemoteException > message');
+                        const xmlDocument = parser.parseFromString(responseText, 'application/xml');
+                        const exceptionNode = xmlDocument.querySelector('RemoteException > exception');
+                        const messageNode = xmlDocument.querySelector('RemoteException > message');
                         if (exceptionNode && exceptionNode.textContent && messageNode && messageNode.textContent) {
                             errorMessage = `${exceptionNode.textContent.trim()}: ${messageNode.textContent.trim()}`;
-                        } else if (xmlDoc.documentElement.nodeName === 'html') {
+                        } else if (xmlDocument.documentElement.nodeName === 'html') {
                             // Check if it's an HTML error page
                             errorMessage = `HTTP ${response.status}: Received HTML error page.`;
                         }
-                    } catch (e) {
+                    } catch {
                         /* Stick with original responseText if XML parsing fails */
                     }
                 }
@@ -67,7 +67,7 @@ class ApiService {
             if (isJsonExpected) {
                 try {
                     data = JSON.parse(responseText);
-                } catch (e) {
+                } catch {
                     if (
                         requestOptions.method === 'PUT' &&
                         responseText.toLowerCase().includes('successfully applied')
@@ -76,7 +76,7 @@ class ApiService {
                     } else {
                         console.warn(
                             `ApiService: Expected JSON for ${endpoint} but received:`,
-                            responseText.substring(0, 200)
+                            responseText.slice(0, 200)
                         );
                         return { status: response.status, data: responseText, error: 'Failed to parse JSON response.' };
                     }
@@ -96,9 +96,9 @@ class ApiService {
         try {
             const response = await fetch(mockFile);
             if (!response.ok) {
-                const errorMsg = `Mock file error: ${mockFile} (Status: ${response.status})`;
-                console.error(errorMsg);
-                return { status: response.status, data: null, error: errorMsg };
+                const errorMessage = `Mock file error: ${mockFile} (Status: ${response.status})`;
+                console.error(errorMessage);
+                return { status: response.status, data: null, error: errorMessage };
             }
             const data = expectJson ? await response.json() : await response.text();
             return { status: 200, data: data };
@@ -153,46 +153,40 @@ class ApiService {
         const { removeQueues = [], addQueues = [], updateQueues = [], globalUpdates = {} } = batchChanges;
         const xmlParts = ['<?xml version="1.0" encoding="UTF-8" standalone="yes"?>', '<sched-conf>'];
 
-        const escapeXml = (str) => {
-            if (typeof str !== 'string') str = String(str);
-            return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, "'");
-        };
-
-        const buildParamsXML = (params) =>
-            Object.entries(params)
+        const buildParametersXML = (parameters) =>
+            Object.entries(parameters)
                 .map(
                     ([key, value]) =>
-                        `    <entry><key>${escapeXml(key)}</key><value>${escapeXml(value)}</value></entry>`
+                        `    <entry><key>${DomUtils.escapeXml(key)}</key><value>${DomUtils.escapeXml(value)}</value></entry>`
                 )
                 .join('\n');
 
-        removeQueues.forEach((queueName) => {
-            xmlParts.push(`  <remove-queue>${escapeXml(queueName)}</remove-queue>`);
-        });
+        for (const queueName of removeQueues) {
+            xmlParts.push(`  <remove-queue>${DomUtils.escapeXml(queueName)}</remove-queue>`);
+        }
 
-        addQueues.forEach((item) => {
+        for (const item of addQueues) {
             xmlParts.push(`  <add-queue>`);
-            xmlParts.push(`    <queue-name>${escapeXml(item.queueName)}</queue-name>`);
+            xmlParts.push(`    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`);
             if (item.params && Object.keys(item.params).length > 0) {
-                xmlParts.push(`    <params>\n${buildParamsXML(item.params)}\n    </params>`);
+                xmlParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
             }
             xmlParts.push(`  </add-queue>`);
-        });
+        }
 
-        updateQueues.forEach((item) => {
+        for (const item of updateQueues) {
             xmlParts.push(`  <update-queue>`);
-            xmlParts.push(`    <queue-name>${escapeXml(item.queueName)}</queue-name>`);
+            xmlParts.push(`    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`);
             if (item.params && Object.keys(item.params).length > 0) {
-                xmlParts.push(`    <params>\n${buildParamsXML(item.params)}\n    </params>`);
+                xmlParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
             }
             xmlParts.push(`  </update-queue>`);
-        });
+        }
 
         if (Object.keys(globalUpdates).length > 0) {
             // Global updates params are expected to be { 'full.yarn.key': 'value' }
             xmlParts.push(`  <global-updates>`);
-            xmlParts.push(buildParamsXML(globalUpdates));
-            xmlParts.push(`  </global-updates>`);
+            xmlParts.push(buildParametersXML(globalUpdates), `  </global-updates>`);
         }
 
         xmlParts.push('</sched-conf>');

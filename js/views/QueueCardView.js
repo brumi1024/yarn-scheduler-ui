@@ -28,9 +28,9 @@ const QueueCardView = {
             capacityBlockHTML += '  <div class="capacity-section-title">Capacity:</div>';
             if (capacityDetails && capacityDetails.length > 0) {
                 capacityBlockHTML += '    <div class="resource-list">';
-                capacityDetails.forEach((r) => {
+                for (const r of capacityDetails) {
                     capacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${DomUtils.escapeXml(r.key)}:</span><span class="resource-value">${DomUtils.escapeXml(r.value)}${DomUtils.escapeXml(r.unit || '')}</span></div>`;
-                });
+                }
                 capacityBlockHTML += '    </div>';
             } else {
                 capacityBlockHTML += `    <div class="resource-raw">${DomUtils.escapeXml(displayCapacity || 'N/A')}</div>`;
@@ -54,9 +54,9 @@ const QueueCardView = {
                 maxCapacityBlockHTML += '  <div class="capacity-section-title">Max Capacity:</div>';
                 if (maxCapacityDetails && maxCapacityDetails.length > 0) {
                     maxCapacityBlockHTML += '    <div class="resource-list">';
-                    maxCapacityDetails.forEach((r) => {
+                    for (const r of maxCapacityDetails) {
                         maxCapacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${DomUtils.escapeXml(r.key)}:</span><span class="resource-value">${DomUtils.escapeXml(r.value)}${DomUtils.escapeXml(r.unit || '')}</span></div>`;
-                    });
+                    }
                     maxCapacityBlockHTML += '    </div>';
                 } else {
                     maxCapacityBlockHTML += `    <div class="resource-raw">${DomUtils.escapeXml(displayMaxCapacity)}</div>`;
@@ -72,8 +72,8 @@ const QueueCardView = {
         return capacityBlockHTML + maxCapacityBlockHTML;
     },
 
-    _isVectorString(valStr) {
-        return typeof valStr === 'string' && valStr.startsWith('[') && valStr.endsWith(']');
+    _isVectorString(valueString) {
+        return typeof valueString === 'string' && valueString.startsWith('[') && valueString.endsWith(']');
     },
 
     /**
@@ -85,7 +85,7 @@ const QueueCardView = {
      */
     _highlightMatch(text, searchTerm) {
         if (!searchTerm || !text) return DomUtils.escapeXml(text || '');
-        const safeTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const safeTerm = searchTerm.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
         const re = new RegExp(`(${safeTerm})`, 'ig'); // Wrap term in capturing group
         return DomUtils.escapeXml(text).replace(re, `<mark>$1</mark>`);
     },
@@ -110,45 +110,45 @@ const QueueCardView = {
         if (formattedQueue.statusClass) card.classList.add(formattedQueue.statusClass);
 
         const titleBar = DomUtils.createElement('div', 'queue-header');
-        const nameEl = DomUtils.createElement('span', 'queue-name');
-        nameEl.innerHTML = this._highlightMatch(formattedQueue.displayName, currentSearchTerm);
-        nameEl.title = formattedQueue.displayNameTitle || formattedQueue.path;
-        nameEl.onclick = (e) => {
+        const nameElement = DomUtils.createElement('span', 'queue-name');
+        nameElement.innerHTML = this._highlightMatch(formattedQueue.displayName, currentSearchTerm);
+        nameElement.title = formattedQueue.displayNameTitle || formattedQueue.path;
+        nameElement.addEventListener('click', (e) => {
             e.stopPropagation();
             eventEmitterCallback('editQueueClicked', formattedQueue.path);
-        };
+        });
 
         const buttonGroup = DomUtils.createElement('div', 'queue-button-group');
-        const infoBtn = DomUtils.createElement('button', 'queue-info-btn', {
+        const infoButton = DomUtils.createElement('button', 'queue-info-btn', {
             title: 'Queue Information',
             'aria-label': 'Queue information',
         });
-        infoBtn.innerHTML = `
+        infoButton.innerHTML = `
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
               <circle cx="12" cy="12" r="11" stroke="currentColor" stroke-width="2" fill="none"/>
               <line x1="12" y1="16" x2="12" y2="12" stroke="currentColor" stroke-width="2"/>
               <circle cx="12" cy="8" r="1" fill="currentColor"/>
             </svg>`;
-        infoBtn.onclick = (e) => {
+        infoButton.addEventListener('click', (e) => {
             e.stopPropagation();
             eventEmitterCallback('infoQueueClicked', formattedQueue.path);
-        };
+        });
 
         const actionsMenuContainer = DomUtils.createElement('span', 'queue-actions-menu');
-        const menuBtn = DomUtils.createElement('button', 'queue-menu-btn', {
+        const menuButton = DomUtils.createElement('button', 'queue-menu-btn', {
             'aria-label': 'Queue actions',
             tabindex: '0',
         });
-        menuBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
+        menuButton.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
 
         const dropdown = DomUtils.createElement('div', 'queue-dropdown', { id: `dropdown-${formattedQueue.path}` });
         const editItem = DomUtils.createElement('div', 'dropdown-item', null, 'Edit Queue');
-        editItem.onclick = () => eventEmitterCallback('editQueueClicked', formattedQueue.path);
+        editItem.addEventListener('click', () => eventEmitterCallback('editQueueClicked', formattedQueue.path));
 
         const addChildItem = DomUtils.createElement('div', 'dropdown-item', null, 'Add Child Queue');
-        addChildItem.onclick = () => eventEmitterCallback('addChildQueueClicked', formattedQueue.path);
-        dropdown.appendChild(editItem);
-        dropdown.appendChild(addChildItem);
+        addChildItem.addEventListener('click', () => eventEmitterCallback('addChildQueueClicked', formattedQueue.path));
+        dropdown.append(editItem);
+        dropdown.append(addChildItem);
 
         if (!formattedQueue.isRoot) {
             const deleteItemText = formattedQueue.isDeleted ? 'Undo Delete' : 'Delete Queue';
@@ -157,30 +157,30 @@ const QueueCardView = {
                 deleteItem.classList.add('disabled');
                 deleteItem.title = formattedQueue.deletionReason || 'Cannot be deleted';
             } else {
-                deleteItem.onclick = () => {
+                deleteItem.addEventListener('click', () => {
                     if (formattedQueue.isDeleted) eventEmitterCallback('undoDeleteQueueClicked', formattedQueue.path);
                     else eventEmitterCallback('deleteQueueClicked', formattedQueue.path);
-                };
+                });
             }
-            dropdown.appendChild(deleteItem);
+            dropdown.append(deleteItem);
         }
 
-        actionsMenuContainer.appendChild(menuBtn);
-        actionsMenuContainer.appendChild(dropdown);
-        menuBtn.onclick = (e) => {
+        actionsMenuContainer.append(menuButton);
+        actionsMenuContainer.append(dropdown);
+        menuButton.addEventListener('click', (e) => {
             // Toggle for this specific dropdown
             e.stopPropagation();
             // Hide all other open dropdowns
-            DomUtils.qsa('.queue-dropdown.show').forEach((d) => {
+            for (const d of DomUtils.qsa('.queue-dropdown.show')) {
                 if (d.id !== dropdown.id) d.classList.remove('show');
-            });
+            }
             dropdown.classList.toggle('show');
-        };
+        });
 
-        buttonGroup.appendChild(infoBtn);
-        buttonGroup.appendChild(actionsMenuContainer);
-        titleBar.appendChild(nameEl);
-        titleBar.appendChild(buttonGroup);
+        buttonGroup.append(infoButton);
+        buttonGroup.append(actionsMenuContainer);
+        titleBar.append(nameElement);
+        titleBar.append(buttonGroup);
 
         const divider = DomUtils.createElement('hr', 'queue-card-divider');
         const labelArea = DomUtils.createElement('div', 'queue-label-area');
@@ -198,10 +198,10 @@ const QueueCardView = {
         const capacitySection = DomUtils.createElement('div', 'queue-capacity-section');
         capacitySection.innerHTML = this._createCapacityDisplayHTML(formattedQueue);
 
-        card.appendChild(titleBar);
-        card.appendChild(divider);
-        card.appendChild(labelArea);
-        card.appendChild(capacitySection);
+        card.append(titleBar);
+        card.append(divider);
+        card.append(labelArea);
+        card.append(capacitySection);
 
         return card;
     },

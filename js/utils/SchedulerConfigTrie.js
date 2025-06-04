@@ -33,7 +33,7 @@ class SchedulerConfigTrie {
      * Initializes the Trie and global properties from a flat list of scheduler properties.
      * @param {Array<Object>} schedulerConfProperties - Array of { name: string, value: string }.
      */
-    initializeFromConfig(schedulerConfProperties) {
+    initializeFromConfig(schedulerConfigProperties) {
         this.rootNode = new SchedulerTrieNode('root');
         this.rootNode.isQueue = true; // Root is always a queue
         this.rootNode.fullPath = 'root';
@@ -42,29 +42,29 @@ class SchedulerConfigTrie {
         const queueDefinitions = new Map(); // Map<String(parentPath), Set<String(childName)>>
         const otherProperties = []; // To store properties not defining queue structure
 
-        if (!schedulerConfProperties || !Array.isArray(schedulerConfProperties)) {
+        if (!schedulerConfigProperties || !Array.isArray(schedulerConfigProperties)) {
             console.warn('SchedulerConfigTrie: No properties provided for initialization.');
             return;
         }
 
         // Pass 1: Identify queue hierarchy definitions (*.queues) and global properties.
-        for (const prop of schedulerConfProperties) {
-            if (!prop || typeof prop.name !== 'string') continue;
-            const configKey = prop.name;
-            const value = prop.value;
+        for (const property of schedulerConfigProperties) {
+            if (!property || typeof property.name !== 'string') continue;
+            const configKey = property.name;
+            const value = property.value;
 
             if (!configKey.startsWith(this._YARN_SCHEDULER_CAPACITY_PREFIX)) {
                 this.globalProperties.set(configKey, value); // Store it as global for now if outside prefix
                 continue;
             }
 
-            const prefixlessName = configKey.substring(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
+            const prefixlessName = configKey.slice(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
 
             if (!prefixlessName.startsWith('root')) {
                 // Global CS properties
                 this.globalProperties.set(configKey, value);
             } else if (prefixlessName.endsWith(this._QUEUES_SUFFIX)) {
-                const parentPath = prefixlessName.substring(0, prefixlessName.length - this._QUEUES_SUFFIX.length);
+                const parentPath = prefixlessName.slice(0, Math.max(0, prefixlessName.length - this._QUEUES_SUFFIX.length));
                 if (parentPath.length > 0) {
                     const children = new Set(
                         value
@@ -86,8 +86,8 @@ class SchedulerConfigTrie {
         this._buildTrieSkeleton(this.rootNode, 'root', queueDefinitions);
 
         // Pass 3: Assign all other properties (queue-specific and complex global) to the Trie nodes.
-        for (const prop of otherProperties) {
-            this._assignPropertyToNode(prop.prefixlessPropertyName, prop.originalKey, prop.value);
+        for (const property of otherProperties) {
+            this._assignPropertyToNode(property.prefixlessPropertyName, property.originalKey, property.value);
         }
     }
 
@@ -101,14 +101,14 @@ class SchedulerConfigTrie {
     _buildTrieSkeleton(parentNode, parentPathKey, queueDefinitions) {
         const childNames = queueDefinitions.get(parentPathKey);
         if (childNames) {
-            childNames.forEach((childName) => {
-                if (!childName) return; // Skip empty child names
+            for (const childName of childNames) {
+                if (!childName) continue; // Skip empty child names
                 const newNode = new SchedulerTrieNode(childName);
                 newNode.fullPath = `${parentNode.fullPath}.${childName}`;
                 newNode.isQueue = true; // These are explicitly defined as queues
                 parentNode.children.set(childName, newNode); // Use original case for map key
                 this._buildTrieSkeleton(newNode, newNode.fullPath, queueDefinitions);
-            });
+            }
         }
     }
 
@@ -126,8 +126,8 @@ class SchedulerConfigTrie {
         let lastConfirmedQueueNode = this.rootNode; // 'root' is always a queue
 
         // Start loop from 1 as parts[0] is 'root', already assigned to currentNode
-        for (let i = 1; i < parts.length; i++) {
-            const segment = parts[i];
+        for (let index = 1; index < parts.length; index++) {
+            const segment = parts[index];
             const childNode = currentNode.children.get(segment);
 
             if (childNode && childNode.isQueue) {
@@ -164,8 +164,8 @@ class SchedulerConfigTrie {
             return currentNode.isQueue ? currentNode : null;
         }
 
-        for (let i = 1; i < segments.length; i++) {
-            const segment = segments[i];
+        for (let index = 1; index < segments.length; index++) {
+            const segment = segments[index];
             if (!currentNode.children.has(segment)) {
                 return null; // Path segment not found
             }

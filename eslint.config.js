@@ -84,6 +84,7 @@ export default [
             'unicorn/consistent-function-scoping' : ['error', {
                 'checkArrowFunctions': false
             }],
+            "unicorn/no-array-for-each": "off", // Allow forEach for better readability in some cases
             'unicorn/filename-case': [
                 'error',
                 {

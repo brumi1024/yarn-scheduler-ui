@@ -23,9 +23,9 @@ class QueueTreeView extends EventEmitter {
         // Global click listener to hide open dropdowns for queue cards
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.queue-menu-btn') && !event.target.closest('.queue-dropdown')) {
-                DomUtils.qsa('.queue-dropdown.show').forEach((dropdown) => {
+                for (const dropdown of DomUtils.qsa('.queue-dropdown.show')) {
                     dropdown.classList.remove('show');
-                });
+                }
             }
         });
     }
@@ -78,7 +78,7 @@ class QueueTreeView extends EventEmitter {
             const cardElement = QueueCardView.createCardElement(formattedHierarchyRoot, '', (eventName, queuePath) => {
                 this._emit(eventName, queuePath);
             });
-            if (columnContainers[0]) columnContainers[0].appendChild(cardElement);
+            if (columnContainers[0]) columnContainers[0].append(cardElement);
             this.queueElements.set(formattedHierarchyRoot.path, cardElement);
 
             this._emit('treeRendered', { hasContent: true });
@@ -102,7 +102,7 @@ class QueueTreeView extends EventEmitter {
 
         for (let i = 0; i <= Math.max(0, estimatedMaxDepth); i++) {
             const colDiv = DomUtils.createElement('div', 'queue-column');
-            this.treeContainerEl.appendChild(colDiv);
+            this.treeContainerEl.append(colDiv);
             columnContainers.push(colDiv);
         }
 
@@ -117,7 +117,7 @@ class QueueTreeView extends EventEmitter {
                 const cardElement = QueueCardView.createCardElement(node, searchTermLC, (eventName, queuePath) => {
                     this._emit(eventName, queuePath);
                 });
-                columnContainers[currentLevel].appendChild(cardElement);
+                columnContainers[currentLevel].append(cardElement);
                 this.queueElements.set(node.path, cardElement);
             } else {
                 console.warn(
@@ -127,7 +127,7 @@ class QueueTreeView extends EventEmitter {
 
             if (node.children) {
                 const childrenToRender = this._sortQueueChildren(Object.values(node.children));
-                childrenToRender.forEach((childNode) => renderNodeRecursive(childNode));
+                for (const childNode of childrenToRender) renderNodeRecursive(childNode);
             }
         };
 
@@ -171,25 +171,25 @@ class QueueTreeView extends EventEmitter {
         if ((parentRect.width === 0 || parentRect.height === 0) && parentNode.path !== 'root') return;
 
         if (parentNode.children) {
-            Object.values(parentNode.children).forEach((childNode) => {
+            for (const childNode of Object.values(parentNode.children)) {
                 if (childNode && !childNode.isDeleted && childNode.path) {
                     const childElement = this.queueElements.get(childNode.path);
                     if (childElement) {
                         const childRect = childElement.getBoundingClientRect();
-                        if (childRect.width === 0 || childRect.height === 0) return;
+                        if (childRect.width === 0 || childRect.height === 0) continue;
                         this._drawSankeyLinkToChild(parentRect, childRect, svgRect, svgContainer, childNode);
                         this._actualDrawRecursive(childNode, svgRect, svgContainer);
                     }
                 }
-            });
+            }
         }
     }
 
     _drawSankeyLinkToChild(parentRect, childRect, svgRect, svgContainer, childNode) {
         // Calculate dynamic link width based on childNode.absoluteCapacity (live info)
         let dynamicWidth = DEFAULT_SANKEY_LINK_WIDTH;
-        if (childNode && typeof childNode.absoluteCapacity === 'number' && !isNaN(childNode.absoluteCapacity)) {
-            const capacityPercent = Math.max(0, Math.min(100, childNode.absoluteCapacity)) / 100.0; // Normalize 0-1
+        if (childNode && typeof childNode.absoluteCapacity === 'number' && !Number.isNaN(childNode.absoluteCapacity)) {
+            const capacityPercent = Math.max(0, Math.min(100, childNode.absoluteCapacity)) / 100; // Normalize 0-1
             dynamicWidth = MIN_SANKEY_LINK_WIDTH + (MAX_SANKEY_LINK_WIDTH - MIN_SANKEY_LINK_WIDTH) * capacityPercent;
         }
         // Ensure the width is at least a minimally visible amount
@@ -226,13 +226,13 @@ class QueueTreeView extends EventEmitter {
         const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
         path.setAttribute('d', d);
         path.setAttribute('class', linkClass);
-        svgContainer.appendChild(path);
+        svgContainer.append(path);
     }
 
     clearConnectors() {
         if (this.arrowSvgEl) {
             const existingPaths = this.arrowSvgEl.querySelectorAll('path.sankey-link, path.arrow-line');
-            existingPaths.forEach((path) => path.remove());
+            for (const path of existingPaths) path.remove();
         }
         clearTimeout(this._connectorDrawTimeoutId);
     }
@@ -243,19 +243,19 @@ class QueueTreeView extends EventEmitter {
         if (maxDepth < 0) return;
         for (let i = 0; i <= maxDepth; i++) {
             const header = DomUtils.createElement('div', 'level-header', null, `Level ${i + 1}`);
-            this.levelHeadersContainerEl.appendChild(header);
+            this.levelHeadersContainerEl.append(header);
         }
     }
 
     _calculateMaxDepthOfFormattedTree(node) {
         if (!node) return -1;
-        let maxDepth = node.level !== undefined ? node.level : 0;
+        let maxDepth = node.level === undefined ? 0 : node.level;
         if (node.children) {
-            Object.values(node.children).forEach((child) => {
+            for (const child of Object.values(node.children)) {
                 if (child && !child.isDeleted) {
                     maxDepth = Math.max(maxDepth, this._calculateMaxDepthOfFormattedTree(child));
                 }
-            });
+            }
         }
         return maxDepth;
     }
@@ -270,12 +270,12 @@ class QueueTreeView extends EventEmitter {
                     if (typeof q.sortableCapacity === 'number') return q.sortableCapacity;
                     if (q.capacityDisplayForLabel) {
                         // Prefer label-specific if shown
-                        const val = parseFloat(String(q.capacityDisplayForLabel).replace(/[^\d.-]/g, ''));
-                        return isNaN(val) ? 0 : val;
+                        const value = Number.parseFloat(String(q.capacityDisplayForLabel).replaceAll(/[^\d.-]/g, ''));
+                        return Number.isNaN(value) ? 0 : value;
                     }
                     if (q.capacityDisplay) {
-                        const val = parseFloat(String(q.capacityDisplay).replace(/[^\d.-]/g, ''));
-                        return isNaN(val) ? 0 : val;
+                        const value = Number.parseFloat(String(q.capacityDisplay).replaceAll(/[^\d.-]/g, ''));
+                        return Number.isNaN(value) ? 0 : value;
                     }
                     return 0;
                 };

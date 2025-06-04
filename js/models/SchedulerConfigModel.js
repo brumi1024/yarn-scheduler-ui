@@ -37,14 +37,12 @@ class SchedulerConfigModel extends EventEmitter {
             // Separate CS global properties from other global properties collected by the Trie
             this._globalConfig.clear();
             const allGlobals = this._trieInstance.getGlobalConfigs();
-            allGlobals.forEach((value, key) => {
-                if (key.startsWith(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5))) {
-                    // Check if it's a CS global
-                    if (!key.substring(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5).length).startsWith('root.')) {
+            for (const [key, value] of allGlobals.entries()) {
+                if (key.startsWith(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5)) && // Check if it's a CS global
+                    !key.slice(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5).length).startsWith('root.')) {
                         this._globalConfig.set(key, value);
                     }
-                }
-            });
+            }
             this._emit('configLoaded', { success: true });
         } catch (error) {
             console.error('SchedulerConfigModel: Error initializing Trie from config:', error);
@@ -75,17 +73,17 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {string} queuePath - The full path of the new queue.
      * @param {Object} params - A map of simple configuration keys and values for the new queue.
      */
-    stageAddQueue(queuePath, params) {
+    stageAddQueue(queuePath, parameters) {
         this._pendingChanges.removeQueues = this._pendingChanges.removeQueues.filter((p) => p !== queuePath);
         this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(
             (item) => item.queueName !== queuePath
         );
 
         const existingAddIndex = this._pendingChanges.addQueues.findIndex((item) => item.queueName === queuePath);
-        if (existingAddIndex > -1) {
-            this._pendingChanges.addQueues[existingAddIndex].params = params;
+        if (existingAddIndex === -1) {
+            this._pendingChanges.addQueues.push({ queueName: queuePath, params: parameters });
         } else {
-            this._pendingChanges.addQueues.push({ queueName: queuePath, params });
+            this._pendingChanges.addQueues[existingAddIndex].params = parameters;
         }
         this._emit('pendingChangesUpdated', this.getRawPendingChanges());
     }
@@ -99,18 +97,18 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {string} queuePath - The full path of the queue to update.
      * @param {Object} params - Map of simple config keys (or specific label keys) to values.
      */
-    stageUpdateQueue(queuePath, params) {
+    stageUpdateQueue(queuePath, parameters) {
         const pendingAddEntry = this._pendingChanges.addQueues.find((item) => item.queueName === queuePath);
         if (pendingAddEntry) {
             // If it's a new queue being staged, merge updates into its params.
             // This includes handling complex keys like "accessible-node-labels.X.capacity" directly.
-            pendingAddEntry.params = { ...pendingAddEntry.params, ...params };
+            pendingAddEntry.params = { ...pendingAddEntry.params, ...parameters };
         } else {
-            let updateEntry = this._pendingChanges.updateQueues.find((item) => item.queueName === queuePath);
+            const updateEntry = this._pendingChanges.updateQueues.find((item) => item.queueName === queuePath);
             if (updateEntry) {
-                updateEntry.params = { ...updateEntry.params, ...params };
+                updateEntry.params = { ...updateEntry.params, ...parameters };
             } else {
-                this._pendingChanges.updateQueues.push({ queueName: queuePath, params });
+                this._pendingChanges.updateQueues.push({ queueName: queuePath, params: parameters });
             }
         }
         this._emit('pendingChangesUpdated', this.getRawPendingChanges());
@@ -142,7 +140,7 @@ class SchedulerConfigModel extends EventEmitter {
 
     /** Returns a deep copy of all pending changes. @returns {Object} */
     getRawPendingChanges() {
-        return JSON.parse(JSON.stringify(this._pendingChanges));
+        return structuredClone(this._pendingChanges);
     }
 
     /** Clears all staged pending changes. */
@@ -170,10 +168,12 @@ class SchedulerConfigModel extends EventEmitter {
         if (!this._trieInstance || !this._trieInstance.rootNode) return [];
         function collectPaths(node) {
             if (node.isQueue) paths.add(node.fullPath);
-            node.children.forEach(collectPaths);
+            for (const element of node.children || []) {
+                collectPaths(element);
+            }
         }
         collectPaths(this._trieInstance.rootNode);
-        return Array.from(paths).sort();
+        return [...paths].sort();
     }
 
     /**

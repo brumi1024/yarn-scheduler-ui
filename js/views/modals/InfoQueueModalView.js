@@ -24,13 +24,13 @@ class InfoQueueModalView extends BaseModalView {
 
         if (!data || !data.displayName) {
             this.formContainer.innerHTML = '<p>Queue information not available or queue not found.</p>';
-            const modalTitleEl = DomUtils.qs('.modal-title', this.modalEl);
-            if (modalTitleEl) modalTitleEl.textContent = 'Queue Info';
+            const modalTitleElement = DomUtils.qs('.modal-title', this.modalEl);
+            if (modalTitleElement) modalTitleElement.textContent = 'Queue Info';
             return;
         }
 
-        const modalTitleEl = DomUtils.qs('.modal-title', this.modalEl);
-        if (modalTitleEl) modalTitleEl.textContent = `Queue Info: ${DomUtils.escapeXml(data.displayName)}`;
+        const modalTitleElement = DomUtils.qs('.modal-title', this.modalEl);
+        if (modalTitleElement) modalTitleElement.textContent = `Queue Info: ${DomUtils.escapeXml(data.displayName)}`;
 
         this.formContainer.innerHTML = this._buildHtml(data);
     }
@@ -38,7 +38,7 @@ class InfoQueueModalView extends BaseModalView {
     _buildSectionHtml(title, items) {
         if (!items || items.length === 0) return '';
 
-        let itemsHtml = items
+        const itemsHtml = items
             .map((item) => {
                 let valueDisplay = '';
                 if (Array.isArray(item.value)) {

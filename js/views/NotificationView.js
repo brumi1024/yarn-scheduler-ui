@@ -3,7 +3,7 @@ class NotificationView {
         this.container = DomUtils.getById('notification-container');
         if (!this.container) {
             this.container = DomUtils.createElement('div', 'notification-container', { id: 'notification-container' });
-            document.body.appendChild(this.container);
+            document.body.append(this.container);
         }
 
         this.icons = {
@@ -29,32 +29,35 @@ class NotificationView {
         notification.innerHTML = `
             <span class="notification-icon">${this.icons[type] || this.icons.info}</span>
             <div class="notification-content">${message}</div>
-            ${type !== 'loading' ? '<button class="notification-close">×</button>' : ''}
+            ${type === 'loading' ? '' : '<button class="notification-close">×</button>'}
         `;
 
-        this.container.appendChild(notification);
+        this.container.append(notification);
 
         const closeButton = notification.querySelector('.notification-close');
         if (closeButton) {
-            closeButton.onclick = () => this._dismiss(notification);
+            closeButton.addEventListener('click', () => this._dismiss(notification));
         }
 
         let effectiveDuration;
         if (duration === undefined) {
             switch (type) {
-                case 'success':
+                case 'success': {
                     effectiveDuration = CONFIG.TIMEOUTS.NOTIFICATION_DURATION.SUCCESS;
                     break;
-                case 'error':
+                }
+                case 'error': {
                     effectiveDuration = CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR;
                     break;
-                case 'warning':
+                }
+                case 'warning': {
                     effectiveDuration = CONFIG.TIMEOUTS.NOTIFICATION_DURATION.WARNING;
                     break;
-                case 'info':
-                default:
+                }
+                default: {
                     effectiveDuration = CONFIG.TIMEOUTS.NOTIFICATION_DURATION.INFO;
                     break;
+                }
             }
         } else {
             effectiveDuration = duration;
@@ -73,7 +76,7 @@ class NotificationView {
             notificationElement.style.animation = 'slideOut 0.3s ease-in';
             setTimeout(() => {
                 if (notificationElement.parentNode) {
-                    notificationElement.parentNode.removeChild(notificationElement);
+                    notificationElement.remove();
                 }
             }, 300);
         }
