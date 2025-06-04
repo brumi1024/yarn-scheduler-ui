@@ -15,7 +15,6 @@ A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler 
 <img width="3200" alt="Screenshot 2025-06-02 at 9 47 11" src="https://github.com/user-attachments/assets/47402e7a-3335-4aca-82fc-a2112dd0c941" />
 <img width="3200" alt="Screenshot 2025-06-02 at 9 47 15" src="https://github.com/user-attachments/assets/4e11fc47-2d98-4125-8aae-9ef70afad06e" />
 
-
 ## Important
 
 The project is currently under development, and later it will be part of the Hadoop repository.

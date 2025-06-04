@@ -1,128 +1,132 @@
 {
-  "property": [
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.maximum-capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.maximum-capacity",
-      "value": "40"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.m7kIjsqti2rNMvvCejwXoCd9c1mxMj4V.capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_A.leaf-queue-template.capacity",
-      "value": "0"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_A.capacity",
-      "value": "20"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.queues",
-      "value": "capacity"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.maximum-capacity",
-      "value": "[memory=65536,vcores=36]"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_A.leaf-queue-template.maximum-capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity.maximum-capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_BBB.capacity",
-      "value": "5w"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.queues",
-      "value": "default,TEST_A,TEST_B,TEST_C"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.webservice.mutation-api.version",
-      "value": "1748673158506"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_BBB.maximum-capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.default.maximum-am-resource-percent",
-      "value": "0.2"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.maximum-capacity",
-      "value": "80"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.capacity",
-      "value": "20"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_A.maximum-capacity",
-      "value": "80"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_CCC.capacity",
-      "value": "6w"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.default.capacity",
-      "value": "20"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_A.auto-create-child-queue.enabled",
-      "value": "true"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_AAA.capacity",
-      "value": "4w"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_AAA.maximum-capacity",
-      "value": "30"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.capacity",
-      "value": "33"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.capacity",
-      "value": "40"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.TEST_CCC.maximum-capacity",
-      "value": "100"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.default.maximum-capacity",
-      "value": "[memory=65536,vcores=12]"
-    },
-    {
-      "name": "yarn.scheduler.capacity.schedule-asynchronously.enable",
-      "value": "true"
-    },
-    {
-      "name": "yarn.scheduler.capacity.node-locality-delay",
-      "value": "70"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_B.queues",
-      "value": "FOO"
-    },
-    {
-      "name": "yarn.scheduler.capacity.root.TEST_C.queues",
-      "value": "TEST_AAA,TEST_BBB,TEST_CCC"
-    }
-  ]
+    "property": [
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.maximum-capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.maximum-capacity",
+            "value": "40"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.m7kIjsqti2rNMvvCejwXoCd9c1mxMj4V.capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_A.leaf-queue-template.capacity",
+            "value": "0"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_A.capacity",
+            "value": "20"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.queues",
+            "value": "capacity"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.maximum-capacity",
+            "value": "[memory=65536,vcores=36]"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_A.leaf-queue-template.maximum-capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity.maximum-capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_BBB.capacity",
+            "value": "5w"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.queues",
+            "value": "default,TEST_A,TEST_B,TEST_C"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.webservice.mutation-api.version",
+            "value": "1748673158506"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_BBB.maximum-capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.default.maximum-am-resource-percent",
+            "value": "0.2"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.maximum-capacity",
+            "value": "80"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.capacity",
+            "value": "20"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.state",
+            "value": "STOPPED"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_A.maximum-capacity",
+            "value": "80"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_CCC.capacity",
+            "value": "6w"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.default.capacity",
+            "value": "20"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_A.auto-create-child-queue.enabled",
+            "value": "true"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_AAA.capacity",
+            "value": "4w"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_AAA.maximum-capacity",
+            "value": "30"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.capacity",
+            "value": "33"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.capacity",
+            "value": "40"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.TEST_CCC.maximum-capacity",
+            "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.default.maximum-capacity",
+            "value": "[memory=65536,vcores=12]"
+        },
+        {
+            "name": "yarn.scheduler.capacity.schedule-asynchronously.enable",
+            "value": "true"
+        },
+        {
+            "name": "yarn.scheduler.capacity.node-locality-delay",
+            "value": "70"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_B.queues",
+            "value": "FOO"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.TEST_C.queues",
+            "value": "TEST_AAA,TEST_BBB,TEST_CCC"
+        }
+    ]
 }

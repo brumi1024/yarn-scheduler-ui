@@ -1,106 +1,100 @@
 .level-headers {
-  display: flex;
-  margin-bottom: 20px;
-  gap: 120px;
-  justify-content: flex-start;
-  padding-top: 10px;
+    display: flex;
+    margin-bottom: 20px;
+    gap: 120px; /* Controls horizontal gap between columns and thus link length */
+    justify-content: flex-start;
+    padding-top: 10px;
+    padding-left: 20px; /* Ensure headers align with columns */
 }
 
 .level-header {
-  font-weight: 600;
-  color: #666;
-  font-size: 14px;
-  width: 280px; /* Increased to match card width */
-  text-align: center;
-  flex-shrink: 0;
+    font-weight: 600;
+    color: #666;
+    font-size: 14px;
+    width: 280px;
+    text-align: center;
+    flex-shrink: 0;
 }
 
 .queue-tree {
-  display: flex;
-  gap: 120px;
-  align-items: flex-start;
-  position: relative;
-  min-width: fit-content;
+    display: flex;
+    gap: 120px; /* Controls horizontal gap between columns */
+    align-items: flex-start;
+    position: relative; /* For SVG overlay */
+    min-width: fit-content; /* Allow horizontal scrolling */
+    padding: 20px; /* Add some padding around the tree */
 }
 
 .queue-column {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-  position: relative;
-  width: 280px; /* Increased width */
-  flex-shrink: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Vertical gap between cards in the same column */
+    position: relative;
+    width: 280px;
+    flex-shrink: 0;
 }
 
-.queue-actions-menu {
-  position: relative;
-  margin-left: 8px;
-}
-
-.queue-menu-btn {
-  border: 1.5px solid #bdbdbd;
-  border-radius: 6px;
-  background: #f5f7fa;
-  padding: 4px 6px; /* Reduced padding */
-  cursor: pointer;
-  transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
-  outline: none;
-  box-shadow: 0 1px 2px rgba(60, 65, 80, 0.04);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: #64748B;
-}
-
-.queue-menu-btn:hover,
-.queue-menu-btn:focus {
-  border-color: #1976d2;
-  box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
-  background: #e3f0fd;
-  color: #1976d2;
+/* SVG container for connectors */
+.arrow-container {
+    /* Rename to .connector-container if preferred */
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none; /* Allows clicks to pass through to cards */
+    z-index: 0; /* Below cards if cards have higher z-index, or 1 if cards are 0 */
 }
 
 .queue-card {
-  background: #fff;
-  border: none;
-  border-radius: 12px;
-  box-shadow: 0 3px 12px 0 rgba(0, 0, 0, 0.08), 2px 0 0 0 #1976d2;
-  padding: 14px 16px 12px 18px; /* Reduced padding */
-  width: 280px; /* Increased width */
-  min-height: 160px; /* Slightly reduced height */
-  display: flex;
-  flex-direction: column;
-  gap: 8px; /* Reduced gap */
-  position: relative;
-  transition: box-shadow 0.2s, transform 0.12s;
-  cursor: pointer;
+    background: #fff;
+    border: none; /* Border can be added by statusClass or base */
+    border-radius: 12px;
+    box-shadow: 0 3px 12px 0 rgba(0, 0, 0, 0.08); /* Default left accent removed, handled by status */
+    padding: 14px 16px 12px 18px;
+    width: 280px;
+    min-height: 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    position: relative; /* For z-index if needed above connectors */
+    transition:
+        box-shadow 0.2s,
+        transform 0.12s;
+    cursor: default; /* No longer pointer for whole card, only name/buttons */
+    z-index: 2; /* Ensure cards are above connectors */
+    border-left: 4px solid #1976d2; /* Default blue left border */
 }
 
 .queue-card:hover {
-  box-shadow: 0 6px 24px rgba(33, 150, 243, 0.12), 2px 0 0 0 #1976d2;
-  transform: translateY(-2px) scale(1.012);
+    box-shadow: 0 6px 24px rgba(33, 150, 243, 0.12);
+    transform: translateY(-2px) scale(1.012);
 }
 
-/* Status borders - preserved */
 .queue-card.pending-changes {
-  border-left: 4px solid #ffc107;
-  background: #fffbe8;
+    border-left-color: #ffc107; /* Yellow */
+    background: #fffbe8;
 }
 .queue-card.validation-error {
-  border-left: 4px solid #dc3545;
-  background: #fbf3f3; /* This is also used by to-be-deleted, good for consistency */
+    /* For future use */
+    border-left-color: #e53935; /* Stronger Red */
+    background: #fdecea;
 }
 .queue-card.new-queue {
-  border-left: 4px solid #28a745;
-  background: #f6fef7;
+    border-left-color: #43a047; /* Green */
+    background: #f6fef7;
 }
 .queue-card.to-be-deleted {
-  border-left: 4px solid #dc3545;
-  background: #fbf3f3; /* Light red tint */
-  /* opacity: 0.75; */ /* Removed opacity to make it more like new-queue styling */
+    border-left-color: #dc3545; /* Red */
+    background: #fbf3f3;
+    opacity: 0.7; /* Dim deleted cards */
+}
+.queue-card.to-be-deleted .queue-name,
+.queue-card.to-be-deleted .queue-button-group button {
+    text-decoration: line-through;
+    color: #777;
 }
 
-/* Updated header layout */
 .queue-header {
     display: flex;
     align-items: center;
@@ -118,14 +112,12 @@
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
-    cursor: pointer;
+    cursor: pointer; /* Keep name clickable for edit */
 }
-
 .queue-name:hover {
     color: #1976d2;
 }
 
-/* Button group container */
 .queue-button-group {
     display: flex;
     align-items: center;
@@ -133,24 +125,28 @@
     flex-shrink: 0;
 }
 
-/* Info button styling - similar to menu button */
-.queue-info-btn {
+.queue-info-btn,
+.queue-menu-btn {
     border: 1.5px solid #bdbdbd;
     border-radius: 6px;
     background: #f5f7fa;
     padding: 4px 6px;
     cursor: pointer;
-    transition: border-color 0.2s, box-shadow 0.2s, background-color 0.2s;
+    transition:
+        border-color 0.2s,
+        box-shadow 0.2s,
+        background-color 0.2s;
     outline: none;
     box-shadow: 0 1px 2px rgba(60, 65, 80, 0.04);
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #64748B;
+    color: #64748b;
 }
-
 .queue-info-btn:hover,
-.queue-info-btn:focus {
+.queue-info-btn:focus,
+.queue-menu-btn:hover,
+.queue-menu-btn:focus {
     border-color: #1976d2;
     box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
     background: #e3f0fd;
@@ -159,425 +155,269 @@
 
 .queue-actions-menu {
     position: relative;
-    margin-left: 0; /* Remove left margin since it's now in a button group */
 }
 
-/* Remove the old queue-info-button styles */
-.queue-info-button {
-    display: none; /* Hide if it exists elsewhere */
-}
-
-/* Enhanced dropdown styling for better visibility */
 .queue-dropdown {
-  position: absolute;
-  top: calc(100% + 4px); /* Small gap below button */
-  right: 0;
-  background: white;
-  border: 1px solid #d1d5db; /* More visible border */
-  border-radius: 8px; /* Slightly more rounded */
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15), 0 0 0 1px rgba(0, 0, 0, 0.05); /* Enhanced shadow */
-  z-index: 1000; /* Higher z-index to ensure visibility */
-  min-width: 160px;
-  display: none;
-  backdrop-filter: blur(8px); /* Add blur effect for modern look */
-  background: rgba(255, 255, 255, 0.95); /* Slightly transparent */
+    position: absolute;
+    top: calc(100% + 4px);
+    right: 0;
+    background: white;
+    border: 1px solid #d1d5db;
+    border-radius: 8px;
+    box-shadow:
+        0 8px 25px rgba(0, 0, 0, 0.15),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    z-index: 1000;
+    min-width: 160px;
+    display: none;
+    backdrop-filter: blur(8px);
+    background: rgba(255, 255, 255, 0.95);
 }
-
 .queue-dropdown.show {
-  display: block;
+    display: block;
 }
-
 .dropdown-item {
-  padding: 10px 14px; /* Increased padding for better touch targets */
-  cursor: pointer;
-  border-bottom: 1px solid #f3f4f6;
-  white-space: nowrap;
-  color: #374151;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: all 0.15s ease;
-  text-decoration: none;
-  display: block;
+    padding: 10px 14px;
+    cursor: pointer;
+    border-bottom: 1px solid #f3f4f6;
+    white-space: nowrap;
+    color: #374151;
+    font-size: 0.875rem;
+    font-weight: 500;
+    transition: all 0.15s ease;
+    text-decoration: none;
+    display: block;
 }
-
 .dropdown-item:hover {
-  background: #f8fafc;
-  color: #1976d2;
-  transform: translateX(2px); /* Subtle hover animation */
+    background: #f8fafc;
+    color: #1976d2;
+    transform: translateX(2px);
 }
-
 .dropdown-item:last-child {
-  border-bottom: none;
-  border-radius: 0 0 8px 8px;
+    border-bottom: none;
+    border-radius: 0 0 8px 8px;
 }
-
 .dropdown-item:first-child {
-  border-radius: 8px 8px 0 0;
+    border-radius: 8px 8px 0 0;
 }
-
 .dropdown-item.disabled {
-  color: #9ca3af;
-  cursor: not-allowed;
-  background: transparent;
+    color: #9ca3af;
+    cursor: not-allowed;
+    background: transparent;
 }
-
 .dropdown-item.disabled:hover {
-  background: transparent;
-  color: #9ca3af;
-  transform: none;
+    background: transparent;
+    color: #9ca3af;
+    transform: none;
 }
 
-/* Divider styling */
 .queue-card-divider {
-  border: none;
-  height: 1px;
-  background: linear-gradient(to right, transparent, #e5e7eb, transparent);
-  margin: 8px 0 10px 0;
+    border: none;
+    height: 1px;
+    background: linear-gradient(to right, transparent, #e5e7eb, transparent);
+    margin: 8px 0 10px 0;
 }
 
-/* Label Area */
 .queue-label-area {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-  margin-bottom: 12px;
-  min-height: 24px; /* Ensure consistent spacing even with no labels */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    margin-bottom: 12px;
+    min-height: 24px;
 }
-
-/* Queue Tags */
 .queue-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 0.7rem;
-  font-weight: 500;
-  padding: 4px 8px;
-  border-radius: 12px;
-  border: 1px solid;
-  line-height: 1.2;
-  white-space: nowrap;
-  transition: all 0.2s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    padding: 4px 8px;
+    border-radius: 12px;
+    border: 1px solid;
+    line-height: 1.2;
+    white-space: nowrap;
+    transition: all 0.2s ease;
 }
-
 .queue-tag:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
 }
-
-/* Mode Tags */
 .tag-mode {
-  background-color: #e3f2fd;
-  color: #1565c0;
-  border-color: #90caf9;
+    background-color: #e3f2fd;
+    color: #1565c0;
+    border-color: #90caf9;
 }
-
-/* State Tags */
 .tag-state.tag-running {
-  background-color: #e8f5e8;
-  color: #2e7d32;
-  border-color: #c8e6c9;
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border-color: #c8e6c9;
 }
-
 .tag-state.tag-stopped {
-  background-color: #ffebee;
-  color: #c62828;
-  border-color: #ffcdd2;
+    background-color: #ffebee;
+    color: #c62828;
+    border-color: #ffcdd2;
 }
-
-/* Auto-Create Tag */
+.tag-state.tag-running-live {
+    background-color: #a5d6a7;
+    color: #1b5e20;
+    border-color: #81c784;
+    font-weight: bold;
+}
+.tag-state.tag-stopped-live {
+    background-color: #ef9a9a;
+    color: #b71c1c;
+    border-color: #e57373;
+    font-weight: bold;
+}
 .tag-auto-create {
-  background-color: #fff3e0;
-  color: #ef6c00;
-  border-color: #ffcc02;
+    background-color: #fff3e0;
+    color: #ef6c00;
+    border-color: #ffcc02;
 }
 
-/* Capacity Section */
 .queue-capacity-section {
-  margin-top: auto; /* Push to bottom of card */
+    margin-top: auto;
 }
-
-/* Info button positioning */
-.queue-info-button {
-  background: none;
-  border: none;
-  color: #64748b;
-  cursor: pointer;
-  padding: 4px;
-  font-size: 14px;
-  border-radius: 4px;
-  line-height: 1;
-  transition: all 0.2s ease;
-  margin-right: 8px;
-}
-
-.queue-info-button:hover {
-  color: #007bff;
-  background-color: #f8f9fa;
-}
-
-.queue-capacities {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid #aaa7a7;
-  border-radius: 8px;
-  font-family: Arial, sans-serif;
-  font-weight: bold;
-  color: #333;
-  background-color: #f5f7fa;
-  min-width: 100px;
-  height: 35px; /* Slightly reduced height */
-  margin-top: auto;
-}
-
-.queue-capacities table {
-  width: 100%;
-  text-align: center;
-}
-
-.capacity-compact,
-.separator {
-  display: inline-block;
-  vertical-align: middle;
-  font-size: 14px; /* Slightly smaller */
-}
-
-.separator {
-  margin: 6px 6px; /* Reduced margin */
-  color: #666;
-}
-
-.queue-capacity-absolute,
-.queue-max-capacity-absolute {
-  font-size: 11px; /* Slightly smaller */
-  color: #223768;
-  background: #f9fafc;
-  border-radius: 4px;
-  padding: 0 6px;
-  margin-top: 2px;
-  font-family: monospace;
-  white-space: pre-wrap;
-  word-break: break-all;
-  max-width: 140px; /* Increased for wider cards */
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.queue-capacity-absolute[title],
-.queue-max-capacity-absolute[title] {
-  cursor: help;
-  border-bottom: 1px dotted #babdc2;
-}
-
-.queue-visual {
-  height: 70px; /* Slightly reduced */
-  background: #e9ecef;
-  border-radius: 4px;
-  position: relative;
-  overflow: hidden;
-  margin-top: auto;
-}
-
-.queue-fill {
-  height: 100%;
-  background: linear-gradient(135deg, #28a745, #20c997);
-  transition: width 0.3s ease;
-}
-
-.queue-fill.changed {
-  background: linear-gradient(135deg, #ffc107, #ffb347);
-}
-
-.effective-capacity {
-  font-size: 11px; /* Slightly smaller */
-  color: #666;
-  text-align: center;
-  margin-top: 4px; /* Reduced margin */
-  font-style: italic;
-}
-
-/* Arrow rendering - preserved */
-.arrow-container {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  pointer-events: none;
-  z-index: 1;
-}
-
-.arrow-line {
-  stroke: #666;
-  stroke-width: 2;
-  fill: none;
-  marker-end: url(#arrowhead);
-}
-
-/* Close dropdown when clicking outside */
-.queue-dropdown::before {
-  content: "";
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  z-index: -1;
-}
-
-/* Add these new styles after the existing capacity styles */
 
 /* Capacity Display Styles */
-.capacity-display {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 0.8rem;
-  margin-top: auto;
-}
-
-.capacity-row {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 4px;
-}
-
-.capacity-row:last-child {
-  margin-bottom: 0;
-}
-
-.capacity-label {
-  color: #6c757d;
-  font-weight: 600;
-  font-size: 0.7rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.capacity-value {
-  color: #343a40;
-  font-weight: 600;
-  font-family: "SF Mono", "Monaco", "Consolas", monospace;
-}
-
-/* Absolute Capacity Styles */
+.capacity-display,
 .absolute-capacity-display {
-  background: #f8f9fa;
-  border: 1px solid #e9ecef;
-  border-radius: 6px;
-  padding: 8px 10px;
-  font-size: 0.75rem;
-  margin-top: auto;
-  max-height: 120px;
-  overflow-y: auto;
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    padding: 8px 10px;
+    font-size: 0.8rem;
+    margin-top: auto;
 }
-
-.capacity-section {
-  margin-bottom: 8px;
+.absolute-capacity-display {
+    font-size: 0.75rem;
+    max-height: 120px;
+    overflow-y: auto;
 }
-
-.capacity-section:last-child {
-  margin-bottom: 0;
+.capacity-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 4px;
+}
+.capacity-row:last-child {
+    margin-bottom: 0;
+}
+.capacity-label {
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.capacity-value {
+    color: #343a40;
+    font-weight: 600;
+    font-family: 'SF Mono', 'Monaco', 'Consolas', monospace;
 }
 
 .capacity-section-title {
-  color: #6c757d;
-  font-weight: 600;
-  font-size: 0.7rem;
-  margin-bottom: 4px;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+    color: #6c757d;
+    font-weight: 600;
+    font-size: 0.7rem;
+    margin-bottom: 4px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
 }
-
 .resource-list {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-}
-
-.resource-item {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 2px 4px;
-  background: #fff;
-  border-radius: 3px;
-  border: 1px solid #e9ecef;
-}
-
-.resource-key {
-  color: #495057;
-  font-weight: 500;
-  font-size: 0.7rem;
-}
-
-.resource-value {
-  color: #212529;
-  font-weight: 600;
-  font-family: "SF Mono", "Monaco", "Consolas", monospace;
-  font-size: 0.7rem;
-}
-
-.resource-raw {
-  background: #fff;
-  border: 1px solid #e9ecef;
-  border-radius: 3px;
-  padding: 4px 6px;
-  font-family: "SF Mono", "Monaco", "Consolas", monospace;
-  font-size: 0.7rem;
-  color: #495057;
-  word-break: break-all;
-  overflow-wrap: break-word;
-}
-
-/* Update existing queue-capacities for backward compatibility */
-.queue-capacities {
-  display: none; /* Hide old style when new capacity-display is present */
-}
-
-.capacity-display ~ .queue-capacities {
-  display: none; /* Ensure old style is hidden when new one exists */
-}
-
-/* Responsive adjustments for longer resource lists */
-@media (max-width: 1200px) {
-  .absolute-capacity-display {
-    max-height: 100px;
-  }
-
-  .resource-item {
+    display: flex;
     flex-direction: column;
-    align-items: flex-start;
-    gap: 1px;
-  }
+    gap: 2px;
+}
+.resource-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 2px 4px;
+    background: #fff;
+    border-radius: 3px;
+    border: 1px solid #e9ecef;
+}
+.resource-key {
+    color: #495057;
+    font-weight: 500;
+    font-size: 0.7rem;
+}
+.resource-value {
+    color: #212529;
+    font-weight: 600;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.7rem;
+}
+.resource-raw {
+    background: #fff;
+    border: 1px solid #e9ecef;
+    border-radius: 3px;
+    padding: 4px 6px;
+    font-family: 'SF Mono', monospace;
+    font-size: 0.7rem;
+    color: #495057;
+    word-break: break-all;
+    overflow-wrap: break-word;
+}
 
-  .resource-key {
-    font-size: 0.65rem;
-  }
+/* Sankey Link Styles */
+.sankey-link {
+    fill-opacity: 0.55; /* Adjusted for better visibility */
+    stroke-width: 0.5;
+    stroke-opacity: 0.6;
+    transition:
+        fill-opacity 0.2s ease-in-out,
+        stroke-opacity 0.2s ease-in-out;
+}
+.sankey-link:hover {
+    fill-opacity: 0.75;
+    stroke-opacity: 0.9;
+}
+.sankey-link.state-running {
+    fill: #90caf9;
+    stroke: #64b5f6;
+} /* Lighter blue */
+.sankey-link.state-stopped {
+    fill: #ef9a9a;
+    stroke: #e57373;
+} /* Lighter red */
+.sankey-link.state-unknown {
+    fill: #e0e0e0;
+    stroke: #bdbdbd;
+} /* Light grey */
 
-  .resource-value {
-    font-size: 0.65rem;
-    align-self: flex-end;
-  }
+/* Responsive adjustments */
+@media (max-width: 1200px) {
+    .absolute-capacity-display {
+        max-height: 100px;
+    }
+    .resource-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1px;
+    }
+    .resource-key,
+    .resource-value {
+        font-size: 0.65rem;
+    }
+    .resource-value {
+        align-self: flex-end;
+    }
 }
 
 /* Scrollbar styling for capacity overflow */
 .absolute-capacity-display::-webkit-scrollbar {
-  width: 4px;
+    width: 4px;
 }
-
 .absolute-capacity-display::-webkit-scrollbar-track {
-  background: #f1f1f1;
-  border-radius: 2px;
+    background: #f1f1f1;
+    border-radius: 2px;
 }
-
 .absolute-capacity-display::-webkit-scrollbar-thumb {
-  background: #c1c1c1;
-  border-radius: 2px;
+    background: #c1c1c1;
+    border-radius: 2px;
 }
-
 .absolute-capacity-display::-webkit-scrollbar-thumb:hover {
-  background: #a8a8a8;
+    background: #a8a8a8;
 }

@@ -1,33 +1,33 @@
 {
-  "name": "yarn-scheduler-ui",
-  "version": "0.1.0",
-  "type": "module",
-  "description": "A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler configurations. This tool provides an intuitive visual interface for viewing, editing, and managing queue hierarchies in YARN clusters.",
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/brumi1024/yarn-scheduler-ui.git"
-  },
-  "keywords": [],
-  "author": "",
-  "license": "ISC",
-  "bugs": {
-    "url": "https://github.com/brumi1024/yarn-scheduler-ui/issues"
-  },
-  "homepage": "https://github.com/brumi1024/yarn-scheduler-ui#readme",
-  "scripts": {
-    "lint": "eslint . --ext .js,.html",
-    "lint:ci": "eslint . --ext .js,.jsx,.ts,.tsx,.html --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif",
-    "lint:fix": "eslint . --ext .js,.html --fix",
-    "format": "prettier --write \"**/*.{js,html,css,md,json}\" --ignore-path .gitignore"
-  },
-  "devDependencies": {
-    "@eslint/js": "^9.2.0",
-    "@microsoft/eslint-formatter-sarif": "^3.1.0",
-    "eslint": "^9.2.0",
-    "eslint-config-prettier": "^9.1.0",
-    "eslint-plugin-html": "^8.0.0",
-    "eslint-plugin-unicorn": "^52.0.0",
-    "globals": "^15.2.0",
-    "prettier": "^3.2.5"
-  }
+    "name": "yarn-scheduler-ui",
+    "version": "0.1.0",
+    "type": "module",
+    "description": "A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler configurations. This tool provides an intuitive visual interface for viewing, editing, and managing queue hierarchies in YARN clusters.",
+    "repository": {
+        "type": "git",
+        "url": "git+https://github.com/brumi1024/yarn-scheduler-ui.git"
+    },
+    "keywords": [],
+    "author": "",
+    "license": "ISC",
+    "bugs": {
+        "url": "https://github.com/brumi1024/yarn-scheduler-ui/issues"
+    },
+    "homepage": "https://github.com/brumi1024/yarn-scheduler-ui#readme",
+    "scripts": {
+        "lint": "eslint . --ext .js,.html",
+        "lint:ci": "eslint . --ext .js,.jsx,.ts,.tsx,.html --format @microsoft/eslint-formatter-sarif --output-file eslint-results.sarif",
+        "lint:fix": "eslint . --ext .js,.html --fix",
+        "format": "prettier --write \"**/*.{js,html,css,md,json}\" --ignore-path .gitignore"
+    },
+    "devDependencies": {
+        "@eslint/js": "^9.2.0",
+        "@microsoft/eslint-formatter-sarif": "^3.1.0",
+        "eslint": "^9.28.0",
+        "eslint-config-prettier": "^9.1.0",
+        "eslint-plugin-html": "^8.0.0",
+        "eslint-plugin-unicorn": "^59.0.0",
+        "globals": "^15.2.0",
+        "prettier": "^3.2.5"
+    }
 }
