@@ -5,7 +5,7 @@ import htmlPlugin from "eslint-plugin-html";
 import unicornPlugin from "eslint-plugin-unicorn";
 import prettierConfig from "eslint-config-prettier"; // Disables ESLint rules that conflict with Prettier
 
-export default tseslint.config( // `tseslint.config` is a helper for easier TS setup
+export default(
     {
       // Global ignores
       ignores: [
