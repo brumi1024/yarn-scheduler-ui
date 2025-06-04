@@ -6,3 +6,5 @@
 *.swo
 *~
 *.iml
+node_modules/
+.tool-versions
