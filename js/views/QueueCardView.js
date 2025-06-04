@@ -6,8 +6,8 @@ const QueueCardView = {
      * @private
      */
     _createCapacityDisplayHTML(formattedQueue) {
-        let capacityBlockHTML = "";
-        let maxCapacityBlockHTML = "";
+        let capacityBlockHTML = '';
+        let maxCapacityBlockHTML = '';
 
         const effectiveMode = formattedQueue.effectiveCapacityMode;
         const displayCapacity = formattedQueue.capacityDisplayForLabel || formattedQueue.capacityDisplay;
@@ -15,37 +15,46 @@ const QueueCardView = {
         const capacityDetails = formattedQueue.capacityDetailsForLabel || formattedQueue.capacityDetails;
         const maxCapacityDetails = formattedQueue.maxCapacityDetailsForLabel || formattedQueue.maxCapacityDetails;
 
-
         // --- Capacity Block ---
-        if (effectiveMode === CAPACITY_MODES.ABSOLUTE || effectiveMode === CAPACITY_MODES.VECTOR ||
-            (this._isVectorString(displayCapacity) && (effectiveMode === CAPACITY_MODES.PERCENTAGE || effectiveMode === CAPACITY_MODES.WEIGHT))) { // Handle vector even if mode is %/w (e.g. for root.max_capacity)
+        if (
+            effectiveMode === CAPACITY_MODES.ABSOLUTE ||
+            effectiveMode === CAPACITY_MODES.VECTOR ||
+            (this._isVectorString(displayCapacity) &&
+                (effectiveMode === CAPACITY_MODES.PERCENTAGE || effectiveMode === CAPACITY_MODES.WEIGHT))
+        ) {
+            // Handle vector even if mode is %/w (e.g. for root.max_capacity)
 
             capacityBlockHTML = '<div class="absolute-capacity-display">';
             capacityBlockHTML += '  <div class="capacity-section-title">Capacity:</div>';
             if (capacityDetails && capacityDetails.length > 0) {
                 capacityBlockHTML += '    <div class="resource-list">';
-                capacityDetails.forEach(r => {
+                capacityDetails.forEach((r) => {
                     capacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${DomUtils.escapeXml(r.key)}:</span><span class="resource-value">${DomUtils.escapeXml(r.value)}${DomUtils.escapeXml(r.unit || '')}</span></div>`;
                 });
                 capacityBlockHTML += '    </div>';
             } else {
-                capacityBlockHTML += `    <div class="resource-raw">${DomUtils.escapeXml(displayCapacity || "N/A")}</div>`;
+                capacityBlockHTML += `    <div class="resource-raw">${DomUtils.escapeXml(displayCapacity || 'N/A')}</div>`;
             }
             capacityBlockHTML += '</div>';
-        } else { // Percentage or Weight
+        } else {
+            // Percentage or Weight
             capacityBlockHTML = '<div class="capacity-display">';
-            capacityBlockHTML += `  <div class="capacity-row"><span class="capacity-label">Capacity:</span><span class="capacity-value">${DomUtils.escapeXml(displayCapacity || "N/A")}</span></div>`;
+            capacityBlockHTML += `  <div class="capacity-row"><span class="capacity-label">Capacity:</span><span class="capacity-value">${DomUtils.escapeXml(displayCapacity || 'N/A')}</span></div>`;
             capacityBlockHTML += '</div>';
         }
 
         // --- Maximum Capacity Block ---
-        if (displayMaxCapacity !== undefined && displayMaxCapacity !== null && String(displayMaxCapacity).trim() !== "") {
+        if (
+            displayMaxCapacity !== undefined &&
+            displayMaxCapacity !== null &&
+            String(displayMaxCapacity).trim() !== ''
+        ) {
             if (this._isVectorString(displayMaxCapacity)) {
                 maxCapacityBlockHTML = '<div class="absolute-capacity-display" style="margin-top: 6px;">';
                 maxCapacityBlockHTML += '  <div class="capacity-section-title">Max Capacity:</div>';
                 if (maxCapacityDetails && maxCapacityDetails.length > 0) {
                     maxCapacityBlockHTML += '    <div class="resource-list">';
-                    maxCapacityDetails.forEach(r => {
+                    maxCapacityDetails.forEach((r) => {
                         maxCapacityBlockHTML += `      <div class="resource-item"><span class="resource-key">${DomUtils.escapeXml(r.key)}:</span><span class="resource-value">${DomUtils.escapeXml(r.value)}${DomUtils.escapeXml(r.unit || '')}</span></div>`;
                     });
                     maxCapacityBlockHTML += '    </div>';
@@ -53,7 +62,8 @@ const QueueCardView = {
                     maxCapacityBlockHTML += `    <div class="resource-raw">${DomUtils.escapeXml(displayMaxCapacity)}</div>`;
                 }
                 maxCapacityBlockHTML += '</div>';
-            } else { // Percentage
+            } else {
+                // Percentage
                 maxCapacityBlockHTML = '<div class="capacity-display" style="margin-top: 6px;">';
                 maxCapacityBlockHTML += `  <div class="capacity-row"><span class="capacity-label">Max Capacity:</span><span class="capacity-value">${DomUtils.escapeXml(displayMaxCapacity)}</span></div>`;
                 maxCapacityBlockHTML += '</div>';
@@ -74,9 +84,9 @@ const QueueCardView = {
      * @private
      */
     _highlightMatch(text, searchTerm) {
-        if (!searchTerm || !text) return DomUtils.escapeXml(text || "");
-        const safeTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const re = new RegExp(`(${safeTerm})`, "ig"); // Wrap term in capturing group
+        if (!searchTerm || !text) return DomUtils.escapeXml(text || '');
+        const safeTerm = searchTerm.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+        const re = new RegExp(`(${safeTerm})`, 'ig'); // Wrap term in capturing group
         return DomUtils.escapeXml(text).replace(re, `<mark>$1</mark>`);
     },
 
@@ -89,13 +99,13 @@ const QueueCardView = {
      */
     createCardElement(formattedQueue, currentSearchTerm, eventEmitterCallback) {
         if (!formattedQueue) {
-            console.warn("QueueCardView: formattedQueue data is missing.");
-            return DomUtils.createElement('div', 'queue-card-error', null, "Error: Queue data unavailable.");
+            console.warn('QueueCardView: formattedQueue data is missing.');
+            return DomUtils.createElement('div', 'queue-card-error', null, 'Error: Queue data unavailable.');
         }
 
         const card = DomUtils.createElement('div', 'queue-card', {
             'data-queue-path': formattedQueue.path,
-            'data-level': formattedQueue.level
+            'data-level': formattedQueue.level,
         });
         if (formattedQueue.statusClass) card.classList.add(formattedQueue.statusClass);
 
@@ -110,7 +120,8 @@ const QueueCardView = {
 
         const buttonGroup = DomUtils.createElement('div', 'queue-button-group');
         const infoBtn = DomUtils.createElement('button', 'queue-info-btn', {
-            title: 'Queue Information', 'aria-label': 'Queue information'
+            title: 'Queue Information',
+            'aria-label': 'Queue information',
         });
         infoBtn.innerHTML = `
             <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
@@ -125,7 +136,8 @@ const QueueCardView = {
 
         const actionsMenuContainer = DomUtils.createElement('span', 'queue-actions-menu');
         const menuBtn = DomUtils.createElement('button', 'queue-menu-btn', {
-            'aria-label': 'Queue actions', tabindex: '0'
+            'aria-label': 'Queue actions',
+            tabindex: '0',
         });
         menuBtn.innerHTML = `<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="5" cy="12" r="2"/><circle cx="12" cy="12" r="2"/><circle cx="19" cy="12" r="2"/></svg>`;
 
@@ -143,10 +155,10 @@ const QueueCardView = {
             const deleteItem = DomUtils.createElement('div', 'dropdown-item', null, deleteItemText);
             if (!formattedQueue.isDeleted && !formattedQueue.canBeDeletedForDropdown) {
                 deleteItem.classList.add('disabled');
-                deleteItem.title = formattedQueue.deletionReason || "Cannot be deleted";
+                deleteItem.title = formattedQueue.deletionReason || 'Cannot be deleted';
             } else {
                 deleteItem.onclick = () => {
-                    if(formattedQueue.isDeleted) eventEmitterCallback('undoDeleteQueueClicked', formattedQueue.path);
+                    if (formattedQueue.isDeleted) eventEmitterCallback('undoDeleteQueueClicked', formattedQueue.path);
                     else eventEmitterCallback('deleteQueueClicked', formattedQueue.path);
                 };
             }
@@ -155,15 +167,15 @@ const QueueCardView = {
 
         actionsMenuContainer.appendChild(menuBtn);
         actionsMenuContainer.appendChild(dropdown);
-        menuBtn.onclick = (e) => { // Toggle for this specific dropdown
+        menuBtn.onclick = (e) => {
+            // Toggle for this specific dropdown
             e.stopPropagation();
             // Hide all other open dropdowns
-            DomUtils.qsa('.queue-dropdown.show').forEach(d => {
+            DomUtils.qsa('.queue-dropdown.show').forEach((d) => {
                 if (d.id !== dropdown.id) d.classList.remove('show');
             });
             dropdown.classList.toggle('show');
         };
-
 
         buttonGroup.appendChild(infoBtn);
         buttonGroup.appendChild(actionsMenuContainer);
@@ -173,11 +185,14 @@ const QueueCardView = {
         const divider = DomUtils.createElement('hr', 'queue-card-divider');
         const labelArea = DomUtils.createElement('div', 'queue-label-area');
         if (formattedQueue.uiLabels && formattedQueue.uiLabels.length > 0) {
-            labelArea.innerHTML = formattedQueue.uiLabels.map(label =>
-                `<span class="${DomUtils.escapeXml(label.cssClass)}" title="${DomUtils.escapeXml(label.title || '')}">${DomUtils.escapeXml(label.text)}</span>`
-            ).join("");
+            labelArea.innerHTML = formattedQueue.uiLabels
+                .map(
+                    (label) =>
+                        `<span class="${DomUtils.escapeXml(label.cssClass)}" title="${DomUtils.escapeXml(label.title || '')}">${DomUtils.escapeXml(label.text)}</span>`
+                )
+                .join('');
         } else {
-            labelArea.style.minHeight = "24px"; // Keep space consistent
+            labelArea.style.minHeight = '24px'; // Keep space consistent
         }
 
         const capacitySection = DomUtils.createElement('div', 'queue-capacity-section');
@@ -189,5 +204,5 @@ const QueueCardView = {
         card.appendChild(capacitySection);
 
         return card;
-    }
+    },
 };

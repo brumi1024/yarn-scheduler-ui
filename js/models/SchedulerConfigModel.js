@@ -20,7 +20,7 @@ class SchedulerConfigModel extends EventEmitter {
             addQueues: [],
             updateQueues: [],
             removeQueues: [],
-            globalUpdates: {}
+            globalUpdates: {},
         };
     }
 
@@ -38,16 +38,17 @@ class SchedulerConfigModel extends EventEmitter {
             this._globalConfig.clear();
             const allGlobals = this._trieInstance.getGlobalConfigs();
             allGlobals.forEach((value, key) => {
-                if (key.startsWith(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5))) { // Check if it's a CS global
-                    if (!key.substring(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5).length).startsWith("root.")) {
+                if (key.startsWith(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5))) {
+                    // Check if it's a CS global
+                    if (!key.substring(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5).length).startsWith('root.')) {
                         this._globalConfig.set(key, value);
                     }
                 }
             });
             this._emit('configLoaded', { success: true });
         } catch (error) {
-            console.error("SchedulerConfigModel: Error initializing Trie from config:", error);
-            this._emit('configLoaded', { success: false, error: "Error processing configuration data" });
+            console.error('SchedulerConfigModel: Error initializing Trie from config:', error);
+            this._emit('configLoaded', { success: false, error: 'Error processing configuration data' });
         }
     }
 
@@ -75,10 +76,12 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {Object} params - A map of simple configuration keys and values for the new queue.
      */
     stageAddQueue(queuePath, params) {
-        this._pendingChanges.removeQueues = this._pendingChanges.removeQueues.filter(p => p !== queuePath);
-        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(item => item.queueName !== queuePath);
+        this._pendingChanges.removeQueues = this._pendingChanges.removeQueues.filter((p) => p !== queuePath);
+        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(
+            (item) => item.queueName !== queuePath
+        );
 
-        const existingAddIndex = this._pendingChanges.addQueues.findIndex(item => item.queueName === queuePath);
+        const existingAddIndex = this._pendingChanges.addQueues.findIndex((item) => item.queueName === queuePath);
         if (existingAddIndex > -1) {
             this._pendingChanges.addQueues[existingAddIndex].params = params;
         } else {
@@ -97,13 +100,13 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {Object} params - Map of simple config keys (or specific label keys) to values.
      */
     stageUpdateQueue(queuePath, params) {
-        const pendingAddEntry = this._pendingChanges.addQueues.find(item => item.queueName === queuePath);
+        const pendingAddEntry = this._pendingChanges.addQueues.find((item) => item.queueName === queuePath);
         if (pendingAddEntry) {
             // If it's a new queue being staged, merge updates into its params.
             // This includes handling complex keys like "accessible-node-labels.X.capacity" directly.
             pendingAddEntry.params = { ...pendingAddEntry.params, ...params };
         } else {
-            let updateEntry = this._pendingChanges.updateQueues.find(item => item.queueName === queuePath);
+            let updateEntry = this._pendingChanges.updateQueues.find((item) => item.queueName === queuePath);
             if (updateEntry) {
                 updateEntry.params = { ...updateEntry.params, ...params };
             } else {
@@ -113,14 +116,15 @@ class SchedulerConfigModel extends EventEmitter {
         this._emit('pendingChangesUpdated', this.getRawPendingChanges());
     }
 
-
     /**
      * Stages a queue for removal.
      * @param {string} queuePath - The full path of the queue to remove.
      */
     stageRemoveQueue(queuePath) {
-        this._pendingChanges.addQueues = this._pendingChanges.addQueues.filter(item => item.queueName !== queuePath);
-        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(item => item.queueName !== queuePath);
+        this._pendingChanges.addQueues = this._pendingChanges.addQueues.filter((item) => item.queueName !== queuePath);
+        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(
+            (item) => item.queueName !== queuePath
+        );
         if (!this._pendingChanges.removeQueues.includes(queuePath)) {
             this._pendingChanges.removeQueues.push(queuePath);
         }
@@ -137,7 +141,9 @@ class SchedulerConfigModel extends EventEmitter {
     }
 
     /** Returns a deep copy of all pending changes. @returns {Object} */
-    getRawPendingChanges() { return JSON.parse(JSON.stringify(this._pendingChanges)); }
+    getRawPendingChanges() {
+        return JSON.parse(JSON.stringify(this._pendingChanges));
+    }
 
     /** Clears all staged pending changes. */
     clearPendingChanges() {
@@ -147,10 +153,12 @@ class SchedulerConfigModel extends EventEmitter {
 
     /** Checks if there are any pending changes. @returns {boolean} */
     hasPendingChanges() {
-        return this._pendingChanges.addQueues.length > 0 ||
+        return (
+            this._pendingChanges.addQueues.length > 0 ||
             this._pendingChanges.updateQueues.length > 0 ||
             this._pendingChanges.removeQueues.length > 0 ||
-            Object.keys(this._pendingChanges.globalUpdates).length > 0;
+            Object.keys(this._pendingChanges.globalUpdates).length > 0
+        );
     }
 
     /**

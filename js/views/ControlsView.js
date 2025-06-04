@@ -10,15 +10,24 @@ class ControlsView extends EventEmitter {
         this.sortSelectEl = DomUtils.getById('sort-select');
         this.refreshButtonEl = DomUtils.getById('btn-refresh-queues'); // Added refresh button
 
-        if (!this.controlsContainerEl || !this.partitionSelectEl || !this.addQueueButtonEl || !this.searchInputEl || !this.sortSelectEl || !this.refreshButtonEl) {
-            console.error("ControlsView: One or more required DOM elements are missing.");
+        if (
+            !this.controlsContainerEl ||
+            !this.partitionSelectEl ||
+            !this.addQueueButtonEl ||
+            !this.searchInputEl ||
+            !this.sortSelectEl ||
+            !this.refreshButtonEl
+        ) {
+            console.error('ControlsView: One or more required DOM elements are missing.');
             // Allow partial functionality if some elements are specific to certain tabs
-            if (!this.refreshButtonEl) console.error("ControlsView: Refresh button is missing.");
+            if (!this.refreshButtonEl) console.error('ControlsView: Refresh button is missing.');
         }
 
         this._bindEvents();
 
-        this.appStateModel.subscribe('selectedPartitionChanged', (partition) => this.renderSelectedPartition(partition));
+        this.appStateModel.subscribe('selectedPartitionChanged', (partition) =>
+            this.renderSelectedPartition(partition)
+        );
         this.appStateModel.subscribe('searchTermChanged', (term) => this.renderSearchTerm(term));
         this.appStateModel.subscribe('sortCriteriaChanged', (criteria) => this.renderSortCriteria(criteria));
     }
@@ -48,7 +57,8 @@ class ControlsView extends EventEmitter {
             });
         }
 
-        if (this.refreshButtonEl) { // Bind event for refresh button
+        if (this.refreshButtonEl) {
+            // Bind event for refresh button
             this.refreshButtonEl.addEventListener('click', () => {
                 this._emit('refreshDataClicked');
             });
@@ -58,7 +68,7 @@ class ControlsView extends EventEmitter {
     renderPartitions(partitions) {
         if (!this.partitionSelectEl) return;
         DomUtils.empty(this.partitionSelectEl);
-        (partitions || [DEFAULT_PARTITION]).forEach(partition => {
+        (partitions || [DEFAULT_PARTITION]).forEach((partition) => {
             const option = DomUtils.createElement('option', null, { value: partition }, partition || 'default');
             this.partitionSelectEl.appendChild(option);
         });

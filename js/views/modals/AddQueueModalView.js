@@ -12,7 +12,7 @@ class AddQueueModalView extends BaseModalView {
      */
     _renderContent(data) {
         if (!this.formContainer) {
-            console.error("AddQueueModalView: Form container not found.");
+            console.error('AddQueueModalView: Form container not found.');
             return;
         }
         DomUtils.empty(this.formContainer);
@@ -24,17 +24,21 @@ class AddQueueModalView extends BaseModalView {
     }
 
     _buildHtml(parentQueues, preselectedParentPath) {
-        let parentOptionsHtml = (parentQueues || []).map(parent => {
-            const selected = parent.path === preselectedParentPath ? 'selected' : '';
-            return `<option value="${DomUtils.escapeXml(parent.path)}" ${selected}>${DomUtils.escapeXml(parent.path)}</option>`;
-        }).join('');
+        let parentOptionsHtml = (parentQueues || [])
+            .map((parent) => {
+                const selected = parent.path === preselectedParentPath ? 'selected' : '';
+                return `<option value="${DomUtils.escapeXml(parent.path)}" ${selected}>${DomUtils.escapeXml(parent.path)}</option>`;
+            })
+            .join('');
 
-        if (!parentOptionsHtml && preselectedParentPath === 'root') { // Ensure root is option if list is empty
+        if (!parentOptionsHtml && preselectedParentPath === 'root') {
+            // Ensure root is option if list is empty
             parentOptionsHtml = `<option value="root" selected>root</option>`;
         }
 
-
-        const defaultPercentageCapacity = this.viewDataFormatterService._getDefaultCapacityValue(CAPACITY_MODES.PERCENTAGE);
+        const defaultPercentageCapacity = this.viewDataFormatterService._getDefaultCapacityValue(
+            CAPACITY_MODES.PERCENTAGE
+        );
         const defaultMaxCapacity = this.viewDataFormatterService._getDefaultMaxCapacityValue(CAPACITY_MODES.PERCENTAGE); // Max usually percentage
 
         // Only include core properties for Add modal, defaults for others applied by model/controller.
@@ -92,7 +96,9 @@ class AddQueueModalView extends BaseModalView {
             capacity: DomUtils.qs('#new-queue-capacity-validation', form),
             maxCapacity: DomUtils.qs('#new-queue-max-capacity-validation', form),
         };
-        Object.values(validationMessages).forEach(el => { if (el) el.textContent = ''; }); // Clear previous messages
+        Object.values(validationMessages).forEach((el) => {
+            if (el) el.textContent = '';
+        }); // Clear previous messages
 
         const parentPath = DomUtils.qs('#new-parent-queue-select', form).value;
         const queueName = DomUtils.qs('#new-queue-name', form).value.trim();
@@ -111,38 +117,49 @@ class AddQueueModalView extends BaseModalView {
         // Validate and Format Capacity
         const capacityValidationResult = ValidationService.parseAndValidateCapacityValue(capacity, capacityMode);
         if (capacityValidationResult.errors || capacityValidationResult.error) {
-            if (validationMessages.capacity) validationMessages.capacity.textContent = (capacityValidationResult.errors || [capacityValidationResult.error]).join(' ');
+            if (validationMessages.capacity)
+                validationMessages.capacity.textContent = (
+                    capacityValidationResult.errors || [capacityValidationResult.error]
+                ).join(' ');
             isValid = false;
         } else {
             capacity = capacityValidationResult.value; // Use potentially auto-corrected value
         }
 
         // Validate and Format Max Capacity (can be % or absolute)
-        let maxCapModeForValidation = this.viewDataFormatterService._isVectorString(maxCapacity) ? CAPACITY_MODES.ABSOLUTE : CAPACITY_MODES.PERCENTAGE;
-        if(maxCapacity.endsWith('w')) maxCapModeForValidation = CAPACITY_MODES.WEIGHT; // Though not typical for max-cap
+        let maxCapModeForValidation = this.viewDataFormatterService._isVectorString(maxCapacity)
+            ? CAPACITY_MODES.ABSOLUTE
+            : CAPACITY_MODES.PERCENTAGE;
+        if (maxCapacity.endsWith('w')) maxCapModeForValidation = CAPACITY_MODES.WEIGHT; // Though not typical for max-cap
 
-        const maxCapacityValidationResult = ValidationService.parseAndValidateCapacityValue(maxCapacity, maxCapModeForValidation, true); // Allow empty vector for max for now
+        const maxCapacityValidationResult = ValidationService.parseAndValidateCapacityValue(
+            maxCapacity,
+            maxCapModeForValidation,
+            true
+        ); // Allow empty vector for max for now
         if (maxCapacityValidationResult.errors || maxCapacityValidationResult.error) {
-            if (validationMessages.maxCapacity) validationMessages.maxCapacity.textContent = (maxCapacityValidationResult.errors || [maxCapacityValidationResult.error]).join(' ');
+            if (validationMessages.maxCapacity)
+                validationMessages.maxCapacity.textContent = (
+                    maxCapacityValidationResult.errors || [maxCapacityValidationResult.error]
+                ).join(' ');
             isValid = false;
         } else {
             maxCapacity = maxCapacityValidationResult.value;
         }
 
-
         if (!isValid) return null;
 
         // Prepare params with simple keys for the API structure and metadata defaults
         const params = {
-            'capacity': capacity,
+            capacity: capacity,
             'maximum-capacity': maxCapacity,
-            'state': state,
-            '_ui_capacityMode': capacityMode // UI hint for later processing
+            state: state,
+            _ui_capacityMode: capacityMode, // UI hint for later processing
         };
 
         // Add default values for other metadata-defined properties for new queues
-        QUEUE_CONFIG_METADATA.forEach(category => {
-            Object.values(category.properties).forEach(meta => {
+        QUEUE_CONFIG_METADATA.forEach((category) => {
+            Object.values(category.properties).forEach((meta) => {
                 const simpleKey = meta.key;
                 if (!params.hasOwnProperty(simpleKey) && meta.defaultValue !== undefined) {
                     params[simpleKey] = String(meta.defaultValue);
@@ -152,7 +169,6 @@ class AddQueueModalView extends BaseModalView {
 
         return { parentPath, queueName, params };
     }
-
 
     _bindFormEvents() {
         const form = DomUtils.qs('#add-queue-form', this.formContainer);
@@ -175,15 +191,22 @@ class AddQueueModalView extends BaseModalView {
             capacityModeSelect.addEventListener('change', () => {
                 const selectedMode = capacityModeSelect.value;
                 capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(selectedMode);
-                switch(selectedMode) {
-                    case CAPACITY_MODES.PERCENTAGE: capacityHelpText.textContent = "e.g., 10% or 10.0%"; break;
-                    case CAPACITY_MODES.WEIGHT: capacityHelpText.textContent = "e.g., 1w or 1.0w"; break;
-                    case CAPACITY_MODES.ABSOLUTE: capacityHelpText.textContent = "e.g., [memory=1024,vcores=1]"; break;
-                    default: capacityHelpText.textContent = "";
+                switch (selectedMode) {
+                    case CAPACITY_MODES.PERCENTAGE:
+                        capacityHelpText.textContent = 'e.g., 10% or 10.0%';
+                        break;
+                    case CAPACITY_MODES.WEIGHT:
+                        capacityHelpText.textContent = 'e.g., 1w or 1.0w';
+                        break;
+                    case CAPACITY_MODES.ABSOLUTE:
+                        capacityHelpText.textContent = 'e.g., [memory=1024,vcores=1]';
+                        break;
+                    default:
+                        capacityHelpText.textContent = '';
                 }
                 // Clear previous capacity validation message
                 const capValMsg = DomUtils.qs('#new-queue-capacity-validation', form);
-                if(capValMsg) capValMsg.textContent = '';
+                if (capValMsg) capValMsg.textContent = '';
             });
         }
 
@@ -199,7 +222,7 @@ class AddQueueModalView extends BaseModalView {
         }
 
         const cancelBtn = DomUtils.qs('#cancel-add-queue-btn', this.modalEl);
-        if(cancelBtn) {
+        if (cancelBtn) {
             cancelBtn.addEventListener('click', () => this.hide({ Canceled: true }));
         }
     }

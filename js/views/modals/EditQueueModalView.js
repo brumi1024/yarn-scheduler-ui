@@ -18,7 +18,7 @@ class EditQueueModalView extends BaseModalView {
     _renderContent(data) {
         if (!this.formContainer || !data || !data.path) {
             if (this.formContainer) DomUtils.empty(this.formContainer);
-            if (this.formContainer) this.formContainer.innerHTML = "<p>Queue data not available for editing.</p>";
+            if (this.formContainer) this.formContainer.innerHTML = '<p>Queue data not available for editing.</p>';
             return;
         }
         DomUtils.empty(this.formContainer);
@@ -26,7 +26,8 @@ class EditQueueModalView extends BaseModalView {
         this.currentQueueData = data; // Store for potential partial re-renders (node labels)
 
         const modalTitleEl = DomUtils.qs('.modal-title', this.modalEl);
-        if (modalTitleEl) modalTitleEl.textContent = `Edit Queue: ${DomUtils.escapeXml(data.displayName || data.path.split('.').pop())}`;
+        if (modalTitleEl)
+            modalTitleEl.textContent = `Edit Queue: ${DomUtils.escapeXml(data.displayName || data.path.split('.').pop())}`;
 
         this.formContainer.innerHTML = this._buildHtml(data);
         this._bindFormEvents(data);
@@ -54,9 +55,9 @@ class EditQueueModalView extends BaseModalView {
                         </div>
                         <div class="property-value-column">
                             <select class="form-input" id="edit-capacity-mode" data-original-mode="${DomUtils.escapeXml(effectiveCapacityMode)}">
-                                <option value="${CAPACITY_MODES.PERCENTAGE}" ${effectiveCapacityMode === CAPACITY_MODES.PERCENTAGE ? "selected" : ""}>Percentage (%)</option>
-                                <option value="${CAPACITY_MODES.WEIGHT}" ${effectiveCapacityMode === CAPACITY_MODES.WEIGHT ? "selected" : ""}>Weight (w)</option>
-                                <option value="${CAPACITY_MODES.ABSOLUTE}" ${effectiveCapacityMode === CAPACITY_MODES.ABSOLUTE ? "selected" : ""}>Absolute Resources</option>
+                                <option value="${CAPACITY_MODES.PERCENTAGE}" ${effectiveCapacityMode === CAPACITY_MODES.PERCENTAGE ? 'selected' : ''}>Percentage (%)</option>
+                                <option value="${CAPACITY_MODES.WEIGHT}" ${effectiveCapacityMode === CAPACITY_MODES.WEIGHT ? 'selected' : ''}>Weight (w)</option>
+                                <option value="${CAPACITY_MODES.ABSOLUTE}" ${effectiveCapacityMode === CAPACITY_MODES.ABSOLUTE ? 'selected' : ''}>Absolute Resources</option>
                             </select>
                         </div>
                      </div>`;
@@ -67,14 +68,20 @@ class EditQueueModalView extends BaseModalView {
             Object.entries(category.properties).forEach(([placeholderKey, meta]) => {
                 const simpleKey = meta.key;
                 const fullYarnPropName = placeholderKey.replace(Q_PATH_PLACEHOLDER, path);
-                const currentValue = properties[simpleKey] !== undefined ? String(properties[simpleKey]) : String(meta.defaultValue);
-                formHTML += this._buildPropertyInputHtml(simpleKey, fullYarnPropName, meta, currentValue, `std-${simpleKey}`);
+                const currentValue =
+                    properties[simpleKey] !== undefined ? String(properties[simpleKey]) : String(meta.defaultValue);
+                formHTML += this._buildPropertyInputHtml(
+                    simpleKey,
+                    fullYarnPropName,
+                    meta,
+                    currentValue,
+                    `std-${simpleKey}`
+                );
             });
         });
 
         // Node Label Configurations Section
         formHTML += this._buildNodeLabelSectionHtml(path, nodeLabelData, data.allPartitions);
-
 
         formHTML += `</form>
                      <div class="modal-actions">
@@ -86,7 +93,8 @@ class EditQueueModalView extends BaseModalView {
 
     _buildNodeLabelSectionHtml(queuePath, nodeLabelData, allPartitions = []) {
         let sectionHtml = `<h4 class="form-category-title">Node Label Configurations</h4>`;
-        const anlMeta = NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
+        const anlMeta =
+            NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
         const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
 
         sectionHtml += this._buildPropertyInputHtml(
@@ -100,30 +108,42 @@ class EditQueueModalView extends BaseModalView {
         // Area to display/edit per-label configurations
         sectionHtml += `<div id="per-label-configs-container" class="per-label-configs-container" style="margin-top: 10px; padding-left:15px; border-left: 2px solid #eee;">`;
 
-        const currentLabelsResult = ValidationService.validateNodeLabelsString(nodeLabelData.accessibleNodeLabelsString);
+        const currentLabelsResult = ValidationService.validateNodeLabelsString(
+            nodeLabelData.accessibleNodeLabelsString
+        );
         const currentLabels = currentLabelsResult.isValid ? currentLabelsResult.labels : [];
 
-        if (currentLabels.length > 0 && currentLabels[0] !== '*' && currentLabels[0] !== "") {
-            currentLabels.forEach(label => {
+        if (currentLabels.length > 0 && currentLabels[0] !== '*' && currentLabels[0] !== '') {
+            currentLabels.forEach((label) => {
                 if (!label) return;
                 sectionHtml += `<h5 class="label-config-subtitle">Label: '${DomUtils.escapeXml(label)}'</h5>`;
                 Object.entries(NODE_LABEL_CONFIG_METADATA.perLabelProperties).forEach(([placeholderKey, meta]) => {
                     const simpleSubKey = `${label}.${meta.key}`; // e.g., "gpu.capacity"
-                    const fullYarnPropName = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath).replace('<label_name>', label);
-                    const currentValue = nodeLabelData.labelSpecificParams[simpleSubKey] !== undefined ? String(nodeLabelData.labelSpecificParams[simpleSubKey]) : String(meta.defaultValue);
-                    const augmentedMeta = {...meta, displayName: meta.displayName.replace("Label", "")}; // Remove generic "Label" prefix for brevity
-                    sectionHtml += this._buildPropertyInputHtml(simpleSubKey, fullYarnPropName, augmentedMeta, currentValue, `label-${label}-${meta.key}`);
+                    const fullYarnPropName = placeholderKey
+                        .replace(Q_PATH_PLACEHOLDER, queuePath)
+                        .replace('<label_name>', label);
+                    const currentValue =
+                        nodeLabelData.labelSpecificParams[simpleSubKey] !== undefined
+                            ? String(nodeLabelData.labelSpecificParams[simpleSubKey])
+                            : String(meta.defaultValue);
+                    const augmentedMeta = { ...meta, displayName: meta.displayName.replace('Label', '') }; // Remove generic "Label" prefix for brevity
+                    sectionHtml += this._buildPropertyInputHtml(
+                        simpleSubKey,
+                        fullYarnPropName,
+                        augmentedMeta,
+                        currentValue,
+                        `label-${label}-${meta.key}`
+                    );
                 });
             });
-        } else if (currentLabels.length === 0 || currentLabels[0] === "") {
+        } else if (currentLabels.length === 0 || currentLabels[0] === '') {
             sectionHtml += `<p class="form-help">No specific labels configured. Edit 'Accessible Node Labels' above to add specific labels.</p>`;
-        } else if (currentLabels[0] === "*") {
+        } else if (currentLabels[0] === '*') {
             sectionHtml += `<p class="form-help">Queue has access to all ('*') labels. To set specific capacities per label, list them explicitly above instead of using '*'.</p>`;
         }
         sectionHtml += `</div>`;
         return sectionHtml;
     }
-
 
     _buildPropertyInputHtml(simpleOrPartialKey, fullYarnPropName, meta, currentValue, idPrefix = null) {
         let html = `<div class="form-group property-edit-item" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}">
@@ -137,29 +157,37 @@ class EditQueueModalView extends BaseModalView {
         const inputId = `edit-queue-${inputIdBase}`;
         const dataAttributes = `data-original-value="${DomUtils.escapeXml(currentValue)}" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}" data-full-key="${DomUtils.escapeXml(fullYarnPropName)}"`;
 
-        if (meta.type === "enum") {
+        if (meta.type === 'enum') {
             html += `<select class="form-input" id="${inputId}" ${dataAttributes}>`;
-            (meta.options || []).forEach(opt => {
-                html += `<option value="${DomUtils.escapeXml(opt)}" ${currentValue === opt ? "selected" : ""}>${DomUtils.escapeXml(opt)}</option>`;
+            (meta.options || []).forEach((opt) => {
+                html += `<option value="${DomUtils.escapeXml(opt)}" ${currentValue === opt ? 'selected' : ''}>${DomUtils.escapeXml(opt)}</option>`;
             });
             html += `</select>`;
-        } else if (meta.type === "boolean") {
+        } else if (meta.type === 'boolean') {
             html += `<select class="form-input" id="${inputId}" ${dataAttributes}>
-                        <option value="true" ${String(currentValue) === "true" ? "selected" : ""}>true</option>
-                        <option value="false" ${String(currentValue) === "false" ? "selected" : ""}>false</option>
+                        <option value="true" ${String(currentValue) === 'true' ? 'selected' : ''}>true</option>
+                        <option value="false" ${String(currentValue) === 'false' ? 'selected' : ''}>false</option>
                      </select>`;
         } else {
-            let inputType = (meta.type === "number" || meta.type === "percentage") ? "number" : "text";
-            if (simpleOrPartialKey === 'capacity' || simpleOrPartialKey === 'maximum-capacity' || simpleOrPartialKey.endsWith('.capacity') || simpleOrPartialKey.endsWith('.maximum-capacity')) {
+            let inputType = meta.type === 'number' || meta.type === 'percentage' ? 'number' : 'text';
+            if (
+                simpleOrPartialKey === 'capacity' ||
+                simpleOrPartialKey === 'maximum-capacity' ||
+                simpleOrPartialKey.endsWith('.capacity') ||
+                simpleOrPartialKey.endsWith('.maximum-capacity')
+            ) {
                 inputType = 'text'; // Capacities can be strings with %, w, or vector
             }
 
             let attrs = `type="${inputType}" value="${DomUtils.escapeXml(currentValue)}" ${dataAttributes}`;
             if (meta.step !== undefined) attrs += ` step="${meta.step}"`;
-            if (meta.type === "percentage") { // For number inputs acting as percentage
-                if(meta.min !== undefined) attrs += ` min="${meta.min}"`; else attrs += ` min="0"`;
-                if(meta.max !== undefined) attrs += ` max="${meta.max}"`; else attrs += ` max="1"`; // Default 0-1 for direct % val
-                if(meta.step === undefined) attrs += ` step="0.01"`;
+            if (meta.type === 'percentage') {
+                // For number inputs acting as percentage
+                if (meta.min !== undefined) attrs += ` min="${meta.min}"`;
+                else attrs += ` min="0"`;
+                if (meta.max !== undefined) attrs += ` max="${meta.max}"`;
+                else attrs += ` max="1"`; // Default 0-1 for direct % val
+                if (meta.step === undefined) attrs += ` step="0.01"`;
             }
             if (meta.placeholder) attrs += ` placeholder="${DomUtils.escapeXml(meta.placeholder)}"`;
 
@@ -171,7 +199,7 @@ class EditQueueModalView extends BaseModalView {
 
     _bindFormEvents(queuePath, originalEffectiveCapacityMode) {
         const form = DomUtils.qs('#edit-queue-form', this.formContainer);
-        if(!form) return;
+        if (!form) return;
 
         const capacityModeSelect = DomUtils.qs('#edit-capacity-mode', form);
         const capacityInput = DomUtils.qs('[data-simple-key="capacity"] .form-input', form);
@@ -194,11 +222,10 @@ class EditQueueModalView extends BaseModalView {
                     queuePath: this.currentQueuePath,
                     newLabelsString: newLabelsString,
                     // Pass current form data so controller can merge and re-request formatting
-                    currentFormParams: this._collectFormData(form, originalEffectiveCapacityMode, queuePath).params
+                    currentFormParams: this._collectFormData(form, originalEffectiveCapacityMode, queuePath).params,
                 });
             });
         }
-
 
         const submitBtn = DomUtils.qs('#submit-edit-queue-btn', this.modalEl);
         if (submitBtn) {
@@ -207,7 +234,7 @@ class EditQueueModalView extends BaseModalView {
                 if (Object.keys(collectedData.params).length > 0) {
                     this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
                 } else {
-                    this.controller.notificationView.show({ message: "No changes detected to stage.", type: "info" });
+                    this.controller.notificationView.show({ message: 'No changes detected to stage.', type: 'info' });
                     this.hide({ Canceled: true, NoChanges: true }); // Close if no changes
                 }
             });
@@ -230,7 +257,7 @@ class EditQueueModalView extends BaseModalView {
             capacityModeChanged = true;
         }
 
-        form.querySelectorAll('.form-input').forEach(inputEl => {
+        form.querySelectorAll('.form-input').forEach((inputEl) => {
             if (inputEl.id === 'edit-capacity-mode') return;
 
             const simpleOrPartialKey = inputEl.getAttribute('data-simple-key');
@@ -242,20 +269,35 @@ class EditQueueModalView extends BaseModalView {
 
                 // Special handling for capacity when mode changes
                 if (simpleOrPartialKey === 'capacity' && capacityModeChanged) {
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(newValue, newCapacityMode, this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode));
+                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                        newValue,
+                        newCapacityMode,
+                        this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode)
+                    );
                     hasChanged = true; // Consider it changed if mode changed, even if formatted value is same
-                } else if ((simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) && this.viewDataFormatterService._isVectorString(originalValue) && this._isEffectivelyEmptyVector(newValue)) {
+                } else if (
+                    (simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) &&
+                    this.viewDataFormatterService._isVectorString(originalValue) &&
+                    this._isEffectivelyEmptyVector(newValue)
+                ) {
                     // If original was a vector like [memory=0] and new value is "[]", consider it a change to empty
-                    newValue = "[]";
-                    hasChanged = originalValue !== "[]";
+                    newValue = '[]';
+                    hasChanged = originalValue !== '[]';
+                } else if (simpleOrPartialKey === 'capacity') {
+                    // ensure capacity formatting for its current mode
+                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                        newValue,
+                        newCapacityMode,
+                        originalValue
+                    );
+                } else if (simpleOrPartialKey === 'maximum-capacity') {
+                    // ensure max-capacity formatting
+                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                        newValue,
+                        CAPACITY_MODES.ABSOLUTE,
+                        '100%'
+                    ); // Max can be % or vector
                 }
-                else if(simpleOrPartialKey === 'capacity'){ // ensure capacity formatting for its current mode
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(newValue, newCapacityMode, originalValue);
-                }
-                else if(simpleOrPartialKey === 'maximum-capacity'){ // ensure max-capacity formatting
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(newValue, CAPACITY_MODES.ABSOLUTE, '100%'); // Max can be % or vector
-                }
-
 
                 if (hasChanged) {
                     stagedChanges.params[simpleOrPartialKey] = newValue;
@@ -266,8 +308,8 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _isEffectivelyEmptyVector(value) {
-        if (value === "[]") return true;
+        if (value === '[]') return true;
         const parsed = this.viewDataFormatterService._resourceVectorParser(value);
-        return parsed.every(p => parseFloat(p.value) === 0);
+        return parsed.every((p) => parseFloat(p.value) === 0);
     }
 }

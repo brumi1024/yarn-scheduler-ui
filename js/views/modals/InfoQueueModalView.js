@@ -17,13 +17,13 @@ class InfoQueueModalView extends BaseModalView {
      */
     _renderContent(data) {
         if (!this.formContainer) {
-            console.error("InfoQueueModalView: Form container not found.");
+            console.error('InfoQueueModalView: Form container not found.');
             return;
         }
         DomUtils.empty(this.formContainer);
 
         if (!data || !data.displayName) {
-            this.formContainer.innerHTML = "<p>Queue information not available or queue not found.</p>";
+            this.formContainer.innerHTML = '<p>Queue information not available or queue not found.</p>';
             const modalTitleEl = DomUtils.qs('.modal-title', this.modalEl);
             if (modalTitleEl) modalTitleEl.textContent = 'Queue Info';
             return;
@@ -38,19 +38,21 @@ class InfoQueueModalView extends BaseModalView {
     _buildSectionHtml(title, items) {
         if (!items || items.length === 0) return '';
 
-        let itemsHtml = items.map(item => {
-            let valueDisplay = '';
-            if (Array.isArray(item.value)) {
-                // For array values (like capacity breakdown strings)
-                valueDisplay = '<div>' + item.value.map(v => DomUtils.escapeXml(String(v))).join('</div><div>') + '</div>';
-            } else if (item.value === null || item.value === undefined) {
-                valueDisplay = '<em class="text-muted">N/A</em>';
-            }
-            else {
-                valueDisplay = DomUtils.escapeXml(String(item.value));
-            }
-            return `<tr><td class="info-label">${DomUtils.escapeXml(item.label)}</td><td class="info-value">${valueDisplay}</td></tr>`;
-        }).join('');
+        let itemsHtml = items
+            .map((item) => {
+                let valueDisplay = '';
+                if (Array.isArray(item.value)) {
+                    // For array values (like capacity breakdown strings)
+                    valueDisplay =
+                        '<div>' + item.value.map((v) => DomUtils.escapeXml(String(v))).join('</div><div>') + '</div>';
+                } else if (item.value === null || item.value === undefined) {
+                    valueDisplay = '<em class="text-muted">N/A</em>';
+                } else {
+                    valueDisplay = DomUtils.escapeXml(String(item.value));
+                }
+                return `<tr><td class="info-label">${DomUtils.escapeXml(item.label)}</td><td class="info-value">${valueDisplay}</td></tr>`;
+            })
+            .join('');
 
         if (!itemsHtml) return ''; // Don't render section if all items resulted in no displayable value
 

@@ -8,10 +8,10 @@
 class SchedulerTrieNode {
     constructor(segment = '') {
         this.segment = segment; // The name of this queue segment (e.g., "default" in "root.default")
-        this.fullPath = '';   // The full path to this node (e.g., "root.default")
+        this.fullPath = ''; // The full path to this node (e.g., "root.default")
         this.properties = new Map(); // Stores all YARN properties for this queue path
-        this.children = new Map();   // Map<string, SchedulerTrieNode> for child queues
-        this.isQueue = false;      // True if this node represents an actual, defined queue
+        this.children = new Map(); // Map<string, SchedulerTrieNode> for child queues
+        this.isQueue = false; // True if this node represents an actual, defined queue
     }
 }
 
@@ -25,8 +25,8 @@ class SchedulerConfigTrie {
         this.rootNode = null;
         this.globalProperties = new Map(); // Stores full_key -> value for global properties
 
-        this._YARN_SCHEDULER_CAPACITY_PREFIX = "yarn.scheduler.capacity.";
-        this._QUEUES_SUFFIX = ".queues";
+        this._YARN_SCHEDULER_CAPACITY_PREFIX = 'yarn.scheduler.capacity.';
+        this._QUEUES_SUFFIX = '.queues';
     }
 
     /**
@@ -43,7 +43,7 @@ class SchedulerConfigTrie {
         const otherProperties = []; // To store properties not defining queue structure
 
         if (!schedulerConfProperties || !Array.isArray(schedulerConfProperties)) {
-            console.warn("SchedulerConfigTrie: No properties provided for initialization.");
+            console.warn('SchedulerConfigTrie: No properties provided for initialization.');
             return;
         }
 
@@ -60,12 +60,18 @@ class SchedulerConfigTrie {
 
             const prefixlessName = configKey.substring(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
 
-            if (!prefixlessName.startsWith("root")) { // Global CS properties
+            if (!prefixlessName.startsWith('root')) {
+                // Global CS properties
                 this.globalProperties.set(configKey, value);
             } else if (prefixlessName.endsWith(this._QUEUES_SUFFIX)) {
                 const parentPath = prefixlessName.substring(0, prefixlessName.length - this._QUEUES_SUFFIX.length);
                 if (parentPath.length > 0) {
-                    const children = new Set(value.split(',').map(q => q.trim()).filter(Boolean));
+                    const children = new Set(
+                        value
+                            .split(',')
+                            .map((q) => q.trim())
+                            .filter(Boolean)
+                    );
                     queueDefinitions.set(parentPath, children);
                 } else {
                     console.warn(`SchedulerConfigTrie: Malformed 'queues' property key: ${configKey}`);
@@ -77,7 +83,7 @@ class SchedulerConfigTrie {
         }
 
         // Pass 2: Build the Trie skeleton based strictly on '.queues' definitions.
-        this._buildTrieSkeleton(this.rootNode, "root", queueDefinitions);
+        this._buildTrieSkeleton(this.rootNode, 'root', queueDefinitions);
 
         // Pass 3: Assign all other properties (queue-specific and complex global) to the Trie nodes.
         for (const prop of otherProperties) {
@@ -95,7 +101,7 @@ class SchedulerConfigTrie {
     _buildTrieSkeleton(parentNode, parentPathKey, queueDefinitions) {
         const childNames = queueDefinitions.get(parentPathKey);
         if (childNames) {
-            childNames.forEach(childName => {
+            childNames.forEach((childName) => {
                 if (!childName) return; // Skip empty child names
                 const newNode = new SchedulerTrieNode(childName);
                 newNode.fullPath = `${parentNode.fullPath}.${childName}`;
@@ -153,7 +159,8 @@ class SchedulerConfigTrie {
         }
 
         let currentNode = this.rootNode;
-        if (segments.length === 1) { // Request for the root node itself
+        if (segments.length === 1) {
+            // Request for the root node itself
             return currentNode.isQueue ? currentNode : null;
         }
 

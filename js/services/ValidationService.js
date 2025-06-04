@@ -12,16 +12,17 @@ class ValidationService {
      */
     static isValidQueueNameChars(name) {
         if (!name || typeof name !== 'string' || name.trim().length === 0) {
-            return { isValid: false, message: "Queue name segment is required." };
+            return { isValid: false, message: 'Queue name segment is required.' };
         }
-        if (!/^[a-zA-Z0-9_.-]+$/.test(name.trim())) { // Relaxed: allow dot for template names. Standard queues usually don't have dots in segments.
+        if (!/^[a-zA-Z0-9_.-]+$/.test(name.trim())) {
+            // Relaxed: allow dot for template names. Standard queues usually don't have dots in segments.
             return {
                 isValid: false,
-                message: "Queue name segment can only contain letters, numbers, underscores, hyphens, and periods."
+                message: 'Queue name segment can only contain letters, numbers, underscores, hyphens, and periods.',
             };
         }
-        if (name.trim().includes(" ")) {
-            return { isValid: false, message: "Queue name segment cannot contain spaces." };
+        if (name.trim().includes(' ')) {
+            return { isValid: false, message: 'Queue name segment cannot contain spaces.' };
         }
         return { isValid: true };
     }
@@ -46,9 +47,9 @@ class ValidationService {
             }
             const num = parseFloat(numStr);
             if (isNaN(num)) {
-                errors.push("Percentage capacity must be a number.");
+                errors.push('Percentage capacity must be a number.');
             } else if (num < 0 || num > 100) {
-                errors.push("Percentage capacity must be between 0.0 and 100.0.");
+                errors.push('Percentage capacity must be between 0.0 and 100.0.');
             }
             return errors.length > 0 ? { value: null, errors: errors } : { value: `${num.toFixed(1)}%` };
         }
@@ -60,9 +61,9 @@ class ValidationService {
             }
             const num = parseFloat(numStr);
             if (isNaN(num)) {
-                errors.push("Weight capacity must be a number.");
+                errors.push('Weight capacity must be a number.');
             } else if (num < 0) {
-                errors.push("Weight capacity must be non-negative.");
+                errors.push('Weight capacity must be non-negative.');
             }
             // YARN might support integer weights better, but UI can standardize to one decimal for 'w'
             return errors.length > 0 ? { value: null, errors: errors } : { value: `${num.toFixed(1)}w` };
@@ -70,26 +71,29 @@ class ValidationService {
 
         if (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) {
             if (!str.startsWith('[') || !str.endsWith(']')) {
-                errors.push("Absolute capacity must be enclosed in brackets, e.g., [memory=1024,vcores=1].");
-            } else if (str === "[]" && !allowEmptyVector) {
-                errors.push("Absolute capacity vector cannot be empty unless explicitly allowed.");
+                errors.push('Absolute capacity must be enclosed in brackets, e.g., [memory=1024,vcores=1].');
+            } else if (str === '[]' && !allowEmptyVector) {
+                errors.push('Absolute capacity vector cannot be empty unless explicitly allowed.');
             }
             // TODO: Deeper validation of vector content (key=value pairs, valid resource names)
             // For example: '[memory=100mb,vcores=2]' - '100mb' would be an issue. Needs to be numeric.
-            if (str !== "[]") {
+            if (str !== '[]') {
                 const content = str.slice(1, -1);
                 const pairs = content.split(',');
-                if(content && pairs.length === 0) errors.push("Invalid format inside absolute capacity brackets.");
+                if (content && pairs.length === 0) errors.push('Invalid format inside absolute capacity brackets.');
                 for (const pair of pairs) {
                     const parts = pair.split('=');
                     if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
-                        errors.push(`Invalid resource entry in vector: "${pair}". Expected format "resourceName=value".`);
+                        errors.push(
+                            `Invalid resource entry in vector: "${pair}". Expected format "resourceName=value".`
+                        );
                         continue;
                     }
                     const resourceValue = parts[1].trim();
                     // Check if value is numeric (ignoring units for now, YARN handles units)
                     // More robust parsing might extract numeric part and unit separately for stricter validation
-                    if (isNaN(parseFloat(resourceValue))) { // Checks if the beginning of the string is a number
+                    if (isNaN(parseFloat(resourceValue))) {
+                        // Checks if the beginning of the string is a number
                         errors.push(`Resource value in "${pair}" must be numeric.`);
                     }
                 }
@@ -98,7 +102,6 @@ class ValidationService {
         }
         return { value: null, error: `Unknown capacity mode: ${mode}` };
     }
-
 
     /**
      * Validates a node label string (comma-separated).
@@ -110,36 +113,37 @@ class ValidationService {
     static validateNodeLabelsString(labelsString) {
         const trimmedString = String(labelsString || '').trim();
 
-        if (trimmedString === "" || trimmedString === "*") {
+        if (trimmedString === '' || trimmedString === '*') {
             return { isValid: true, labels: [trimmedString] }; // Empty or "*" are valid single states
         }
 
-        const labels = trimmedString.split(',')
-            .map(label => label.trim())
-            .filter(label => label.length > 0); // Remove empty strings resulting from ,, or trailing ,
+        const labels = trimmedString
+            .split(',')
+            .map((label) => label.trim())
+            .filter((label) => label.length > 0); // Remove empty strings resulting from ,, or trailing ,
 
         if (labels.length === 0 && trimmedString.length > 0) {
             // This case implies input like "," which results in empty labels array after filter.
-            return { isValid: false, labels: [], message: "Invalid labels list format. Contains only delimiters."};
+            return { isValid: false, labels: [], message: 'Invalid labels list format. Contains only delimiters.' };
         }
 
         const uniqueLabels = [...new Set(labels)];
 
-        if (uniqueLabels.includes("*") && uniqueLabels.length > 1) {
+        if (uniqueLabels.includes('*') && uniqueLabels.length > 1) {
             return {
                 isValid: false,
                 labels: uniqueLabels,
-                message: "Label '*' cannot be mixed with other specific labels."
+                message: "Label '*' cannot be mixed with other specific labels.",
             };
         }
 
         for (const label of uniqueLabels) {
-            if (label === "*") continue;
+            if (label === '*') continue;
             if (!/^[a-zA-Z0-9][a-zA-Z0-9._-]*$/.test(label)) {
                 return {
                     isValid: false,
                     labels: uniqueLabels,
-                    message: `Invalid character(s) or start for label "${label}". Labels must start with a letter/number and contain only letters, numbers, '.', '_', or '-'.`
+                    message: `Invalid character(s) or start for label "${label}". Labels must start with a letter/number and contain only letters, numbers, '.', '_', or '-'.`,
                 };
             }
         }
@@ -155,20 +159,22 @@ class ValidationService {
      */
     static checkDeletability(formattedQueueNode) {
         if (!formattedQueueNode) {
-            return { canDelete: false, reason: "Queue data not available." };
+            return { canDelete: false, reason: 'Queue data not available.' };
         }
         if (formattedQueueNode.path === 'root') {
-            return { canDelete: false, reason: "Root queue cannot be deleted." };
+            return { canDelete: false, reason: 'Root queue cannot be deleted.' };
         }
-        if (formattedQueueNode.isDeleted) { // Already marked for deletion
-            return { canDelete: true, reason: "Queue is already marked for deletion (can be undone)." };
+        if (formattedQueueNode.isDeleted) {
+            // Already marked for deletion
+            return { canDelete: true, reason: 'Queue is already marked for deletion (can be undone).' };
         }
 
         let activeChildCount = 0;
         const activeChildrenNames = [];
         if (formattedQueueNode.children) {
-            Object.values(formattedQueueNode.children).forEach(child => {
-                if (child && !child.isDeleted) { // Consider only children not also marked for delete
+            Object.values(formattedQueueNode.children).forEach((child) => {
+                if (child && !child.isDeleted) {
+                    // Consider only children not also marked for delete
                     activeChildCount++;
                     activeChildrenNames.push(child.name);
                 }
@@ -176,12 +182,13 @@ class ValidationService {
         }
 
         if (activeChildCount > 0) {
-            const nameList = activeChildrenNames.length > 3 ?
-                activeChildrenNames.slice(0, 3).join(", ") + "..." :
-                activeChildrenNames.join(", ");
+            const nameList =
+                activeChildrenNames.length > 3
+                    ? activeChildrenNames.slice(0, 3).join(', ') + '...'
+                    : activeChildrenNames.join(', ');
             return {
                 canDelete: false,
-                reason: `Cannot delete queue '${formattedQueueNode.name}': it has active child queues (${nameList}). Delete children first.`
+                reason: `Cannot delete queue '${formattedQueueNode.name}': it has active child queues (${nameList}). Delete children first.`,
             };
         }
 
@@ -191,10 +198,10 @@ class ValidationService {
         if (state && state.toUpperCase() !== 'STOPPED') {
             return {
                 canDelete: false,
-                reason: `Queue '${formattedQueueNode.name}' is not in STOPPED state. It should be stopped before deletion.`
+                reason: `Queue '${formattedQueueNode.name}' is not in STOPPED state. It should be stopped before deletion.`,
             };
         }
 
-        return { canDelete: true, reason: "" };
+        return { canDelete: true, reason: '' };
     }
 }

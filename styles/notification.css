@@ -1,147 +1,147 @@
 /* Add to your CSS file */
 .notification-container {
-  position: fixed;
-  top: 80px; /* Below the search bar and controls */
-  right: 20px;
-  z-index: 2000;
-  max-width: 400px;
+    position: fixed;
+    top: 80px; /* Below the search bar and controls */
+    right: 20px;
+    z-index: 2000;
+    max-width: 400px;
 }
 
 .notification {
-  background: white;
-  border-radius: 6px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-  margin-bottom: 10px;
-  padding: 16px;
-  display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  border-left: 4px solid;
-  animation: slideIn 0.3s ease-out;
+    background: white;
+    border-radius: 6px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    margin-bottom: 10px;
+    padding: 16px;
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    border-left: 4px solid;
+    animation: slideIn 0.3s ease-out;
 }
 
 .notification.success {
-  border-left-color: #10b981;
-  background: #f0fdf4;
+    border-left-color: #10b981;
+    background: #f0fdf4;
 }
 
 .notification.error {
-  border-left-color: #ef4444;
-  background: #fef2f2;
+    border-left-color: #ef4444;
+    background: #fef2f2;
 }
 
 .notification.warning {
-  border-left-color: #f59e0b;
-  background: #fffbeb;
+    border-left-color: #f59e0b;
+    background: #fffbeb;
 }
 
 .notification.info {
-  border-left-color: #3b82f6;
-  background: #eff6ff;
+    border-left-color: #3b82f6;
+    background: #eff6ff;
 }
 
 .notification.loading {
-  border-left-color: #6b7280;
-  background: #f9fafb;
+    border-left-color: #6b7280;
+    background: #f9fafb;
 }
 
 .notification-icon {
-  font-size: 18px;
-  margin-top: 2px;
+    font-size: 18px;
+    margin-top: 2px;
 }
 
 .notification.success .notification-icon {
-  color: #10b981;
+    color: #10b981;
 }
 
 .notification.error .notification-icon {
-  color: #ef4444;
+    color: #ef4444;
 }
 
 .notification.warning .notification-icon {
-  color: #f59e0b;
+    color: #f59e0b;
 }
 
 .notification.info .notification-icon {
-  color: #3b82f6;
+    color: #3b82f6;
 }
 
 .notification.loading .notification-icon {
-  color: #6b7280;
+    color: #6b7280;
 }
 
 .notification-content {
-  flex: 1;
-  color: #374151;
-  font-size: 14px;
-  line-height: 1.4;
+    flex: 1;
+    color: #374151;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 .notification-close {
-  background: none;
-  border: none;
-  cursor: pointer;
-  font-size: 18px;
-  color: #6b7280;
-  padding: 0;
-  line-height: 1;
-  margin-left: auto;
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 18px;
+    color: #6b7280;
+    padding: 0;
+    line-height: 1;
+    margin-left: auto;
 }
 
 .notification-close:hover {
-  color: #374151;
+    color: #374151;
 }
 
 /* Loading spinner animation */
 .loading-container {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  height: 400px;
-  text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 400px;
+    text-align: center;
 }
 
 .loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 4px solid #e5e7eb;
-  border-radius: 50%;
-  border-top-color: #3b82f6;
-  animation: spin 1s linear infinite;
-  margin-bottom: 16px;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #e5e7eb;
+    border-radius: 50%;
+    border-top-color: #3b82f6;
+    animation: spin 1s linear infinite;
+    margin-bottom: 16px;
 }
 
 .loading-text {
-  color: #6b7280;
-  font-size: 16px;
-  font-weight: 500;
+    color: #6b7280;
+    font-size: 16px;
+    font-weight: 500;
 }
 
 @keyframes spin {
-  to {
-    transform: rotate(360deg);
-  }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 @keyframes slideIn {
-  from {
-    transform: translateX(100%);
-    opacity: 0;
-  }
-  to {
-    transform: translateX(0);
-    opacity: 1;
-  }
+    from {
+        transform: translateX(100%);
+        opacity: 0;
+    }
+    to {
+        transform: translateX(0);
+        opacity: 1;
+    }
 }
 
 @keyframes slideOut {
-  from {
-    transform: translateX(0);
-    opacity: 1;
-  }
-  to {
-    transform: translateX(100%);
-    opacity: 0;
-  }
+    from {
+        transform: translateX(0);
+        opacity: 1;
+    }
+    to {
+        transform: translateX(100%);
+        opacity: 0;
+    }
 }

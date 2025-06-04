@@ -15,10 +15,10 @@ class SchedulerInfoModel extends EventEmitter {
      */
     loadSchedulerInfo(schedulerInfoData) {
         if (!schedulerInfoData || !schedulerInfoData.scheduler || !schedulerInfoData.scheduler.schedulerInfo) {
-            console.error("SchedulerInfoModel: Invalid schedulerInfoData received.");
+            console.error('SchedulerInfoModel: Invalid schedulerInfoData received.');
             this._schedulerInfo = null;
             this._partitions = [DEFAULT_PARTITION];
-            this._emit('infoLoaded', { success: false, error: "Invalid scheduler info data" });
+            this._emit('infoLoaded', { success: false, error: 'Invalid scheduler info data' });
             return;
         }
         this._schedulerInfo = schedulerInfoData.scheduler.schedulerInfo;
@@ -36,8 +36,9 @@ class SchedulerInfoModel extends EventEmitter {
         if (this._schedulerInfo && this._schedulerInfo.queues) {
             const extractFromQueueRecursive = (queueInfo) => {
                 if (queueInfo.capacities && queueInfo.capacities.queueCapacitiesByPartition) {
-                    queueInfo.capacities.queueCapacitiesByPartition.forEach(pInfo => {
-                        if (pInfo.partitionName && pInfo.partitionName !== "") { // Ensure not empty and not default
+                    queueInfo.capacities.queueCapacitiesByPartition.forEach((pInfo) => {
+                        if (pInfo.partitionName && pInfo.partitionName !== '') {
+                            // Ensure not empty and not default
                             partitions.add(pInfo.partitionName);
                         }
                     });
@@ -45,12 +46,14 @@ class SchedulerInfoModel extends EventEmitter {
                 // Also check nodeLabels array on queues as per old logic, if that's still relevant for partition discovery
                 if (queueInfo.nodeLabels) {
                     queueInfo.nodeLabels.forEach((label) => {
-                        if (label && label !== "*" && label !== "") partitions.add(label);
+                        if (label && label !== '*' && label !== '') partitions.add(label);
                     });
                 }
 
                 if (queueInfo.queues && queueInfo.queues.queue) {
-                    const children = Array.isArray(queueInfo.queues.queue) ? queueInfo.queues.queue : [queueInfo.queues.queue];
+                    const children = Array.isArray(queueInfo.queues.queue)
+                        ? queueInfo.queues.queue
+                        : [queueInfo.queues.queue];
                     children.forEach(extractFromQueueRecursive);
                 }
             };
@@ -71,12 +74,17 @@ class SchedulerInfoModel extends EventEmitter {
         function findQueueInInfo(infoNode, targetPath) {
             if (!infoNode) return null;
             let currentPath = infoNode.queuePath;
-            if (infoNode.queueName !== 'root' && infoNode.parentPath) { // Assuming we can add parentPath
+            if (infoNode.queueName !== 'root' && infoNode.parentPath) {
+                // Assuming we can add parentPath
                 currentPath = `${infoNode.parentPath}.${infoNode.queueName}`;
-            } else if (infoNode.queueName !== 'root' && !infoNode.parentPath && infoNode.queuePath && infoNode.queuePath.includes('.')) {
+            } else if (
+                infoNode.queueName !== 'root' &&
+                !infoNode.parentPath &&
+                infoNode.queuePath &&
+                infoNode.queuePath.includes('.')
+            ) {
                 currentPath = infoNode.queuePath;
             }
-
 
             if (currentPath === targetPath) {
                 // If partition specific data is needed, we'd look into `capacities.queueCapacitiesByPartition`

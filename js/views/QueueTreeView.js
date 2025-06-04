@@ -1,5 +1,5 @@
-const MIN_SANKEY_LINK_WIDTH = 20;    // Minimum width in pixels for a link
-const MAX_SANKEY_LINK_WIDTH = 200;   // Maximum width in pixels for a link
+const MIN_SANKEY_LINK_WIDTH = 20; // Minimum width in pixels for a link
+const MAX_SANKEY_LINK_WIDTH = 200; // Maximum width in pixels for a link
 const DEFAULT_SANKEY_LINK_WIDTH = 40; // Default width if capacity info is unavailable
 const MIN_VISIBLE_SANKEY_WIDTH = 2; // Smallest pixel value to ensure link is drawn
 
@@ -17,14 +17,14 @@ class QueueTreeView extends EventEmitter {
         this._currentFormattedHierarchy = null; // To store the last used data for drawing
 
         if (!this.treeContainerEl || !this.levelHeadersContainerEl || !this.arrowSvgEl) {
-            console.error("QueueTreeView: Required DOM elements (queue-tree, level-headers, or arrow-svg) not found.");
+            console.error('QueueTreeView: Required DOM elements (queue-tree, level-headers, or arrow-svg) not found.');
         }
 
         // Global click listener to hide open dropdowns for queue cards
         document.addEventListener('click', (event) => {
             if (!event.target.closest('.queue-menu-btn') && !event.target.closest('.queue-dropdown')) {
-                DomUtils.qsa(".queue-dropdown.show").forEach((dropdown) => {
-                    dropdown.classList.remove("show");
+                DomUtils.qsa('.queue-dropdown.show').forEach((dropdown) => {
+                    dropdown.classList.remove('show');
                 });
             }
         });
@@ -47,7 +47,7 @@ class QueueTreeView extends EventEmitter {
         this.setCurrentFormattedHierarchy(formattedHierarchyRoot);
 
         if (!this.treeContainerEl || !this.levelHeadersContainerEl) {
-            console.warn("QueueTreeView.render: Core containers not found.");
+            console.warn('QueueTreeView.render: Core containers not found.');
             return;
         }
 
@@ -59,27 +59,29 @@ class QueueTreeView extends EventEmitter {
         if (!formattedHierarchyRoot) {
             this.treeContainerEl.innerHTML = "<p style='text-align:center; padding:20px;'>No queue data loaded.</p>";
             this._renderLevelHeaders(-1);
-            this._emit('treeRendered', {hasContent: false});
+            this._emit('treeRendered', { hasContent: false });
             return;
         }
 
-        const isEffectivelyEmptyRoot = formattedHierarchyRoot.path === 'root' &&
+        const isEffectivelyEmptyRoot =
+            formattedHierarchyRoot.path === 'root' &&
             Object.keys(formattedHierarchyRoot.children || {}).length === 0 &&
             !formattedHierarchyRoot.isNew &&
             !formattedHierarchyRoot.hasPendingChanges &&
             (!formattedHierarchyRoot.effectiveProperties || formattedHierarchyRoot.effectiveProperties.size <= 1); // Only path prop
 
         if (isEffectivelyEmptyRoot) {
-            this.treeContainerEl.innerHTML = "<p style='text-align:center; padding:20px;'>No queues configured beyond root.</p>";
+            this.treeContainerEl.innerHTML =
+                "<p style='text-align:center; padding:20px;'>No queues configured beyond root.</p>";
             this._renderLevelHeaders(0); // Header for root
             // Still need to render the root card itself if it exists
-            const cardElement = QueueCardView.createCardElement(formattedHierarchyRoot, "", (eventName, queuePath) => {
+            const cardElement = QueueCardView.createCardElement(formattedHierarchyRoot, '', (eventName, queuePath) => {
                 this._emit(eventName, queuePath);
             });
             if (columnContainers[0]) columnContainers[0].appendChild(cardElement);
             this.queueElements.set(formattedHierarchyRoot.path, cardElement);
 
-            this._emit('treeRendered', {hasContent: true});
+            this._emit('treeRendered', { hasContent: true });
             return; // No connectors to draw if only root
         }
 
@@ -87,9 +89,10 @@ class QueueTreeView extends EventEmitter {
         const visibilityMemo = new Map();
 
         if (searchTermLC && !this._doesNodeOrDescendantMatch(formattedHierarchyRoot, searchTermLC, visibilityMemo)) {
-            this.treeContainerEl.innerHTML = "<p style='text-align:center; padding:20px;'>No queues match your search criteria.</p>";
+            this.treeContainerEl.innerHTML =
+                "<p style='text-align:center; padding:20px;'>No queues match your search criteria.</p>";
             this._renderLevelHeaders(-1);
-            this._emit('treeRendered', {hasContent: false});
+            this._emit('treeRendered', { hasContent: false });
             return;
         }
 
@@ -117,23 +120,28 @@ class QueueTreeView extends EventEmitter {
                 columnContainers[currentLevel].appendChild(cardElement);
                 this.queueElements.set(node.path, cardElement);
             } else {
-                console.warn(`QueueTreeView: Column container for level ${currentLevel} (queue: ${node.path}) not found.`);
+                console.warn(
+                    `QueueTreeView: Column container for level ${currentLevel} (queue: ${node.path}) not found.`
+                );
             }
 
             if (node.children) {
                 const childrenToRender = this._sortQueueChildren(Object.values(node.children));
-                childrenToRender.forEach(childNode => renderNodeRecursive(childNode));
+                childrenToRender.forEach((childNode) => renderNodeRecursive(childNode));
             }
         };
 
         renderNodeRecursive(formattedHierarchyRoot);
         this._renderLevelHeaders(maxActualDepthRendered);
 
-        if (drawConnectors && formattedHierarchyRoot && this.queueElements.size > 1) { // Only draw if more than root
+        if (drawConnectors && formattedHierarchyRoot && this.queueElements.size > 1) {
+            // Only draw if more than root
             this._scheduleConnectorDraw(formattedHierarchyRoot);
         }
 
-        this._emit('treeRendered', {hasContent: maxActualDepthRendered >= 0 || formattedHierarchyRoot.path === 'root'});
+        this._emit('treeRendered', {
+            hasContent: maxActualDepthRendered >= 0 || formattedHierarchyRoot.path === 'root',
+        });
     }
 
     _scheduleConnectorDraw(hierarchyRootToDraw) {
@@ -162,14 +170,13 @@ class QueueTreeView extends EventEmitter {
         const parentRect = parentElement.getBoundingClientRect();
         if ((parentRect.width === 0 || parentRect.height === 0) && parentNode.path !== 'root') return;
 
-
         if (parentNode.children) {
-            Object.values(parentNode.children).forEach(childNode => {
+            Object.values(parentNode.children).forEach((childNode) => {
                 if (childNode && !childNode.isDeleted && childNode.path) {
                     const childElement = this.queueElements.get(childNode.path);
                     if (childElement) {
                         const childRect = childElement.getBoundingClientRect();
-                        if ((childRect.width === 0 || childRect.height === 0)) return;
+                        if (childRect.width === 0 || childRect.height === 0) return;
                         this._drawSankeyLinkToChild(parentRect, childRect, svgRect, svgContainer, childNode);
                         this._actualDrawRecursive(childNode, svgRect, svgContainer);
                     }
@@ -193,12 +200,13 @@ class QueueTreeView extends EventEmitter {
         const startX = parentRect.right - svgRect.left;
         const endX = childRect.left - svgRect.left;
 
-        if (startX >= endX - dynamicWidth) { // Ensure there's space for the link
+        if (startX >= endX - dynamicWidth) {
+            // Ensure there's space for the link
             // console.warn(`Skipping link from ${childNode.parentPath} to ${childNode.path} due to layout.`);
             return;
         }
 
-        const childState = childNode.state ? childNode.state.toUpperCase() : "UNKNOWN";
+        const childState = childNode.state ? childNode.state.toUpperCase() : 'UNKNOWN';
         let linkClass = 'sankey-link';
         if (childState === 'STOPPED') linkClass += ' state-stopped';
         else if (childState === 'RUNNING') linkClass += ' state-running';
@@ -212,19 +220,19 @@ class QueueTreeView extends EventEmitter {
             `C ${c1x},${startY - dynamicWidth / 2}, ${c2x},${endY - dynamicWidth / 2}, ${endX},${endY - dynamicWidth / 2}`,
             `L ${endX},${endY + dynamicWidth / 2}`,
             `C ${c2x},${endY + dynamicWidth / 2}, ${c1x},${startY + dynamicWidth / 2}, ${startX},${startY + dynamicWidth / 2}`,
-            `Z`
-        ].join(" ");
+            `Z`,
+        ].join(' ');
 
-        const path = document.createElementNS("http://www.w3.org/2000/svg", "path");
-        path.setAttribute("d", d);
-        path.setAttribute("class", linkClass);
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', d);
+        path.setAttribute('class', linkClass);
         svgContainer.appendChild(path);
     }
 
     clearConnectors() {
         if (this.arrowSvgEl) {
-            const existingPaths = this.arrowSvgEl.querySelectorAll("path.sankey-link, path.arrow-line");
-            existingPaths.forEach(path => path.remove());
+            const existingPaths = this.arrowSvgEl.querySelectorAll('path.sankey-link, path.arrow-line');
+            existingPaths.forEach((path) => path.remove());
         }
         clearTimeout(this._connectorDrawTimeoutId);
     }
@@ -243,7 +251,7 @@ class QueueTreeView extends EventEmitter {
         if (!node) return -1;
         let maxDepth = node.level !== undefined ? node.level : 0;
         if (node.children) {
-            Object.values(node.children).forEach(child => {
+            Object.values(node.children).forEach((child) => {
                 if (child && !child.isDeleted) {
                     maxDepth = Math.max(maxDepth, this._calculateMaxDepthOfFormattedTree(child));
                 }
@@ -254,33 +262,38 @@ class QueueTreeView extends EventEmitter {
 
     _sortQueueChildren(childrenArray) {
         const sortCriteria = this.appStateModel.getCurrentSortCriteria();
-        return childrenArray.filter(c => c && !c.isDeleted).sort((a, b) => {
-            if (!a || !b) return 0;
-            const getSortableCap = (q) => {
-                if (typeof q.sortableCapacity === 'number') return q.sortableCapacity;
-                if (q.capacityDisplayForLabel) { // Prefer label-specific if shown
-                    const val = parseFloat(String(q.capacityDisplayForLabel).replace(/[^\d.-]/g, ''));
-                    return isNaN(val) ? 0 : val;
-                }
-                if (q.capacityDisplay) {
-                    const val = parseFloat(String(q.capacityDisplay).replace(/[^\d.-]/g, ''));
-                    return isNaN(val) ? 0 : val;
+        return childrenArray
+            .filter((c) => c && !c.isDeleted)
+            .sort((a, b) => {
+                if (!a || !b) return 0;
+                const getSortableCap = (q) => {
+                    if (typeof q.sortableCapacity === 'number') return q.sortableCapacity;
+                    if (q.capacityDisplayForLabel) {
+                        // Prefer label-specific if shown
+                        const val = parseFloat(String(q.capacityDisplayForLabel).replace(/[^\d.-]/g, ''));
+                        return isNaN(val) ? 0 : val;
+                    }
+                    if (q.capacityDisplay) {
+                        const val = parseFloat(String(q.capacityDisplay).replace(/[^\d.-]/g, ''));
+                        return isNaN(val) ? 0 : val;
+                    }
+                    return 0;
+                };
+                if (sortCriteria === 'capacity') {
+                    return getSortableCap(b) - getSortableCap(a);
+                } else if (sortCriteria === 'name') {
+                    return (a.displayName || '').localeCompare(b.displayName || '');
                 }
                 return 0;
-            };
-            if (sortCriteria === 'capacity') {
-                return (getSortableCap(b)) - (getSortableCap(a));
-            } else if (sortCriteria === 'name') {
-                return (a.displayName || '').localeCompare(b.displayName || '');
-            }
-            return 0;
-        });
+            });
     }
 
     _nodeItselfMatches(node, searchTermLC) {
         if (!searchTermLC) return true;
-        return (node.displayName || '').toLowerCase().includes(searchTermLC) ||
-            (node.path || '').toLowerCase().includes(searchTermLC);
+        return (
+            (node.displayName || '').toLowerCase().includes(searchTermLC) ||
+            (node.path || '').toLowerCase().includes(searchTermLC)
+        );
     }
 
     _doesNodeOrDescendantMatch(node, searchTermLC, memo) {

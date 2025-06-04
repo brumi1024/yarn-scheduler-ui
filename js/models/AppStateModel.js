@@ -14,14 +14,27 @@ class AppStateModel extends EventEmitter {
     }
 
     // --- Getters ---
-    getCurrentTab() { return this._currentTab; }
-    getCurrentSearchTerm() { return this._currentSearchTerm; }
-    getCurrentSortCriteria() { return this._currentSortCriteria; }
-    getSelectedPartition() { return this._selectedPartition; }
-    isGlobalConfigInEditMode() { return this._isGlobalConfigInEditMode; }
-    isLoading() { return this._isLoading; }
-    getLoadingMessage() { return this._loadingMessage; }
-
+    getCurrentTab() {
+        return this._currentTab;
+    }
+    getCurrentSearchTerm() {
+        return this._currentSearchTerm;
+    }
+    getCurrentSortCriteria() {
+        return this._currentSortCriteria;
+    }
+    getSelectedPartition() {
+        return this._selectedPartition;
+    }
+    isGlobalConfigInEditMode() {
+        return this._isGlobalConfigInEditMode;
+    }
+    isLoading() {
+        return this._isLoading;
+    }
+    getLoadingMessage() {
+        return this._loadingMessage;
+    }
 
     // --- Setters ---
     /**
@@ -63,7 +76,7 @@ class AppStateModel extends EventEmitter {
      * @param {string} partition - The selected partition name.
      */
     setSelectedPartition(partition) {
-        const newPartition = (partition === undefined || partition === null) ? DEFAULT_PARTITION : partition;
+        const newPartition = partition === undefined || partition === null ? DEFAULT_PARTITION : partition;
         if (this._selectedPartition !== newPartition) {
             this._selectedPartition = newPartition;
             this._emit('selectedPartitionChanged', newPartition);
@@ -86,7 +99,7 @@ class AppStateModel extends EventEmitter {
      * @param {boolean} isLoading - True if the application is loading, false otherwise.
      * @param {string} [message=""] - An optional message to display while loading.
      */
-    setLoading(isLoading, message = "") {
+    setLoading(isLoading, message = '') {
         const newLoadingState = !!isLoading; // Coerce to boolean
         const newMessage = newLoadingState ? message : ''; // Clear message if not loading
 

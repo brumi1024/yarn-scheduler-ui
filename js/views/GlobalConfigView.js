@@ -7,7 +7,7 @@ class GlobalConfigView extends EventEmitter {
         this.actionsContainerEl = DomUtils.getById('global-config-actions'); // The div holding the buttons
 
         if (!this.containerEl || !this.actionsContainerEl) {
-            console.error("GlobalConfigView: Required DOM elements not found.");
+            console.error('GlobalConfigView: Required DOM elements not found.');
             return;
         }
 
@@ -39,7 +39,7 @@ class GlobalConfigView extends EventEmitter {
                 } else {
                     // No actual changes were made, treat as cancel or just switch mode
                     this._emit('cancelGlobalConfigClicked'); // Or a specific "noChangesToSave" event
-                    this._emit('showNotification', { message: "No changes detected to save.", type: "info" });
+                    this._emit('showNotification', { message: 'No changes detected to save.', type: 'info' });
                 }
             });
         }
@@ -66,14 +66,15 @@ class GlobalConfigView extends EventEmitter {
         this._updateButtonVisibility(isInEditMode);
 
         if (!GLOBAL_CONFIG_METADATA || GLOBAL_CONFIG_METADATA.length === 0) {
-            this.containerEl.innerHTML = '<p>No global scheduler settings categories are defined in the UI metadata.</p>';
+            this.containerEl.innerHTML =
+                '<p>No global scheduler settings categories are defined in the UI metadata.</p>';
             if (this.editBtn) this.editBtn.disabled = true;
             return;
         }
         if (this.editBtn) this.editBtn.disabled = false;
 
         let html = '';
-        GLOBAL_CONFIG_METADATA.forEach(group => {
+        GLOBAL_CONFIG_METADATA.forEach((group) => {
             if (group.properties && Object.keys(group.properties).length > 0) {
                 html += `<div class="config-group">`;
                 html += `<h3 class="config-group-title">${DomUtils.escapeXml(group.groupName)}</h3>`;
@@ -82,8 +83,9 @@ class GlobalConfigView extends EventEmitter {
                     const liveValue = globalConfigData ? globalConfigData.get(propName) : undefined;
                     const currentValue = liveValue !== undefined ? liveValue : metadata.defaultValue;
                     const isDefaultUsed = liveValue === undefined;
-                    const inputId = `global-config-${propName.replace(/\./g, "-")}`;
-                    const displayNameSuffix = isDefaultUsed && !isInEditMode ? ' <em class="default-value-indicator">(default)</em>' : '';
+                    const inputId = `global-config-${propName.replace(/\./g, '-')}`;
+                    const displayNameSuffix =
+                        isDefaultUsed && !isInEditMode ? ' <em class="default-value-indicator">(default)</em>' : '';
 
                     html += `<div class="config-item" data-property-name="${DomUtils.escapeXml(propName)}">
                                 <div class="config-item-col-left">
@@ -117,22 +119,23 @@ class GlobalConfigView extends EventEmitter {
 
         const dataAttributes = `data-original-value="${escapedCurrentValue}" data-prop-name="${escapedPropName}"`;
 
-        if (metadata.type === "boolean") {
+        if (metadata.type === 'boolean') {
             inputHtml = `<select id="${inputId}" class="config-value-input" ${dataAttributes}>
-                            <option value="true" ${String(currentValue) === "true" ? "selected" : ""}>true</option>
-                            <option value="false" ${String(currentValue) === "false" ? "selected" : ""}>false</option>
+                            <option value="true" ${String(currentValue) === 'true' ? 'selected' : ''}>true</option>
+                            <option value="false" ${String(currentValue) === 'false' ? 'selected' : ''}>false</option>
                          </select>`;
-        } else if (metadata.type === "number" || metadata.type === "percentage") {
+        } else if (metadata.type === 'number' || metadata.type === 'percentage') {
             let attrs = `type="number" value="${escapedCurrentValue}" ${dataAttributes}`;
             if (metadata.step !== undefined) attrs += ` step="${metadata.step}"`;
             if (metadata.min !== undefined) attrs += ` min="${metadata.min}"`;
             if (metadata.max !== undefined) attrs += ` max="${metadata.max}"`;
-            if (metadata.type === "percentage" && metadata.step === undefined) attrs += ` step="0.01"`; // Default step for %
-            if (metadata.type === "percentage" && metadata.min === undefined) attrs += ` min="0"`;
-            if (metadata.type === "percentage" && metadata.max === undefined) attrs += ` max="1"`; // Default max for %
+            if (metadata.type === 'percentage' && metadata.step === undefined) attrs += ` step="0.01"`; // Default step for %
+            if (metadata.type === 'percentage' && metadata.min === undefined) attrs += ` min="0"`;
+            if (metadata.type === 'percentage' && metadata.max === undefined) attrs += ` max="1"`; // Default max for %
 
             inputHtml = `<input id="${inputId}" class="config-value-input" ${attrs}>`;
-        } else { // Default to text
+        } else {
+            // Default to text
             inputHtml = `<input type="text" id="${inputId}" class="config-value-input" value="${escapedCurrentValue}" ${dataAttributes}>`;
         }
         return inputHtml;
@@ -142,7 +145,7 @@ class GlobalConfigView extends EventEmitter {
         const formData = { params: {} }; // params will hold { 'full.yarn.key': 'newValue' }
         const configItems = DomUtils.qsa('.config-item', this.containerEl);
 
-        configItems.forEach(item => {
+        configItems.forEach((item) => {
             const inputElement = item.querySelector('.config-value-input');
             if (inputElement) {
                 const propName = inputElement.getAttribute('data-prop-name');

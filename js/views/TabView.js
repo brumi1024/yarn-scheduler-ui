@@ -17,7 +17,7 @@ class TabView extends EventEmitter {
     }
 
     _bindNavTabClicks() {
-        this.navTabs.forEach(tab => {
+        this.navTabs.forEach((tab) => {
             tab.addEventListener('click', (event) => {
                 const targetTabId = event.currentTarget.getAttribute('data-tab');
                 if (targetTabId) {
@@ -35,11 +35,11 @@ class TabView extends EventEmitter {
     render() {
         const activeTabId = this.appStateModel.getCurrentTab();
 
-        this.navTabs.forEach(tab => {
+        this.navTabs.forEach((tab) => {
             tab.classList.toggle('active', tab.getAttribute('data-tab') === activeTabId);
         });
 
-        this.tabPanes.forEach(pane => {
+        this.tabPanes.forEach((pane) => {
             const paneIsActive = pane.id === activeTabId;
             pane.classList.toggle('active', paneIsActive);
             DomUtils.show(pane, paneIsActive ? 'block' : 'none');

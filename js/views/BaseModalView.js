@@ -34,7 +34,6 @@ class BaseModalView extends EventEmitter {
         return '';
     }
 
-
     _handleOverlayClick(event) {
         if (event.target === this.modalEl) {
             this.hide({ Canceled: true });
@@ -84,7 +83,7 @@ class BaseModalView extends EventEmitter {
      * @protected
      */
     _buildHtml(data) {
-        return "<p>Modal content not implemented.</p>";
+        return '<p>Modal content not implemented.</p>';
     }
 
     /**

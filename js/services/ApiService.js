@@ -10,7 +10,7 @@ class ApiService {
 
         this.defaultHeaders = {
             'Content-Type': 'application/json', // Default for GET
-            'Accept': 'application/json',       // Default for GET
+            Accept: 'application/json', // Default for GET
         };
     }
 
@@ -42,18 +42,22 @@ class ApiService {
 
             if (!response.ok) {
                 let errorMessage = `HTTP ${response.status}: ${responseText || response.statusText}`;
-                if (requestOptions.method === 'PUT' && responseText) { // YARN PUT errors are often XML
+                if (requestOptions.method === 'PUT' && responseText) {
+                    // YARN PUT errors are often XML
                     try {
                         const parser = new DOMParser();
-                        const xmlDoc = parser.parseFromString(responseText, "application/xml");
-                        const exceptionNode = xmlDoc.querySelector("RemoteException > exception");
-                        const messageNode = xmlDoc.querySelector("RemoteException > message");
+                        const xmlDoc = parser.parseFromString(responseText, 'application/xml');
+                        const exceptionNode = xmlDoc.querySelector('RemoteException > exception');
+                        const messageNode = xmlDoc.querySelector('RemoteException > message');
                         if (exceptionNode && exceptionNode.textContent && messageNode && messageNode.textContent) {
                             errorMessage = `${exceptionNode.textContent.trim()}: ${messageNode.textContent.trim()}`;
-                        } else if (xmlDoc.documentElement.nodeName === "html") { // Check if it's an HTML error page
+                        } else if (xmlDoc.documentElement.nodeName === 'html') {
+                            // Check if it's an HTML error page
                             errorMessage = `HTTP ${response.status}: Received HTML error page.`;
                         }
-                    } catch (e) { /* Stick with original responseText if XML parsing fails */ }
+                    } catch (e) {
+                        /* Stick with original responseText if XML parsing fails */
+                    }
                 }
                 console.error(`ApiService: Error for ${endpoint} - Status ${response.status}:`, errorMessage);
                 return { status: response.status, data: null, error: errorMessage };
@@ -64,18 +68,23 @@ class ApiService {
                 try {
                     data = JSON.parse(responseText);
                 } catch (e) {
-                    if (requestOptions.method === 'PUT' && responseText.toLowerCase().includes("successfully applied")) {
+                    if (
+                        requestOptions.method === 'PUT' &&
+                        responseText.toLowerCase().includes('successfully applied')
+                    ) {
                         data = responseText;
                     } else {
-                        console.warn(`ApiService: Expected JSON for ${endpoint} but received:`, responseText.substring(0, 200));
-                        return { status: response.status, data: responseText, error: "Failed to parse JSON response." };
+                        console.warn(
+                            `ApiService: Expected JSON for ${endpoint} but received:`,
+                            responseText.substring(0, 200)
+                        );
+                        return { status: response.status, data: responseText, error: 'Failed to parse JSON response.' };
                     }
                 }
             } else {
                 data = responseText;
             }
             return { status: response.status, data: data };
-
         } catch (error) {
             console.error(`ApiService: Network or fetch error for ${endpoint}:`, error);
             return { status: 0, data: null, error: error.message || 'Network error' };
@@ -103,9 +112,13 @@ class ApiService {
         if (this.useMocks) {
             return this._getMock(CONFIG.API_ENDPOINTS.SCHEDULER_CONF, true);
         }
-        return this._makeRequest(CONFIG.API_ENDPOINTS.SCHEDULER_CONF, {
-            headers: { 'Accept': 'application/json' } // Try for JSON, but be ready for XML
-        }, true); // True, because our mock is JSON, and old code tried to parse response as JSON
+        return this._makeRequest(
+            CONFIG.API_ENDPOINTS.SCHEDULER_CONF,
+            {
+                headers: { Accept: 'application/json' }, // Try for JSON, but be ready for XML
+            },
+            true
+        ); // True, because our mock is JSON, and old code tried to parse response as JSON
     }
 
     /**
@@ -117,9 +130,13 @@ class ApiService {
         if (this.useMocks) {
             return this._getMock(CONFIG.API_ENDPOINTS.SCHEDULER_INFO, true);
         }
-        return this._makeRequest(CONFIG.API_ENDPOINTS.SCHEDULER_INFO, {
-            headers: { 'Accept': 'application/json' }
-        }, true);
+        return this._makeRequest(
+            CONFIG.API_ENDPOINTS.SCHEDULER_INFO,
+            {
+                headers: { Accept: 'application/json' },
+            },
+            true
+        );
     }
 
     /**
@@ -138,23 +155,22 @@ class ApiService {
 
         const escapeXml = (str) => {
             if (typeof str !== 'string') str = String(str);
-            return str.replace(/&/g, '&')
-                .replace(/</g, '<')
-                .replace(/>/g, '>')
-                .replace(/"/g, '"')
-                .replace(/'/g, '\'');
+            return str.replace(/&/g, '&').replace(/</g, '<').replace(/>/g, '>').replace(/"/g, '"').replace(/'/g, "'");
         };
 
-        const buildParamsXML = (params) => Object.entries(params)
-            .map(([key, value]) =>
-                `    <entry><key>${escapeXml(key)}</key><value>${escapeXml(value)}</value></entry>`
-            ).join('\n');
+        const buildParamsXML = (params) =>
+            Object.entries(params)
+                .map(
+                    ([key, value]) =>
+                        `    <entry><key>${escapeXml(key)}</key><value>${escapeXml(value)}</value></entry>`
+                )
+                .join('\n');
 
-        removeQueues.forEach(queueName => {
+        removeQueues.forEach((queueName) => {
             xmlParts.push(`  <remove-queue>${escapeXml(queueName)}</remove-queue>`);
         });
 
-        addQueues.forEach(item => {
+        addQueues.forEach((item) => {
             xmlParts.push(`  <add-queue>`);
             xmlParts.push(`    <queue-name>${escapeXml(item.queueName)}</queue-name>`);
             if (item.params && Object.keys(item.params).length > 0) {
@@ -163,7 +179,7 @@ class ApiService {
             xmlParts.push(`  </add-queue>`);
         });
 
-        updateQueues.forEach(item => {
+        updateQueues.forEach((item) => {
             xmlParts.push(`  <update-queue>`);
             xmlParts.push(`    <queue-name>${escapeXml(item.queueName)}</queue-name>`);
             if (item.params && Object.keys(item.params).length > 0) {
@@ -185,25 +201,34 @@ class ApiService {
 
     async putSchedulerChanges(batchMutationPayload) {
         const xmlBody = this._buildBatchMutationXML(batchMutationPayload);
-        console.debug("ApiService: PUT XML Payload:", xmlBody);
+        console.debug('ApiService: PUT XML Payload:', xmlBody);
 
         if (this.useMocks) {
-            console.log("ApiService (Mock): Simulating PUT /scheduler-conf");
-            await new Promise(resolve => setTimeout(resolve, 300)); // Simulate delay
+            console.log('ApiService (Mock): Simulating PUT /scheduler-conf');
+            await new Promise((resolve) => setTimeout(resolve, 300)); // Simulate delay
             // Example: simulate specific mock failure based on payload content for testing
-            if (xmlBody.includes("<key>capacity</key><value>200%</value>")) { // Mock a validation failure
-                return { status: 400, data: "<error><message>Mock: Capacity cannot be 200%</message></error>", error: "Mock validation: Capacity > 100%." };
+            if (xmlBody.includes('<key>capacity</key><value>200%</value>')) {
+                // Mock a validation failure
+                return {
+                    status: 400,
+                    data: '<error><message>Mock: Capacity cannot be 200%</message></error>',
+                    error: 'Mock validation: Capacity > 100%.',
+                };
             }
-            return { status: 200, data: "Configuration successfully applied (Mock Response)." };
+            return { status: 200, data: 'Configuration successfully applied (Mock Response).' };
         }
 
-        return this._makeRequest(CONFIG.API_ENDPOINTS.SCHEDULER_CONF, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/xml',
-                'Accept': 'application/xml',
+        return this._makeRequest(
+            CONFIG.API_ENDPOINTS.SCHEDULER_CONF,
+            {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/xml',
+                    Accept: 'application/xml',
+                },
+                body: xmlBody,
             },
-            body: xmlBody,
-        }, false);
+            false
+        );
     }
 }

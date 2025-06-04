@@ -27,9 +27,7 @@ class EventEmitter {
         if (!this.events[eventType]) {
             return;
         }
-        this.events[eventType] = this.events[eventType].filter(
-            (currentListener) => currentListener !== listener
-        );
+        this.events[eventType] = this.events[eventType].filter((currentListener) => currentListener !== listener);
     }
 
     /**

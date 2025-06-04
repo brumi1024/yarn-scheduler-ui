@@ -9,8 +9,14 @@ class BatchControlsView extends EventEmitter {
         this.applyChangesBtnEl = DomUtils.getById('btn-apply-changes');
         this.discardChangesBtnEl = DomUtils.qs('.btn-secondary', this.batchControlsEl); // Assuming it's the only secondary button
 
-        if (!this.batchControlsEl || !this.batchInfoEl || !this.batchValidationEl || !this.applyChangesBtnEl || !this.discardChangesBtnEl) {
-            console.error("BatchControlsView: One or more required DOM elements are missing.");
+        if (
+            !this.batchControlsEl ||
+            !this.batchInfoEl ||
+            !this.batchValidationEl ||
+            !this.applyChangesBtnEl ||
+            !this.discardChangesBtnEl
+        ) {
+            console.error('BatchControlsView: One or more required DOM elements are missing.');
             return;
         }
 
@@ -46,16 +52,16 @@ class BatchControlsView extends EventEmitter {
             if (pendingCounts.added > 0) infoTextParts.push(`${pendingCounts.added} added`);
             if (pendingCounts.modified > 0) infoTextParts.push(`${pendingCounts.modified} modified`);
             if (pendingCounts.deleted > 0) infoTextParts.push(`${pendingCounts.deleted} deleted`);
-            this.batchInfoEl.textContent = infoTextParts.length > 0 ? infoTextParts.join(", ") : "No changes staged";
+            this.batchInfoEl.textContent = infoTextParts.length > 0 ? infoTextParts.join(', ') : 'No changes staged';
 
             if (validationErrors.length === 0) {
-                this.batchValidationEl.textContent = "All changes valid ✓";
-                this.batchValidationEl.className = "batch-validation valid";
+                this.batchValidationEl.textContent = 'All changes valid ✓';
+                this.batchValidationEl.className = 'batch-validation valid';
                 this.applyChangesBtnEl.disabled = false;
             } else {
-                const errorText = validationErrors.map(e => e.message || String(e)).join("; ");
+                const errorText = validationErrors.map((e) => e.message || String(e)).join('; ');
                 this.batchValidationEl.textContent = `Validation errors: ${errorText}`;
-                this.batchValidationEl.className = "batch-validation"; // Default class implies error/warning
+                this.batchValidationEl.className = 'batch-validation'; // Default class implies error/warning
                 this.applyChangesBtnEl.disabled = true;
             }
         }

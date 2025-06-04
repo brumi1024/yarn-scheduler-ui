@@ -17,15 +17,16 @@ const SCHEDULER_INFO_METADATA = {
     absoluteMaxCapacity: { displayName: 'Absolute Max Capacity', unit: '%' },
     absoluteUsedCapacity: { displayName: 'Absolute Used Capacity', unit: '%' },
     numApplications: { displayName: 'Total Applications' },
-    maxParallelApps: { displayName: 'Max Parallel Apps'}, // From scheduler info if different from conf
-    resourcesUsed: { // This is an object in API
+    maxParallelApps: { displayName: 'Max Parallel Apps' }, // From scheduler info if different from conf
+    resourcesUsed: {
+        // This is an object in API
         displayName: 'Resources Used',
         memory: { displayName: 'Memory Used', unit: 'MB' },
-        vCores: { displayName: 'VCores Used' }
+        vCores: { displayName: 'VCores Used' },
     },
     mode: { displayName: 'Capacity Mode' }, // As reported by scheduler endpoint
-    weight: { displayName: 'Weight'},
-    normalizedWeight: {displayName: 'Normalized Weight'},
+    weight: { displayName: 'Weight' },
+    normalizedWeight: { displayName: 'Normalized Weight' },
 
     // Leaf Queue Specific Info
     numActiveApplications: { displayName: 'Active Applications' },
@@ -43,12 +44,12 @@ const SCHEDULER_INFO_METADATA = {
     defaultPartitionEffectiveMinResource: {
         displayName: 'Default Partition Effective Min Resource',
         memory: { displayName: 'Memory', unit: 'MB' },
-        vCores: { displayName: 'VCores' }
+        vCores: { displayName: 'VCores' },
     },
     defaultPartitionEffectiveMaxResource: {
         displayName: 'Default Partition Effective Max Resource',
         memory: { displayName: 'Memory', unit: 'MB' },
-        vCores: { displayName: 'VCores' }
+        vCores: { displayName: 'VCores' },
     },
     // Add more fields from scheduler-info.txt as needed for the Info Modal.
     // Consider how to display array/nested objects like `users` or `queueAcls` if desired.

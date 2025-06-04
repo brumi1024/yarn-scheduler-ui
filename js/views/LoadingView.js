@@ -7,7 +7,9 @@ class LoadingView {
         this.mainContentWrapperEl = DomUtils.getById('main-content'); // The main content area that gets hidden
 
         if (!this.loadingContainerEl || !this.loadingTextEl || !this.mainContentWrapperEl) {
-            console.error("LoadingView: Required DOM elements not found (loading-container, loading-text, or main-content).");
+            console.error(
+                'LoadingView: Required DOM elements not found (loading-container, loading-text, or main-content).'
+            );
         }
 
         // Subscribe to loading state changes from AppStateModel
@@ -27,7 +29,7 @@ class LoadingView {
      * @param {string} [message="Loading..."] - The message to display.
      * @private
      */
-    show(message = "Loading...") {
+    show(message = 'Loading...') {
         if (this.loadingTextEl) {
             this.loadingTextEl.textContent = message;
         }
