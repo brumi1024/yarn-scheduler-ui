@@ -1,61 +1,120 @@
-import globals from "globals";
-import js from "@eslint/js"; // ESLint's recommended rules
-import htmlPlugin from "eslint-plugin-html";
-import unicornPlugin from "eslint-plugin-unicorn";
-import prettierConfig from "eslint-config-prettier"; // Disables ESLint rules that conflict with Prettier
+import globals from 'globals';
+import js from '@eslint/js'; // ESLint's recommended rules
+import htmlPlugin from 'eslint-plugin-html';
+import unicornPlugin from 'eslint-plugin-unicorn';
+import prettierConfig from 'eslint-config-prettier'; // Disables ESLint rules that conflict with Prettier
 
-export default [ // Flat config is an array of configuration objects
+export default [
     {
         // Global ignores for all configurations
         ignores: [
-            "node_modules/",
-            "dist/",
-            "build/",
-            "coverage/",
-            "*.log",
-            "eslint-results.sarif",
+            'node_modules/',
+            'dist/',
+            'build/',
+            'coverage/',
+            '*.log',
+            'eslint-results.sarif',
         ],
     },
 
-    // Base ESLint recommended rules applied globally (to JS found by other configs)
+    // Base ESLint recommended rules applied globally
     js.configs.recommended,
 
     // Unicorn plugin configurations applied globally
     unicornPlugin.configs.recommended,
 
     {
-        files: ["**/*.js", "**/*.jsx"], // Target JS and JSX files
+        files: ['**/*.js', '**/*.jsx'], // Target JS and JSX files
         languageOptions: {
-            ecmaVersion: "latest", // Use the latest ECMAScript standards
-            sourceType: "module",  // Use ES modules (import/export)
+            ecmaVersion: 'latest',
+            sourceType: 'module',
             globals: {
-                ...globals.browser, // For browser environment global variables
-                ...globals.node,    // For Node.js environment global variables (if you have scripts)
-                ...globals.es2021,  // Or globals.es2022, globals.esNext etc.
+                ...globals.browser,
+                ...globals.es2021,
+
+                // Custom globals from your project (loaded via <script> tags in index.html)
+                'app': 'writable',
+                'MainController': 'readonly',
+                'AppStateModel': 'readonly',
+                'SchedulerConfigModel': 'readonly',
+                'SchedulerInfoModel': 'readonly',
+                'ApiService': 'readonly',
+                'ValidationService': 'readonly',
+                'ViewDataFormatterService': 'readonly',
+                'LoadingView': 'readonly',
+                'NotificationView': 'readonly',
+                'TabView': 'readonly',
+                'ControlsView': 'readonly',
+                'BatchControlsView': 'readonly',
+                'GlobalConfigView': 'readonly',
+                'QueueTreeView': 'readonly',
+                'AddQueueModalView': 'readonly',
+                'EditQueueModalView': 'readonly',
+                'InfoQueueModalView': 'readonly',
+                'BaseModalView': 'readonly',
+                'QueueCardView': 'readonly',
+                'DomUtils': 'readonly',
+                'EventEmitter': 'readonly',
+                'SchedulerConfigTrie': 'readonly',
+                'CONFIG': 'readonly',
+                'Q_PATH_PLACEHOLDER': 'readonly',
+                'CAPACITY_MODES': 'readonly',
+                'OPERATION_TYPES': 'readonly',
+                'DEFAULT_PARTITION': 'readonly',
+                // For metadata files that define globals like GLOBAL_CONFIG_METADATA, etc.
+                'GLOBAL_CONFIG_METADATA': 'readonly',
+                'NODE_LABEL_CONFIG_METADATA': 'readonly',
+                'QUEUE_CONFIG_METADATA': 'readonly',
+                'SCHEDULER_INFO_METADATA': 'readonly',
             },
         },
         rules: {
-            // 'no-unused-vars': ['warn', { 'argsIgnorePattern': '^_' }],
+            'no-unused-vars': ['error', {
+                'vars': 'local',
+                'args': 'after-used', // Ignore unused function arguments unless they are after the last used argument
+                'varsIgnorePattern': '^_|^[A-Z_][A-Z0-9_]*$|^[A-Z][a-zA-Z0-9]*$', // Ignore unused variables:
+                // 1. Starting with _
+                // 2. ALL_CAPS_SNAKE_CASE (constants)
+                // 3. PascalCase (constructors/classes)
+            }],
+            'unicorn/prevent-abbreviations': 'off',
+            'unicorn/no-null': 'off',
+            'unicorn/prefer-module': 'off',
+            'unicorn/prefer-event-target': 'off', // Not applicable in this context
+            'unicorn/consistent-function-scoping' : ['error', {
+                'checkArrowFunctions': false
+            }],
+            'unicorn/filename-case': [
+                'error',
+                {
+                    'cases': {
+                        'kebabCase': true,
+                        'pascalCase': true
+                    }
+                }
+            ],
         },
     },
 
     // Configuration for processing HTML files
-    // eslint-plugin-html will extract JS from <script> tags.
-    // The extracted JavaScript will then be linted by the JavaScript configuration above.
     {
-        files: ["**/*.html"],
+        files: ['**/*.html'],
         plugins: {
             html: htmlPlugin,
         },
+        rules: {
+        }
     },
 
     {
         rules: {
-            'no-console': 'warn',
+            'no-console': 'off', // TODO: Enable in production
             'no-debugger': 'warn',
             'curly': ['error', 'all'],
             'no-var': 'error',
-            'prefer-const': 'warn',
+            'prefer-const': ['warn', {
+                'destructuring': 'all',
+            }],
         },
     },
 
