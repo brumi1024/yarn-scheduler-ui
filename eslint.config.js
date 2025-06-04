@@ -1,7 +1,6 @@
 // eslint.config.js
 import globals from "globals";
 import js from "@eslint/js"; // ESLint's recommended rules
-import tseslint from "typescript-eslint"; // For TypeScript
 import htmlPlugin from "eslint-plugin-html";
 import unicornPlugin from "eslint-plugin-unicorn";
 import prettierConfig from "eslint-config-prettier"; // Disables ESLint rules that conflict with Prettier
