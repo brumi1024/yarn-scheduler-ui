@@ -146,17 +146,22 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _buildPropertyInputHtml(simpleOrPartialKey, fullYarnPropertyName, meta, currentValue, idPrefix = null) {
+        // Build the custom HTML structure for edit queue modal
+        const inputIdBase = (idPrefix || simpleOrPartialKey).replaceAll(/[^\w-]/g, '-');
+        const inputId = `edit-queue-${inputIdBase}`;
+        const dataAttributes = `data-original-value="${DomUtils.escapeXml(currentValue)}" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}" data-full-key="${DomUtils.escapeXml(fullYarnPropertyName)}"`;
+
         let html = `<div class="form-group property-edit-item" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}">
                         <div class="property-details-column">
-                            <div class="property-display-name"><span>${DomUtils.escapeXml(meta.displayName)}</span><span class="info-icon" title="${DomUtils.escapeXml(meta.description || '')}">ⓘ</span></div>
+                            <div class="property-display-name">
+                                <span>${DomUtils.escapeXml(meta.displayName)}</span>
+                                <span class="info-icon" title="${DomUtils.escapeXml(meta.description || '')}">ⓘ</span>
+                            </div>
                             <div class="property-yarn-name">${DomUtils.escapeXml(fullYarnPropertyName)}</div>
                         </div>
                         <div class="property-value-column">`;
 
-        const inputIdBase = (idPrefix || simpleOrPartialKey).replaceAll(/[^\w-]/g, '-'); // Sanitize ID
-        const inputId = `edit-queue-${inputIdBase}`;
-        const dataAttributes = `data-original-value="${DomUtils.escapeXml(currentValue)}" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}" data-full-key="${DomUtils.escapeXml(fullYarnPropertyName)}"`;
-
+        // Generate the appropriate input based on metadata
         if (meta.type === 'enum') {
             html += `<select class="form-input" id="${inputId}" ${dataAttributes}>`;
             for (const opt of (meta.options || [])) {
@@ -182,16 +187,17 @@ class EditQueueModalView extends BaseModalView {
             let attributes = `type="${inputType}" value="${DomUtils.escapeXml(currentValue)}" ${dataAttributes}`;
             if (meta.step !== undefined) attributes += ` step="${meta.step}"`;
             if (meta.type === 'percentage') {
-                // For number inputs acting as percentage
                 attributes += meta.min === undefined ? ` min="0"` : ` min="${meta.min}"`;
-                attributes += meta.max === undefined ? ` max="1"` : ` max="${meta.max}"`; // Default 0-1 for direct % val
+                attributes += meta.max === undefined ? ` max="1"` : ` max="${meta.max}"`;
                 if (meta.step === undefined) attributes += ` step="0.01"`;
             }
             if (meta.placeholder) attributes += ` placeholder="${DomUtils.escapeXml(meta.placeholder)}"`;
 
             html += `<input class="form-input" id="${inputId}" ${attributes}>`;
         }
-        html += `   </div></div>`;
+        
+        html += `        </div>
+                    </div>`;
         return html;
     }
 

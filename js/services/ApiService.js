@@ -156,6 +156,7 @@ class ApiService {
 
         const buildParametersXML = (parameters) =>
             Object.entries(parameters)
+                .filter(([key]) => key !== '_ui_capacityMode') // Filter out UI helper fields
                 .map(
                     ([key, value]) =>
                         `    <entry><key>${DomUtils.escapeXml(key)}</key><value>${DomUtils.escapeXml(value)}</value></entry>`

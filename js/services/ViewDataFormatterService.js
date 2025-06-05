@@ -37,15 +37,20 @@ class ViewDataFormatterService {
         const trieRoot = schedulerConfigModel.getSchedulerTrieRoot();
         if (!trieRoot) return null;
 
-        const pendingChanges = schedulerConfigModel.getRawPendingChanges();
+        const changeLog = schedulerConfigModel.getChangeLog();
         const selectedPartition = appStateModel.getSelectedPartition();
 
-        const rootAddEntry = pendingChanges.addQueues.find((a) => a.queueName === 'root');
-        if (rootAddEntry) {
-            return this._buildAddedRootNode(rootAddEntry, schedulerInfoModel, selectedPartition, pendingChanges, forValidationOnly);
+        // Check if changeLog is available and has the required methods (it might be null during initialization)
+        if (!changeLog || typeof changeLog.getQueueAdditions !== 'function') {
+            return this._formatNodeRecursive(trieRoot, null, null, schedulerInfoModel, selectedPartition, forValidationOnly);
         }
 
-        return this._formatNodeRecursive(trieRoot, null, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly);
+        const rootAddChanges = changeLog.getQueueAdditions().filter(change => change.path === 'root');
+        if (rootAddChanges.length > 0) {
+            return this._buildAddedRootNode(rootAddChanges[0], schedulerInfoModel, selectedPartition, changeLog, forValidationOnly);
+        }
+
+        return this._formatNodeRecursive(trieRoot, null, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly);
     }
 
     _buildEffectiveProperties(baseProperties, pendingEntry, queuePath) {
@@ -74,33 +79,50 @@ class ViewDataFormatterService {
         return { effectiveProperties, uiCapacityModeHint };
     }
 
-    _applyPendingAdditions(formattedNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly) {
+    _applyPendingAdditions(formattedNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly) {
         let activeChildrenCount = 0;
 
-        for (const newChildEntry of pendingChanges.addQueues) {
-            const newQueueParentPath = newChildEntry.queueName.slice(
-                0, Math.max(0, newChildEntry.queueName.lastIndexOf('.'))
+        // If no changeLog or missing methods, no pending additions to apply
+        if (!changeLog || typeof changeLog.getQueueAdditions !== 'function') {
+            return activeChildrenCount;
+        }
+
+        for (const addChange of changeLog.getQueueAdditions()) {
+            const newQueueParentPath = addChange.path.slice(
+                0, Math.max(0, addChange.path.lastIndexOf('.'))
             );
             
             if (newQueueParentPath === basePath) {
-                const newChildSegment = newChildEntry.queueName.slice(
-                    Math.max(0, newChildEntry.queueName.lastIndexOf('.') + 1)
+                const newChildSegment = addChange.path.slice(
+                    Math.max(0, addChange.path.lastIndexOf('.') + 1)
                 );
                 
                 if (!formattedNode.children[newChildSegment]) {
+                    // Convert to legacy format for _buildEffectiveProperties
+                    const legacyEntry = {
+                        queueName: addChange.path, // Add queueName to match the check in _buildEffectiveProperties
+                        params: {}
+                    };
+                    for (const [fullKey, value] of addChange.properties) {
+                        const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+                        if (simpleKey) {
+                            legacyEntry.params[simpleKey] = value;
+                        }
+                    }
+                    
                     const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-                        new Map(), newChildEntry, newChildEntry.queueName
+                        new Map(), legacyEntry, addChange.path
                     );
                     
                     formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
-                        newChildEntry.queueName,
+                        addChange.path,
                         newChildSegment,
                         basePath,
                         effectiveProperties,
                         schedulerInfoModel,
                         selectedPartition,
                         OPERATION_TYPES.ADD,
-                        pendingChanges,
+                        changeLog,
                         uiCapacityModeHint,
                         forValidationOnly
                     );
@@ -112,25 +134,52 @@ class ViewDataFormatterService {
         return activeChildrenCount;
     }
 
-    _formatNodeRecursive(trieNode, parentPath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly) {
+    _formatNodeRecursive(trieNode, parentPath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly) {
         const basePath = trieNode.fullPath;
 
-        if (pendingChanges.removeQueues.includes(basePath)) {
-            return null;
+        // Check if queue is marked for deletion (only if changeLog exists and has the method)
+        if (changeLog && typeof changeLog.getQueueDeletions === 'function') {
+            const deletions = changeLog.getQueueDeletions();
+            if (deletions.some(change => change.path === basePath)) {
+                return null;
+            }
         }
 
-        const addEntry = pendingChanges.addQueues.find((a) => a.queueName === basePath);
-        const updateEntry = pendingChanges.updateQueues.find((u) => u.queueName === basePath);
+        const addChanges = (changeLog && typeof changeLog.getQueueAdditions === 'function') 
+            ? changeLog.getQueueAdditions().filter(change => change.path === basePath) : [];
+        const updateChanges = (changeLog && typeof changeLog.getQueueUpdates === 'function')
+            ? changeLog.getQueueUpdates().filter(change => change.path === basePath) : [];
         
         let operationType = null;
         let effectiveProperties, uiCapacityModeHint;
 
-        if (addEntry) {
+        if (addChanges.length > 0) {
             operationType = OPERATION_TYPES.ADD;
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), addEntry, basePath));
-        } else if (updateEntry) {
+            // Convert to legacy format for _buildEffectiveProperties
+            const legacyEntry = {
+                params: {}
+            };
+            for (const [fullKey, value] of addChanges[0].properties) {
+                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+                if (simpleKey) {
+                    legacyEntry.params[simpleKey] = value;
+                }
+            }
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), legacyEntry, basePath));
+        } else if (updateChanges.length > 0) {
             operationType = OPERATION_TYPES.UPDATE;
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, updateEntry, basePath));
+            // Convert to legacy format for _buildEffectiveProperties
+            const legacyEntry = {
+                queueName: basePath, // Add queueName to match the check in _buildEffectiveProperties
+                params: {}
+            };
+            for (const [fullKey, value] of updateChanges[0].properties) {
+                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+                if (simpleKey) {
+                    legacyEntry.params[simpleKey] = value;
+                }
+            }
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, legacyEntry, basePath));
         } else {
             effectiveProperties = new Map(trieNode.properties);
         }
@@ -143,7 +192,7 @@ class ViewDataFormatterService {
             schedulerInfoModel,
             selectedPartition,
             operationType,
-            pendingChanges,
+            changeLog,
             uiCapacityModeHint,
             forValidationOnly
         );
@@ -154,7 +203,7 @@ class ViewDataFormatterService {
         trieNode.children.forEach((childTrieNode) => {
             if (childTrieNode.isQueue) {
                 const formattedChild = this._formatNodeRecursive(
-                    childTrieNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly
+                    childTrieNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly
                 );
                 if (formattedChild) {
                     formattedNode.children[childTrieNode.segment] = formattedChild;
@@ -164,16 +213,27 @@ class ViewDataFormatterService {
         });
 
         activeChildrenCount += this._applyPendingAdditions(
-            formattedNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly
+            formattedNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly
         );
 
         formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
         return formattedNode;
     }
 
-    _buildAddedRootNode(rootAddEntry, schedulerInfoModel, selectedPartition, pendingChanges, forValidationOnly) {
+    _buildAddedRootNode(rootAddChange, schedulerInfoModel, selectedPartition, changeLog, forValidationOnly) {
+        // Convert ChangeLog format to legacy format for _buildEffectiveProperties
+        const legacyEntry = {
+            params: {}
+        };
+        for (const [fullKey, value] of rootAddChange.properties) {
+            const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+            if (simpleKey) {
+                legacyEntry.params[simpleKey] = value;
+            }
+        }
+        
         const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-            new Map(), rootAddEntry, 'root'
+            new Map(), legacyEntry, 'root'
         );
         
         return this._formatSingleQueueNode(
@@ -184,7 +244,7 @@ class ViewDataFormatterService {
             schedulerInfoModel,
             selectedPartition,
             OPERATION_TYPES.ADD,
-            pendingChanges,
+            changeLog,
             uiCapacityModeHint,
             forValidationOnly
         );
@@ -208,7 +268,9 @@ class ViewDataFormatterService {
     ) {
         const isNew = changeOperationType === OPERATION_TYPES.ADD;
         // Correctly determine if there's a PENDING update for an EXISTING queue
-        const isPendingUpdate = !isNew && pendingChanges.updateQueues.some((q) => q.queueName === queuePath);
+        const isPendingUpdate = !isNew && pendingChanges && typeof pendingChanges.getQueueUpdates === 'function' 
+            ? pendingChanges.getQueueUpdates().some((change) => change.path === queuePath)
+            : false;
 
         const formattedNode = {
             path: queuePath,
@@ -457,22 +519,21 @@ class ViewDataFormatterService {
     }
 
     formatQueueDataForEditModal(queuePath, schedulerConfigModel, schedulerInfoModel, appStateModel) {
-        const pendingChanges = schedulerConfigModel.getRawPendingChanges();
-        const addEntry = pendingChanges.addQueues.find((a) => a.queueName === queuePath);
-        const updateEntry = pendingChanges.updateQueues.find((u) => u.queueName === queuePath);
+        const changeLog = schedulerConfigModel.getChangeLog();
+        const addChanges = changeLog.getQueueAdditions().filter(change => change.path === queuePath);
+        const updateChanges = changeLog.getQueueUpdates().filter(change => change.path === queuePath);
 
         let baseProperties = new Map();
         let displayName = queuePath.split('.').pop();
         let uiCapacityModeHint = null;
 
-        if (addEntry) {
-            for (const [simpleKey, value] of Object.entries(addEntry.params)) {
+        if (addChanges.length > 0) {
+            const addChange = addChanges[0];
+            for (const [fullKey, value] of addChange.properties) {
+                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey === '_ui_capacityMode') {
                     uiCapacityModeHint = value;
                 } else {
-                    const fullKey =
-                        this._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
-                        `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                     baseProperties.set(fullKey, value);
                 }
             }
@@ -487,14 +548,13 @@ class ViewDataFormatterService {
             }
             baseProperties = new Map(trieNode.properties);
             displayName = trieNode.segment;
-            if (updateEntry) {
-                for (const [simpleKey, value] of Object.entries(updateEntry.params)) {
+            if (updateChanges.length > 0) {
+                const updateChange = updateChanges[0];
+                for (const [fullKey, value] of updateChange.properties) {
+                    const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                     if (simpleKey === '_ui_capacityMode') {
                         uiCapacityModeHint = value;
                     } else {
-                        const fullKey =
-                            this._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
-                            `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                         baseProperties.set(fullKey, value);
                     }
                 }
@@ -511,7 +571,7 @@ class ViewDataFormatterService {
             },
             effectiveCapacityMode:
                 uiCapacityModeHint || this._determineEffectiveCapacityMode(queuePath, baseProperties),
-            isNew: !!addEntry,
+            isNew: addChanges.length > 0,
             allPartitions: schedulerInfoModel ? schedulerInfoModel.getPartitions() : [DEFAULT_PARTITION],
         };
 

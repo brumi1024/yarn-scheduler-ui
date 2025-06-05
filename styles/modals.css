@@ -19,7 +19,7 @@
     background: white;
     border-radius: 8px;
     padding: 20px;
-    max-width: 700px;
+    max-width: 900px;
     width: 90%;
     max-height: 85vh;
     overflow-y: auto;
@@ -113,9 +113,10 @@
 .property-edit-item {
     display: flex;
     justify-content: space-between;
-    align-items: center; /* Vertically center content of both columns */
+    align-items: flex-start; /* Align to top instead of center to prevent overflow */
     margin-bottom: 12px; /* Space between property items */
     padding: 8px 0; /* Padding within the item */
+    min-height: 40px; /* Ensure minimum height */
     /* border-bottom: 1px solid #f0f0f0; /* Optional: separator between items */
 }
 /* .property-edit-item:last-child {
@@ -123,10 +124,11 @@
 } */
 
 .property-details-column {
-    flex: 0 0 55%; /* Adjust flex-basis as needed for left column width */
+    flex: 0 0 50%; /* Adjust flex-basis as needed for left column width */
     display: flex;
     flex-direction: column;
     padding-right: 15px; /* Space between left column and value column */
+    min-width: 0; /* Allow text to wrap */
 }
 
 .property-display-name {
@@ -175,15 +177,18 @@
 }
 
 .property-value-column {
-    flex: 0 0 40%; /* Adjust flex-basis for right column width */
+    flex: 0 0 45%; /* Adjust flex-basis for right column width */
     display: flex;
     justify-content: flex-end; /* Align input to the right of this column */
+    min-width: 0; /* Allow content to shrink */
 }
 
 .property-value-column .form-input {
     /* Style for inputs/selects in this column */
     width: 100%; /* Make input take full width of its column */
-    max-width: 250px; /* Optional: max width for very wide modals */
+    max-width: 300px; /* Increased max width for better usability */
+    min-width: 120px; /* Ensure minimum usable width */
+    box-sizing: border-box; /* Include padding and border in width */
 }
 
 .modal-actions {
