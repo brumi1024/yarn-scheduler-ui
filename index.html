@@ -173,7 +173,8 @@
         <script src="js/controllers/MainController.js"></script>
 
         <script>
-            document.addEventListener('DOMContentLoaded', () => {
+          /*global document, app:true, MainController*/
+          document.addEventListener('DOMContentLoaded', () => {
                 app = new MainController();
                 app.init();
             });

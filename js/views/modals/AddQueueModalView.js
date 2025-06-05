@@ -96,9 +96,9 @@ class AddQueueModalView extends BaseModalView {
             capacity: DomUtils.qs('#new-queue-capacity-validation', form),
             maxCapacity: DomUtils.qs('#new-queue-max-capacity-validation', form),
         };
-        Object.values(validationMessages).forEach((el) => {
-            if (el) el.textContent = '';
-        }); // Clear previous messages
+        for (const element of Object.values(validationMessages)) {
+            if (element) element.textContent = '';
+        } // Clear previous messages
 
         const parentPath = DomUtils.qs('#new-parent-queue-select', form).value;
         const queueName = DomUtils.qs('#new-queue-name', form).value.trim();
@@ -150,7 +150,7 @@ class AddQueueModalView extends BaseModalView {
         if (!isValid) return null;
 
         // Prepare params with simple keys for the API structure and metadata defaults
-        const params = {
+        const parameters = {
             capacity: capacity,
             'maximum-capacity': maxCapacity,
             state: state,
@@ -158,16 +158,16 @@ class AddQueueModalView extends BaseModalView {
         };
 
         // Add default values for other metadata-defined properties for new queues
-        QUEUE_CONFIG_METADATA.forEach((category) => {
-            Object.values(category.properties).forEach((meta) => {
+        for (const category of QUEUE_CONFIG_METADATA) {
+            for (const meta of Object.values(category.properties)) {
                 const simpleKey = meta.key;
-                if (!params.hasOwnProperty(simpleKey) && meta.defaultValue !== undefined) {
-                    params[simpleKey] = String(meta.defaultValue);
+                if (!Object.prototype.hasOwnProperty.call(parameters, simpleKey) && meta.defaultValue !== undefined) {
+                    parameters[simpleKey] = String(meta.defaultValue);
                 }
-            });
-        });
+            }
+        }
 
-        return { parentPath, queueName, params };
+        return { parentPath, queueName, params: parameters };
     }
 
     _bindFormEvents() {
@@ -178,12 +178,12 @@ class AddQueueModalView extends BaseModalView {
         const capacityInput = DomUtils.qs('#new-queue-capacity', form);
         const capacityHelpText = DomUtils.qs('#new-capacity-help', form);
         const nameInput = DomUtils.qs('#new-queue-name', form);
-        const nameValidationEl = DomUtils.qs('#new-queue-name-validation', form);
+        const nameValidationElement = DomUtils.qs('#new-queue-name-validation', form);
 
-        if (nameInput && nameValidationEl) {
+        if (nameInput && nameValidationElement) {
             nameInput.addEventListener('input', () => {
                 const validation = ValidationService.isValidQueueNameChars(nameInput.value);
-                nameValidationEl.textContent = validation.isValid ? '' : validation.message;
+                nameValidationElement.textContent = validation.isValid ? '' : validation.message;
             });
         }
 
@@ -192,27 +192,31 @@ class AddQueueModalView extends BaseModalView {
                 const selectedMode = capacityModeSelect.value;
                 capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(selectedMode);
                 switch (selectedMode) {
-                    case CAPACITY_MODES.PERCENTAGE:
+                    case CAPACITY_MODES.PERCENTAGE: {
                         capacityHelpText.textContent = 'e.g., 10% or 10.0%';
                         break;
-                    case CAPACITY_MODES.WEIGHT:
+                    }
+                    case CAPACITY_MODES.WEIGHT: {
                         capacityHelpText.textContent = 'e.g., 1w or 1.0w';
                         break;
-                    case CAPACITY_MODES.ABSOLUTE:
+                    }
+                    case CAPACITY_MODES.ABSOLUTE: {
                         capacityHelpText.textContent = 'e.g., [memory=1024,vcores=1]';
                         break;
-                    default:
+                    }
+                    default: {
                         capacityHelpText.textContent = '';
+                    }
                 }
                 // Clear previous capacity validation message
-                const capValMsg = DomUtils.qs('#new-queue-capacity-validation', form);
-                if (capValMsg) capValMsg.textContent = '';
+                const capValueMessage = DomUtils.qs('#new-queue-capacity-validation', form);
+                if (capValueMessage) capValueMessage.textContent = '';
             });
         }
 
-        const submitBtn = DomUtils.qs('#submit-add-queue-btn', this.modalEl);
-        if (submitBtn) {
-            submitBtn.addEventListener('click', () => {
+        const submitButton = DomUtils.qs('#submit-add-queue-btn', this.modalEl);
+        if (submitButton) {
+            submitButton.addEventListener('click', () => {
                 const formData = this._validateAndGetFormData(form);
                 if (formData) {
                     this._emit('submitAddQueue', formData); // Emits to MainController
@@ -221,9 +225,9 @@ class AddQueueModalView extends BaseModalView {
             });
         }
 
-        const cancelBtn = DomUtils.qs('#cancel-add-queue-btn', this.modalEl);
-        if (cancelBtn) {
-            cancelBtn.addEventListener('click', () => this.hide({ Canceled: true }));
+        const cancelButton = DomUtils.qs('#cancel-add-queue-btn', this.modalEl);
+        if (cancelButton) {
+            cancelButton.addEventListener('click', () => this.hide({ Canceled: true }));
         }
     }
 }

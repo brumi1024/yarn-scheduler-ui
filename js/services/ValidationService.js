@@ -4,13 +4,13 @@
  * should be handled by SchedulerConfigModel.performStatefulValidation() using data from ViewDataFormatterService.
  * Uses constants from js/config/config.js
  */
-class ValidationService {
+const ValidationService = {
     /**
      * Validates the characters allowed in a queue name segment.
      * @param {string} name - The queue name segment to validate.
      * @returns {{isValid: boolean, message?: string}}
      */
-    static isValidQueueNameChars(name) {
+    isValidQueueNameChars(name) {
         if (!name || typeof name !== 'string' || name.trim().length === 0) {
             return { isValid: false, message: 'Queue name segment is required.' };
         }
@@ -25,7 +25,7 @@ class ValidationService {
             return { isValid: false, message: 'Queue name segment cannot contain spaces.' };
         }
         return { isValid: true };
-    }
+    },
 
     /**
      * Parses and validates a capacity string based on its mode.
@@ -36,49 +36,49 @@ class ValidationService {
      *          `value` is the (potentially auto-corrected) string, or null if invalid.
      *          `error` (singular) for general errors, `errors` (array) from old `validateCapacity`.
      */
-    static parseAndValidateCapacityValue(capacityString, mode, allowEmptyVector = false) {
-        const str = String(capacityString || '').trim();
+    parseAndValidateCapacityValue(capacityString, mode, allowEmptyVector = false) {
+        const string_ = String(capacityString || '').trim();
         const errors = [];
 
         if (mode === CAPACITY_MODES.PERCENTAGE) {
-            let numStr = str;
-            if (str.endsWith('%')) {
-                numStr = str.slice(0, -1);
+            let numberString = string_;
+            if (string_.endsWith('%')) {
+                numberString = string_.slice(0, -1);
             }
-            const num = parseFloat(numStr);
-            if (isNaN(num)) {
+            const number_ = Number.parseFloat(numberString);
+            if (Number.isNaN(number_)) {
                 errors.push('Percentage capacity must be a number.');
-            } else if (num < 0 || num > 100) {
+            } else if (number_ < 0 || number_ > 100) {
                 errors.push('Percentage capacity must be between 0.0 and 100.0.');
             }
-            return errors.length > 0 ? { value: null, errors: errors } : { value: `${num.toFixed(1)}%` };
+            return errors.length > 0 ? { value: null, errors: errors } : { value: `${number_.toFixed(1)}%` };
         }
 
         if (mode === CAPACITY_MODES.WEIGHT) {
-            let numStr = str;
-            if (str.endsWith('w')) {
-                numStr = str.slice(0, -1);
+            let numberString = string_;
+            if (string_.endsWith('w')) {
+                numberString = string_.slice(0, -1);
             }
-            const num = parseFloat(numStr);
-            if (isNaN(num)) {
+            const number_ = Number.parseFloat(numberString);
+            if (Number.isNaN(number_)) {
                 errors.push('Weight capacity must be a number.');
-            } else if (num < 0) {
+            } else if (number_ < 0) {
                 errors.push('Weight capacity must be non-negative.');
             }
             // YARN might support integer weights better, but UI can standardize to one decimal for 'w'
-            return errors.length > 0 ? { value: null, errors: errors } : { value: `${num.toFixed(1)}w` };
+            return errors.length > 0 ? { value: null, errors: errors } : { value: `${number_.toFixed(1)}w` };
         }
 
         if (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) {
-            if (!str.startsWith('[') || !str.endsWith(']')) {
+            if (!string_.startsWith('[') || !string_.endsWith(']')) {
                 errors.push('Absolute capacity must be enclosed in brackets, e.g., [memory=1024,vcores=1].');
-            } else if (str === '[]' && !allowEmptyVector) {
+            } else if (string_ === '[]' && !allowEmptyVector) {
                 errors.push('Absolute capacity vector cannot be empty unless explicitly allowed.');
             }
             // TODO: Deeper validation of vector content (key=value pairs, valid resource names)
             // For example: '[memory=100mb,vcores=2]' - '100mb' would be an issue. Needs to be numeric.
-            if (str !== '[]') {
-                const content = str.slice(1, -1);
+            if (string_ !== '[]') {
+                const content = string_.slice(1, -1);
                 const pairs = content.split(',');
                 if (content && pairs.length === 0) errors.push('Invalid format inside absolute capacity brackets.');
                 for (const pair of pairs) {
@@ -92,16 +92,16 @@ class ValidationService {
                     const resourceValue = parts[1].trim();
                     // Check if value is numeric (ignoring units for now, YARN handles units)
                     // More robust parsing might extract numeric part and unit separately for stricter validation
-                    if (isNaN(parseFloat(resourceValue))) {
+                    if (Number.isNaN(Number.parseFloat(resourceValue))) {
                         // Checks if the beginning of the string is a number
                         errors.push(`Resource value in "${pair}" must be numeric.`);
                     }
                 }
             }
-            return errors.length > 0 ? { value: null, errors: errors } : { value: str };
+            return errors.length > 0 ? { value: null, errors: errors } : { value: string_ };
         }
         return { value: null, error: `Unknown capacity mode: ${mode}` };
-    }
+    },
 
     /**
      * Validates a node label string (comma-separated).
@@ -110,7 +110,7 @@ class ValidationService {
      * @returns {{isValid: boolean, labels: Array<string>, message?: string}}
      *          `labels` contains an array of trimmed, non-empty, unique label segments.
      */
-    static validateNodeLabelsString(labelsString) {
+    validateNodeLabelsString(labelsString) {
         const trimmedString = String(labelsString || '').trim();
 
         if (trimmedString === '' || trimmedString === '*') {
@@ -148,7 +148,7 @@ class ValidationService {
             }
         }
         return { isValid: true, labels: uniqueLabels.sort() };
-    }
+    },
 
     /**
      * Helper to check if a queue (not already marked for deletion) can be marked for deletion.
@@ -157,7 +157,7 @@ class ValidationService {
      * @param {Object} formattedQueueNode - The formatted queue node from ViewDataFormatterService.
      * @returns {{canDelete: boolean, reason: string}}
      */
-    static checkDeletability(formattedQueueNode) {
+    checkDeletability(formattedQueueNode) {
         if (!formattedQueueNode) {
             return { canDelete: false, reason: 'Queue data not available.' };
         }
@@ -172,13 +172,13 @@ class ValidationService {
         let activeChildCount = 0;
         const activeChildrenNames = [];
         if (formattedQueueNode.children) {
-            Object.values(formattedQueueNode.children).forEach((child) => {
+            for (const child of Object.values(formattedQueueNode.children)) {
                 if (child && !child.isDeleted) {
                     // Consider only children not also marked for delete
                     activeChildCount++;
                     activeChildrenNames.push(child.name);
                 }
-            });
+            }
         }
 
         if (activeChildCount > 0) {
@@ -203,5 +203,5 @@ class ValidationService {
         }
 
         return { canDelete: true, reason: '' };
-    }
-}
+    },
+};

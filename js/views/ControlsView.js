@@ -68,10 +68,10 @@ class ControlsView extends EventEmitter {
     renderPartitions(partitions) {
         if (!this.partitionSelectEl) return;
         DomUtils.empty(this.partitionSelectEl);
-        (partitions || [DEFAULT_PARTITION]).forEach((partition) => {
+        for (const partition of (partitions || [DEFAULT_PARTITION])) {
             const option = DomUtils.createElement('option', null, { value: partition }, partition || 'default');
-            this.partitionSelectEl.appendChild(option);
-        });
+            this.partitionSelectEl.append(option);
+        }
         this.renderSelectedPartition(this.appStateModel.getSelectedPartition());
     }
 

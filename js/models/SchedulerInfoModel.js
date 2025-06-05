@@ -36,30 +36,32 @@ class SchedulerInfoModel extends EventEmitter {
         if (this._schedulerInfo && this._schedulerInfo.queues) {
             const extractFromQueueRecursive = (queueInfo) => {
                 if (queueInfo.capacities && queueInfo.capacities.queueCapacitiesByPartition) {
-                    queueInfo.capacities.queueCapacitiesByPartition.forEach((pInfo) => {
+                    for (const pInfo of queueInfo.capacities.queueCapacitiesByPartition) {
                         if (pInfo.partitionName && pInfo.partitionName !== '') {
                             // Ensure not empty and not default
                             partitions.add(pInfo.partitionName);
                         }
-                    });
+                    }
                 }
                 // Also check nodeLabels array on queues as per old logic, if that's still relevant for partition discovery
                 if (queueInfo.nodeLabels) {
-                    queueInfo.nodeLabels.forEach((label) => {
+                    for (const label of queueInfo.nodeLabels) {
                         if (label && label !== '*' && label !== '') partitions.add(label);
-                    });
+                    }
                 }
 
                 if (queueInfo.queues && queueInfo.queues.queue) {
                     const children = Array.isArray(queueInfo.queues.queue)
                         ? queueInfo.queues.queue
                         : [queueInfo.queues.queue];
-                    children.forEach(extractFromQueueRecursive);
+                    for (const child of children) {
+                        extractFromQueueRecursive(child);
+                    }
                 }
             };
             extractFromQueueRecursive(this._schedulerInfo); // Start from root
         }
-        this._partitions = Array.from(partitions).sort();
+        this._partitions = [...partitions].sort();
     }
 
     /**

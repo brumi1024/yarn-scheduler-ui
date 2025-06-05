@@ -20,9 +20,9 @@ const DomUtils = {
             }
         }
         if (attributes) {
-            for (const attr in attributes) {
-                if (Object.hasOwnProperty.call(attributes, attr)) {
-                    element.setAttribute(attr, attributes[attr]);
+            for (const attribute in attributes) {
+                if (Object.hasOwnProperty.call(attributes, attribute)) {
+                    element.setAttribute(attribute, attributes[attribute]);
                 }
             }
         }
@@ -39,7 +39,7 @@ const DomUtils = {
     empty(element) {
         if (element) {
             while (element.firstChild) {
-                element.removeChild(element.firstChild);
+                element.firstChild.remove();
             }
         }
     },
@@ -71,7 +71,7 @@ const DomUtils = {
      * @returns {HTMLElement|null}
      */
     getById(id) {
-        return document.getElementById(id);
+        return document.querySelector(`#${id}`);
     },
 
     /**
@@ -100,16 +100,16 @@ const DomUtils = {
      * @param {string | number | boolean | undefined | null} str - The string to escape.
      * @returns {string} The escaped string.
      */
-    escapeXml(str) {
-        if (str === undefined || str === null) {
+    escapeXml(string_) {
+        if (string_ === undefined || string_ === null) {
             return '';
         }
-        const stringValue = String(str); // Ensure it's a string
+        const stringValue = String(string_); // Ensure it's a string
         return stringValue
-            .replace(/&/g, '&')
-            .replace(/</g, '<')
-            .replace(/>/g, '>')
-            .replace(/"/g, '"')
-            .replace(/'/g, "'");
+            .replaceAll('&', '&')
+            .replaceAll('<', '<')
+            .replaceAll('>', '>')
+            .replaceAll('"', '"')
+            .replaceAll('\'', "'");
     },
 };

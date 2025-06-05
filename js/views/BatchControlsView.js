@@ -48,7 +48,7 @@ class BatchControlsView extends EventEmitter {
         const totalChanges = pendingCounts.added + pendingCounts.modified + pendingCounts.deleted;
 
         if (totalChanges > 0) {
-            let infoTextParts = [];
+            const infoTextParts = [];
             if (pendingCounts.added > 0) infoTextParts.push(`${pendingCounts.added} added`);
             if (pendingCounts.modified > 0) infoTextParts.push(`${pendingCounts.modified} modified`);
             if (pendingCounts.deleted > 0) infoTextParts.push(`${pendingCounts.deleted} deleted`);

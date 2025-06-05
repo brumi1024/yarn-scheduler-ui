@@ -40,12 +40,12 @@ class EventEmitter {
         if (!this.events[eventType]) {
             return;
         }
-        this.events[eventType].forEach((listener) => {
+        for (const listener of this.events[eventType]) {
             try {
                 listener(data);
             } catch (error) {
                 console.error(`Error in listener for event "${eventType}":`, error);
             }
-        });
+        }
     }
 }

@@ -2,11 +2,11 @@ class ViewDataFormatterService {
     constructor() {
         this._resourceVectorParser = (resourceString) => {
             if (!resourceString || typeof resourceString !== 'string') return [];
-            let cleanStr = resourceString.trim();
-            if (cleanStr.startsWith('[') && cleanStr.endsWith(']')) cleanStr = cleanStr.slice(1, -1);
-            if (!cleanStr) return [];
+            let cleanString = resourceString.trim();
+            if (cleanString.startsWith('[') && cleanString.endsWith(']')) cleanString = cleanString.slice(1, -1);
+            if (!cleanString) return [];
 
-            return cleanStr
+            return cleanString
                 .split(',')
                 .map((pair) => {
                     const parts = pair.split('=');
@@ -25,8 +25,8 @@ class ViewDataFormatterService {
         };
     }
 
-    _isVectorString(valStr) {
-        return typeof valStr === 'string' && valStr.startsWith('[') && valStr.endsWith(']');
+    _isVectorString(valueString) {
+        return typeof valueString === 'string' && valueString.startsWith('[') && valueString.endsWith(']');
     }
 
     _mapSimpleKeyToFullYarnKey(queuePath, simpleOrPartialKey) {
@@ -61,7 +61,7 @@ class ViewDataFormatterService {
                 return null;
             }
 
-            let effectiveProperties = new Map(trieNode.properties);
+            const effectiveProperties = new Map(trieNode.properties);
             let operationType = null;
             let uiCapacityModeHint = null;
 
@@ -122,17 +122,17 @@ class ViewDataFormatterService {
                 }
             });
 
-            pendingChanges.addQueues.forEach((newChildEntry) => {
-                const newQueueParentPath = newChildEntry.queueName.substring(
+            for (const newChildEntry of pendingChanges.addQueues) {
+                const newQueueParentPath = newChildEntry.queueName.slice(
                     0,
-                    newChildEntry.queueName.lastIndexOf('.')
+                    Math.max(0, newChildEntry.queueName.lastIndexOf('.'))
                 );
                 if (newQueueParentPath === basePath) {
-                    const newChildSegment = newChildEntry.queueName.substring(
-                        newChildEntry.queueName.lastIndexOf('.') + 1
+                    const newChildSegment = newChildEntry.queueName.slice(
+                        Math.max(0, newChildEntry.queueName.lastIndexOf('.') + 1)
                     );
                     if (!formattedNode.children[newChildSegment]) {
-                        const newChildEffectiveProps = new Map();
+                        const newChildEffectiveProperties = new Map();
                         let newChildUiModeHint = null;
                         for (const [simpleKey, value] of Object.entries(newChildEntry.params)) {
                             if (simpleKey === '_ui_capacityMode') {
@@ -142,13 +142,13 @@ class ViewDataFormatterService {
                             const fullKey =
                                 this._mapSimpleKeyToFullYarnKey(newChildEntry.queueName, simpleKey) ||
                                 `yarn.scheduler.capacity.${newChildEntry.queueName}.${simpleKey}`;
-                            newChildEffectiveProps.set(fullKey, value);
+                            newChildEffectiveProperties.set(fullKey, value);
                         }
                         formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
                             newChildEntry.queueName,
                             newChildSegment,
                             basePath,
-                            newChildEffectiveProps,
+                            newChildEffectiveProperties,
                             schedulerInfoModel,
                             selectedPartition,
                             OPERATION_TYPES.ADD,
@@ -159,14 +159,14 @@ class ViewDataFormatterService {
                         activeChildrenCount++;
                     }
                 }
-            });
+            }
             formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
             return formattedNode;
         };
 
         const rootAddEntry = pendingChanges.addQueues.find((a) => a.queueName === 'root');
         if (rootAddEntry) {
-            const rootEffectiveProps = new Map();
+            const rootEffectiveProperties = new Map();
             let rootUiModeHint = null;
             for (const [simpleKey, value] of Object.entries(rootAddEntry.params)) {
                 if (simpleKey === '_ui_capacityMode') {
@@ -175,13 +175,13 @@ class ViewDataFormatterService {
                 }
                 const fullKey =
                     this._mapSimpleKeyToFullYarnKey('root', simpleKey) || `yarn.scheduler.capacity.root.${simpleKey}`;
-                rootEffectiveProps.set(fullKey, value);
+                rootEffectiveProperties.set(fullKey, value);
             }
             return this._formatSingleQueueNode(
                 'root',
                 'root',
                 null,
-                rootEffectiveProps,
+                rootEffectiveProperties,
                 schedulerInfoModel,
                 selectedPartition,
                 OPERATION_TYPES.ADD,
@@ -237,7 +237,7 @@ class ViewDataFormatterService {
         this._populateConfiguredProperties(formattedNode, queuePath, effectiveProperties);
 
         // --- Format Capacities for Display ---
-        let maxCapacityMode = this._isVectorString(String(formattedNode['maximum-capacity'] || '').trim())
+        const maxCapacityMode = this._isVectorString(String(formattedNode['maximum-capacity'] || '').trim())
             ? CAPACITY_MODES.ABSOLUTE
             : CAPACITY_MODES.PERCENTAGE;
 
@@ -265,13 +265,13 @@ class ViewDataFormatterService {
             formattedNode.effectiveCapacityMode === CAPACITY_MODES.WEIGHT
         ) {
             formattedNode.sortableCapacity =
-                parseFloat(String(formattedNode.capacityDisplay).replace(/[^\d.-]/g, '')) || 0;
+                Number.parseFloat(String(formattedNode.capacityDisplay).replaceAll(/[^\d.-]/g, '')) || 0;
         } else if (this._isVectorString(formattedNode.capacityDisplay)) {
             let memoryValue = 0;
             const memResource = formattedNode.capacityDetails.find(
                 (r) => r.key && (r.key.toLowerCase() === 'memory' || r.key.toLowerCase() === 'memory-mb')
             );
-            if (memResource && memResource.value) memoryValue = parseFloat(memResource.value) || 0;
+            if (memResource && memResource.value) memoryValue = Number.parseFloat(memResource.value) || 0;
             formattedNode.sortableCapacity = memoryValue;
         } else {
             formattedNode.sortableCapacity = 0; // Fallback
@@ -291,20 +291,20 @@ class ViewDataFormatterService {
             const liveQueueInfo = schedulerInfoModel.getQueueRuntimeInfo(queuePath, selectedPartition);
             if (liveQueueInfo) {
                 formattedNode.numApplications =
-                    liveQueueInfo.numApplications !== undefined
-                        ? liveQueueInfo.numApplications
-                        : liveQueueInfo.numActiveApplications !== undefined
-                          ? liveQueueInfo.numActiveApplications + (liveQueueInfo.numPendingApplications || 0)
-                          : 0;
+                    liveQueueInfo.numApplications === undefined
+                        ? liveQueueInfo.numActiveApplications === undefined
+                          ? 0
+                          : liveQueueInfo.numActiveApplications + (liveQueueInfo.numPendingApplications || 0)
+                        : liveQueueInfo.numApplications;
                 formattedNode.absoluteCapacity = liveQueueInfo.absoluteCapacity; // Use the raw value for sankey width
                 formattedNode.absoluteCapacityDisplay =
-                    liveQueueInfo.absoluteCapacity !== undefined
-                        ? `${parseFloat(liveQueueInfo.absoluteCapacity).toFixed(1)}%`
-                        : 'N/A';
+                    liveQueueInfo.absoluteCapacity === undefined
+                        ? 'N/A'
+                        : `${Number.parseFloat(liveQueueInfo.absoluteCapacity).toFixed(1)}%`;
                 formattedNode.absoluteUsedCapacityDisplay =
-                    liveQueueInfo.absoluteUsedCapacity !== undefined
-                        ? `${parseFloat(liveQueueInfo.absoluteUsedCapacity).toFixed(1)}%`
-                        : 'N/A';
+                    liveQueueInfo.absoluteUsedCapacity === undefined
+                        ? 'N/A'
+                        : `${Number.parseFloat(liveQueueInfo.absoluteUsedCapacity).toFixed(1)}%`;
                 formattedNode.liveState = liveQueueInfo.state;
             } else {
                 formattedNode.numApplications = 0;
@@ -331,16 +331,16 @@ class ViewDataFormatterService {
     }
 
     _populateConfiguredProperties(formattedNode, queuePath, effectiveProperties) {
-        QUEUE_CONFIG_METADATA.forEach((category) => {
-            Object.entries(category.properties).forEach(([placeholderKey, meta]) => {
+        for (const category of QUEUE_CONFIG_METADATA) {
+            for (const [placeholderKey, meta] of Object.entries(category.properties)) {
                 const fullKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
                 let value = effectiveProperties.get(fullKey);
                 if (value === undefined && meta.defaultValue !== undefined) {
                     value = meta.defaultValue;
                 }
                 formattedNode[meta.key] = value;
-            });
-        });
+            }
+        }
         const labelsListKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
         const anlFullPlaceholderKey = `yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`;
         const anlDefault = NODE_LABEL_CONFIG_METADATA[anlFullPlaceholderKey]?.defaultValue || '*';
@@ -376,9 +376,9 @@ class ViewDataFormatterService {
     _determineEffectiveCapacityMode(queuePath, effectiveProperties) {
         const rawCapacityString = effectiveProperties.get(`yarn.scheduler.capacity.${queuePath}.capacity`);
         if (rawCapacityString !== undefined) {
-            const capStr = String(rawCapacityString).trim();
-            if (capStr.endsWith('w')) return CAPACITY_MODES.WEIGHT;
-            if (this._isVectorString(capStr)) return CAPACITY_MODES.ABSOLUTE;
+            const capString = String(rawCapacityString).trim();
+            if (capString.endsWith('w')) return CAPACITY_MODES.WEIGHT;
+            if (this._isVectorString(capString)) return CAPACITY_MODES.ABSOLUTE;
         }
         return CAPACITY_MODES.PERCENTAGE;
     }
@@ -396,32 +396,32 @@ class ViewDataFormatterService {
     }
 
     _formatCapacityForDisplay(rawValue, mode, defaultValueForEmptyOrInvalid) {
-        let valStr = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
+        let valueString = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
 
-        if (valStr === '' || valStr === null || valStr === undefined) {
-            valStr = String(defaultValueForEmptyOrInvalid).trim();
+        if (valueString === '' || valueString === null || valueString === undefined) {
+            valueString = String(defaultValueForEmptyOrInvalid).trim();
         }
 
-        if (!isNaN(parseFloat(valStr))) {
-            const num = parseFloat(valStr);
-            if (mode === CAPACITY_MODES.PERCENTAGE) return `${num.toFixed(1)}%`;
-            if (mode === CAPACITY_MODES.WEIGHT) return `${num.toFixed(1)}w`;
+        if (!Number.isNaN(Number.parseFloat(valueString))) {
+            const number_ = Number.parseFloat(valueString);
+            if (mode === CAPACITY_MODES.PERCENTAGE) return `${number_.toFixed(1)}%`;
+            if (mode === CAPACITY_MODES.WEIGHT) return `${number_.toFixed(1)}w`;
         }
 
-        if (mode === CAPACITY_MODES.PERCENTAGE && valStr.endsWith('%')) return valStr;
-        if (mode === CAPACITY_MODES.WEIGHT && valStr.endsWith('w')) return valStr;
-        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && this._isVectorString(valStr))
-            return valStr;
+        if (mode === CAPACITY_MODES.PERCENTAGE && valueString.endsWith('%')) return valueString;
+        if (mode === CAPACITY_MODES.WEIGHT && valueString.endsWith('w')) return valueString;
+        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && this._isVectorString(valueString))
+            return valueString;
 
-        if (!isNaN(parseFloat(valStr))) {
+        if (!Number.isNaN(Number.parseFloat(valueString))) {
             // Check again if it was just a number but wrong mode initially
-            const num = parseFloat(valStr);
-            if (mode === CAPACITY_MODES.PERCENTAGE) return `${num.toFixed(1)}%`;
-            if (mode === CAPACITY_MODES.WEIGHT) return `${num.toFixed(1)}w`;
+            const number_ = Number.parseFloat(valueString);
+            if (mode === CAPACITY_MODES.PERCENTAGE) return `${number_.toFixed(1)}%`;
+            if (mode === CAPACITY_MODES.WEIGHT) return `${number_.toFixed(1)}w`;
         }
 
         // If it's supposed to be absolute/vector but isn't, return default vector
-        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && !this._isVectorString(valStr)) {
+        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && !this._isVectorString(valueString)) {
             return this._getDefaultCapacityValue(CAPACITY_MODES.ABSOLUTE);
         }
 
@@ -480,7 +480,7 @@ class ViewDataFormatterService {
         let uiCapacityModeHint = null;
 
         if (addEntry) {
-            Object.entries(addEntry.params).forEach(([simpleKey, value]) => {
+            for (const [simpleKey, value] of Object.entries(addEntry.params)) {
                 if (simpleKey === '_ui_capacityMode') {
                     uiCapacityModeHint = value;
                 } else {
@@ -489,8 +489,8 @@ class ViewDataFormatterService {
                         `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                     baseProperties.set(fullKey, value);
                 }
-            });
-            displayName = queuePath.substring(queuePath.lastIndexOf('.') + 1);
+            }
+            displayName = queuePath.slice(Math.max(0, queuePath.lastIndexOf('.') + 1));
         } else {
             const trieNode = schedulerConfigModel.getTrieInstance().getQueueNode(queuePath);
             if (!trieNode) {
@@ -502,7 +502,7 @@ class ViewDataFormatterService {
             baseProperties = new Map(trieNode.properties);
             displayName = trieNode.segment;
             if (updateEntry) {
-                Object.entries(updateEntry.params).forEach(([simpleKey, value]) => {
+                for (const [simpleKey, value] of Object.entries(updateEntry.params)) {
                     if (simpleKey === '_ui_capacityMode') {
                         uiCapacityModeHint = value;
                     } else {
@@ -511,7 +511,7 @@ class ViewDataFormatterService {
                             `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                         baseProperties.set(fullKey, value);
                     }
-                });
+                }
             }
         }
 
@@ -529,26 +529,26 @@ class ViewDataFormatterService {
             allPartitions: schedulerInfoModel ? schedulerInfoModel.getPartitions() : [DEFAULT_PARTITION],
         };
 
-        QUEUE_CONFIG_METADATA.forEach((category) => {
-            Object.entries(category.properties).forEach(([placeholderKey, meta]) => {
+        for (const category of QUEUE_CONFIG_METADATA) {
+            for (const [placeholderKey, meta] of Object.entries(category.properties)) {
                 const fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
                 const value = baseProperties.get(fullYarnKey);
-                dataForModal.properties[meta.key] = value !== undefined ? String(value) : String(meta.defaultValue);
-            });
-        });
+                dataForModal.properties[meta.key] = value === undefined ? String(meta.defaultValue) : String(value);
+            }
+        }
 
         const anlKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
         const anlFullPlaceholderKey = `yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`;
         const anlDefault = NODE_LABEL_CONFIG_METADATA[anlFullPlaceholderKey]?.defaultValue || '*';
         dataForModal.nodeLabelData.accessibleNodeLabelsString = String(baseProperties.get(anlKey) || anlDefault);
 
-        baseProperties.forEach((value, key) => {
+        for (const [key, value] of baseProperties.entries()) {
             const labelPrefix = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels.`;
             if (key.startsWith(labelPrefix) && key !== anlKey) {
-                const simpleSubKey = key.substring(labelPrefix.length);
+                const simpleSubKey = key.slice(labelPrefix.length);
                 dataForModal.nodeLabelData.labelSpecificParams[simpleSubKey] = String(value);
             }
-        });
+        }
 
         return dataForModal;
     }
@@ -591,9 +591,7 @@ class ViewDataFormatterService {
             nodeLabelInfo: [],
         };
 
-        infoData.basicInfo.push({ label: 'Name', value: targetNode.displayName });
-        infoData.basicInfo.push({ label: 'Path', value: targetNode.path });
-        infoData.basicInfo.push({ label: 'Configured State', value: targetNode.state });
+        infoData.basicInfo.push({ label: 'Name', value: targetNode.displayName }, { label: 'Path', value: targetNode.path }, { label: 'Configured State', value: targetNode.state });
         if (targetNode.liveState && targetNode.liveState !== targetNode.state) {
             infoData.basicInfo.push({ label: 'Live State', value: targetNode.liveState });
         }
@@ -632,17 +630,15 @@ class ViewDataFormatterService {
         infoData.liveUsage.push({
             label: 'Absolute Capacity (Live)',
             value: targetNode.absoluteCapacityDisplay || 'N/A',
-        });
-        infoData.liveUsage.push({
+        }, {
             label: 'Absolute Used Capacity (Live)',
             value: targetNode.absoluteUsedCapacityDisplay || 'N/A',
-        });
-        infoData.liveUsage.push({
+        }, {
             label: 'Number of Applications (Live)',
-            value: targetNode.numApplications !== undefined ? targetNode.numApplications : 'N/A',
+            value: targetNode.numApplications === undefined ? 'N/A' : targetNode.numApplications,
         });
         if (liveQueueInfo) {
-            Object.entries(SCHEDULER_INFO_METADATA).forEach(([apiKey, meta]) => {
+            for (const [apiKey, meta] of Object.entries(SCHEDULER_INFO_METADATA)) {
                 if (
                     apiKey !== 'queueName' &&
                     apiKey !== 'queuePath' &&
@@ -655,9 +651,9 @@ class ViewDataFormatterService {
                     apiKey !== 'absoluteMaxCapacity' &&
                     apiKey !== 'absoluteUsedCapacity' &&
                     apiKey !== 'numApplications' &&
-                    !infoData.liveUsage.find((item) => item.label === meta.displayName) &&
-                    !infoData.basicInfo.find((item) => item.label === meta.displayName) &&
-                    !infoData.capacityResourceDetails.find((item) => item.label === meta.displayName)
+                    !infoData.liveUsage.some((item) => item.label === meta.displayName) &&
+                    !infoData.basicInfo.some((item) => item.label === meta.displayName) &&
+                    !infoData.capacityResourceDetails.some((item) => item.label === meta.displayName)
                 ) {
                     let value = liveQueueInfo[apiKey];
                     if (apiKey === 'resourcesUsed' && liveQueueInfo.resourcesUsed) {
@@ -673,11 +669,11 @@ class ViewDataFormatterService {
                         });
                     }
                 }
-            });
+            }
         }
 
-        const coreDisplayProps = ['capacity', 'maximum-capacity', 'state', 'accessible-node-labels'];
-        targetNode.effectiveProperties.forEach((value, fullKey) => {
+        const coreDisplayProperties = new Set(['capacity', 'maximum-capacity', 'state', 'accessible-node-labels']);
+        for (const [fullKey, value] of targetNode.effectiveProperties.entries()) {
             let matchedMeta = null;
             for (const category of QUEUE_CONFIG_METADATA) {
                 for (const phKey in category.properties) {
@@ -689,8 +685,8 @@ class ViewDataFormatterService {
                 if (matchedMeta) break;
             }
 
-            if (matchedMeta && !coreDisplayProps.includes(matchedMeta.key)) {
-                if (!infoData.otherConfigured.find((item) => item.label === matchedMeta.displayName)) {
+            if (matchedMeta && !coreDisplayProperties.has(matchedMeta.key)) {
+                if (!infoData.otherConfigured.some((item) => item.label === matchedMeta.displayName)) {
                     infoData.otherConfigured.push({ label: matchedMeta.displayName, value: String(value) });
                 }
             } else if (
@@ -698,30 +694,30 @@ class ViewDataFormatterService {
                 fullKey.startsWith(`yarn.scheduler.capacity.${targetNode.path}.`) &&
                 !fullKey.includes('accessible-node-labels.')
             ) {
-                const simpleKey = fullKey.substring(`yarn.scheduler.capacity.${targetNode.path}.`.length);
+                const simpleKey = fullKey.slice(`yarn.scheduler.capacity.${targetNode.path}.`.length);
                 if (
-                    !coreDisplayProps.includes(simpleKey) &&
-                    !infoData.otherConfigured.find((item) => item.label === simpleKey)
+                    !coreDisplayProperties.has(simpleKey) &&
+                    !infoData.otherConfigured.some((item) => item.label === simpleKey)
                 ) {
                     infoData.otherConfigured.push({ label: simpleKey + ' (Custom)', value: String(value) });
                 }
             }
-        });
+        }
 
         infoData.nodeLabelInfo.push({
             label: 'Accessible Node Labels (Effective)',
             value: targetNode['accessible-node-labels'],
         });
         const labelPrefix = `yarn.scheduler.capacity.${targetNode.path}.accessible-node-labels.`;
-        targetNode.effectiveProperties.forEach((value, key) => {
+        for (const [key, value] of targetNode.effectiveProperties.entries()) {
             if (
                 key.startsWith(labelPrefix) &&
                 key !== `yarn.scheduler.capacity.${targetNode.path}.accessible-node-labels`
             ) {
-                const subKey = key.substring(labelPrefix.length);
+                const subKey = key.slice(labelPrefix.length);
                 infoData.nodeLabelInfo.push({ label: `Effective Label '${subKey}'`, value: String(value) });
             }
-        });
+        }
 
         return infoData;
     }
