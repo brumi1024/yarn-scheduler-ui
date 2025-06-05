@@ -88,11 +88,11 @@ For each queue, use the pattern: `yarn.scheduler.capacity.<queue-path>.<property
 
 #### Absolute Resource Configuration
 
-Use bracket notation for absolute resources:
+Use bracket notation for absolute resources (supports custom resource types):
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
-  <value>[memory=4096Mi,vcores=4]</value>
+  <n>yarn.scheduler.capacity.root.queue1.capacity</n>
+  <value>[memory=4096Mi,vcores=4,yarn.io/gpu=2]</value>
 </property>
 ```
 
@@ -101,7 +101,7 @@ Use bracket notation for absolute resources:
 Use 'w' suffix for weight-based capacity:
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
+  <n>yarn.scheduler.capacity.root.queue1.capacity</n>
   <value>3w</value>
 </property>
 ```
@@ -188,7 +188,7 @@ Available ordering policies:
 Use `.leaf-queue-template` for leaf queue properties:
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.parent.leaf-queue-template.capacity</name>
+  <n>yarn.scheduler.capacity.root.parent.leaf-queue-template.capacity</n>
   <value>1w</value>
 </property>
 ```
@@ -310,84 +310,90 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 <configuration>
   <!-- Global settings -->
   <property>
-    <name>yarn.scheduler.capacity.maximum-applications</name>
+    <n>yarn.scheduler.capacity.maximum-applications</n>
     <value>10000</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.maximum-am-resource-percent</name>
+    <n>yarn.scheduler.capacity.maximum-am-resource-percent</n>
     <value>0.1</value>
+  </property>
+  
+  <!-- Enable mixed resource types -->
+  <property>
+    <n>yarn.scheduler.capacity.legacy-queue-mode.enabled</n>
+    <value>false</value>
   </property>
   
   <!-- Root queue children -->
   <property>
-    <name>yarn.scheduler.capacity.root.queues</name>
+    <n>yarn.scheduler.capacity.root.queues</n>
     <value>production,development</value>
   </property>
   
   <!-- Production queue configuration -->
   <property>
-    <name>yarn.scheduler.capacity.root.production.capacity</name>
+    <n>yarn.scheduler.capacity.root.production.capacity</n>
     <value>70</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.production.maximum-capacity</name>
+    <n>yarn.scheduler.capacity.root.production.maximum-capacity</n>
     <value>90</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.production.state</name>
+    <n>yarn.scheduler.capacity.root.production.state</n>
     <value>RUNNING</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.production.ordering-policy</name>
+    <n>yarn.scheduler.capacity.root.production.ordering-policy</n>
     <value>priority-utilization</value>
   </property>
   
   <!-- Development queue configuration -->
   <property>
-    <name>yarn.scheduler.capacity.root.development.capacity</name>
+    <n>yarn.scheduler.capacity.root.development.capacity</n>
     <value>30</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.development.maximum-capacity</name>
+    <n>yarn.scheduler.capacity.root.development.maximum-capacity</n>
     <value>50</value>
   </property>
   
   <!-- Weight-based configuration example -->
   <property>
-    <name>yarn.scheduler.capacity.root.weighted-queue.capacity</name>
+    <n>yarn.scheduler.capacity.root.weighted-queue.capacity</n>
     <value>5w</value>
   </property>
   
   <!-- Absolute resource configuration example -->
   <property>
-    <name>yarn.scheduler.capacity.root.resource-queue.capacity</name>
-    <value>[memory=8192Mi,vcores=8]</value>
+    <n>yarn.scheduler.capacity.root.resource-queue.capacity</n>
+    <value>[memory=8192Mi,vcores=8,yarn.io/gpu=2]</value>
   </property>
   
   <!-- Auto queue creation example -->
   <property>
-    <name>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.enabled</name>
+    <n>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.enabled</n>
     <value>true</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.max-queues</name>
+    <n>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.max-queues</n>
     <value>100</value>
   </property>
   
   <!-- Node label configuration example -->
   <property>
-    <name>yarn.scheduler.capacity.root.gpu-queue.accessible-node-labels</name>
+    <n>yarn.scheduler.capacity.root.gpu-queue.accessible-node-labels</n>
     <value>gpu</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.gpu-queue.accessible-node-labels.gpu.capacity</name>
+    <n>yarn.scheduler.capacity.root.gpu-queue.accessible-node-labels.gpu.capacity</n>
     <value>100</value>
   </property>
 </configuration>
@@ -398,7 +404,7 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 ### Percentage-based Capacity
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
+  <n>yarn.scheduler.capacity.root.queue1.capacity</n>
   <value>50</value>
 </property>
 ```
@@ -406,7 +412,7 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 ### Weight-based Capacity
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
+  <n>yarn.scheduler.capacity.root.queue1.capacity</n>
   <value>3w</value>
 </property>
 ```
@@ -414,16 +420,36 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 ### Absolute Resource Capacity
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
-  <value>[memory=4096Mi,vcores=4]</value>
+  <n>yarn.scheduler.capacity.root.queue1.capacity</n>
+  <value>[memory=4096Mi,vcores=4,yarn.io/gpu=2]</value>
 </property>
 ```
 
 ### Mixed Resource Types
+**Note**: Mixed resource types (combining percentage-based, weight-based, and absolute resource specifications within a hierarchy or even within a single queue) are only available when legacy queue mode is disabled (`yarn.scheduler.capacity.legacy-queue-mode.enabled=false`).
+
+Examples of mixed configurations:
 ```xml
+<!-- Mixed hierarchy: percentage, weight, and absolute -->
 <property>
-  <name>yarn.scheduler.capacity.root.queue1.capacity</name>
-  <value>[memory=8Gi,vcores=8,yarn.io/gpu=2]</value>
+  <n>yarn.scheduler.capacity.root.percentage-queue.capacity</n>
+  <value>50</value>
+</property>
+
+<property>
+  <n>yarn.scheduler.capacity.root.weight-queue.capacity</n>
+  <value>3w</value>
+</property>
+
+<property>
+  <n>yarn.scheduler.capacity.root.absolute-queue.capacity</n>
+  <value>[memory=4096Mi,vcores=4,yarn.io/gpu=2]</value>
+</property>
+
+<!-- Mixed within single queue -->
+<property>
+  <n>yarn.scheduler.capacity.root.mixed-queue.capacity</n>
+  <value>[memory=4096Mi,vcores=4w,yarn.io/gpu=20%]</value>
 </property>
 ```
 
@@ -439,3 +465,47 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 8. **Monitoring**: Enable appropriate monitoring and logging
 9. **Queue Ordering**: Choose appropriate queue ordering policies based on workload characteristics
 10. **Resource Vectors**: Use new capacity vector format for complex resource requirements
+11. **Legacy Mode**: Disable legacy queue mode to enable mixed resource type configurations
+
+## Validation
+
+Before deploying your configuration:
+1. Validate XML syntax
+2. Ensure capacity percentages are correct
+3. Test ACL configurations
+4. Verify queue hierarchies
+5. Check resource limit configurations
+6. Test with sample applications
+7. Validate auto queue creation settings
+8. Test preemption configurations
+9. Verify mixed resource type configurations if using non-legacy mode
+
+## Common Configuration Patterns
+
+### Development/Production Split
+- Separate queues for development and production workloads
+- Higher capacity for production, burst capability for development
+
+### Multi-Tenant Environment
+- Dedicated queues per tenant/team
+- Fair resource sharing with appropriate limits
+
+### Batch vs Interactive
+- Different queues for batch and interactive workloads
+- Different ordering policies and resource limits
+
+### GPU/Specialized Hardware
+- Use node labels for specialized hardware
+- Separate queues for GPU workloads
+- Use absolute resource capacity with custom resource types
+
+### Weight-based Fair Sharing
+- Use weight-based capacity allocation
+- Automatic resource distribution based on weights
+
+### Mixed Resource Allocation (Non-Legacy Mode)
+- Combine percentage, weight, and absolute resource specifications
+- Enable flexible resource management across different queue types
+- Requires `yarn.scheduler.capacity.legacy-queue-mode.enabled=false`
+
+This configuration system provides extensive flexibility for managing cluster resources according to organizational needs and workload characteristics, with support for both traditional percentage-based allocation and modern weight-based and absolute resource specifications, as well as advanced mixed resource type configurations.

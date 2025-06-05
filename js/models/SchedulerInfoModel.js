@@ -1,29 +1,49 @@
 /**
  * @file Manages data from the YARN Scheduler Info API (/ws/v1/cluster/scheduler).
  * This includes live queue metrics, partition information, etc.
+ * Now includes caching and data normalization for improved performance.
  */
 class SchedulerInfoModel extends EventEmitter {
     constructor() {
         super();
         this._schedulerInfo = null; // Raw object from API
         this._partitions = [DEFAULT_PARTITION]; // Initialize with default partition
+        this._dataCache = new SchedulerDataCache(); // Performance optimization
+        this._useCache = true; // Can be disabled for testing
     }
 
     /**
      * Loads and processes data from the Scheduler Info API.
      * @param {Object} schedulerInfoData - The raw JSON object from the API.
+     * @param {boolean} forceRefresh - Force cache refresh even if data is still valid
      */
-    loadSchedulerInfo(schedulerInfoData) {
+    loadSchedulerInfo(schedulerInfoData, forceRefresh = false) {
         if (!schedulerInfoData || !schedulerInfoData.scheduler || !schedulerInfoData.scheduler.schedulerInfo) {
             console.error('SchedulerInfoModel: Invalid schedulerInfoData received.');
             this._schedulerInfo = null;
             this._partitions = [DEFAULT_PARTITION];
+            this._dataCache.clearCache();
             this._emit('infoLoaded', { success: false, error: 'Invalid scheduler info data' });
             return;
         }
-        this._schedulerInfo = schedulerInfoData.scheduler.schedulerInfo;
+
+        // Use cache if enabled and valid
+        if (this._useCache && !forceRefresh && this._dataCache.isCacheValid()) {
+            this._emit('infoLoaded', { success: true, fromCache: true });
+            return;
+        }
+
+        // Normalize and cache the data for performance
+        const startTime = performance.now();
+        this._schedulerInfo = this._useCache 
+            ? this._dataCache.normalizeSchedulerInfo(schedulerInfoData)
+            : schedulerInfoData.scheduler.schedulerInfo;
+        
+        const processingTime = performance.now() - startTime;
+        console.log(`SchedulerInfoModel: Data processing took ${processingTime.toFixed(2)}ms`);
+
         this._extractPartitions();
-        this._emit('infoLoaded', { success: true });
+        this._emit('infoLoaded', { success: true, processingTime });
     }
 
     /**
@@ -66,6 +86,7 @@ class SchedulerInfoModel extends EventEmitter {
 
     /**
      * Retrieves live runtime information for a specific queue.
+     * Uses cached data when available for better performance.
      * @param {string} queuePath - The full path of the queue (e.g., "root.default").
      * @param {string} [partition=""] - The specific partition to get info for. Defaults to default partition.
      * @returns {Object | null} The queue's runtime info object or null if not found.
@@ -73,6 +94,23 @@ class SchedulerInfoModel extends EventEmitter {
     getQueueRuntimeInfo(queuePath, partition = DEFAULT_PARTITION) {
         if (!this._schedulerInfo) return null;
 
+        if (this._useCache && this._dataCache.isCacheValid()) {
+            const cachedQueue = this._dataCache.getQueueByPath(queuePath);
+            if (cachedQueue) {
+                // Handle partition-specific data if needed
+                if (partition !== DEFAULT_PARTITION && cachedQueue.capacities?.queueCapacitiesByPartition) {
+                    const partitionData = cachedQueue.capacities.queueCapacitiesByPartition.find(
+                        p => p.partitionName === partition
+                    );
+                    if (partitionData) {
+                        return { ...cachedQueue, partitionSpecificData: partitionData };
+                    }
+                }
+                return cachedQueue;
+            }
+        }
+
+        // Fallback to original search method
         function findQueueInInfo(infoNode, targetPath) {
             if (!infoNode) return null;
             let currentPath = infoNode.queuePath;
@@ -122,5 +160,48 @@ class SchedulerInfoModel extends EventEmitter {
      */
     getRawSchedulerInfo() {
         return this._schedulerInfo;
+    }
+
+    /**
+     * Enables or disables caching for performance optimization.
+     * @param {boolean} enabled - Whether to enable caching
+     */
+    setCacheEnabled(enabled) {
+        this._useCache = enabled;
+        if (!enabled) {
+            this._dataCache.clearCache();
+        }
+    }
+
+    /**
+     * Gets cache statistics for monitoring performance improvements.
+     * @returns {Object} Cache statistics including memory savings
+     */
+    getCacheStats() {
+        if (!this._useCache || !this._schedulerInfo) {
+            return { enabled: false };
+        }
+
+        // Estimate memory savings
+        const originalSize = JSON.stringify(this._schedulerInfo).length;
+        const cachedSize = this._dataCache.runtimeCache.size * 1000; // Rough estimate
+        const savingsPercent = ((originalSize - cachedSize) / originalSize * 100).toFixed(1);
+
+        return {
+            enabled: true,
+            valid: this._dataCache.isCacheValid(),
+            originalSizeKB: (originalSize / 1024).toFixed(2),
+            cachedSizeKB: (cachedSize / 1024).toFixed(2),
+            savingsPercent,
+            ttlMs: this._dataCache.CACHE_TTL,
+            resourceTypesCount: this._dataCache.resourceMetadataCache.size
+        };
+    }
+
+    /**
+     * Forces a cache refresh on next data load.
+     */
+    invalidateCache() {
+        this._dataCache.clearCache();
     }
 }
