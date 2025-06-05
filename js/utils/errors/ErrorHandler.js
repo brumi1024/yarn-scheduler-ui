@@ -68,7 +68,7 @@ class ErrorHandler {
 
         // Parse errors
         if (error instanceof SyntaxError) {
-            return new ConfigurationError('Failed to parse response data', 'PARSE_ERROR', {
+            return new ValidationError('Failed to parse response data', 'PARSE_ERROR', {
                 originalError: error.message
             });
         }
@@ -142,7 +142,7 @@ class ErrorHandler {
             } else {
                 console.warn('API Error:', logMessage, error.details);
             }
-        } else if (error instanceof ConfigurationError) {
+        } else if (error instanceof ValidationError) {
             console.error('Configuration Error:', logMessage, error.details);
         } else {
             console.error('Error:', logMessage, error);

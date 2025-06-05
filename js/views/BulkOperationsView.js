@@ -106,6 +106,7 @@ class BulkOperationsView extends EventEmitter {
         // Listen to bulk operations selection changes
         this.bulkOperations.on('selectionChanged', (data) => {
             this._updateSelectionInfo(data.count);
+            this._updateCheckboxStates(data.selected);
         });
 
         this.bulkOperations.on('operationCompleted', (data) => {
@@ -256,6 +257,23 @@ class BulkOperationsView extends EventEmitter {
             checkboxContainer.className = 'bulk-select-container';
             checkboxContainer.appendChild(checkbox);
             header.insertBefore(checkboxContainer, header.firstChild);
+        }
+    }
+
+    /**
+     * Updates all checkbox states to match the current selection.
+     * @param {Array} selectedPaths - Array of currently selected queue paths
+     */
+    _updateCheckboxStates(selectedPaths) {
+        const selectedSet = new Set(selectedPaths);
+        const checkboxes = document.querySelectorAll('.bulk-select-checkbox');
+        
+        for (const checkbox of checkboxes) {
+            const queueCard = checkbox.closest('.queue-card');
+            if (queueCard) {
+                const queuePath = queueCard.dataset.queuePath;
+                checkbox.checked = selectedSet.has(queuePath);
+            }
         }
     }
 

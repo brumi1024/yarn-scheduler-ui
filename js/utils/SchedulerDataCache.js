@@ -218,32 +218,4 @@ class SchedulerDataCache {
         }
     }
 
-    /**
-     * Reconstructs full resource information from normalized data.
-     * @param {Object} normalizedResource - Normalized resource with reference
-     * @returns {Object} Full resource information
-     */
-    denormalizeResource(normalizedResource) {
-        if (!normalizedResource?.resourceInfoRef) {
-            return normalizedResource;
-        }
-
-        const template = this.resourceMetadataCache.get(normalizedResource.resourceInfoRef);
-        if (!template) {
-            return normalizedResource;
-        }
-
-        // Merge template metadata with actual values
-        const resourceInformation = template.template.map((templateItem, index) => ({
-            ...templateItem,
-            value: normalizedResource.values[index]?.value || 0
-        }));
-
-        return {
-            ...normalizedResource,
-            resourceInformations: {
-                resourceInformation
-            }
-        };
-    }
 }

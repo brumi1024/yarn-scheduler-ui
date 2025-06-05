@@ -200,11 +200,11 @@ class SchedulerConfigModel extends EventEmitter {
                 return [];
             }
 
-            if (!this._validationPipeline) {
-                this._validationPipeline = new ValidationPipeline();
+            if (!this._queueValidator) {
+                this._queueValidator = new QueueValidator();
             }
 
-            return this._validationPipeline.validate(
+            return this._queueValidator.validate(
                 this,
                 effectiveHierarchy,
                 schedulerInfoModel,

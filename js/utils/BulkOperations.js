@@ -203,7 +203,7 @@ class BulkOperations {
                 }
 
                 // Stage the capacity change
-                this.schedulerConfigModel.stageUpdateQueue(queuePath, { capacity: `${newCapacity}%` });
+                this.schedulerConfigModel.stageUpdateQueue(queuePath, { capacity: newCapacity.toFixed(1) });
                 results.success.push(queuePath);
             } catch (error) {
                 results.failed.push({ queuePath, error: error.message });
