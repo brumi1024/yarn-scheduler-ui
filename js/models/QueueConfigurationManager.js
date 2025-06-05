@@ -176,8 +176,14 @@ class QueueConfigurationManager {
                         .filter(name => name.length > 0);
                     queueDefinitions.set(queuePath, new Set(childNames));
                 } else {
-                    // Queue property
-                    otherProperties.push(prop);
+                    // Check if this is actually a global property that happens to start with capacity prefix
+                    if (this._isGlobalCapacityProperty(prop.name)) {
+                        // Global property that starts with yarn.scheduler.capacity.
+                        this.globalProperties.set(prop.name, prop.value || '');
+                    } else {
+                        // Queue property
+                        otherProperties.push(prop);
+                    }
                 }
             } else {
                 // Global property
@@ -295,6 +301,26 @@ class QueueConfigurationManager {
         }
 
         return currentNode;
+    }
+
+    /**
+     * Determines if a property that starts with yarn.scheduler.capacity. is actually a global property
+     */
+    _isGlobalCapacityProperty(propertyName) {
+        const remainder = propertyName.slice(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
+        
+        // Known global properties that start with yarn.scheduler.capacity.
+        const globalCapacityProperties = [
+            'legacy-queue-mode.enabled',
+            'schedule-asynchronously.enable',
+            'node-locality-delay',
+            'maximum-am-resource-percent',
+            'maximum-applications',
+            'user-limit-factor',
+            // Add other global capacity properties as needed
+        ];
+        
+        return globalCapacityProperties.includes(remainder);
     }
 
     /**
