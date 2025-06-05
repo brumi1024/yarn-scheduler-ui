@@ -34,7 +34,7 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _buildHtml(data) {
-        const { path, displayName, properties, nodeLabelData, effectiveCapacityMode } = data;
+        const { path, displayName, properties, propertyDefaults, nodeLabelData, effectiveCapacityMode } = data;
         let formHTML = `<form id="edit-queue-form" data-queue-path="${path}" onsubmit="return false;">`;
 
         // Static Info
@@ -75,7 +75,8 @@ class EditQueueModalView extends BaseModalView {
                     fullYarnPropertyName,
                     meta,
                     currentValue,
-                    `std-${simpleKey}`
+                    `std-${simpleKey}`,
+                    propertyDefaults[simpleKey]
                 );
             }
         }
@@ -102,7 +103,8 @@ class EditQueueModalView extends BaseModalView {
             anlFullKey,
             anlMeta,
             nodeLabelData.accessibleNodeLabelsString,
-            'accessible-node-labels-list-input' // Specific ID for this input
+            'accessible-node-labels-list-input', // Specific ID for this input
+            false // Node labels are never defaults in this context
         );
 
         // Area to display/edit per-label configurations
@@ -132,7 +134,8 @@ class EditQueueModalView extends BaseModalView {
                         fullYarnPropertyName,
                         augmentedMeta,
                         currentValue,
-                        `label-${label}-${meta.key}`
+                        `label-${label}-${meta.key}`,
+                        nodeLabelData.labelSpecificParams[simpleSubKey] === undefined // Is default if not explicitly set
                     );
                 }
             }
@@ -145,7 +148,7 @@ class EditQueueModalView extends BaseModalView {
         return sectionHtml;
     }
 
-    _buildPropertyInputHtml(simpleOrPartialKey, fullYarnPropertyName, meta, currentValue, idPrefix = null) {
+    _buildPropertyInputHtml(simpleOrPartialKey, fullYarnPropertyName, meta, currentValue, idPrefix = null, isDefault = false) {
         // Build the custom HTML structure for edit queue modal
         const inputIdBase = (idPrefix || simpleOrPartialKey).replaceAll(/[^\w-]/g, '-');
         const inputId = `edit-queue-${inputIdBase}`;
@@ -156,6 +159,7 @@ class EditQueueModalView extends BaseModalView {
                             <div class="property-display-name">
                                 <span>${DomUtils.escapeXml(meta.displayName)}</span>
                                 <span class="info-icon" title="${DomUtils.escapeXml(meta.description || '')}">ⓘ</span>
+                                ${isDefault ? '<span class="default-indicator" title="This field is using the default value">Default</span>' : ''}
                             </div>
                             <div class="property-yarn-name">${DomUtils.escapeXml(fullYarnPropertyName)}</div>
                         </div>
@@ -270,40 +274,56 @@ class EditQueueModalView extends BaseModalView {
 
             if (simpleOrPartialKey) {
                 let hasChanged = newValue !== originalValue;
+                const userActuallyChangedValue = hasChanged; // Track if user actually modified this field
 
-                // Special handling for capacity when mode changes
-                if (simpleOrPartialKey === 'capacity' && capacityModeChanged) {
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                        newValue,
-                        newCapacityMode,
-                        this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode)
-                    );
-                    hasChanged = true; // Consider it changed if mode changed, even if formatted value is same
-                } else if (
-                    (simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) &&
-                    this.viewDataFormatterService._isVectorString(originalValue) &&
-                    this._isEffectivelyEmptyVector(newValue)
-                ) {
-                    // If original was a vector like [memory=0] and new value is "[]", consider it a change to empty
-                    newValue = '[]';
-                    hasChanged = originalValue !== '[]';
-                } else if (simpleOrPartialKey === 'capacity') {
-                    // ensure capacity formatting for its current mode
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                        newValue,
-                        newCapacityMode,
-                        originalValue
-                    );
+                // Handle capacity fields with user intent awareness
+                if (simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) {
+                    if (!userActuallyChangedValue) {
+                        // User didn't change this capacity field, don't stage it
+                        hasChanged = false;
+                    } else if (simpleOrPartialKey === 'capacity' && capacityModeChanged) {
+                        // Special handling for capacity when mode changes and user modified it
+                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                            newValue,
+                            newCapacityMode,
+                            this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode)
+                        );
+                        hasChanged = true; // Consider it changed if mode changed and user modified it
+                    } else if (
+                        this.viewDataFormatterService._isVectorString(originalValue) &&
+                        this._isEffectivelyEmptyVector(newValue)
+                    ) {
+                        // If original was a vector like [memory=0] and new value is "[]", consider it a change to empty
+                        newValue = '[]';
+                        hasChanged = originalValue !== '[]';
+                    } else if (simpleOrPartialKey === 'capacity') {
+                        // ensure capacity formatting for its current mode
+                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                            newValue,
+                            newCapacityMode,
+                            originalValue
+                        );
+                        // Recheck for changes after formatting to avoid false positives
+                        hasChanged = newValue !== originalValue;
+                    }
                 } else if (simpleOrPartialKey === 'maximum-capacity') {
-                    // Detect the actual format of the maximum capacity value and preserve it
-                    const parsed = CapacityValueParser.parse(newValue.trim());
-                    const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
-                    
-                    newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                        newValue,
-                        maxCapacityMode,
-                        '100%'
-                    );
+                    // Only format and stage maximum-capacity if user actually changed it
+                    if (userActuallyChangedValue) {
+                        // Detect the actual format of the maximum capacity value and preserve it
+                        const parsed = CapacityValueParser.parse(newValue.trim());
+                        const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
+                        
+                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                            newValue,
+                            maxCapacityMode,
+                            '100%'
+                        );
+                        // Recheck for changes after formatting to avoid false positives
+                        hasChanged = newValue !== originalValue;
+                    } else {
+                        // User didn't change maximum-capacity, don't stage it
+                        hasChanged = false;
+                    }
                 }
 
                 if (hasChanged) {

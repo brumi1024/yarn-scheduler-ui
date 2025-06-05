@@ -23,6 +23,10 @@
     position: relative; /* For SVG overlay */
     min-width: fit-content; /* Allow horizontal scrolling */
     padding: 20px; /* Add some padding around the tree */
+    overflow: visible; /* Content flows freely */
+    flex: 1; /* Take all available vertical space */
+    min-height: 100%; /* Ensure full height */
+    z-index: 1; /* Above the arrow container */
 }
 
 .queue-column {
@@ -31,19 +35,19 @@
     gap: 30px; /* Vertical gap between cards in the same column */
     position: relative;
     width: 280px;
-    flex-shrink: 0;
+    flex-shrink: 0; /* Prevent columns from shrinking */
 }
 
 /* SVG container for connectors */
 .arrow-container {
-    /* Rename to .connector-container if preferred */
     position: absolute;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     pointer-events: none; /* Allows clicks to pass through to cards */
-    z-index: 0; /* Below cards if cards have higher z-index, or 1 if cards are 0 */
+    z-index: 0; /* Below cards */
+    overflow: visible; /* Ensure connectors can extend beyond container */
 }
 
 .queue-card {

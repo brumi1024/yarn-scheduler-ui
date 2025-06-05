@@ -593,6 +593,60 @@ class QueueConfigurationManager {
     }
 
     /**
+     * Gets all changes (compatibility with ChangeLog interface)
+     * Required for ChangePreview.fromChangeLog()
+     */
+    getChanges() {
+        const allChanges = [];
+        
+        // Collect additions
+        const additions = this.getQueueAdditions();
+        for (const addition of additions) {
+            for (const [fullKey, value] of addition.properties || new Map()) {
+                allChanges.push({
+                    id: addition.id,
+                    operation: 'ADD',
+                    queuePath: addition.path,
+                    propertyKey: fullKey,
+                    oldValue: null,
+                    newValue: value
+                });
+            }
+        }
+        
+        // Collect updates
+        const updates = this.getQueueUpdates();
+        for (const update of updates) {
+            for (const [fullKey, value] of update.properties || new Map()) {
+                const oldValue = update.oldProperties ? update.oldProperties.get(fullKey) : null;
+                allChanges.push({
+                    id: update.id,
+                    operation: 'UPDATE',
+                    queuePath: update.path,
+                    propertyKey: fullKey,
+                    oldValue: oldValue,
+                    newValue: value
+                });
+            }
+        }
+        
+        // Collect deletions
+        const deletions = this.getQueueDeletions();
+        for (const deletion of deletions) {
+            allChanges.push({
+                id: deletion.id,
+                operation: 'DELETE',
+                queuePath: deletion.path,
+                propertyKey: null,
+                oldValue: null,
+                newValue: null
+            });
+        }
+        
+        return allChanges;
+    }
+
+    /**
      * Removes a change by ID (compatibility with ChangeLog interface)
      */
     removeChange(changeId) {
