@@ -168,8 +168,8 @@ class SchedulerConfigModel extends EventEmitter {
         if (!this._trieInstance || !this._trieInstance.rootNode) return [];
         function collectPaths(node) {
             if (node.isQueue) paths.add(node.fullPath);
-            for (const element of node.children || []) {
-                collectPaths(element);
+            for (const childNode of (node.children || new Map()).values()) {
+                collectPaths(childNode);
             }
         }
         collectPaths(this._trieInstance.rootNode);
