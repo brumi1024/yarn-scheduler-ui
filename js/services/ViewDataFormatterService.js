@@ -406,6 +406,13 @@ class ViewDataFormatterService {
             }
         }
 
+        // Get global config to determine legacy mode
+        const globalConfig = schedulerConfigModel.getGlobalConfig();
+        const isLegacyMode = appStateModel.isLegacyModeEnabled(globalConfig);
+        
+        // Check if queue has children (important for auto-creation validation)
+        const hasChildren = queueNode.children && queueNode.children.size > 0;
+        
         const dataForModal = {
             path: queuePath,
             displayName: displayName,
@@ -415,10 +422,16 @@ class ViewDataFormatterService {
                 accessibleNodeLabelsString: '',
                 labelSpecificParams: {},
             },
+            autoCreationData: {
+                enabled: false,
+                hasChildren: hasChildren,
+                templateProperties: {},
+            },
             effectiveCapacityMode:
                 uiCapacityModeHint || this._determineEffectiveCapacityMode(queuePath, baseProperties),
             isNew: queueNode.isNew(),
             allPartitions: schedulerInfoModel ? schedulerInfoModel.getPartitions() : [DEFAULT_PARTITION],
+            isLegacyMode: isLegacyMode,
         };
 
         for (const category of QUEUE_CONFIG_METADATA) {
@@ -426,7 +439,8 @@ class ViewDataFormatterService {
                 const fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
                 const value = baseProperties.get(fullYarnKey);
                 const isDefault = value === undefined;
-                dataForModal.properties[meta.key] = isDefault ? String(meta.defaultValue) : String(value);
+                // Show empty string for unconfigured properties, actual value for configured ones
+                dataForModal.properties[meta.key] = isDefault ? '' : String(value);
                 dataForModal.propertyDefaults[meta.key] = isDefault;
             }
         }
@@ -443,6 +457,9 @@ class ViewDataFormatterService {
                 dataForModal.nodeLabelData.labelSpecificParams[simpleSubKey] = String(value);
             }
         }
+
+        // Populate auto-creation data
+        this._populateAutoCreationData(dataForModal, queuePath, baseProperties);
 
         return dataForModal;
     }
@@ -614,5 +631,91 @@ class ViewDataFormatterService {
         }
 
         return infoData;
+    }
+
+    _populateAutoCreationData(dataForModal, queuePath, baseProperties) {
+        // Check if auto-creation is enabled (check both v1 and v2)
+        const v1AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-create-child-queue.enabled`;
+        const v2AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.enabled`;
+        const v1AutoCreateValue = baseProperties.get(v1AutoCreateKey);
+        const v2AutoCreateValue = baseProperties.get(v2AutoCreateKey);
+        
+        // Auto-creation is enabled if either v1 or v2 is enabled
+        dataForModal.autoCreationData.enabled = 
+            String(v1AutoCreateValue).toLowerCase() === 'true' || 
+            String(v2AutoCreateValue).toLowerCase() === 'true';
+            
+        // Store which mode is enabled
+        dataForModal.autoCreationData.v1Enabled = String(v1AutoCreateValue).toLowerCase() === 'true';
+        dataForModal.autoCreationData.v2Enabled = String(v2AutoCreateValue).toLowerCase() === 'true';
+
+        // Populate non-template properties from AUTO_CREATION_CONFIG_METADATA
+        dataForModal.autoCreationData.nonTemplateProperties = {};
+        for (const [placeholderKey, meta] of Object.entries(AUTO_CREATION_CONFIG_METADATA)) {
+            const fullKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
+            const value = baseProperties.get(fullKey);
+            const isDefault = value === undefined;
+            
+            dataForModal.autoCreationData.nonTemplateProperties[meta.key] = {
+                value: isDefault ? '' : String(value),
+                isDefault: isDefault,
+                meta: meta,
+            };
+        }
+
+        // Populate template properties dynamically from QUEUE_CONFIG_METADATA
+        dataForModal.autoCreationData.templateProperties = {};
+        
+        // v1 template properties: yarn.scheduler.capacity.<queue-path>.leaf-queue-template.<property>
+        dataForModal.autoCreationData.v1TemplateProperties = {};
+        
+        // v2 template properties with different scopes
+        dataForModal.autoCreationData.v2TemplateProperties = {
+            template: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.template.<property>
+            parentTemplate: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<property>
+            leafTemplate: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<property>
+        };
+
+        // Generate template properties from queue metadata
+        for (const category of QUEUE_CONFIG_METADATA) {
+            for (const [placeholderKey, meta] of Object.entries(category.properties)) {
+                if (meta.availableInTemplate) {
+                    // v1 template property
+                    const v1FullKey = `yarn.scheduler.capacity.${queuePath}.leaf-queue-template.${meta.key}`;
+                    const v1Value = baseProperties.get(v1FullKey);
+                    const v1IsDefault = v1Value === undefined;
+                    
+                    dataForModal.autoCreationData.v1TemplateProperties[meta.key] = {
+                        value: v1IsDefault ? '' : String(v1Value),
+                        isDefault: v1IsDefault,
+                        meta: meta,
+                    };
+
+                    // v2 template properties
+                    const v2Scopes = ['template', 'parent-template', 'leaf-template'];
+                    for (const scope of v2Scopes) {
+                        const v2FullKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.${scope}.${meta.key}`;
+                        const v2Value = baseProperties.get(v2FullKey);
+                        const v2IsDefault = v2Value === undefined;
+                        
+                        // Convert 'parent-template' -> 'parentTemplate', 'leaf-template' -> 'leafTemplate'
+                        const scopeKey = scope.includes('-') ? 
+                            scope.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) : 
+                            scope;
+                        
+                        // Ensure the nested object exists
+                        if (!dataForModal.autoCreationData.v2TemplateProperties[scopeKey]) {
+                            dataForModal.autoCreationData.v2TemplateProperties[scopeKey] = {};
+                        }
+                        
+                        dataForModal.autoCreationData.v2TemplateProperties[scopeKey][meta.key] = {
+                            value: v2IsDefault ? '' : String(v2Value),
+                            isDefault: v2IsDefault,
+                            meta: meta,
+                        };
+                    }
+                }
+            }
+        }
     }
 }

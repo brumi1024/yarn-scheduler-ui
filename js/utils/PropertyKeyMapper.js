@@ -38,6 +38,33 @@ class PropertyKeyMapper {
             return null;
         }
         
+        // Handle auto-creation properties which have complex structures
+        if (withoutPrefix.includes('auto-create-child-queue.') || 
+            withoutPrefix.includes('auto-queue-creation-v2.') ||
+            withoutPrefix.includes('leaf-queue-template.')) {
+            
+            // For auto-creation properties, preserve the full property structure after queue path
+            // Find the queue path by looking for known property patterns
+            let queuePathLength = 0;
+            for (let i = 0; i < parts.length; i++) {
+                const remainingParts = parts.slice(i);
+                const remaining = remainingParts.join('.');
+                
+                if (remaining.startsWith('auto-create-child-queue.') ||
+                    remaining.startsWith('auto-queue-creation-v2.') ||
+                    remaining.startsWith('leaf-queue-template.')) {
+                    queuePathLength = i;
+                    break;
+                }
+            }
+            
+            if (queuePathLength > 0) {
+                // Return everything after the queue path
+                return parts.slice(queuePathLength).join('.');
+            }
+        }
+        
+        // For regular queue properties, return just the last part
         return parts[parts.length - 1];
     }
 

@@ -46,6 +46,7 @@ class CapacityValueParser {
             case CAPACITY_MODES.WEIGHT:
                 return `${parsedValue.value}w`;
             case CAPACITY_MODES.ABSOLUTE:
+            case CAPACITY_MODES.VECTOR:
                 return parsedValue.originalValue || parsedValue.value;
             case CAPACITY_MODES.PERCENTAGE:
             default:
@@ -128,6 +129,8 @@ class CapacityValueParser {
                 return '1w';
             case CAPACITY_MODES.ABSOLUTE:
                 return '[memory=1024,vcores=1]';
+            case CAPACITY_MODES.VECTOR:
+                return '[memory=50%,vcores=2]';
             case CAPACITY_MODES.PERCENTAGE:
             default:
                 return '10';
@@ -199,6 +202,7 @@ class CapacityValueParser {
 
         const resources = value.slice(1, -1).split(',');
         const parsedResources = {};
+        let hasNonAbsoluteValue = false;
         
         for (const resource of resources) {
             const [key, val] = resource.split('=');
@@ -211,15 +215,27 @@ class CapacityValueParser {
                     error: `Invalid resource format: ${resource}`
                 };
             }
-            parsedResources[key.trim()] = val.trim();
+            const trimmedKey = key.trim();
+            const trimmedVal = val.trim();
+            
+            // Check if this is a mixed mode vector (contains %, w, or other units)
+            if (trimmedVal.endsWith('%') || trimmedVal.endsWith('w')) {
+                hasNonAbsoluteValue = true;
+            }
+            
+            parsedResources[trimmedKey] = trimmedVal;
         }
 
+        // If we have mixed values (%, w, absolute), this is a VECTOR mode
+        const capacityType = hasNonAbsoluteValue ? CAPACITY_MODES.VECTOR : CAPACITY_MODES.ABSOLUTE;
+
         return {
-            type: CAPACITY_MODES.ABSOLUTE,
+            type: capacityType,
             value: parsedResources,
-            unit: 'absolute',
+            unit: capacityType === CAPACITY_MODES.VECTOR ? 'vector' : 'absolute',
             isValid: true,
-            originalValue: value
+            originalValue: value,
+            isMixedVector: hasNonAbsoluteValue
         };
     }
 }

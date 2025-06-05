@@ -363,3 +363,94 @@
 .queue-info-container::-webkit-scrollbar-thumb:hover {
     background: #a8a8a8;
 }
+
+/* Custom Properties Section */
+.custom-properties-section {
+    margin-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+}
+
+.form-category-title.collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.form-category-title.collapsible:hover {
+    color: #0066cc;
+}
+
+.collapse-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 12px;
+}
+
+.form-category-title.collapsible:not(.collapsed) .collapse-icon {
+    transform: rotate(90deg);
+}
+
+.custom-property-row {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 10px;
+    align-items: center;
+}
+
+.custom-property-row input {
+    flex: 1;
+}
+
+.custom-property-row .property-suffix {
+    flex: 2;
+}
+
+.custom-property-row .property-value {
+    flex: 3;
+}
+
+.custom-property-row .btn-remove {
+    flex: 0 0 auto;
+    padding: 5px 10px;
+    background-color: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+.custom-property-row .btn-remove:hover {
+    background-color: #c82333;
+}
+
+/* Auto Queue Creation Section */
+.auto-creation-section {
+    margin-top: 20px;
+    border-top: 1px solid #e0e0e0;
+    padding-top: 10px;
+}
+
+.auto-creation-template {
+    margin-top: 15px;
+    padding: 15px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 3px solid #28a745;
+}
+
+.auto-creation-template h5 {
+    margin: 0 0 10px 0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #495057;
+}
+
+.auto-creation-template h6 {
+    margin: 15px 0 10px 0;
+    font-size: 13px;
+    font-weight: 500;
+    color: #6c757d;
+}

@@ -1,8 +1,8 @@
-# Capacity Scheduler XML Configuration Instructions
+# Complete Capacity Scheduler XML Configuration Guide
 
 ## Overview
 
-This document provides comprehensive instructions for creating a `capacity-scheduler.xml` configuration file for Apache Hadoop YARN's Capacity Scheduler. The configuration file defines how cluster resources are allocated among different queues and users.
+This document provides comprehensive instructions for creating a `capacity-scheduler.xml` configuration file for Apache Hadoop YARN's Capacity Scheduler. The configuration file defines how cluster resources are allocated among different queues and users, including advanced features like dynamic queue auto-creation.
 
 ## Configuration File Structure
 
@@ -162,36 +162,195 @@ Available ordering policies:
 | `intra-queue-preemption.disable_preemption` | false | Disable intra-queue preemption |
 | `allow-zero-capacity-sum` | false | Allow zero capacity sum for child queues |
 
-## Auto Queue Creation
+## Dynamic Auto Queue Creation
 
-### Legacy Auto Creation
+The Capacity Scheduler supports dynamic creation and management of queues through two modes: **Legacy** and **Flexible**. Auto-created queues can only be configured with weights as capacity and provide powerful automation for managing dynamic workloads.
 
-| Configuration Key | Default | Description |
-|-------------------|---------|-------------|
-| `auto-create-child-queue.enabled` | false | Enable auto creation of child queues |
-| `auto-create-child-queue.max-queues` | 1000 | Maximum auto-created queues |
-| `auto-create-child-queue.management-policy` | GuaranteedOrZeroCapacityOverTimePolicy | Queue management policy |
-| `auto-create-child-queue.fail-on-exceeding-parent-capacity` | false | Fail auto creation when parent capacity exceeded |
+### Queue Mapping Setup for Auto-Creation
 
-### Auto Queue Creation V2
+To enable dynamic auto-created leaf queues, configure user-group queue mappings in `yarn.scheduler.capacity.queue-mappings` with an additional parent queue parameter to identify where auto-created leaf queues should be created.
 
-| Configuration Key | Default | Description |
-|-------------------|---------|-------------|
-| `auto-queue-creation-v2.enabled` | false | Enable auto queue creation v2 |
-| `auto-queue-creation-v2.max-queues` | 1000 | Maximum queues in v2 |
-| `auto-queue-creation-v2.maximum-queue-depth` | 2 | Maximum queue depth |
-| `auto-queue-creation-v2.queue-auto-removal.enable` | true | Enable auto removal of expired queues |
-| `auto-queue-creation-v2.queue-expiration-time` | 300 | Queue expiration time (seconds) |
-
-### Auto-Created Queue Templates
-
-Use `.leaf-queue-template` for leaf queue properties:
+**Example Queue Mapping:**
 ```xml
 <property>
-  <name>yarn.scheduler.capacity.root.parent.leaf-queue-template.capacity</name>
-  <value>1w</value>
+  <name>yarn.scheduler.capacity.queue-mappings</name>
+  <value>u:user1:queue1,g:group1:queue2,u:user2:%primary_group,u:%user:parent1.%user</value>
+  <description>
+    The mapping u:%user:parent1.%user allows any user (other than user1, user2) 
+    to be mapped to their own user-specific leaf queue which will be auto-created under parent1.
+  </description>
 </property>
 ```
+
+### Legacy Auto Queue Creation
+
+Legacy mode allows the creation of **leaf queues only** under parent queues configured for this feature. Parent queues with legacy auto-creation enabled do not support pre-configured queues co-existing with auto-created queues.
+
+#### Legacy Configuration Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.enabled` | false | **Mandatory**: Enable auto leaf queue creation for the parent queue |
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.management-policy` | GuaranteedOrZeroCapacityOverTimePolicy | **Optional**: Class name for AutoCreatedQueueManagementPolicy implementation |
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.max-queues` | 1000 | **Optional**: Maximum number of auto-created queues |
+| `yarn.scheduler.capacity.<queue-path>.auto-create-child-queue.fail-on-exceeding-parent-capacity` | false | **Optional**: Fail auto creation when parent capacity is exceeded |
+
+#### Legacy Queue Template Configuration
+
+Auto-created leaf queues inherit properties from template configurations:
+
+| Property | Description |
+|----------|-------------|
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.capacity` | **Mandatory**: Minimum guaranteed capacity for auto-created leaf queues |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.maximum-capacity` | **Optional**: Maximum capacity for auto-created leaf queues |
+| `yarn.scheduler.capacity.<queue-path>.leaf-queue-template.<property>` | **Optional**: Any other leaf queue property (user-limit-factor, maximum-am-resource-percent, etc.) |
+
+**Legacy Auto-Creation Example:**
+```xml
+<!-- Enable legacy auto-creation -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.auto-create-child-queue.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Template configuration for auto-created leaf queues -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.capacity</name>
+  <value>5</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.maximum-capacity</name>
+  <value>100</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.user-limit-factor</name>
+  <value>3.0</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.ordering-policy</name>
+  <value>fair</value>
+</property>
+
+<!-- Node label configuration for auto-created queues -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.accessible-node-labels</name>
+  <value>GPU,SSD</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.accessible-node-labels</name>
+  <value>GPU</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent1.leaf-queue-template.accessible-node-labels.GPU.capacity</name>
+  <value>5</value>
+</property>
+```
+
+**Legacy with Absolute Resources Example:**
+```xml
+<property>
+  <name>yarn.scheduler.capacity.root.parent2.auto-create-child-queue.enabled</name>
+  <value>true</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent2.leaf-queue-template.capacity</name>
+  <value>[memory=1024,vcores=1]</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent2.leaf-queue-template.maximum-capacity</name>
+  <value>[memory=10240,vcores=10]</value>
+</property>
+```
+
+### Flexible Auto Queue Creation (V2)
+
+Flexible mode allows the creation of both **parent queues** and **leaf queues**. Parent queues with flexible auto-creation can have pre-configured queues co-existing with auto-created queues. All auto-created queues use weights as capacity, so pre-configured sibling queues must also use weight-based capacity.
+
+#### Flexible Configuration Properties
+
+| Property | Default | Description |
+|----------|---------|-------------|
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.enabled` | false | **Mandatory**: Enable flexible auto queue creation |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.max-queues` | 1000 | **Optional**: Maximum number of dynamic queues under parent |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.maximum-queue-depth` | 2 | **Optional**: Maximum queue depth for auto-creation |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.queue-auto-removal.enable` | true | **Optional**: Enable automatic removal of expired queues |
+| `yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.queue-expiration-time` | 300 | **Optional**: Queue expiration time in seconds |
+
+#### Flexible Template Configuration
+
+Flexible auto-creation supports three types of templates:
+
+| Template Type | Property Pattern | Description |
+|---------------|-----------------|-------------|
+| **General Template** | `auto-queue-creation-v2.template.<property>` | Properties inherited by both parent and leaf auto-created queues |
+| **Parent Template** | `auto-queue-creation-v2.parent-template.<property>` | Properties inherited only by auto-created parent queues |
+| **Leaf Template** | `auto-queue-creation-v2.leaf-template.<property>` | Properties inherited only by auto-created leaf queues |
+
+**Template Hierarchy**: Properties in parent-template and leaf-template override corresponding properties in the general template.
+
+**Flexible Auto-Creation Example:**
+```xml
+<!-- Enable flexible auto-creation -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.enabled</name>
+  <value>true</value>
+</property>
+
+<!-- Wildcard configuration affecting all queues two levels below root.parent -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent.*.auto-queue-creation-v2.template.maximum-capacity</name>
+  <value>80</value>
+</property>
+
+<!-- Parent template: properties for auto-created parent queues -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.parent-template.capacity</name>
+  <value>2w</value>
+</property>
+
+<!-- Leaf template: properties for auto-created leaf queues -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.leaf-template.accessible-node-labels</name>
+  <value>GPU</value>
+</property>
+
+<property>
+  <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.leaf-template.accessible-node-labels.GPU.capacity</name>
+  <value>5w</value>
+</property>
+
+<!-- General template: properties for all auto-created queues -->
+<property>
+  <name>yarn.scheduler.capacity.root.parent.auto-queue-creation-v2.template.user-limit-factor</name>
+  <value>2.0</value>
+</property>
+```
+
+### Auto Queue Management Policy
+
+For legacy auto-creation, configure the queue management policy:
+
+| Configuration Key | Default | Description |
+|-------------------|---------|-------------|
+| `yarn.resourcemanager.monitor.capacity.queue-management.monitoring-interval` | 1500 | Queue management monitoring interval (ms) |
+
+Add `org.apache.hadoop.yarn.server.resourcemanager.scheduler.capacity.QueueManagementDynamicEditPolicy` to the list of scheduling edit policies in `yarn.resourcemanager.scheduler.monitor.policies`.
+
+### Auto-Creation Limitations and Requirements
+
+1. **Capacity Type**: Auto-created queues can only use **weight-based capacity** (not percentage or absolute resources for capacity allocation)
+2. **Legacy Mode Exclusivity**: Parent queues with legacy auto-creation cannot have pre-configured child queues
+3. **Flexible Mode Compatibility**: In flexible mode, pre-configured sibling queues must use weight-based capacity
+4. **Resource Templates**: Absolute resource configurations are not supported in queue templates
+5. **Queue Depth**: Flexible mode supports configurable maximum queue depth
+6. **Auto Removal**: Flexible mode supports automatic removal of unused queues after expiration time
 
 ## Queue Placement Rules
 
@@ -303,7 +462,7 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
 | `yarn.resourcemanager.monitor.capacity.queue-management.monitoring-interval` | 1500 | Queue management monitoring interval (ms) |
 | `yarn.scheduler.capacity.queue.auto.refresh.monitoring-interval` | 5000 | Queue auto refresh monitoring interval (ms) |
 
-## Example Configuration Structure
+## Complete Example Configuration
 
 ```xml
 <?xml version="1.0"?>
@@ -328,7 +487,7 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
   <!-- Root queue children -->
   <property>
     <name>yarn.scheduler.capacity.root.queues</name>
-    <value>production,development</value>
+    <value>production,development,auto-parent</value>
   </property>
   
   <!-- Production queue configuration -->
@@ -355,7 +514,7 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
   <!-- Development queue configuration -->
   <property>
     <name>yarn.scheduler.capacity.root.development.capacity</name>
-    <value>30</value>
+    <value>20</value>
   </property>
   
   <property>
@@ -363,27 +522,63 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
     <value>50</value>
   </property>
   
-  <!-- Weight-based configuration example -->
+  <!-- Auto-parent queue with weight-based capacity -->
   <property>
-    <name>yarn.scheduler.capacity.root.weighted-queue.capacity</name>
-    <value>5w</value>
+    <name>yarn.scheduler.capacity.root.auto-parent.capacity</name>
+    <value>2w</value>
   </property>
   
-  <!-- Absolute resource configuration example -->
+  <!-- Legacy auto-creation configuration -->
   <property>
-    <name>yarn.scheduler.capacity.root.resource-queue.capacity</name>
-    <value>[memory=8192Mi,vcores=8,yarn.io/gpu=2]</value>
-  </property>
-  
-  <!-- Auto queue creation example -->
-  <property>
-    <name>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.enabled</name>
+    <name>yarn.scheduler.capacity.root.auto-parent.auto-create-child-queue.enabled</name>
     <value>true</value>
   </property>
   
   <property>
-    <name>yarn.scheduler.capacity.root.auto-parent.auto-queue-creation-v2.max-queues</name>
+    <name>yarn.scheduler.capacity.root.auto-parent.leaf-queue-template.capacity</name>
+    <value>1w</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.auto-parent.leaf-queue-template.maximum-capacity</name>
     <value>100</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.auto-parent.leaf-queue-template.user-limit-factor</name>
+    <value>3.0</value>
+  </property>
+  
+  <!-- Flexible auto-creation example -->
+  <property>
+    <name>yarn.scheduler.capacity.root.flexible-parent.auto-queue-creation-v2.enabled</name>
+    <value>true</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.flexible-parent.auto-queue-creation-v2.max-queues</name>
+    <value>100</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.flexible-parent.auto-queue-creation-v2.parent-template.capacity</name>
+    <value>2w</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.flexible-parent.auto-queue-creation-v2.leaf-template.accessible-node-labels</name>
+    <value>GPU</value>
+  </property>
+  
+  <property>
+    <name>yarn.scheduler.capacity.root.flexible-parent.auto-queue-creation-v2.leaf-template.accessible-node-labels.GPU.capacity</name>
+    <value>5w</value>
+  </property>
+  
+  <!-- Queue mappings for auto-creation -->
+  <property>
+    <name>yarn.scheduler.capacity.queue-mappings</name>
+    <value>u:%user:auto-parent.%user,g:developers:development</value>
   </property>
   
   <!-- Node label configuration example -->
@@ -395,6 +590,18 @@ Use pattern: `yarn.scheduler.capacity.user.<username>.weight`
   <property>
     <name>yarn.scheduler.capacity.root.gpu-queue.accessible-node-labels.gpu.capacity</name>
     <value>100</value>
+  </property>
+  
+  <!-- Absolute resource configuration example -->
+  <property>
+    <name>yarn.scheduler.capacity.root.resource-queue.capacity</name>
+    <value>[memory=8192Mi,vcores=8,yarn.io/gpu=2]</value>
+  </property>
+  
+  <!-- Queue management monitoring -->
+  <property>
+    <name>yarn.resourcemanager.monitor.capacity.queue-management.monitoring-interval</name>
+    <value>1500</value>
   </property>
 </configuration>
 ```
@@ -455,57 +662,24 @@ Examples of mixed configurations:
 
 ## Best Practices
 
+### General Queue Configuration
 1. **Capacity Planning**: Ensure child queue capacities sum to 100% (or use weight-based allocation)
 2. **Maximum Capacity**: Set reasonable maximum capacities to prevent resource starvation
 3. **User Limits**: Configure appropriate user limits to ensure fair sharing
 4. **ACLs**: Set proper access controls for queue administration and application submission
 5. **Node Labels**: Use node labels for heterogeneous clusters
 6. **Preemption**: Configure preemption carefully to balance fairness and stability
-7. **Auto Creation**: Use auto queue creation for dynamic workloads
-8. **Monitoring**: Enable appropriate monitoring and logging
-9. **Queue Ordering**: Choose appropriate queue ordering policies based on workload characteristics
-10. **Resource Vectors**: Use new capacity vector format for complex resource requirements
-11. **Legacy Mode**: Disable legacy queue mode to enable mixed resource type configurations
 
-## Validation
+### Auto Queue Creation Best Practices
+7. **Choose the Right Mode**: Use legacy mode for simple leaf queue auto-creation, flexible mode for complex hierarchies
+8. **Weight-Based Capacity**: Plan for weight-based capacity allocation when using auto-creation features
+9. **Template Design**: Design comprehensive templates to ensure consistent queue properties
+10. **Monitoring**: Monitor auto-created queue usage and configure appropriate expiration times
+11. **Queue Limits**: Set reasonable maximum queue limits to prevent resource exhaustion
+12. **Queue Mappings**: Design queue mappings carefully to route users/groups to appropriate auto-created queues
 
-Before deploying your configuration:
-1. Validate XML syntax
-2. Ensure capacity percentages are correct
-3. Test ACL configurations
-4. Verify queue hierarchies
-5. Check resource limit configurations
-6. Test with sample applications
-7. Validate auto queue creation settings
-8. Test preemption configurations
-9. Verify mixed resource type configurations if using non-legacy mode
-
-## Common Configuration Patterns
-
-### Development/Production Split
-- Separate queues for development and production workloads
-- Higher capacity for production, burst capability for development
-
-### Multi-Tenant Environment
-- Dedicated queues per tenant/team
-- Fair resource sharing with appropriate limits
-
-### Batch vs Interactive
-- Different queues for batch and interactive workloads
-- Different ordering policies and resource limits
-
-### GPU/Specialized Hardware
-- Use node labels for specialized hardware
-- Separate queues for GPU workloads
-- Use absolute resource capacity with custom resource types
-
-### Weight-based Fair Sharing
-- Use weight-based capacity allocation
-- Automatic resource distribution based on weights
-
-### Mixed Resource Allocation (Non-Legacy Mode)
-- Combine percentage, weight, and absolute resource specifications
-- Enable flexible resource management across different queue types
-- Requires `yarn.scheduler.capacity.legacy-queue-mode.enabled=false`
-
-This configuration system provides extensive flexibility for managing cluster resources according to organizational needs and workload characteristics, with support for both traditional percentage-based allocation and modern weight-based and absolute resource specifications, as well as advanced mixed resource type configurations.
+### Performance and Scalability
+13. **Queue Ordering**: Choose appropriate queue ordering policies based on workload characteristics
+14. **Resource Vectors**: Use new capacity vector format for complex resource requirements
+15. **Legacy Mode**: Disable legacy queue mode to enable mixed resource type configurations
+16. **Auto Removal**: Enable auto removal of expired queues to maintain cluster cleanliness

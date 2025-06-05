@@ -15,6 +15,8 @@ const QUEUE_CONFIG_METADATA = [
                     'Guaranteed resource capacity (e.g., "10%", "2w", "[memory=2048,vcores=2]"). Format depends on selected Capacity Mode.',
                 type: 'string', // Actual input type might vary based on mode
                 defaultValue: '10%',
+                placeholder: 'Default: 10%',
+                availableInTemplate: true, // Available in auto-creation templates
             },
             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-capacity`]: {
                 key: 'maximum-capacity',
@@ -22,6 +24,8 @@ const QUEUE_CONFIG_METADATA = [
                 description: 'Maximum resource capacity the queue can use (e.g., "100%", "[memory=4096,vcores=4]").',
                 type: 'string',
                 defaultValue: '100%',
+                placeholder: 'Default: 100%',
+                availableInTemplate: true, // Available in auto-creation templates
             },
             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.state`]: {
                 key: 'state',
@@ -30,6 +34,7 @@ const QUEUE_CONFIG_METADATA = [
                 type: 'enum',
                 options: ['RUNNING', 'STOPPED'],
                 defaultValue: 'RUNNING',
+                availableInTemplate: false, // Not available in templates
             },
         },
     },
@@ -43,6 +48,8 @@ const QUEUE_CONFIG_METADATA = [
                 type: 'number',
                 step: '0.1',
                 defaultValue: '1',
+                placeholder: 'Default: 1',
+                availableInTemplate: true, // Available in auto-creation templates
             },
             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-am-resource-percent`]: {
                 key: 'maximum-am-resource-percent',
@@ -51,13 +58,17 @@ const QUEUE_CONFIG_METADATA = [
                     "Maximum percentage of this queue's resources for Application Masters (e.g., 0.1 for 10%).",
                 type: 'percentage',
                 defaultValue: '0.1',
+                placeholder: 'Default: 0.1 (10%)',
+                availableInTemplate: true, // Available in auto-creation templates
             },
             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.max-parallel-apps`]: {
                 key: 'max-parallel-apps',
                 displayName: 'Maximum Parallel Apps',
                 description: 'Maximum number of applications that can run concurrently in this queue.',
                 type: 'number',
-                defaultValue: '', // YARN often has a large internal default, empty means "use YARN default"
+                defaultValue: '',
+                placeholder: 'No limit (unlimited)',
+                availableInTemplate: false, // Not available in templates
             },
         },
     },
@@ -69,8 +80,9 @@ const QUEUE_CONFIG_METADATA = [
                 displayName: 'Ordering Policy',
                 description: 'Policy for ordering applications (e.g., fifo, fair, utilization).',
                 type: 'enum',
-                options: ['fifo', 'fair', 'utilization'], // Default is usually fifo in YARN
+                options: ['fifo', 'fair'],
                 defaultValue: 'fifo',
+                availableInTemplate: true, // Available in auto-creation templates
             },
             [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.disable_preemption`]: {
                 key: 'disable_preemption',
@@ -78,16 +90,8 @@ const QUEUE_CONFIG_METADATA = [
                 description: 'Whether preemption is disabled for this queue.',
                 type: 'boolean',
                 defaultValue: 'false',
-            },
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.auto-create-child-queue.enabled`]: {
-                key: 'auto-create-child-queue.enabled',
-                displayName: 'Auto-Create Child Queue',
-                description:
-                    'Whether to automatically create child queues when applications are submitted to this queue.',
-                type: 'boolean',
-                defaultValue: 'false',
-            },
-            // Note: 'queues' property (yarn.scheduler.capacity.<path>.queues) is handled by Trie structure, not direct edit here.
+                availableInTemplate: false, // Not available in templates
+            }
         },
     },
 ];
