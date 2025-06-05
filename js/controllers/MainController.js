@@ -124,29 +124,20 @@ class MainController {
                 configSuccess = true;
             } else {
                 this.schedulerConfigModel.loadSchedulerConfig([]);
-                this.notificationView.show({
-                    message:
-                        configResult.error ||
-                        `Failed to fetch scheduler configuration (status: ${configResult.status})`,
-                    type: 'error',
-                });
+                this.notificationView.showError(configResult.error ||
+                    `Failed to fetch scheduler configuration (status: ${configResult.status})`);
             }
 
             if (infoResult.status === 200 && infoResult.data) {
                 this.schedulerInfoModel.loadSchedulerInfo(infoResult.data);
             } else {
                 this.schedulerInfoModel.loadSchedulerInfo(null);
-                this.notificationView.show({
-                    message: infoResult.error || `Failed to fetch scheduler info (status: ${infoResult.status})`,
-                    type: 'warning',
-                });
+                this.notificationView.showWarning(infoResult.error ||
+                    `Failed to fetch scheduler info (status: ${infoResult.status})`);
             }
         } catch (error) {
             console.error('MainController init error:', error);
-            this.notificationView.show({
-                message: `Application initialization failed: ${error.message}`,
-                type: 'error',
-            });
+            this.notificationView.showError(`Application initialization failed: ${error.message}`);
             this.schedulerConfigModel.loadSchedulerConfig([]);
             this.schedulerInfoModel.loadSchedulerInfo(null);
         } finally {
@@ -164,7 +155,7 @@ class MainController {
         if (result.success) {
             this._tryRenderInitialViews();
         } else {
-            this.notificationView.show({ message: result.error || 'Configuration data is invalid.', type: 'error' });
+            this.notificationView.showError(result.error || 'Configuration data is invalid.');
             this.appStateModel.setLoading(false);
         }
     }
@@ -291,7 +282,7 @@ class MainController {
 
         const nameValidation = this.validationService.isValidQueueNameChars(queueName);
         if (!nameValidation.isValid) {
-            this.notificationView.show({ message: nameValidation.message, type: 'error' });
+            this.notificationView.showError(nameValidation.message);
             return;
         }
         const capacityValidation = this.validationService.parseAndValidateCapacityValue(
@@ -299,10 +290,7 @@ class MainController {
             params._ui_capacityMode
         );
         if (capacityValidation.errors || capacityValidation.error) {
-            this.notificationView.show({
-                message: `Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`,
-                type: 'error',
-            });
+            this.notificationView.showError(`Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`);
             return;
         }
         params.capacity = capacityValidation.value;
@@ -316,10 +304,7 @@ class MainController {
             true
         );
         if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-            this.notificationView.show({
-                message: `Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`,
-                type: 'error',
-            });
+            this.notificationView.showError(`Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`);
             return;
         }
         params['maximum-capacity'] = maxCapacityValidation.value;
@@ -353,19 +338,13 @@ class MainController {
             parentNodeToCheck.children[queueName] &&
             !parentNodeToCheck.children[queueName].isDeleted
         ) {
-            this.notificationView.show({
-                message: `A queue named "${queueName}" effectively already exists under "${parentPath}".`,
-                type: 'error',
-            });
+            this.notificationView.showError(`A queue named "${queueName}" effectively already exists under "${parentPath}".`);
             return;
         }
 
         this.schedulerConfigModel.stageAddQueue(newPath, params);
         this.addQueueModalView.hide();
-        this.notificationView.show({
-            message: `Queue "${queueName}" staged for addition under "${parentPath}".`,
-            type: 'success',
-        });
+        this.notificationView.showSuccess(`Queue "${queueName}" staged for addition under "${parentPath}".`);
     }
 
     handleOpenEditQueueModal(queuePath) {
@@ -379,7 +358,7 @@ class MainController {
         if (editData) {
             this.editQueueModalView.show(editData);
         } else {
-            this.notificationView.show({ message: `Could not load data for queue: ${queuePath}`, type: 'error' });
+            this.notificationView.showError(`Could not load data for queue: ${queuePath}`);
         }
     }
 
@@ -450,9 +429,9 @@ class MainController {
 
         if (refreshedModalData) {
             this.editQueueModalView.show(refreshedModalData);
-            this.notificationView.show({ message: 'Node label fields updated. Please review.', type: 'info' });
+            this.notificationView.showInfo('Node label fields updated. Please review.');
         } else {
-            this.notificationView.show({ message: 'Error refreshing node label fields in modal.', type: 'error' });
+            this.notificationView.showError('Error refreshing node label fields in modal.');
         }
     }
 
@@ -477,10 +456,7 @@ class MainController {
                 modeForValidation
             );
             if (capacityValidation.errors || capacityValidation.error) {
-                this.notificationView.show({
-                    message: `Invalid Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`,
-                    type: 'error',
-                });
+                this.notificationView.showError(`Invalid Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`);
                 return;
             }
             params.capacity = capacityValidation.value;
@@ -495,10 +471,7 @@ class MainController {
                 true
             );
             if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-                this.notificationView.show({
-                    message: `Invalid Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`,
-                    type: 'error',
-                });
+                this.notificationView.showError(`Invalid Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`);
                 return;
             }
             params['maximum-capacity'] = maxCapacityValidation.value;
@@ -506,10 +479,7 @@ class MainController {
 
         this.schedulerConfigModel.stageUpdateQueue(queuePath, params);
         this.editQueueModalView.hide();
-        this.notificationView.show({
-            message: `Changes for queue "${queuePath.split('.').pop()}" staged.`,
-            type: 'success',
-        });
+        this.notificationView.showSuccess(`Changes for queue "${queuePath.split('.').pop()}" staged.`);
     }
 
     handleDeleteQueue(queuePath) {
@@ -541,17 +511,14 @@ class MainController {
             if (nodeToValidate) {
                 const deletability = this.validationService.checkDeletability(nodeToValidate);
                 if (!deletability.canDelete) {
-                    this.notificationView.show({ message: deletability.reason, type: 'warning' });
+                    this.notificationView.showWarning(deletability.reason);
                     return;
                 }
             } else if (queuePath !== 'root') {
-                this.notificationView.show({
-                    message: `Could not fully validate deletability for ${queuePath}. Staging deletion.`,
-                    type: 'warning',
-                });
+                this.notificationView.showWarning(`Could not fully validate deletability for ${queuePath}. Staging deletion.`);
             }
             this.schedulerConfigModel.stageRemoveQueue(queuePath);
-            this.notificationView.show({ message: `Queue "${queuePath}" marked for deletion.`, type: 'info' });
+            this.notificationView.showInfo(`Queue "${queuePath}" marked for deletion.`);
         }
     }
 
@@ -562,12 +529,9 @@ class MainController {
                 (p) => p !== queuePath
             );
             this.schedulerConfigModel._emit('pendingChangesUpdated');
-            this.notificationView.show({ message: `Deletion mark for "${queuePath}" undone.`, type: 'info' });
+            this.notificationView.showInfo(`Deletion mark for "${queuePath}" undone.`);
         } else {
-            this.notificationView.show({
-                message: `Queue "${queuePath}" was not marked for deletion.`,
-                type: 'warning',
-            });
+            this.notificationView.showWarning(`Queue "${queuePath}" was not marked for deletion.`);
         }
     }
 
@@ -581,7 +545,7 @@ class MainController {
         if (infoData) {
             this.infoQueueModalView.show(infoData);
         } else {
-            this.notificationView.show({ message: `Could not load info for queue: ${queuePath}`, type: 'error' });
+            this.notificationView.showError(`Could not load info for queue: ${queuePath}`);
         }
     }
 
@@ -592,7 +556,7 @@ class MainController {
     handleSaveGlobalConfig(formData) {
         if (formData && formData.params && Object.keys(formData.params).length > 0) {
             this.schedulerConfigModel.stageGlobalUpdate(formData.params);
-            this.notificationView.show({ message: 'Global settings changes staged.', type: 'info' });
+            this.notificationView.showInfo('Global settings changes staged.');
         }
         this.appStateModel.setGlobalConfigEditMode(false);
     }
@@ -618,7 +582,7 @@ class MainController {
         }
 
         if (!this.schedulerConfigModel.hasPendingChanges()) {
-            this.notificationView.show({ message: 'No changes to apply.', type: 'info' });
+            this.notificationView.showInfo('No changes to apply.');
             this.appStateModel.setLoading(false);
             return;
         }
@@ -640,7 +604,7 @@ class MainController {
             typeof result.data === 'string' &&
             result.data.toLowerCase().includes('successfully applied')
         ) {
-            this.notificationView.show({ message: 'Configuration changes applied successfully!', type: 'success' });
+            this.notificationView.showSuccess('Configuration changes applied successfully!');
             this.schedulerConfigModel.clearPendingChanges();
             this.appStateModel.setLoading(true, 'Reloading configuration from server...');
             await this.init();
@@ -666,13 +630,13 @@ class MainController {
                 )
             ) {
                 this.schedulerConfigModel.clearPendingChanges();
-                this.notificationView.show({ message: 'All pending changes discarded.', type: 'info' });
+                this.notificationView.showInfo('All pending changes discarded.');
                 this.renderQueueRelatedViews();
                 this.renderGlobalConfigView();
                 this.renderBatchControls();
             }
         } else {
-            this.notificationView.show({ message: 'No pending changes to discard.', type: 'info' });
+            this.notificationView.showInfo( 'No pending changes to discard.');
         }
     }
 
@@ -687,6 +651,6 @@ class MainController {
         }
         this.appStateModel.setLoading(true, 'Refreshing all data from server...');
         await this.init();
-        this.notificationView.show({ message: 'Data refreshed from server.', type: 'success' });
+        this.notificationView.showSuccess('Data refreshed from server.');
     }
 }

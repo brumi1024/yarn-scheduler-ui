@@ -81,7 +81,7 @@ class EditQueueModalView extends BaseModalView {
         }
 
         // Node Label Configurations Section
-        formHTML += this._buildNodeLabelSectionHtml(path, nodeLabelData, data.allPartitions);
+        formHTML += this._buildNodeLabelSectionHtml(path, nodeLabelData);
 
         formHTML += `</form>
                      <div class="modal-actions">
@@ -91,7 +91,7 @@ class EditQueueModalView extends BaseModalView {
         return formHTML;
     }
 
-    _buildNodeLabelSectionHtml(queuePath, nodeLabelData, allPartitions = []) {
+    _buildNodeLabelSectionHtml(queuePath, nodeLabelData) {
         let sectionHtml = `<h4 class="form-category-title">Node Label Configurations</h4>`;
         const anlMeta =
             NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
@@ -232,7 +232,7 @@ class EditQueueModalView extends BaseModalView {
                 if (Object.keys(collectedData.params).length > 0) {
                     this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
                 } else {
-                    this.controller.notificationView.show({ message: 'No changes detected to stage.', type: 'info' });
+                    this.controller.notificationView.showInfo('No changes detected to stage.');
                     this.hide({ Canceled: true, NoChanges: true }); // Close if no changes
                 }
             });

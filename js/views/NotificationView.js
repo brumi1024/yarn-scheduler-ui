@@ -16,6 +16,34 @@ class NotificationView {
         };
     }
 
+    showSuccess(message) {
+        this.show({
+            message: message,
+            type: 'success'
+        })
+    }
+
+    showInfo(message) {
+        this.show({
+            message: message,
+            type: 'info'
+        })
+    }
+
+    showWarning(message) {
+        this.show({
+            message: message,
+            type: 'warning'
+        })
+    }
+
+    showError(message) {
+        this.show({
+            message: message,
+            type: 'error'
+        })
+    }
+
     /**
      * Displays a notification.
      * @param {{message: string, type?: string, duration?: number}} notificationData
