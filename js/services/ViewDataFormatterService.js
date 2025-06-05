@@ -235,7 +235,7 @@ class ViewDataFormatterService {
         }
 
         // --- Generate UI Labels and Deletion Info ---
-        formattedNode.uiLabels = this._generateUILabels(formattedNode);
+        formattedNode.uiLabels = this._generateUILabels(formattedNode, effectiveProperties, queuePath);
 
         // Pass formattedNode for deletability check, as it contains effective state/children info.
         // This implies ValidationService.checkDeletability might need to be more nuanced if it needs more than formattedNode gives.
@@ -340,7 +340,7 @@ class ViewDataFormatterService {
         return String(defaultValueForEmptyOrInvalid); // Last resort
     }
 
-    _generateUILabels(formattedNode) {
+    _generateUILabels(formattedNode, effectiveProperties, queuePath) {
         const labels = [];
         const modeIcons = {
             [CAPACITY_MODES.PERCENTAGE]: '📊',
@@ -371,12 +371,25 @@ class ViewDataFormatterService {
             });
         }
 
-        const autoCreateEnabled = String(formattedNode['auto-create-child-queue.enabled']).toLowerCase() === 'true';
-        if (autoCreateEnabled) {
+        // Check for both v1 and v2 auto-creation using effectiveProperties
+        const v1AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-create-child-queue.enabled`;
+        const v2AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.enabled`;
+        const v1AutoCreateEnabled = String(effectiveProperties.get(v1AutoCreateKey) || '').toLowerCase() === 'true';
+        const v2AutoCreateEnabled = String(effectiveProperties.get(v2AutoCreateKey) || '').toLowerCase() === 'true';
+        
+        if (v1AutoCreateEnabled) {
             labels.push({
-                text: '⚡ Auto-Create',
-                cssClass: 'queue-tag tag-auto-create',
-                tooltip: 'Auto Queue Creation. When auto-creation is enabled on a YARN Capacity Scheduler parent queue, it dynamically generates child leaf queues based on user or group mappings, facilitating flexible and scalable resource allocation without manual configuration. These auto-created queues inherit properties from their parent and the parent\'s auto-creation template configurations. It can be automatically deleted after a period of inactivity, typically 300 seconds, unless configured otherwise.',
+                text: '⚡ Auto-Create v1',
+                cssClass: 'queue-tag tag-auto-create-v1',
+                tooltip: 'Legacy Auto Queue Creation (v1). Automatically creates child leaf queues based on user or group mappings using traditional template properties. These queues inherit properties from the parent\'s leaf-queue-template configuration and can be automatically deleted after inactivity.',
+            });
+        }
+        
+        if (v2AutoCreateEnabled) {
+            labels.push({
+                text: '🚀 Auto-Create v2',
+                cssClass: 'queue-tag tag-auto-create-v2',
+                tooltip: 'Flexible Auto Queue Creation (v2). Advanced auto-creation mode with support for different template scopes (general, parent, leaf), management policies, and enhanced flexibility. Available in weight-based capacity modes and non-legacy queue configurations.',
             });
         }
         return labels;

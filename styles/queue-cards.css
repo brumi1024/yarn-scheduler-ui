@@ -278,6 +278,16 @@
     color: #ef6c00;
     border-color: #ffcc02;
 }
+.tag-auto-create-v1 {
+    background-color: #fff3e0;
+    color: #ef6c00;
+    border-color: #ffcc02;
+}
+.tag-auto-create-v2 {
+    background-color: #f3e5f5;
+    color: #7b1fa2;
+    border-color: #ba68c8;
+}
 
 .queue-capacity-section {
     margin-top: auto;
