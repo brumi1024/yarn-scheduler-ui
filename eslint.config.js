@@ -34,13 +34,26 @@ export default [
 
                 // Custom globals from your project (loaded via <script> tags in index.html)
                 'app': 'writable',
-                'MainController': 'readonly',
+                
+                // Core Models
+                'QueueConfigurationManager': 'readonly',
+                'QueueNode': 'readonly',
                 'AppStateModel': 'readonly',
                 'SchedulerConfigModel': 'readonly',
                 'SchedulerInfoModel': 'readonly',
+                
+                // Services
                 'ApiService': 'readonly',
                 'ValidationService': 'readonly',
                 'ViewDataFormatterService': 'readonly',
+                'ConfigurationOrchestrator': 'readonly',
+                'UIStateManager': 'readonly',
+                'ChangeManager': 'readonly',
+                
+                // Controllers
+                'MainController': 'readonly',
+                
+                // Views
                 'LoadingView': 'readonly',
                 'NotificationView': 'readonly',
                 'TabView': 'readonly',
@@ -48,20 +61,41 @@ export default [
                 'BatchControlsView': 'readonly',
                 'GlobalConfigView': 'readonly',
                 'QueueTreeView': 'readonly',
+                'BulkOperationsView': 'readonly',
                 'AddQueueModalView': 'readonly',
                 'EditQueueModalView': 'readonly',
                 'InfoQueueModalView': 'readonly',
                 'BaseModalView': 'readonly',
                 'QueueCardView': 'readonly',
+                
+                // Utilities
                 'DomUtils': 'readonly',
                 'EventEmitter': 'readonly',
-                'SchedulerConfigTrie': 'readonly',
+                'SchedulerDataCache': 'readonly',
+                'PropertyKeyMapper': 'readonly',
+                'CapacityValueParser': 'readonly',
+                'FormGenerator': 'readonly',
+                'RealTimeValidator': 'readonly',
+                'ChangePreview': 'readonly',
+                'BulkOperations': 'readonly',
+                
+                // Error Classes
+                'YarnSchedulerError': 'readonly',
+                'ValidationError': 'readonly',
+                'ApiError': 'readonly',
+                'ErrorHandler': 'readonly',
+                
+                // Validators
+                'QueueValidator': 'readonly',
+                
+                // Configuration Constants
                 'CONFIG': 'readonly',
                 'Q_PATH_PLACEHOLDER': 'readonly',
                 'CAPACITY_MODES': 'readonly',
                 'OPERATION_TYPES': 'readonly',
                 'DEFAULT_PARTITION': 'readonly',
-                // For metadata files that define globals like GLOBAL_CONFIG_METADATA, etc.
+                
+                // Metadata Objects
                 'GLOBAL_CONFIG_METADATA': 'readonly',
                 'NODE_LABEL_CONFIG_METADATA': 'readonly',
                 'QUEUE_CONFIG_METADATA': 'readonly',
