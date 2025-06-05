@@ -30,21 +30,7 @@ class ViewDataFormatterService {
     }
 
     _mapSimpleKeyToFullYarnKey(queuePath, simpleOrPartialKey) {
-        for (const category of QUEUE_CONFIG_METADATA) {
-            for (const placeholderKey in category.properties) {
-                if (category.properties[placeholderKey].key === simpleOrPartialKey) {
-                    return placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
-                }
-            }
-        }
-        const mainLabelListFullPlaceholder = `yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`;
-        if (NODE_LABEL_CONFIG_METADATA[mainLabelListFullPlaceholder]?.key === simpleOrPartialKey) {
-            return `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-        }
-        if (simpleOrPartialKey.startsWith('accessible-node-labels.')) {
-            return `yarn.scheduler.capacity.${queuePath}.${simpleOrPartialKey}`;
-        }
-        return null;
+        return PropertyKeyMapper.toFullKey(queuePath, simpleOrPartialKey);
     }
 
     formatQueueHierarchyForView(schedulerConfigModel, schedulerInfoModel, appStateModel, forValidationOnly = false) {
@@ -54,144 +40,154 @@ class ViewDataFormatterService {
         const pendingChanges = schedulerConfigModel.getRawPendingChanges();
         const selectedPartition = appStateModel.getSelectedPartition();
 
-        const formatNodeRecursive = (trieNode, parentPath = null) => {
-            const basePath = trieNode.fullPath;
-
-            if (pendingChanges.removeQueues.includes(basePath)) {
-                return null;
-            }
-
-            const effectiveProperties = new Map(trieNode.properties);
-            let operationType = null;
-            let uiCapacityModeHint = null;
-
-            const addEntry = pendingChanges.addQueues.find((a) => a.queueName === basePath);
-            const updateEntry = pendingChanges.updateQueues.find((u) => u.queueName === basePath);
-
-            if (addEntry) {
-                operationType = OPERATION_TYPES.ADD;
-                effectiveProperties.clear();
-                for (const [simpleKey, value] of Object.entries(addEntry.params)) {
-                    if (simpleKey === '_ui_capacityMode') {
-                        uiCapacityModeHint = value;
-                        continue;
-                    }
-                    const fullKey =
-                        this._mapSimpleKeyToFullYarnKey(basePath, simpleKey) ||
-                        `yarn.scheduler.capacity.${basePath}.${simpleKey}`;
-                    effectiveProperties.set(fullKey, value);
-                }
-            } else if (updateEntry) {
-                operationType = OPERATION_TYPES.UPDATE;
-                // Apply updates on top of base properties from Trie
-                for (const [simpleKey, value] of Object.entries(updateEntry.params)) {
-                    if (simpleKey === '_ui_capacityMode') {
-                        uiCapacityModeHint = value;
-                        continue;
-                    }
-                    const fullKey =
-                        this._mapSimpleKeyToFullYarnKey(basePath, simpleKey) ||
-                        `yarn.scheduler.capacity.${basePath}.${simpleKey}`;
-                    effectiveProperties.set(fullKey, value);
-                }
-            }
-
-            const formattedNode = this._formatSingleQueueNode(
-                basePath,
-                trieNode.segment,
-                parentPath,
-                effectiveProperties,
-                schedulerInfoModel,
-                selectedPartition,
-                operationType,
-                pendingChanges,
-                uiCapacityModeHint,
-                forValidationOnly
-            );
-
-            formattedNode.children = {};
-            let activeChildrenCount = 0;
-
-            trieNode.children.forEach((childTrieNode) => {
-                if (childTrieNode.isQueue) {
-                    const formattedChild = formatNodeRecursive(childTrieNode, basePath);
-                    if (formattedChild) {
-                        formattedNode.children[childTrieNode.segment] = formattedChild;
-                        activeChildrenCount++;
-                    }
-                }
-            });
-
-            for (const newChildEntry of pendingChanges.addQueues) {
-                const newQueueParentPath = newChildEntry.queueName.slice(
-                    0,
-                    Math.max(0, newChildEntry.queueName.lastIndexOf('.'))
-                );
-                if (newQueueParentPath === basePath) {
-                    const newChildSegment = newChildEntry.queueName.slice(
-                        Math.max(0, newChildEntry.queueName.lastIndexOf('.') + 1)
-                    );
-                    if (!formattedNode.children[newChildSegment]) {
-                        const newChildEffectiveProperties = new Map();
-                        let newChildUiModeHint = null;
-                        for (const [simpleKey, value] of Object.entries(newChildEntry.params)) {
-                            if (simpleKey === '_ui_capacityMode') {
-                                newChildUiModeHint = value;
-                                continue;
-                            }
-                            const fullKey =
-                                this._mapSimpleKeyToFullYarnKey(newChildEntry.queueName, simpleKey) ||
-                                `yarn.scheduler.capacity.${newChildEntry.queueName}.${simpleKey}`;
-                            newChildEffectiveProperties.set(fullKey, value);
-                        }
-                        formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
-                            newChildEntry.queueName,
-                            newChildSegment,
-                            basePath,
-                            newChildEffectiveProperties,
-                            schedulerInfoModel,
-                            selectedPartition,
-                            OPERATION_TYPES.ADD,
-                            pendingChanges,
-                            newChildUiModeHint,
-                            forValidationOnly
-                        );
-                        activeChildrenCount++;
-                    }
-                }
-            }
-            formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
-            return formattedNode;
-        };
-
         const rootAddEntry = pendingChanges.addQueues.find((a) => a.queueName === 'root');
         if (rootAddEntry) {
-            const rootEffectiveProperties = new Map();
-            let rootUiModeHint = null;
-            for (const [simpleKey, value] of Object.entries(rootAddEntry.params)) {
-                if (simpleKey === '_ui_capacityMode') {
-                    rootUiModeHint = value;
-                    continue;
-                }
-                const fullKey =
-                    this._mapSimpleKeyToFullYarnKey('root', simpleKey) || `yarn.scheduler.capacity.root.${simpleKey}`;
-                rootEffectiveProperties.set(fullKey, value);
-            }
-            return this._formatSingleQueueNode(
-                'root',
-                'root',
-                null,
-                rootEffectiveProperties,
-                schedulerInfoModel,
-                selectedPartition,
-                OPERATION_TYPES.ADD,
-                pendingChanges,
-                rootUiModeHint,
-                forValidationOnly
-            );
+            return this._buildAddedRootNode(rootAddEntry, schedulerInfoModel, selectedPartition, pendingChanges, forValidationOnly);
         }
 
-        return formatNodeRecursive(trieRoot);
+        return this._formatNodeRecursive(trieRoot, null, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly);
+    }
+
+    _buildEffectiveProperties(baseProperties, pendingEntry, queuePath) {
+        const effectiveProperties = new Map(baseProperties);
+        let uiCapacityModeHint = null;
+
+        if (pendingEntry) {
+            if (pendingEntry.queueName === queuePath) {
+                if (pendingEntry.params) {
+                    if (Object.prototype.hasOwnProperty.call(pendingEntry, 'queueName')) {
+                        effectiveProperties.clear();
+                    }
+                    
+                    for (const [simpleKey, value] of Object.entries(pendingEntry.params)) {
+                        if (simpleKey === '_ui_capacityMode') {
+                            uiCapacityModeHint = value;
+                            continue;
+                        }
+                        const fullKey = PropertyKeyMapper.createFullKey(queuePath, simpleKey);
+                        effectiveProperties.set(fullKey, value);
+                    }
+                }
+            }
+        }
+
+        return { effectiveProperties, uiCapacityModeHint };
+    }
+
+    _applyPendingAdditions(formattedNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly) {
+        let activeChildrenCount = 0;
+
+        for (const newChildEntry of pendingChanges.addQueues) {
+            const newQueueParentPath = newChildEntry.queueName.slice(
+                0, Math.max(0, newChildEntry.queueName.lastIndexOf('.'))
+            );
+            
+            if (newQueueParentPath === basePath) {
+                const newChildSegment = newChildEntry.queueName.slice(
+                    Math.max(0, newChildEntry.queueName.lastIndexOf('.') + 1)
+                );
+                
+                if (!formattedNode.children[newChildSegment]) {
+                    const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
+                        new Map(), newChildEntry, newChildEntry.queueName
+                    );
+                    
+                    formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
+                        newChildEntry.queueName,
+                        newChildSegment,
+                        basePath,
+                        effectiveProperties,
+                        schedulerInfoModel,
+                        selectedPartition,
+                        OPERATION_TYPES.ADD,
+                        pendingChanges,
+                        uiCapacityModeHint,
+                        forValidationOnly
+                    );
+                    activeChildrenCount++;
+                }
+            }
+        }
+        
+        return activeChildrenCount;
+    }
+
+    _formatNodeRecursive(trieNode, parentPath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly) {
+        const basePath = trieNode.fullPath;
+
+        if (pendingChanges.removeQueues.includes(basePath)) {
+            return null;
+        }
+
+        const addEntry = pendingChanges.addQueues.find((a) => a.queueName === basePath);
+        const updateEntry = pendingChanges.updateQueues.find((u) => u.queueName === basePath);
+        
+        let operationType = null;
+        let effectiveProperties, uiCapacityModeHint;
+
+        if (addEntry) {
+            operationType = OPERATION_TYPES.ADD;
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), addEntry, basePath));
+        } else if (updateEntry) {
+            operationType = OPERATION_TYPES.UPDATE;
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, updateEntry, basePath));
+        } else {
+            effectiveProperties = new Map(trieNode.properties);
+        }
+
+        const formattedNode = this._formatSingleQueueNode(
+            basePath,
+            trieNode.segment,
+            parentPath,
+            effectiveProperties,
+            schedulerInfoModel,
+            selectedPartition,
+            operationType,
+            pendingChanges,
+            uiCapacityModeHint,
+            forValidationOnly
+        );
+
+        formattedNode.children = {};
+        let activeChildrenCount = 0;
+
+        trieNode.children.forEach((childTrieNode) => {
+            if (childTrieNode.isQueue) {
+                const formattedChild = this._formatNodeRecursive(
+                    childTrieNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly
+                );
+                if (formattedChild) {
+                    formattedNode.children[childTrieNode.segment] = formattedChild;
+                    activeChildrenCount++;
+                }
+            }
+        });
+
+        activeChildrenCount += this._applyPendingAdditions(
+            formattedNode, basePath, pendingChanges, schedulerInfoModel, selectedPartition, forValidationOnly
+        );
+
+        formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
+        return formattedNode;
+    }
+
+    _buildAddedRootNode(rootAddEntry, schedulerInfoModel, selectedPartition, pendingChanges, forValidationOnly) {
+        const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
+            new Map(), rootAddEntry, 'root'
+        );
+        
+        return this._formatSingleQueueNode(
+            'root',
+            'root',
+            null,
+            effectiveProperties,
+            schedulerInfoModel,
+            selectedPartition,
+            OPERATION_TYPES.ADD,
+            pendingChanges,
+            uiCapacityModeHint,
+            forValidationOnly
+        );
     }
 
     /**
@@ -374,25 +370,15 @@ class ViewDataFormatterService {
     }
 
     _determineEffectiveCapacityMode(queuePath, effectiveProperties) {
-        const rawCapacityString = effectiveProperties.get(`yarn.scheduler.capacity.${queuePath}.capacity`);
-        if (rawCapacityString !== undefined) {
-            const capString = String(rawCapacityString).trim();
-            if (capString.endsWith('w')) return CAPACITY_MODES.WEIGHT;
-            if (this._isVectorString(capString)) return CAPACITY_MODES.ABSOLUTE;
-        }
-        return CAPACITY_MODES.PERCENTAGE;
+        return CapacityValueParser.determineMode(queuePath, effectiveProperties);
     }
 
     _getDefaultCapacityValue(mode) {
-        // Make this directly usable by views if needed
-        if (mode === CAPACITY_MODES.WEIGHT) return '1.0w';
-        if (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) return '[memory=1024,vcores=1]';
-        return '10.0%';
+        return CapacityValueParser.getDefaultValue(mode);
     }
 
     _getDefaultMaxCapacityValue() {
-        // Make this directly usable by views
-        return '100.0%';
+        return CapacityValueParser.getDefaultMaxValue(CAPACITY_MODES.PERCENTAGE);
     }
 
     _formatCapacityForDisplay(rawValue, mode, defaultValueForEmptyOrInvalid) {

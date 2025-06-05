@@ -7,7 +7,8 @@ class SchedulerConfigModel extends EventEmitter {
         super();
         this._trieInstance = new SchedulerConfigTrie(); // Holds the actual Trie data structure
         this._globalConfig = new Map(); // full.yarn.property.name -> value, specifically for CS global props
-        this._pendingChanges = this._getInitialPendingChanges();
+        this._changeLog = new ChangeLog(); // Unified change tracking
+        this._pendingChanges = this._getInitialPendingChanges(); // Legacy format for backward compatibility
     }
 
     /**
@@ -48,6 +49,14 @@ class SchedulerConfigModel extends EventEmitter {
             console.error('SchedulerConfigModel: Error initializing Trie from config:', error);
             this._emit('configLoaded', { success: false, error: 'Error processing configuration data' });
         }
+    }
+
+    /**
+     * Syncs the ChangeLog with the legacy pending changes format
+     * @private
+     */
+    _syncPendingChanges() {
+        this._pendingChanges = this._changeLog.toLegacyFormat();
     }
 
     /**
@@ -145,6 +154,7 @@ class SchedulerConfigModel extends EventEmitter {
 
     /** Clears all staged pending changes. */
     clearPendingChanges() {
+        this._changeLog.clear();
         this._pendingChanges = this._getInitialPendingChanges();
         this._emit('pendingChangesUpdated', this.getRawPendingChanges());
     }
@@ -178,15 +188,46 @@ class SchedulerConfigModel extends EventEmitter {
 
     /**
      * Performs stateful validation of pending changes against the current configuration.
-     * @returns {Array<Object>} An array of error objects { message: string, queuePath?: string }.
+     * @param {ViewDataFormatterService} viewDataFormatterService - For building effective hierarchy
+     * @param {AppStateModel} appStateModel - Current app state
+     * @param {SchedulerInfoModel} schedulerInfoModel - Optional scheduler info for advanced validation
+     * @returns {Array<Object>} An array of error objects { type: string, message: string, queuePath?: string }.
      */
-    performStatefulValidation() {
-        // This method will be complex and rely on an "effective hierarchy" view.
-        // For now, it's a placeholder.
-        const errors = [];
-        // Example: If adding queue 'root.new.child' but 'root.new' doesn't exist and isn't being added.
-        // Example: Check capacity sums at each level of the effective hierarchy.
-        return errors;
+    performStatefulValidation(viewDataFormatterService, appStateModel, schedulerInfoModel = null) {
+        if (!viewDataFormatterService || !appStateModel) {
+            return [];
+        }
+
+        try {
+            const effectiveHierarchy = viewDataFormatterService.formatQueueHierarchyForView(
+                this,
+                schedulerInfoModel,
+                appStateModel,
+                true // Include pending changes
+            );
+
+            if (!effectiveHierarchy) {
+                return [];
+            }
+
+            if (!this._validationPipeline) {
+                this._validationPipeline = new ValidationPipeline();
+            }
+
+            return this._validationPipeline.validate(
+                this,
+                effectiveHierarchy,
+                schedulerInfoModel,
+                appStateModel
+            );
+        } catch (error) {
+            console.error('SchedulerConfigModel: Validation error:', error);
+            return [{
+                type: 'VALIDATION_SYSTEM_ERROR',
+                message: `Validation system error: ${error.message}`,
+                queuePath: null
+            }];
+        }
     }
 
     /**
