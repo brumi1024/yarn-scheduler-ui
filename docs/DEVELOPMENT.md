@@ -146,30 +146,72 @@ handleAccessibleLabelsChange(eventData, ...)
   displayName: 'My New Property',
   description: 'This property does something amazing.',
   type: 'string', // 'number', 'boolean', 'enum'
-  defaultValue: 'defaultValue'
+  defaultValue: 'defaultValue',
+  placeholder: 'Default: defaultValue', // Optional helpful placeholder
+  availableInTemplate: true, // Optional: make available in auto-creation templates
+  // For enum types:
+  // options: ['option1', 'option2'],
+  // For number types:
+  // step: '0.1', min: '0', max: '100'
 }
 ```
 
-### 2. Automatic Integration:
+### 2. Enhanced Metadata Fields:
+- **`availableInTemplate`**: Set to `true` to automatically include in auto-creation templates
+- **`placeholder`**: Helpful text shown in empty fields (e.g., "Default: 10%")
+- **`v2Property`**: For auto-creation specific properties, marks as v2-only features
+
+### 3. Automatic Integration:
 The system automatically handles new properties through:
 - `ViewDataFormatterService._populateConfiguredProperties()`: Auto-populates from metadata
 - `ViewDataFormatterService.formatQueueDataForEditModal()`: Tracks default values in `propertyDefaults`
 - `EditQueueModalView._buildHtml()`: Auto-generates form fields with default indicators
 - `QueueConfigurationManager`: Handles staging and API payload generation
+- **Auto-creation templates**: Properties with `availableInTemplate: true` automatically appear in template sections
 
-### 3. Default Value Detection:
+### 4. Default Value Detection:
 New properties automatically get default value indicators when:
 - Property value is `undefined` (using system default)
 - Blue badge appears next to property name in edit modal
+- Input field shows empty with helpful placeholder text
 - Tooltip indicates "This field is using the default value"
 
-### 4. Testing:
-- Verify field appears in edit modal with appropriate default indicator
-- Test staging and API payload generation
-- Confirm XML includes new property
-- Verify default indicator toggles correctly when value is modified
+### 5. Template Integration:
+If `availableInTemplate: true`:
+- Property automatically appears in v1 templates: `leaf-queue-template.<property>`
+- Property automatically appears in v2 templates: `auto-queue-creation-v2.{template,parent-template,leaf-template}.<property>`
+- No additional code required for template support
 
-## 5. Recent Improvements
+### 6. Testing:
+- Verify field appears in edit modal with appropriate default indicator
+- Test staging and API payload generation with full YARN property names
+- Confirm XML includes complete property path (not simple key)
+- Verify default indicator toggles correctly when value is modified
+- If `availableInTemplate: true`, verify property appears in auto-creation template sections
+
+## 5. Key Architectural Changes (2024)
+
+### PropertyKeyMapper Enhancement
+The `PropertyKeyMapper.toSimpleKey()` method has been enhanced to handle complex auto-creation property structures:
+- **Before**: `yarn.scheduler.capacity.root.test.auto-create-child-queue.enabled` → `enabled`
+- **After**: `yarn.scheduler.capacity.root.test.auto-create-child-queue.enabled` → `auto-create-child-queue.enabled`
+- **Preserves full property context** for auto-creation and template properties
+- **Maintains backward compatibility** for regular queue properties
+
+### API Submission Improvements
+Fixed critical issues in API payload generation:
+- **Full YARN Property Names**: API now receives complete property paths instead of simple keys
+- **Percentage Value Cleaning**: Automatic `%` removal from percentage values (YARN expects numeric values)
+- **Value Processing**: `_cleanValueForApi()` method handles different capacity formats correctly
+
+### Template Property System
+Revolutionary auto-creation template system:
+- **No Duplication**: Template properties are dynamically generated from queue metadata
+- **Extensible**: Adding `availableInTemplate: true` to any queue property automatically makes it available in templates
+- **Mode-Aware**: Different template structures for v1 vs v2 auto-creation modes
+- **Inheritance**: Template properties inherit all metadata (types, validation, descriptions) from queue properties
+
+## 6. Recent Improvements
 
 ### Scrolling and Layout Fixes
 - **Multiple Horizontal Scrollbars**: Fixed dual scrollbar issue in queue tree
@@ -245,9 +287,44 @@ YarnSchedulerError (base)
 ### Default Value Indicators
 The edit modal includes visual indicators for properties using default values:
 - Blue badges with gear icons appear next to property names when using defaults
+- Empty input fields for unconfigured properties with helpful placeholders
 - Helps users distinguish between configured and default values
 - Implementation in `ViewDataFormatterService` tracks defaults via `propertyDefaults` object
 - CSS styling in `modals.css` with `.default-indicator` class
+
+### New Features (2024 Implementation)
+
+#### Resource Vector Capacity Mode
+- **Available in non-legacy mode only**: When `legacy-queue-mode.enabled = false`
+- **Mixed resource types**: Support for `[memory=50%,vcores=2,gpu=1w]` format
+- **Dynamic dropdown**: Vector option only appears when legacy mode is disabled
+- **Validation**: Let YARN validate complex vector formats
+- **Implementation**: Added to `CapacityValueParser` and capacity mode dropdown
+
+#### Custom Properties (Advanced Users)
+- **Collapsible section**: ⚠️ Custom Properties (Advanced) in edit modal
+- **Dynamic property addition**: Add any YARN property with `yarn.scheduler.capacity.<queue>.` prefix
+- **No validation**: Warning displayed that properties are not validated by UI
+- **Implementation**: Separate collection and submission pipeline for custom properties
+
+#### Auto Queue Creation Configuration
+- **Mode-aware configuration**: Different properties for v1 (Legacy) vs v2 (Flexible) modes
+- **Child queue validation**: Legacy auto-creation disabled for queues with existing children
+- **Template property inheritance**: Auto-generated from `QUEUE_CONFIG_METADATA` with `availableInTemplate: true`
+- **v1 Templates**: `yarn.scheduler.capacity.<queue>.leaf-queue-template.<property>`
+- **v2 Templates**: Multiple scopes:
+  - `auto-queue-creation-v2.template.<property>` (all children)
+  - `auto-queue-creation-v2.parent-template.<property>` (parent children only)
+  - `auto-queue-creation-v2.leaf-template.<property>` (leaf children only)
+- **Dynamic property structure**: Template properties automatically inherit from queue metadata
+
+#### Legacy vs Non-Legacy Queue Modes
+- **Legacy Mode Detection**: `AppStateModel.isLegacyModeEnabled()` checks global config
+- **UI Adaptation**: Different capacity options and validation rules based on mode
+- **Global Configuration**: `yarn.scheduler.capacity.legacy-queue-mode.enabled` in global config
+- **Mode-specific Features**:
+  - Legacy: Traditional percentage/weight/absolute modes
+  - Non-legacy: All modes plus Resource Vector support
 
 ### Queue Tree Display
 - **Horizontal Scrolling**: Supports deep queue hierarchies with proper scrolling
@@ -259,6 +336,7 @@ The edit modal includes visual indicators for properties using default values:
 - **Preview Changes**: Detailed view of pending modifications with old/new value comparison
 - **Staging System**: Stage changes before applying to YARN
 - **Validation Pipeline**: Real-time validation with error reporting
+- **Value Cleaning**: Automatic % removal from percentage values for YARN API
 
 ## 10. Performance Features
 

@@ -71,7 +71,7 @@ class ChangeManager {
      * @returns {boolean} Success status
      */
     stageUpdateQueue(queuePath, formData, viewDataFormatterService) {
-        const { params } = formData;
+        const { params, customProperties } = formData;
 
         // Validate capacity if changed
         if (Object.prototype.hasOwnProperty.call(params, 'capacity')) {
@@ -115,7 +115,15 @@ class ChangeManager {
             params['maximum-capacity'] = maxCapacityValidation.value;
         }
 
+        // Stage standard property updates
         this.schedulerConfigModel.stageUpdateQueue(queuePath, params);
+        
+        // Stage custom property updates if any
+        if (customProperties && Object.keys(customProperties).length > 0) {
+            // Custom properties are already full YARN keys, so we pass them directly
+            this.schedulerConfigModel.stageGlobalUpdate(customProperties);
+        }
+        
         this.notificationView.showSuccess(`Changes for queue "${queuePath.split('.').pop()}" staged.`);
         return true;
     }

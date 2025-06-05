@@ -109,4 +109,20 @@ class AppStateModel extends EventEmitter {
             this._emit('loadingStateChanged', { isLoading: this._isLoading, message: this._loadingMessage });
         }
     }
+
+    /**
+     * Checks if legacy queue mode is enabled based on global configuration.
+     * @param {Map<string, string>} globalConfig - The global configuration properties
+     * @returns {boolean} True if legacy mode is enabled (default), false otherwise
+     */
+    isLegacyModeEnabled(globalConfig) {
+        if (!globalConfig || !globalConfig.has) {
+            return true; // Default to legacy mode if no config
+        }
+        
+        const legacyModeValue = globalConfig.get('yarn.scheduler.capacity.legacy-queue-mode.enabled');
+        
+        // Default to true if not set, only false if explicitly set to 'false'
+        return legacyModeValue !== 'false';
+    }
 }

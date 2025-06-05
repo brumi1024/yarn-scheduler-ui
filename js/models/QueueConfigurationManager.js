@@ -524,7 +524,8 @@ class QueueConfigurationManager {
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    params[simpleKey] = value;
+                    // Use full YARN property key and clean the value for API
+                    params[fullKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.addQueues.push({
@@ -536,7 +537,8 @@ class QueueConfigurationManager {
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    params[simpleKey] = value;
+                    // Use full YARN property key and clean the value for API
+                    params[fullKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.updateQueues.push({
@@ -550,6 +552,31 @@ class QueueConfigurationManager {
         for (const child of node.children.values()) {
             this._collectQueueChanges(child, payload);
         }
+    }
+
+    /**
+     * Cleans values for API submission
+     * @param {string} value - The value to clean
+     * @param {string} simpleKey - The simple key to determine cleaning rules
+     * @returns {string} Cleaned value
+     */
+    _cleanValueForApi(value, simpleKey) {
+        if (typeof value !== 'string') {
+            return String(value);
+        }
+
+        // Remove % characters from percentage capacity values for YARN API
+        // YARN expects numeric values for percentages, not with % suffix
+        if (simpleKey === 'capacity' || simpleKey === 'maximum-capacity' || 
+            simpleKey.endsWith('.capacity') || simpleKey.endsWith('.maximum-capacity')) {
+            
+            // Only clean percentage values (ending with %), keep weight (w) and vector formats
+            if (value.endsWith('%') && !value.startsWith('[')) {
+                return value.slice(0, -1); // Remove the % character
+            }
+        }
+
+        return value;
     }
 
     /**

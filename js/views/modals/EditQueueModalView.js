@@ -34,7 +34,7 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _buildHtml(data) {
-        const { path, displayName, properties, propertyDefaults, nodeLabelData, effectiveCapacityMode } = data;
+        const { path, displayName, properties, propertyDefaults, nodeLabelData, effectiveCapacityMode, isLegacyMode } = data;
         let formHTML = `<form id="edit-queue-form" data-queue-path="${path}" onsubmit="return false;">`;
 
         // Static Info
@@ -48,9 +48,13 @@ class EditQueueModalView extends BaseModalView {
                      </div>`;
 
         // Capacity Mode
+        const capacityModeTooltip = isLegacyMode 
+            ? "Determines how queue capacity is specified. In legacy mode, all queues in a hierarchy must use the same capacity mode."
+            : "Determines how queue capacity is specified. Non-legacy mode allows mixing capacity modes and Resource Vectors.";
+            
         formHTML += `<div class="form-group property-edit-item">
                         <div class="property-details-column">
-                            <div class="property-display-name"><span>Capacity Mode</span><span class="info-icon" title="Determines how queue capacity is specified (Percentage, Weight, or Absolute Resources).">ⓘ</span></div>
+                            <div class="property-display-name"><span>Capacity Mode</span><span class="info-icon" title="${DomUtils.escapeXml(capacityModeTooltip)}">ⓘ</span></div>
                             <div class="property-yarn-name">- UI Helper -</div>
                         </div>
                         <div class="property-value-column">
@@ -58,6 +62,7 @@ class EditQueueModalView extends BaseModalView {
                                 <option value="${CAPACITY_MODES.PERCENTAGE}" ${effectiveCapacityMode === CAPACITY_MODES.PERCENTAGE ? 'selected' : ''}>Percentage (%)</option>
                                 <option value="${CAPACITY_MODES.WEIGHT}" ${effectiveCapacityMode === CAPACITY_MODES.WEIGHT ? 'selected' : ''}>Weight (w)</option>
                                 <option value="${CAPACITY_MODES.ABSOLUTE}" ${effectiveCapacityMode === CAPACITY_MODES.ABSOLUTE ? 'selected' : ''}>Absolute Resources</option>
+                                ${isLegacyMode ? '' : `<option value="${CAPACITY_MODES.VECTOR}" ${effectiveCapacityMode === CAPACITY_MODES.VECTOR ? 'selected' : ''}>Resource Vector (Mixed)</option>`}
                             </select>
                         </div>
                      </div>`;
@@ -81,8 +86,14 @@ class EditQueueModalView extends BaseModalView {
             }
         }
 
+        // Auto Queue Creation Section
+        formHTML += this._buildAutoCreationSectionHtml(data);
+
         // Node Label Configurations Section
         formHTML += this._buildNodeLabelSectionHtml(path, nodeLabelData);
+
+        // Custom Properties Section
+        formHTML += this._buildCustomPropertiesSectionHtml(path);
 
         formHTML += `</form>
                      <div class="modal-actions">
@@ -145,6 +156,170 @@ class EditQueueModalView extends BaseModalView {
             sectionHtml += `<p class="form-help">Queue has access to all ('*') labels. To set specific capacities per label, list them explicitly above instead of using '*'.</p>`;
         }
         sectionHtml += `</div>`;
+        return sectionHtml;
+    }
+
+    _buildAutoCreationSectionHtml(data) {
+        const { autoCreationData, isLegacyMode, path, effectiveCapacityMode } = data;
+        
+        // Determine which mode should be active and if templates should be shown
+        const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
+        const shouldUseV2 = isWeightMode || !isLegacyMode;
+        const shouldShowTemplates = shouldUseV2 ? autoCreationData.v2Enabled : autoCreationData.v1Enabled;
+
+        const sectionHtml = `
+            <div class="auto-creation-section">
+                <h4 class="form-category-title">Auto Queue Creation</h4>
+                ${this._buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode)}
+                ${shouldShowTemplates ? this._buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode) : ''}
+            </div>
+        `;
+        return sectionHtml;
+    }
+
+    _buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
+        const { enabled, hasChildren, v1Enabled, v2Enabled } = autoCreationData;
+        const cannotEnableLegacy = isLegacyMode && hasChildren;
+        
+        // Determine which auto-creation mode should be used
+        const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
+        const shouldUseV2 = isWeightMode || !isLegacyMode;
+        const autoCreationMode = shouldUseV2 ? 'v2 (Flexible)' : 'v1 (Legacy)';
+        
+        // Determine which property to show and its current value
+        const propertyKey = shouldUseV2 ? 'auto-queue-creation-v2.enabled' : 'auto-create-child-queue.enabled';
+        const fullPropertyName = `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${propertyKey}`;
+        const currentValue = shouldUseV2 ? v2Enabled : v1Enabled;
+        
+        const warningText = cannotEnableLegacy && !shouldUseV2
+            ? 'Legacy auto queue creation cannot be enabled on queues that have existing children.'
+            : '';
+
+        return `
+            <div class="form-group property-edit-item">
+                <div class="property-details-column">
+                    <div class="property-display-name">
+                        <span>Enable Auto Queue Creation</span>
+                        <span class="info-icon" title="Automatically create child queues when applications are submitted to this queue. Mode: ${autoCreationMode}">ⓘ</span>
+                    </div>
+                    <div class="property-yarn-name">${fullPropertyName}</div>
+                    <p class="form-help" style="color: ${shouldUseV2 ? '#28a745' : '#856404'}; margin-top: 5px;">Using ${autoCreationMode} auto queue creation</p>
+                    ${warningText ? `<p class="form-help" style="color: #dc3545; margin-top: 5px;">${warningText}</p>` : ''}
+                </div>
+                <div class="property-value-column">
+                    <select class="form-input" id="auto-creation-enabled" data-simple-key="${propertyKey}" data-original-value="${currentValue ? 'true' : 'false'}" ${cannotEnableLegacy && !shouldUseV2 ? 'disabled' : ''}>
+                        <option value="false" ${!currentValue ? 'selected' : ''}>false</option>
+                        <option value="true" ${currentValue ? 'selected' : ''}>true</option>
+                    </select>
+                </div>
+            </div>
+        `;
+    }
+
+    _buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
+        const { nonTemplateProperties, v1TemplateProperties, v2TemplateProperties } = autoCreationData;
+        
+        // Determine auto-creation mode based on capacity mode and legacy settings
+        const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
+        const isV2Mode = isWeightMode || !isLegacyMode;
+        
+        let templateHtml = `
+            <div class="auto-creation-template" id="auto-creation-template">
+                <h5 style="margin: 15px 0 10px; color: #666;">Auto Queue Creation Configuration</h5>
+        `;
+
+        if (isV2Mode) {
+            // v2 mode: show v2 non-template properties and v2 template properties
+            templateHtml += `
+                <h6 style="margin: 0 0 10px; color: #28a745;">v2 (Flexible) Configuration</h6>
+            `;
+            
+            // Show v2 non-template properties (excluding the main toggle)
+            for (const [propKey, propData] of Object.entries(nonTemplateProperties)) {
+                if (propData.meta.v2Property && propData.meta.key !== 'auto-queue-creation-v2.enabled') {
+                    templateHtml += this._buildPropertyInputHtml(
+                        propData.meta.key,
+                        `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${propData.meta.key}`,
+                        propData.meta,
+                        propData.value,
+                        `auto-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                        propData.isDefault
+                    );
+                }
+            }
+            
+            // Show v2 template properties with different scopes
+            const scopeLabels = {
+                template: 'General Template',
+                parentTemplate: 'Parent Queue Template', 
+                leafTemplate: 'Leaf Queue Template'
+            };
+            
+            for (const [scopeKey, scopeProps] of Object.entries(v2TemplateProperties)) {
+                if (Object.keys(scopeProps).length > 0) {
+                    templateHtml += `
+                        <h6 style="margin: 15px 0 5px; color: #666;">${scopeLabels[scopeKey]}</h6>
+                        <p class="form-help" style="margin-bottom: 10px;">Properties applied to ${scopeKey === 'template' ? 'all auto-created queues' : scopeKey === 'parentTemplate' ? 'auto-created parent queues' : 'auto-created leaf queues'}:</p>
+                    `;
+                    
+                    for (const [propKey, propData] of Object.entries(scopeProps)) {
+                        const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
+                        templateHtml += this._buildPropertyInputHtml(
+                            fullKey,
+                            `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
+                            propData.meta,
+                            propData.value,
+                            `v2-${scopeKey}-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                            propData.isDefault
+                        );
+                    }
+                }
+            }
+        } else {
+            // v1 mode: show v1 template properties only
+            templateHtml += `
+                <h6 style="margin: 0 0 10px; color: #856404;">v1 (Legacy) Template Properties</h6>
+                <p class="form-help" style="margin-bottom: 15px;">These properties will be applied to automatically created child queues:</p>
+            `;
+            
+            for (const [propKey, propData] of Object.entries(v1TemplateProperties)) {
+                const fullKey = `leaf-queue-template.${propData.meta.key}`;
+                templateHtml += this._buildPropertyInputHtml(
+                    fullKey,
+                    `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
+                    propData.meta,
+                    propData.value,
+                    `v1-template-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    propData.isDefault
+                );
+            }
+        }
+
+        templateHtml += `</div>`;
+        return templateHtml;
+    }
+
+    _buildCustomPropertiesSectionHtml(queuePath) {
+        const sectionHtml = `
+            <div class="custom-properties-section">
+                <h4 class="form-category-title collapsible collapsed" id="custom-properties-header">
+                    <span class="collapse-icon">▶</span>
+                    <span>⚠️ Custom Properties (Advanced)</span>
+                </h4>
+                <div class="custom-properties-content" id="custom-properties-content" style="display: none;">
+                    <p class="form-help" style="margin-bottom: 15px; color: #856404; background-color: #fff3cd; padding: 10px; border-radius: 4px;">
+                        <strong>Warning:</strong> Custom properties are not validated by the UI. Ensure property names and values are correct to avoid YARN configuration errors.
+                    </p>
+                    <div id="custom-properties-list">
+                        <!-- Custom properties will be added here dynamically -->
+                    </div>
+                    <button type="button" class="btn btn-secondary" id="add-custom-property-btn" style="margin-top: 10px;">
+                        + Add Custom Property
+                    </button>
+                    <input type="hidden" id="queue-path-prefix" value="yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}." />
+                </div>
+            </div>
+        `;
         return sectionHtml;
     }
 
@@ -213,11 +388,15 @@ class EditQueueModalView extends BaseModalView {
         const capacityInput = DomUtils.qs('[data-simple-key="capacity"] .form-input', form);
 
         if (capacityModeSelect && capacityInput) {
+            // Set initial placeholder
+            this._updateCapacityPlaceholder(capacityInput, capacityModeSelect.value);
+            
             capacityModeSelect.addEventListener('change', () => {
                 const newMode = capacityModeSelect.value;
                 // Update capacity input to default for the new mode
                 capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(newMode);
-                // Future: could add help text changes here too
+                // Update placeholder based on new mode
+                this._updateCapacityPlaceholder(capacityInput, newMode);
             });
         }
 
@@ -251,6 +430,12 @@ class EditQueueModalView extends BaseModalView {
         if (cancelButton) {
             cancelButton.addEventListener('click', () => this.hide({ Canceled: true }));
         }
+
+        // Bind custom properties events
+        this._bindCustomPropertiesEvents(form);
+        
+        // Bind auto-creation events
+        this._bindAutoCreationEvents(form);
     }
 
     _collectFormData(form, originalCapacityMode) {
@@ -275,6 +460,7 @@ class EditQueueModalView extends BaseModalView {
             if (simpleOrPartialKey) {
                 let hasChanged = newValue !== originalValue;
                 const userActuallyChangedValue = hasChanged; // Track if user actually modified this field
+                
 
                 // Handle capacity fields with user intent awareness
                 if (simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) {
@@ -331,6 +517,14 @@ class EditQueueModalView extends BaseModalView {
                 }
             }
         }
+        
+        // Collect custom properties
+        const customProperties = this._collectCustomProperties(form);
+        if (customProperties) {
+            // Custom properties use full YARN keys, not simple keys
+            stagedChanges.customProperties = customProperties;
+        }
+        
         return stagedChanges;
     }
 
@@ -338,5 +532,128 @@ class EditQueueModalView extends BaseModalView {
         if (value === '[]') return true;
         const parsed = this.viewDataFormatterService._resourceVectorParser(value);
         return parsed.every((p) => Number.parseFloat(p.value) === 0);
+    }
+
+    _updateCapacityPlaceholder(capacityInput, mode) {
+        let placeholder = '';
+        switch (mode) {
+            case CAPACITY_MODES.PERCENTAGE: {
+                placeholder = 'e.g., 50 or 50%';
+                break;
+            }
+            case CAPACITY_MODES.WEIGHT: {
+                placeholder = 'e.g., 2w';
+                break;
+            }
+            case CAPACITY_MODES.ABSOLUTE: {
+                placeholder = 'e.g., [memory=1024,vcores=2]';
+                break;
+            }
+            case CAPACITY_MODES.VECTOR: {
+                placeholder = 'e.g., [memory=50%,vcores=2,gpu=1w]';
+                break;
+            }
+        }
+        capacityInput.setAttribute('placeholder', placeholder);
+    }
+
+    _bindCustomPropertiesEvents(form) {
+        const header = DomUtils.qs('#custom-properties-header', form);
+        const content = DomUtils.qs('#custom-properties-content', form);
+        const addButton = DomUtils.qs('#add-custom-property-btn', form);
+        
+        if (header && content) {
+            header.addEventListener('click', () => {
+                const isCollapsed = header.classList.contains('collapsed');
+                if (isCollapsed) {
+                    header.classList.remove('collapsed');
+                    content.style.display = 'block';
+                } else {
+                    header.classList.add('collapsed');
+                    content.style.display = 'none';
+                }
+            });
+        }
+        
+        if (addButton) {
+            addButton.addEventListener('click', () => {
+                this._addCustomPropertyRow();
+            });
+        }
+    }
+
+    _addCustomPropertyRow() {
+        const container = DomUtils.qs('#custom-properties-list', this.formContainer);
+        if (!container) return;
+        
+        const rowId = `custom-prop-${Date.now()}`;
+        const prefix = DomUtils.qs('#queue-path-prefix', this.formContainer)?.value || '';
+        
+        const rowHtml = `
+            <div class="custom-property-row" id="${rowId}">
+                <span style="flex: 0 0 auto; font-family: monospace; font-size: 12px;">${DomUtils.escapeXml(prefix)}</span>
+                <input type="text" class="form-input property-suffix" placeholder="property.name" data-custom-property="suffix" />
+                <span style="flex: 0 0 auto;">=</span>
+                <input type="text" class="form-input property-value" placeholder="value" data-custom-property="value" />
+                <button type="button" class="btn-remove" data-row-id="${rowId}">Remove</button>
+            </div>
+        `;
+        
+        container.insertAdjacentHTML('beforeend', rowHtml);
+        
+        // Bind remove button
+        const removeBtn = container.querySelector(`#${rowId} .btn-remove`);
+        if (removeBtn) {
+            removeBtn.addEventListener('click', () => {
+                const row = DomUtils.qs(`#${rowId}`, container);
+                if (row) row.remove();
+            });
+        }
+    }
+
+    _collectCustomProperties(form) {
+        const customPropertyRows = form.querySelectorAll('.custom-property-row');
+        if (customPropertyRows.length === 0) return null;
+        
+        const prefix = DomUtils.qs('#queue-path-prefix', form)?.value || '';
+        const customProperties = {};
+        
+        for (const row of customPropertyRows) {
+            const suffixInput = row.querySelector('[data-custom-property="suffix"]');
+            const valueInput = row.querySelector('[data-custom-property="value"]');
+            
+            if (suffixInput && valueInput) {
+                const suffix = suffixInput.value.trim();
+                const value = valueInput.value.trim();
+                
+                if (suffix && value) {
+                    const fullKey = prefix + suffix;
+                    customProperties[fullKey] = value;
+                }
+            }
+        }
+        
+        return Object.keys(customProperties).length > 0 ? customProperties : null;
+    }
+
+    _bindAutoCreationEvents(form) {
+        const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
+        const templateSection = DomUtils.qs('#auto-creation-template', form);
+        
+        if (autoCreationToggle) {
+            // Set initial template visibility
+            this._updateTemplateVisibility(autoCreationToggle.value === 'true', templateSection);
+            
+            autoCreationToggle.addEventListener('change', () => {
+                const enabled = autoCreationToggle.value === 'true';
+                this._updateTemplateVisibility(enabled, templateSection);
+            });
+        }
+    }
+
+    _updateTemplateVisibility(enabled, templateSection) {
+        if (templateSection) {
+            templateSection.style.display = enabled ? 'block' : 'none';
+        }
     }
 }
