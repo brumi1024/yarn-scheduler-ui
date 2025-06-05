@@ -30,18 +30,15 @@ class PropertyKeyMapper {
             return null;
         }
 
-        for (const category of QUEUE_CONFIG_METADATA) {
-            for (const placeholderKey in category.properties) {
-                const pattern = placeholderKey.replace(Q_PATH_PLACEHOLDER, '([^.]+(?:\\.[^.]+)*)');
-                const regex = new RegExp(`^${pattern}$`);
-                if (regex.test(fullKey)) {
-                    return category.properties[placeholderKey].key;
-                }
-            }
+        // Extract queue path and property from the full key
+        const withoutPrefix = fullKey.replace('yarn.scheduler.capacity.', '');
+        const parts = withoutPrefix.split('.');
+        
+        if (parts.length < 2) {
+            return null;
         }
-
-        const parts = fullKey.split('.');
-        return parts.length > 4 ? parts.slice(4).join('.') : null;
+        
+        return parts[parts.length - 1];
     }
 
     /**

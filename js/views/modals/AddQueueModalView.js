@@ -2,6 +2,7 @@ class AddQueueModalView extends BaseModalView {
     constructor(controller) {
         super('add-queue-modal', controller); // modalId, controller
         this.viewDataFormatterService = controller.viewDataFormatterService; // For default capacity values
+        this.realTimeValidator = null;
     }
 
     /**
@@ -21,72 +22,98 @@ class AddQueueModalView extends BaseModalView {
 
         this.formContainer.innerHTML = this._buildHtml(parentQueues, preselectedParentPath);
         this._bindFormEvents();
+        this._setupRealTimeValidation();
     }
 
     _buildHtml(parentQueues, preselectedParentPath) {
-        let parentOptionsHtml = (parentQueues || [])
-            .map((parent) => {
-                const selected = parent.path === preselectedParentPath ? 'selected' : '';
-                return `<option value="${DomUtils.escapeXml(parent.path)}" ${selected}>${DomUtils.escapeXml(parent.path)}</option>`;
-            })
-            .join('');
-
-        if (!parentOptionsHtml && preselectedParentPath === 'root') {
-            // Ensure root is option if list is empty
-            parentOptionsHtml = `<option value="root" selected>root</option>`;
-        }
-
         const defaultPercentageCapacity = this.viewDataFormatterService._getDefaultCapacityValue(
             CAPACITY_MODES.PERCENTAGE
         );
-        const defaultMaxCapacity = this.viewDataFormatterService._getDefaultMaxCapacityValue(CAPACITY_MODES.PERCENTAGE); // Max usually percentage
+        const defaultMaxCapacity = this.viewDataFormatterService._getDefaultMaxCapacityValue(CAPACITY_MODES.PERCENTAGE);
 
-        // Only include core properties for Add modal, defaults for others applied by model/controller.
-        return `
-            <form id="add-queue-form" onsubmit="return false;"> <!-- Prevent default form submission -->
-                <div class="form-group">
-                    <label class="form-label" for="new-parent-queue-select">Parent Queue</label>
-                    <select class="form-input" id="new-parent-queue-select">${parentOptionsHtml}</select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new-queue-name">New Queue Name</label>
-                    <input type="text" class="form-input" id="new-queue-name" placeholder="Enter queue name (e.g., my_queue)" required>
-                    <small class="form-help">Letters, numbers, underscores, hyphens, periods allowed.</small>
-                    <div class="validation-message" id="new-queue-name-validation"></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new-capacity-mode">Capacity Mode</label>
-                    <select class="form-input" id="new-capacity-mode">
-                        <option value="${CAPACITY_MODES.PERCENTAGE}" selected>Percentage (%)</option>
-                        <option value="${CAPACITY_MODES.WEIGHT}">Weight (w)</option>
-                        <option value="${CAPACITY_MODES.ABSOLUTE}">Absolute Resources</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new-queue-capacity">Capacity</label>
-                    <input type="text" class="form-input" id="new-queue-capacity" value="${defaultPercentageCapacity}">
-                    <small class="form-help" id="new-capacity-help">e.g., 10% or 10.0%</small>
-                    <div class="validation-message" id="new-queue-capacity-validation"></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new-queue-max-capacity">Maximum Capacity</label>
-                    <input type="text" class="form-input" id="new-queue-max-capacity" value="${defaultMaxCapacity}">
-                    <small class="form-help">e.g., "100%" or "[memory=2048,vcores=2]".</small>
-                    <div class="validation-message" id="new-queue-max-capacity-validation"></div>
-                </div>
-                <div class="form-group">
-                    <label class="form-label" for="new-queue-state">State</label>
-                    <select class="form-input" id="new-queue-state">
-                        <option value="RUNNING" selected>RUNNING</option>
-                        <option value="STOPPED">STOPPED</option>
-                    </select>
-                </div>
-            </form>
-            <div class="modal-actions">
-                <button class="btn btn-secondary" id="cancel-add-queue-btn">Cancel</button>
-                <button class="btn btn-success" id="submit-add-queue-btn">Add Queue</button>
-            </div>
-        `;
+        // Prepare parent queue options
+        let parentOptions = (parentQueues || []).map(parent => ({
+            value: parent.path,
+            label: parent.path
+        }));
+
+        if (parentOptions.length === 0 && preselectedParentPath === 'root') {
+            parentOptions = [{ value: 'root', label: 'root' }];
+        }
+
+        // Define form fields using FormGenerator
+        const fields = [
+            {
+                type: 'select',
+                id: 'new-parent-queue-select',
+                name: 'parentQueue',
+                label: 'Parent Queue',
+                value: preselectedParentPath,
+                options: parentOptions,
+                required: true
+            },
+            {
+                type: 'text',
+                id: 'new-queue-name',
+                name: 'queueName',
+                label: 'New Queue Name',
+                placeholder: 'Enter queue name (e.g., my_queue)',
+                help: 'Letters, numbers, underscores, hyphens, periods allowed.',
+                required: true
+            },
+            {
+                type: 'select',
+                id: 'new-capacity-mode',
+                name: 'capacityMode',
+                label: 'Capacity Mode',
+                value: CAPACITY_MODES.PERCENTAGE,
+                options: [
+                    { value: CAPACITY_MODES.PERCENTAGE, label: 'Percentage (%)' },
+                    { value: CAPACITY_MODES.WEIGHT, label: 'Weight (w)' },
+                    { value: CAPACITY_MODES.ABSOLUTE, label: 'Absolute Resources' }
+                ]
+            },
+            {
+                type: 'text',
+                id: 'new-queue-capacity',
+                name: 'capacity',
+                label: 'Capacity',
+                value: defaultPercentageCapacity,
+                help: 'e.g., 10% or 10.0%'
+            },
+            {
+                type: 'text',
+                id: 'new-queue-max-capacity',
+                name: 'maxCapacity',
+                label: 'Maximum Capacity',
+                value: defaultMaxCapacity,
+                help: 'e.g., "100%" or "[memory=2048,vcores=2]"'
+            },
+            {
+                type: 'select',
+                id: 'new-queue-state',
+                name: 'state',
+                label: 'State',
+                value: 'RUNNING',
+                options: [
+                    { value: 'RUNNING', label: 'RUNNING' },
+                    { value: 'STOPPED', label: 'STOPPED' }
+                ]
+            }
+        ];
+
+        const actions = FormGenerator.createStandardActions({
+            cancelId: 'cancel-add-queue-btn',
+            submitId: 'submit-add-queue-btn',
+            submitText: 'Add Queue',
+            submitClass: 'btn btn-success'
+        });
+
+        return FormGenerator.generateForm(fields, {
+            formId: 'add-queue-form',
+            submitOnEnter: false,
+            actions
+        });
     }
 
     _validateAndGetFormData(form) {
@@ -229,5 +256,52 @@ class AddQueueModalView extends BaseModalView {
         if (cancelButton) {
             cancelButton.addEventListener('click', () => this.hide({ Canceled: true }));
         }
+    }
+
+    /**
+     * Sets up real-time validation for form fields.
+     */
+    _setupRealTimeValidation() {
+        const form = DomUtils.qs('#add-queue-form', this.formContainer);
+        if (!form) return;
+
+        // Clean up existing validator
+        if (this.realTimeValidator) {
+            this.realTimeValidator.destroy();
+        }
+
+        // Create new validator
+        this.realTimeValidator = new RealTimeValidator(form, {
+            debounceDelay: 300,
+            validateOnBlur: true,
+            validateOnInput: true,
+            showSuccessState: true
+        });
+
+        // Add validators for each field
+        const validators = RealTimeValidator.createQueueValidators();
+        
+        // Add unique queue name validator
+        validators.queueName = RealTimeValidator.createUniqueQueueNameValidator((queuePath) => {
+            // Check if queue already exists via controller
+            return this.controller.schedulerConfigModel.getAllQueuePaths().includes(queuePath);
+        });
+
+        this.realTimeValidator.addValidators({
+            'new-queue-name': validators.queueName,
+            'new-queue-capacity': validators.capacity,
+            'new-queue-max-capacity': validators.maxCapacity
+        });
+    }
+
+    /**
+     * Cleans up resources when modal is hidden.
+     */
+    hide(result) {
+        if (this.realTimeValidator) {
+            this.realTimeValidator.destroy();
+            this.realTimeValidator = null;
+        }
+        super.hide(result);
     }
 }

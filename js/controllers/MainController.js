@@ -21,6 +21,10 @@ class MainController {
         this.editQueueModalView = new EditQueueModalView(this);
         this.infoQueueModalView = new InfoQueueModalView(this);
 
+        // Initialize bulk operations
+        this.bulkOperations = new BulkOperations(this.schedulerConfigModel, this.notificationView);
+        this.bulkOperationsView = new BulkOperationsView(this.bulkOperations);
+
         this.currentEditQueuePath = null;
 
         this._bindAppEvents();
@@ -63,11 +67,13 @@ class MainController {
                 this.appStateModel.setCurrentSortCriteria(criteria)
             );
             this.controlsView.subscribe('refreshDataClicked', () => this.handleRefreshData());
+            this.controlsView.subscribe('bulkOperationsClicked', () => this.handleBulkOperationsToggle());
         }
 
         if (this.batchControlsView) {
             this.batchControlsView.subscribe('applyAllClicked', () => this.handleApplyAllChanges());
             this.batchControlsView.subscribe('discardAllClicked', () => this.handleDiscardAllChanges());
+            this.batchControlsView.subscribe('previewChangesClicked', () => this.handlePreviewChanges());
         }
 
         if (this.globalConfigView) {
@@ -107,6 +113,12 @@ class MainController {
         });
 
         this.infoQueueModalView.subscribe('modalHidden', () => {});
+
+        // Bulk operations events
+        if (this.bulkOperationsView) {
+            this.bulkOperationsView.subscribe('selectAllRequested', () => this.handleSelectAllQueues());
+            this.bulkOperationsView.subscribe('visibilityChanged', (isVisible) => this.handleBulkOperationsVisibilityChange(isVisible));
+        }
     }
 
     async init() {
@@ -228,6 +240,16 @@ class MainController {
         );
         if (this.queueTreeView) {
             this.queueTreeView.render(formattedHierarchy, true);
+            
+            // Re-add bulk selection checkboxes if bulk operations is visible
+            if (this.bulkOperationsView && this.bulkOperationsView.isVisible) {
+                setTimeout(() => {
+                    this._addBulkSelectionToQueueCards();
+                    if (this.bulkOperationsView) {
+                        this.bulkOperationsView.updateCheckboxStates();
+                    }
+                }, 50); // Small delay to ensure DOM is ready
+            }
         }
     }
 
@@ -241,14 +263,15 @@ class MainController {
 
     renderBatchControls() {
         if (this.batchControlsView && this.schedulerConfigModel) {
-            const rawChanges = this.schedulerConfigModel.getRawPendingChanges();
+            const changeLog = this.schedulerConfigModel.getChangeLog();
+            const summary = changeLog.getSummary();
+            // Include global changes in modified count for UI display
             const counts = {
-                added: rawChanges.addQueues.length,
-                modified: rawChanges.updateQueues.length,
-                deleted: rawChanges.removeQueues.length,
-                global: Object.keys(rawChanges.globalUpdates).length,
+                added: summary.added,
+                modified: summary.modified + summary.global,
+                deleted: summary.deleted
             };
-            const totalChanges = counts.added + counts.modified + counts.deleted + counts.global;
+            const totalChanges = counts.added + counts.modified + counts.deleted;
             let validationErrors = [];
             if (totalChanges > 0) {
                 validationErrors = this.schedulerConfigModel.performStatefulValidation(
@@ -369,10 +392,9 @@ class MainController {
         const baseTrieNode = this.schedulerConfigModel.getTrieInstance().getQueueNode(queuePath);
         const temporaryEffectiveProperties = new Map(baseTrieNode ? baseTrieNode.properties : undefined);
 
-        const addEntry = this.schedulerConfigModel
-            .getRawPendingChanges()
-            .addQueues.find((a) => a.queueName === queuePath);
-        if (addEntry) {
+        const changeLog = this.schedulerConfigModel.getChangeLog();
+        const addChanges = changeLog.getQueueAdditions().filter(change => change.path === queuePath);
+        if (addChanges.length > 0) {
             temporaryEffectiveProperties.clear();
             for (const [simpleKey, value] of Object.entries(currentFormParams)) {
                 if (simpleKey === '_ui_capacityMode') continue;
@@ -382,15 +404,11 @@ class MainController {
                 temporaryEffectiveProperties.set(fullKey, value);
             }
         } else {
-            const existingPendingUpdate = this.schedulerConfigModel
-                .getRawPendingChanges()
-                .updateQueues.find((u) => u.queueName === queuePath);
-            if (existingPendingUpdate) {
-                for (const [simpleKey, value] of Object.entries(existingPendingUpdate.params)) {
+            const updateChanges = changeLog.getQueueUpdates().filter(change => change.path === queuePath);
+            if (updateChanges.length > 0) {
+                for (const [fullKey, value] of updateChanges[0].properties) {
+                    const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                     if (simpleKey === '_ui_capacityMode') continue;
-                    const fullKey =
-                        this.viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
-                        `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                     temporaryEffectiveProperties.set(fullKey, value);
                 }
             }
@@ -417,7 +435,7 @@ class MainController {
                 getQueueNode: (p) =>
                     p === queuePath ? temporaryTrieNodeLike : this.schedulerConfigModel.getTrieInstance().getQueueNode(p),
             }),
-            getRawPendingChanges: () => ({ ...this.schedulerConfigModel.getRawPendingChanges() }),
+            getChangeLog: () => this.schedulerConfigModel.getChangeLog(),
         };
 
         const refreshedModalData = this.viewDataFormatterService.formatQueueDataForEditModal(
@@ -523,12 +541,12 @@ class MainController {
     }
 
     handleUndoDeleteQueue(queuePath) {
-        const pending = this.schedulerConfigModel.getRawPendingChanges();
-        if (pending.removeQueues.includes(queuePath)) {
-            this.schedulerConfigModel._pendingChanges.removeQueues = pending.removeQueues.filter(
-                (p) => p !== queuePath
-            );
-            this.schedulerConfigModel._emit('pendingChangesUpdated');
+        const changeLog = this.schedulerConfigModel.getChangeLog();
+        const deletions = changeLog.getQueueDeletions();
+        const deleteChange = deletions.find(change => change.path === queuePath);
+        if (deleteChange) {
+            changeLog.removeChange(deleteChange.id);
+            this.schedulerConfigModel._emit('pendingChangesUpdated', changeLog);
             this.notificationView.showInfo(`Deletion mark for "${queuePath}" undone.`);
         } else {
             this.notificationView.showWarning(`Queue "${queuePath}" was not marked for deletion.`);
@@ -588,13 +606,8 @@ class MainController {
         }
 
         this.appStateModel.setLoading(true, 'Applying configuration changes...');
-        const rawPendingChanges = this.schedulerConfigModel.getRawPendingChanges();
-        const apiPayload = {
-            addQueues: rawPendingChanges.addQueues,
-            updateQueues: rawPendingChanges.updateQueues,
-            removeQueues: rawPendingChanges.removeQueues,
-            globalUpdates: rawPendingChanges.globalUpdates,
-        };
+        const changeLog = this.schedulerConfigModel.getChangeLog();
+        const apiPayload = changeLog.getApiPayload();
 
         const result = await this.apiService.putSchedulerChanges(apiPayload);
 
@@ -652,5 +665,112 @@ class MainController {
         this.appStateModel.setLoading(true, 'Refreshing all data from server...');
         await this.init();
         this.notificationView.showSuccess('Data refreshed from server.');
+    }
+
+    /**
+     * Handles toggling the bulk operations view.
+     */
+    handleBulkOperationsToggle() {
+        if (this.bulkOperationsView) {
+            this.bulkOperationsView.toggle();
+        }
+    }
+
+    /**
+     * Handles select all queues request from bulk operations.
+     */
+    handleSelectAllQueues() {
+        // Get all queue paths from the current hierarchy
+        const allQueuePaths = this.schedulerConfigModel.getAllQueuePaths();
+        
+        // Filter out root if it exists
+        const selectableQueuePaths = allQueuePaths.filter(path => path !== 'root');
+        
+        if (this.bulkOperations) {
+            this.bulkOperations.selectAll(selectableQueuePaths);
+        }
+    }
+
+    /**
+     * Handles bulk operations toolbar visibility changes.
+     * @param {boolean} isVisible - Whether the toolbar is visible
+     */
+    handleBulkOperationsVisibilityChange(isVisible) {
+        if (isVisible) {
+            // Add checkboxes to queue cards
+            this._addBulkSelectionToQueueCards();
+            // Adjust queue positioning for bulk toolbar
+            this._adjustQueueLayoutForBulkBar(true);
+        } else {
+            // Remove checkboxes from queue cards
+            this._removeBulkSelectionFromQueueCards();
+            // Restore normal queue positioning
+            this._adjustQueueLayoutForBulkBar(false);
+        }
+    }
+
+    /**
+     * Adds selection checkboxes to all queue cards.
+     */
+    _addBulkSelectionToQueueCards() {
+        if (!this.bulkOperationsView) return;
+        
+        const queueCards = document.querySelectorAll('.queue-card');
+        for (const card of queueCards) {
+            const queuePath = card.dataset.queuePath;
+            if (queuePath && queuePath !== 'root') {
+                this.bulkOperationsView.addSelectionCheckbox(card, queuePath);
+            }
+        }
+    }
+
+    /**
+     * Removes selection checkboxes from all queue cards.
+     */
+    _removeBulkSelectionFromQueueCards() {
+        if (this.bulkOperationsView) {
+            this.bulkOperationsView.removeSelectionCheckboxes();
+        }
+    }
+
+    /**
+     * Adjusts queue layout when bulk operations bar is shown/hidden.
+     * @param {boolean} showingBulkBar - Whether the bulk bar is being shown
+     */
+    _adjustQueueLayoutForBulkBar(showingBulkBar) {
+        const treeContainer = document.getElementById('queue-tree');
+        if (!treeContainer) return;
+
+        if (showingBulkBar) {
+            // Add margin/padding to account for bulk toolbar
+            treeContainer.style.marginTop = '80px'; // Adjust based on toolbar height
+        } else {
+            // Remove the adjustment
+            treeContainer.style.marginTop = '';
+        }
+
+        // Re-render connectors after layout change
+        setTimeout(() => {
+            if (this.queueTreeView && this.queueTreeView.getCurrentFormattedHierarchy()) {
+                this.queueTreeView.clearConnectors();
+                this.queueTreeView._scheduleConnectorDraw(this.queueTreeView.getCurrentFormattedHierarchy());
+            }
+        }, 100);
+    }
+
+    /**
+     * Handles showing the change preview modal.
+     */
+    handlePreviewChanges() {
+        if (this.batchControlsView) {
+            // Get ChangeLog directly
+            const changeLog = this.schedulerConfigModel.getChangeLog();
+            
+            // Update the preview with current changes
+            this.batchControlsView.updateChangePreview(changeLog);
+            
+            // Show the preview modal
+            this.batchControlsView.showPreviewModal();
+        }
     }
 }

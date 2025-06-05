@@ -31,7 +31,7 @@ class SchedulerConfigTrie {
 
     /**
      * Initializes the Trie and global properties from a flat list of scheduler properties.
-     * @param {Array<Object>} schedulerConfProperties - Array of { name: string, value: string }.
+     * @param {Array<Object>} schedulerConfigProperties - Array of { name: string, value: string }.
      */
     initializeFromConfig(schedulerConfigProperties) {
         this.rootNode = new SchedulerTrieNode('root');

@@ -7,18 +7,36 @@ class BatchControlsView extends EventEmitter {
         this.batchInfoEl = DomUtils.getById('batch-info');
         this.batchValidationEl = DomUtils.getById('batch-validation');
         this.applyChangesBtnEl = DomUtils.getById('btn-apply-changes');
-        this.discardChangesBtnEl = DomUtils.qs('.btn-secondary', this.batchControlsEl); // Assuming it's the only secondary button
+        this.previewChangesBtnEl = DomUtils.getById('btn-preview-changes');
+        this.discardChangesBtnEl = DomUtils.getById('btn-discard-changes');
+        
+        // Change preview modal elements
+        this.previewModalEl = DomUtils.getById('change-preview-modal');
+        this.previewContainerEl = DomUtils.getById('change-preview-container');
+        this.closePreviewBtnEl = DomUtils.getById('close-preview-btn');
+        this.applyFromPreviewBtnEl = DomUtils.getById('apply-from-preview-btn');
 
         if (
             !this.batchControlsEl ||
             !this.batchInfoEl ||
             !this.batchValidationEl ||
             !this.applyChangesBtnEl ||
-            !this.discardChangesBtnEl
+            !this.previewChangesBtnEl ||
+            !this.discardChangesBtnEl ||
+            !this.previewModalEl ||
+            !this.previewContainerEl
         ) {
             console.error('BatchControlsView: One or more required DOM elements are missing.');
             return;
         }
+
+        // Initialize change preview
+        this.changePreview = new ChangePreview(this.previewContainerEl, {
+            showDiff: true,
+            showSummary: true,
+            collapsible: true,
+            maxChanges: 50
+        });
 
         this._bindEvents();
 
@@ -34,9 +52,44 @@ class BatchControlsView extends EventEmitter {
             }
         });
 
+        this.previewChangesBtnEl.addEventListener('click', () => {
+            this._emit('previewChangesClicked');
+        });
+
         this.discardChangesBtnEl.addEventListener('click', () => {
             this._emit('discardAllClicked');
         });
+
+        // Change preview modal events
+        if (this.closePreviewBtnEl) {
+            this.closePreviewBtnEl.addEventListener('click', () => {
+                this.hidePreviewModal();
+            });
+        }
+
+        if (this.applyFromPreviewBtnEl) {
+            this.applyFromPreviewBtnEl.addEventListener('click', () => {
+                this.hidePreviewModal();
+                this._emit('applyAllClicked');
+            });
+        }
+
+        // Close modal when clicking backdrop
+        if (this.previewModalEl) {
+            this.previewModalEl.addEventListener('click', (event) => {
+                if (event.target === this.previewModalEl || event.target.classList.contains('modal-backdrop')) {
+                    this.hidePreviewModal();
+                }
+            });
+
+            // Close button in modal header
+            const closeBtn = this.previewModalEl.querySelector('.close-btn');
+            if (closeBtn) {
+                closeBtn.addEventListener('click', () => {
+                    this.hidePreviewModal();
+                });
+            }
+        }
     }
 
     /**
@@ -91,5 +144,44 @@ class BatchControlsView extends EventEmitter {
     hide() {
         DomUtils.hide(this.batchControlsEl);
         this.batchControlsEl.classList.remove('show');
+    }
+
+    /**
+     * Updates the change preview with current changes.
+     * @param {Object} changes - Changes to preview (ChangeLog or legacy format)
+     */
+    updateChangePreview(changes) {
+        if (!this.changePreview) return;
+
+        let previewChanges = [];
+        
+        if (changes && typeof changes.getChanges === 'function') {
+            // ChangeLog format
+            previewChanges = ChangePreview.fromChangeLog(changes);
+        } else if (changes) {
+            // Legacy pending changes format
+            previewChanges = ChangePreview.fromLegacyPendingChanges(changes);
+        }
+
+        this.changePreview.setChanges(previewChanges);
+    }
+
+    /**
+     * Shows the change preview modal.
+     */
+    showPreviewModal() {
+        if (this.previewModalEl) {
+            this.previewModalEl.style.display = 'flex';
+            this.changePreview.render();
+        }
+    }
+
+    /**
+     * Hides the change preview modal.
+     */
+    hidePreviewModal() {
+        if (this.previewModalEl) {
+            this.previewModalEl.style.display = 'none';
+        }
     }
 }

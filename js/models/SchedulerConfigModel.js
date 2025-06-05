@@ -8,22 +8,8 @@ class SchedulerConfigModel extends EventEmitter {
         this._trieInstance = new SchedulerConfigTrie(); // Holds the actual Trie data structure
         this._globalConfig = new Map(); // full.yarn.property.name -> value, specifically for CS global props
         this._changeLog = new ChangeLog(); // Unified change tracking
-        this._pendingChanges = this._getInitialPendingChanges(); // Legacy format for backward compatibility
     }
 
-    /**
-     * Initializes the structure for pending changes.
-     * @returns {object} The initial pending changes object.
-     * @private
-     */
-    _getInitialPendingChanges() {
-        return {
-            addQueues: [],
-            updateQueues: [],
-            removeQueues: [],
-            globalUpdates: {},
-        };
-    }
 
     /**
      * Loads and parses the flat scheduler configuration properties using SchedulerConfigTrie.
@@ -51,13 +37,6 @@ class SchedulerConfigModel extends EventEmitter {
         }
     }
 
-    /**
-     * Syncs the ChangeLog with the legacy pending changes format
-     * @private
-     */
-    _syncPendingChanges() {
-        this._pendingChanges = this._changeLog.toLegacyFormat();
-    }
 
     /**
      * Retrieves the raw properties of a queue node from the Trie.
@@ -80,47 +59,56 @@ class SchedulerConfigModel extends EventEmitter {
     /**
      * Stages a new queue for addition.
      * @param {string} queuePath - The full path of the new queue.
-     * @param {Object} params - A map of simple configuration keys and values for the new queue.
+     * @param {Object} parameters - A map of simple configuration keys and values for the new queue.
      */
     stageAddQueue(queuePath, parameters) {
-        this._pendingChanges.removeQueues = this._pendingChanges.removeQueues.filter((p) => p !== queuePath);
-        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(
-            (item) => item.queueName !== queuePath
-        );
-
-        const existingAddIndex = this._pendingChanges.addQueues.findIndex((item) => item.queueName === queuePath);
-        if (existingAddIndex === -1) {
-            this._pendingChanges.addQueues.push({ queueName: queuePath, params: parameters });
-        } else {
-            this._pendingChanges.addQueues[existingAddIndex].params = parameters;
-        }
-        this._emit('pendingChangesUpdated', this.getRawPendingChanges());
+        // Convert simple parameters to full YARN keys
+        const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
+        
+        this._changeLog.addChange({
+            type: 'add',
+            target: 'queue',
+            path: queuePath,
+            properties: properties
+        });
+        
+        this._emit('pendingChangesUpdated', this._changeLog);
     }
 
     /**
      * Stages updates for an existing or pending-add queue.
-     * The params object uses simple keys (e.g., 'capacity').
+     * The parameters object uses simple keys (e.g., 'capacity').
      * For node label properties (e.g., accessible-node-labels, accessible-node-labels.X.capacity),
-     * the key in params should reflect the specific property being changed
+     * the key in parameters should reflect the specific property being changed
      * (e.g., 'accessible-node-labels' or 'accessible-node-labels.X.capacity').
      * @param {string} queuePath - The full path of the queue to update.
-     * @param {Object} params - Map of simple config keys (or specific label keys) to values.
+     * @param {Object} parameters - Map of simple config keys (or specific label keys) to values.
      */
     stageUpdateQueue(queuePath, parameters) {
-        const pendingAddEntry = this._pendingChanges.addQueues.find((item) => item.queueName === queuePath);
-        if (pendingAddEntry) {
-            // If it's a new queue being staged, merge updates into its params.
-            // This includes handling complex keys like "accessible-node-labels.X.capacity" directly.
-            pendingAddEntry.params = { ...pendingAddEntry.params, ...parameters };
-        } else {
-            const updateEntry = this._pendingChanges.updateQueues.find((item) => item.queueName === queuePath);
-            if (updateEntry) {
-                updateEntry.params = { ...updateEntry.params, ...parameters };
-            } else {
-                this._pendingChanges.updateQueues.push({ queueName: queuePath, params: parameters });
+        // Convert simple parameters to full YARN keys
+        const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
+        
+        // Get current values for oldProperties
+        const queueNode = this._trieInstance.getQueueNode(queuePath);
+        const oldProperties = new Map();
+        if (queueNode) {
+            for (const [fullKey] of properties) {
+                const currentValue = queueNode.properties.get(fullKey);
+                if (currentValue !== undefined) {
+                    oldProperties.set(fullKey, currentValue);
+                }
             }
         }
-        this._emit('pendingChangesUpdated', this.getRawPendingChanges());
+        
+        this._changeLog.addChange({
+            type: 'update',
+            target: 'queue',
+            path: queuePath,
+            properties: properties,
+            oldProperties: oldProperties
+        });
+        
+        this._emit('pendingChangesUpdated', this._changeLog);
     }
 
     /**
@@ -128,14 +116,14 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {string} queuePath - The full path of the queue to remove.
      */
     stageRemoveQueue(queuePath) {
-        this._pendingChanges.addQueues = this._pendingChanges.addQueues.filter((item) => item.queueName !== queuePath);
-        this._pendingChanges.updateQueues = this._pendingChanges.updateQueues.filter(
-            (item) => item.queueName !== queuePath
-        );
-        if (!this._pendingChanges.removeQueues.includes(queuePath)) {
-            this._pendingChanges.removeQueues.push(queuePath);
-        }
-        this._emit('pendingChangesUpdated', this.getRawPendingChanges());
+        this._changeLog.addChange({
+            type: 'delete',
+            target: 'queue',
+            path: queuePath,
+            properties: new Map() // No properties needed for deletion
+        });
+        
+        this._emit('pendingChangesUpdated', this._changeLog);
     }
 
     /**
@@ -143,30 +131,32 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {Object} params - A map of full YARN property names and their new values.
      */
     stageGlobalUpdate(params) {
-        this._pendingChanges.globalUpdates = { ...this._pendingChanges.globalUpdates, ...params };
-        this._emit('pendingChangesUpdated', this.getRawPendingChanges());
+        const properties = new Map(Object.entries(params));
+        
+        this._changeLog.addChange({
+            type: 'update',
+            target: 'global',
+            path: 'global',
+            properties: properties
+        });
+        
+        this._emit('pendingChangesUpdated', this._changeLog);
     }
 
-    /** Returns a deep copy of all pending changes. @returns {Object} */
-    getRawPendingChanges() {
-        return structuredClone(this._pendingChanges);
+    /** Returns the ChangeLog instance directly. @returns {ChangeLog} */
+    getChangeLog() {
+        return this._changeLog;
     }
 
     /** Clears all staged pending changes. */
     clearPendingChanges() {
         this._changeLog.clear();
-        this._pendingChanges = this._getInitialPendingChanges();
-        this._emit('pendingChangesUpdated', this.getRawPendingChanges());
+        this._emit('pendingChangesUpdated', this._changeLog);
     }
 
     /** Checks if there are any pending changes. @returns {boolean} */
     hasPendingChanges() {
-        return (
-            this._pendingChanges.addQueues.length > 0 ||
-            this._pendingChanges.updateQueues.length > 0 ||
-            this._pendingChanges.removeQueues.length > 0 ||
-            Object.keys(this._pendingChanges.globalUpdates).length > 0
-        );
+        return this._changeLog.hasChanges();
     }
 
     /**

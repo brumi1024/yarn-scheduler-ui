@@ -28,6 +28,7 @@
             </div>
             <div class="queue-actions">
                 <button class="btn btn-success" id="btn-add-queue">+ Add Queue</button>
+                <button class="btn btn-secondary" id="btn-bulk-operations">Bulk Operations</button>
             </div>
             <div class="search-sort">
                 <input type="text" class="search-box" placeholder="Search queues" id="search-input" />
@@ -98,8 +99,26 @@
         <div class="batch-controls" id="batch-controls" style="display: none">
             <div class="batch-info" id="batch-info">0 changes pending</div>
             <div class="batch-validation" id="batch-validation"></div>
+            <button class="btn btn-secondary" id="btn-preview-changes">Preview Changes</button>
             <button class="btn btn-secondary" id="btn-discard-changes">Discard Changes</button>
             <button class="btn btn-success" id="btn-apply-changes" disabled>Apply All Changes</button>
+        </div>
+
+        <div class="change-preview-modal" id="change-preview-modal" style="display: none">
+            <div class="modal-backdrop"></div>
+            <div class="modal-content-large">
+                <div class="modal-header">
+                    <h2 class="modal-title">Change Preview</h2>
+                    <button class="close-btn">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="change-preview-container"></div>
+                </div>
+                <div class="modal-actions">
+                    <button class="btn btn-secondary" id="close-preview-btn">Close</button>
+                    <button class="btn btn-success" id="apply-from-preview-btn">Apply Changes</button>
+                </div>
+            </div>
         </div>
 
         <button class="refresh-btn" id="btn-refresh-queues">
@@ -153,6 +172,17 @@
         <script src="js/utils/PropertyKeyMapper.js"></script>
         <script src="js/utils/CapacityValueParser.js"></script>
         <script src="js/utils/ChangeLog.js"></script>
+        <script src="js/utils/FormGenerator.js"></script>
+        <script src="js/utils/RealTimeValidator.js"></script>
+        <script src="js/utils/ChangePreview.js"></script>
+        <script src="js/utils/BulkOperations.js"></script>
+        
+        <!-- Error Handling Framework -->
+        <script src="js/utils/errors/YarnSchedulerError.js"></script>
+        <script src="js/utils/errors/ValidationError.js"></script>
+        <script src="js/utils/errors/ApiError.js"></script>
+        <script src="js/utils/errors/ConfigurationError.js"></script>
+        <script src="js/utils/errors/ErrorHandler.js"></script>
         
         <!-- Validation Framework -->
         <script src="js/utils/validators/CapacitySumValidator.js"></script>
@@ -178,6 +208,7 @@
         <script src="js/views/GlobalConfigView.js"></script>
         <script src="js/views/QueueCardView.js"></script>
         <script src="js/views/QueueTreeView.js"></script>
+        <script src="js/views/BulkOperationsView.js"></script>
 
         <script src="js/views/modals/AddQueueModalView.js"></script>
         <script src="js/views/modals/EditQueueModalView.js"></script>

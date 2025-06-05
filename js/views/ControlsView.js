@@ -6,6 +6,7 @@ class ControlsView extends EventEmitter {
         this.controlsContainerEl = DomUtils.getById('queue-config-controls'); // For queue-specific controls
         this.partitionSelectEl = DomUtils.getById('partition-select');
         this.addQueueButtonEl = DomUtils.getById('btn-add-queue'); // Using ID
+        this.bulkOperationsButtonEl = DomUtils.getById('btn-bulk-operations');
         this.searchInputEl = DomUtils.getById('search-input');
         this.sortSelectEl = DomUtils.getById('sort-select');
         this.refreshButtonEl = DomUtils.getById('btn-refresh-queues'); // Added refresh button
@@ -42,6 +43,12 @@ class ControlsView extends EventEmitter {
         if (this.addQueueButtonEl) {
             this.addQueueButtonEl.addEventListener('click', () => {
                 this._emit('addQueueClicked');
+            });
+        }
+
+        if (this.bulkOperationsButtonEl) {
+            this.bulkOperationsButtonEl.addEventListener('click', () => {
+                this._emit('bulkOperationsClicked');
             });
         }
 

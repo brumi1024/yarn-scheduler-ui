@@ -15,6 +15,7 @@ class ChangeLog {
      * @param {string} change.target - 'queue'|'global'
      * @param {string} change.path - Queue path or 'global'
      * @param {Map<string, string>} change.properties - Full YARN keys to values
+     * @param {Map<string, string>} [change.oldProperties] - Original values for updates
      */
     addChange(change) {
         const changeEntry = {
@@ -23,6 +24,7 @@ class ChangeLog {
             target: change.target,
             path: change.path,
             properties: new Map(change.properties),
+            oldProperties: change.oldProperties ? new Map(change.oldProperties) : new Map(),
             timestamp: Date.now()
         };
         
@@ -102,11 +104,12 @@ class ChangeLog {
         return this.changes.filter(change => change.target === 'global');
     }
 
+
     /**
-     * Converts to legacy API format for backward compatibility
+     * Converts to API payload format
      */
-    toLegacyFormat() {
-        const legacy = {
+    getApiPayload() {
+        const payload = {
             addQueues: [],
             updateQueues: [],
             removeQueues: [],
@@ -119,11 +122,11 @@ class ChangeLog {
                     const params = {};
                     for (const [fullKey, value] of change.properties) {
                         const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                        if (simpleKey) {
+                        if (simpleKey && simpleKey !== '_ui_capacityMode') {
                             params[simpleKey] = value;
                         }
                     }
-                    legacy.addQueues.push({
+                    payload.addQueues.push({
                         queueName: change.path,
                         params
                     });
@@ -131,32 +134,25 @@ class ChangeLog {
                     const params = {};
                     for (const [fullKey, value] of change.properties) {
                         const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                        if (simpleKey) {
+                        if (simpleKey && simpleKey !== '_ui_capacityMode') {
                             params[simpleKey] = value;
                         }
                     }
-                    legacy.updateQueues.push({
+                    payload.updateQueues.push({
                         queueName: change.path,
                         params
                     });
                 } else if (change.type === 'delete') {
-                    legacy.removeQueues.push(change.path);
+                    payload.removeQueues.push(change.path);
                 }
             } else if (change.target === 'global') {
                 for (const [fullKey, value] of change.properties) {
-                    legacy.globalUpdates[fullKey] = value;
+                    payload.globalUpdates[fullKey] = value;
                 }
             }
         }
 
-        return legacy;
-    }
-
-    /**
-     * Converts to API payload format
-     */
-    getApiPayload() {
-        return this.toLegacyFormat();
+        return payload;
     }
 
     /**
@@ -187,7 +183,7 @@ class ChangeLog {
     getSummary() {
         const summary = {
             added: 0,
-            updated: 0,
+            modified: 0,
             deleted: 0,
             global: 0
         };
@@ -195,7 +191,7 @@ class ChangeLog {
         for (const change of this.changes) {
             if (change.target === 'queue') {
                 if (change.type === 'add') summary.added++;
-                else if (change.type === 'update') summary.updated++;
+                else if (change.type === 'update') summary.modified++;
                 else if (change.type === 'delete') summary.deleted++;
             } else if (change.target === 'global') {
                 summary.global++;
@@ -203,6 +199,67 @@ class ChangeLog {
         }
 
         return summary;
+    }
+
+    /**
+     * Gets all changes in format expected by ChangePreview
+     * @returns {Array} Array of changes with ChangePreview-compatible format
+     */
+    getChanges() {
+        const formattedChanges = [];
+        
+        for (const change of this.changes) {
+            if (change.target === 'queue') {
+                if (change.type === 'delete') {
+                    // For deletions, just add one change for the entire queue
+                    formattedChanges.push({
+                        id: change.id,
+                        operation: OPERATION_TYPES.DELETE,
+                        queuePath: change.path,
+                        propertyKey: null,
+                        oldValue: 'Queue',
+                        newValue: null,
+                        timestamp: change.timestamp
+                    });
+                } else {
+                    // For additions and updates, create one change per property
+                    for (const [fullKey, value] of change.properties) {
+                        // Skip UI helper fields
+                        const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+                        if (simpleKey === '_ui_capacityMode') continue;
+                        
+                        const oldValue = change.type === 'update' 
+                            ? (change.oldProperties ? change.oldProperties.get(fullKey) : null)
+                            : undefined;
+                        
+                        formattedChanges.push({
+                            id: `${change.id}-${fullKey}`,
+                            operation: change.type === 'add' ? OPERATION_TYPES.ADD : OPERATION_TYPES.UPDATE,
+                            queuePath: change.path,
+                            propertyKey: fullKey,
+                            oldValue: oldValue,
+                            newValue: value,
+                            timestamp: change.timestamp
+                        });
+                    }
+                }
+            } else if (change.target === 'global') {
+                // For global changes, create one change per property
+                for (const [fullKey, value] of change.properties) {
+                    formattedChanges.push({
+                        id: `${change.id}-${fullKey}`,
+                        operation: OPERATION_TYPES.UPDATE,
+                        queuePath: null,
+                        propertyKey: fullKey,
+                        oldValue: null,
+                        newValue: value,
+                        timestamp: change.timestamp
+                    });
+                }
+            }
+        }
+        
+        return formattedChanges;
     }
 
     _generateChangeId() {
