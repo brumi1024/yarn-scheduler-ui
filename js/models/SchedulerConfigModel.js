@@ -1,51 +1,38 @@
 /**
- * @file Manages the YARN scheduler configuration, including the queue hierarchy (via SchedulerConfigTrie),
- * global settings, and pending changes.
+ * @file Manages the YARN scheduler configuration using the unified QueueConfigurationManager
  */
 class SchedulerConfigModel extends EventEmitter {
     constructor() {
         super();
-        this._trieInstance = new SchedulerConfigTrie(); // Holds the actual Trie data structure
-        this._globalConfig = new Map(); // full.yarn.property.name -> value, specifically for CS global props
-        this._changeLog = new ChangeLog(); // Unified change tracking
+        this._queueConfigManager = new QueueConfigurationManager();
     }
 
 
     /**
-     * Loads and parses the flat scheduler configuration properties using SchedulerConfigTrie.
+     * Loads and parses the flat scheduler configuration properties.
      * @param {Array<Object>} propertiesArray - Array of { name: string, value: string }.
      */
     loadSchedulerConfig(propertiesArray) {
-        this._trieInstance = new SchedulerConfigTrie(); // Fresh instance on each load
-        this.clearPendingChanges(); // Clear any old pending changes
+        this._queueConfigManager = new QueueConfigurationManager(); // Fresh instance on each load
 
         try {
-            this._trieInstance.initializeFromConfig(propertiesArray);
-            // Separate CS global properties from other global properties collected by the Trie
-            this._globalConfig.clear();
-            const allGlobals = this._trieInstance.getGlobalConfigs();
-            for (const [key, value] of allGlobals.entries()) {
-                if (key.startsWith(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5)) && // Check if it's a CS global
-                    !key.slice(CONFIG.API_ENDPOINTS.SCHEDULER_CONF.slice(0, -5).length).startsWith('root.')) {
-                        this._globalConfig.set(key, value);
-                    }
-            }
+            this._queueConfigManager.initializeFromConfig(propertiesArray);
             this._emit('configLoaded', { success: true });
         } catch (error) {
-            console.error('SchedulerConfigModel: Error initializing Trie from config:', error);
+            console.error('SchedulerConfigModel: Error initializing configuration:', error);
             this._emit('configLoaded', { success: false, error: 'Error processing configuration data' });
         }
     }
 
 
     /**
-     * Retrieves the raw properties of a queue node from the Trie.
+     * Retrieves the effective properties of a queue node.
      * @param {string} path - The full path of the queue (e.g., "root.default").
      * @returns {Map<string, string> | null} A map of properties or null if not found.
      */
     getQueueNodeProperties(path) {
-        const node = this._trieInstance.getQueueNode(path);
-        return node ? new Map(node.properties) : null;
+        const node = this._queueConfigManager.getQueueNode(path);
+        return node ? node.getEffectiveProperties() : null;
     }
 
     /**
@@ -53,7 +40,7 @@ class SchedulerConfigModel extends EventEmitter {
      * @returns {Map<string, string>}
      */
     getGlobalConfig() {
-        return new Map(this._globalConfig);
+        return this._queueConfigManager.getEffectiveGlobalProperties();
     }
 
     /**
@@ -65,14 +52,9 @@ class SchedulerConfigModel extends EventEmitter {
         // Convert simple parameters to full YARN keys
         const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
         
-        this._changeLog.addChange({
-            type: 'add',
-            target: 'queue',
-            path: queuePath,
-            properties: properties
-        });
+        this._queueConfigManager.stageAddQueue(queuePath, properties);
         
-        this._emit('pendingChangesUpdated', this._changeLog);
+        this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
     /**
@@ -88,27 +70,9 @@ class SchedulerConfigModel extends EventEmitter {
         // Convert simple parameters to full YARN keys
         const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
         
-        // Get current values for oldProperties
-        const queueNode = this._trieInstance.getQueueNode(queuePath);
-        const oldProperties = new Map();
-        if (queueNode) {
-            for (const [fullKey] of properties) {
-                const currentValue = queueNode.properties.get(fullKey);
-                if (currentValue !== undefined) {
-                    oldProperties.set(fullKey, currentValue);
-                }
-            }
-        }
+        this._queueConfigManager.stageUpdateQueue(queuePath, properties);
         
-        this._changeLog.addChange({
-            type: 'update',
-            target: 'queue',
-            path: queuePath,
-            properties: properties,
-            oldProperties: oldProperties
-        });
-        
-        this._emit('pendingChangesUpdated', this._changeLog);
+        this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
     /**
@@ -116,14 +80,9 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {string} queuePath - The full path of the queue to remove.
      */
     stageRemoveQueue(queuePath) {
-        this._changeLog.addChange({
-            type: 'delete',
-            target: 'queue',
-            path: queuePath,
-            properties: new Map() // No properties needed for deletion
-        });
+        this._queueConfigManager.stageDeleteQueue(queuePath);
         
-        this._emit('pendingChangesUpdated', this._changeLog);
+        this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
     /**
@@ -131,49 +90,33 @@ class SchedulerConfigModel extends EventEmitter {
      * @param {Object} params - A map of full YARN property names and their new values.
      */
     stageGlobalUpdate(params) {
-        const properties = new Map(Object.entries(params));
+        this._queueConfigManager.stageGlobalUpdate(params);
         
-        this._changeLog.addChange({
-            type: 'update',
-            target: 'global',
-            path: 'global',
-            properties: properties
-        });
-        
-        this._emit('pendingChangesUpdated', this._changeLog);
+        this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
-    /** Returns the ChangeLog instance directly. @returns {ChangeLog} */
+    /** Returns the QueueConfigurationManager instance directly. @returns {QueueConfigurationManager} */
     getChangeLog() {
-        return this._changeLog;
+        return this._queueConfigManager;
     }
 
     /** Clears all staged pending changes. */
     clearPendingChanges() {
-        this._changeLog.clear();
-        this._emit('pendingChangesUpdated', this._changeLog);
+        this._queueConfigManager.clearAllPendingChanges();
+        this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
     /** Checks if there are any pending changes. @returns {boolean} */
     hasPendingChanges() {
-        return this._changeLog.hasChanges();
+        return this._queueConfigManager.hasPendingChanges();
     }
 
     /**
-     * Returns an array of all valid queue paths from the current Trie.
+     * Returns an array of all valid queue paths.
      * @returns {Array<string>}
      */
     getAllQueuePaths() {
-        const paths = new Set();
-        if (!this._trieInstance || !this._trieInstance.rootNode) return [];
-        function collectPaths(node) {
-            if (node.isQueue) paths.add(node.fullPath);
-            for (const childNode of (node.children || new Map()).values()) {
-                collectPaths(childNode);
-            }
-        }
-        collectPaths(this._trieInstance.rootNode);
-        return [...paths].sort();
+        return this._queueConfigManager.getAllQueuePaths();
     }
 
     /**
@@ -221,18 +164,18 @@ class SchedulerConfigModel extends EventEmitter {
     }
 
     /**
-     * Provides the root node of the scheduler configuration Trie.
-     * @returns {SchedulerTrieNode | null}
+     * Provides the root node of the scheduler configuration.
+     * @returns {QueueNode | null}
      */
     getSchedulerTrieRoot() {
-        return this._trieInstance ? this._trieInstance.rootNode : null;
+        return this._queueConfigManager ? this._queueConfigManager.rootNode : null;
     }
 
     /**
-     * Retrieves the underlying Trie instance. Primarily for ViewDataFormatterService.
-     * @returns {SchedulerConfigTrie | null}
+     * Retrieves the underlying QueueConfigurationManager instance.
+     * @returns {QueueConfigurationManager | null}
      */
     getTrieInstance() {
-        return this._trieInstance;
+        return this._queueConfigManager;
     }
 }

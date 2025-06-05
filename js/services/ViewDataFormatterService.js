@@ -34,149 +34,62 @@ class ViewDataFormatterService {
     }
 
     formatQueueHierarchyForView(schedulerConfigModel, schedulerInfoModel, appStateModel, forValidationOnly = false) {
-        const trieRoot = schedulerConfigModel.getSchedulerTrieRoot();
-        if (!trieRoot) return null;
+        const configManager = schedulerConfigModel.getSchedulerTrieRoot();
+        if (!configManager) return null;
 
-        const changeLog = schedulerConfigModel.getChangeLog();
         const selectedPartition = appStateModel.getSelectedPartition();
 
-        // Check if changeLog is available and has the required methods (it might be null during initialization)
-        if (!changeLog || typeof changeLog.getQueueAdditions !== 'function') {
-            return this._formatNodeRecursive(trieRoot, null, null, schedulerInfoModel, selectedPartition, forValidationOnly);
-        }
-
-        const rootAddChanges = changeLog.getQueueAdditions().filter(change => change.path === 'root');
-        if (rootAddChanges.length > 0) {
-            return this._buildAddedRootNode(rootAddChanges[0], schedulerInfoModel, selectedPartition, changeLog, forValidationOnly);
-        }
-
-        return this._formatNodeRecursive(trieRoot, null, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly);
+        return this._formatQueueNodeRecursive(configManager, null, schedulerInfoModel, selectedPartition, forValidationOnly);
     }
 
-    _buildEffectiveProperties(baseProperties, pendingEntry, queuePath) {
-        const effectiveProperties = new Map(baseProperties);
-        let uiCapacityModeHint = null;
+    // This method is no longer needed with unified QueueConfigurationManager
+    // Properties are now unified in QueueNode.getEffectiveProperties()
 
-        if (pendingEntry) {
-            // Handle both legacy format and ChangeLog format
-            if (pendingEntry.params) {
-                // Legacy format - for backward compatibility
-                if (pendingEntry.queueName === queuePath) {
-                    if (Object.prototype.hasOwnProperty.call(pendingEntry, 'queueName')) {
-                        effectiveProperties.clear();
-                    }
-                    
-                    for (const [simpleKey, value] of Object.entries(pendingEntry.params)) {
-                        if (simpleKey === '_ui_capacityMode') {
-                            uiCapacityModeHint = value;
-                            continue;
-                        }
-                        const fullKey = PropertyKeyMapper.createFullKey(queuePath, simpleKey);
-                        effectiveProperties.set(fullKey, value);
-                    }
-                }
-            } else if (pendingEntry.properties) {
-                // New ChangeLog format - direct full key usage
-                if (pendingEntry.type === 'add') {
-                    effectiveProperties.clear();
-                }
-                
-                for (const [fullKey, value] of pendingEntry.properties) {
-                    const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                    if (simpleKey === '_ui_capacityMode') {
-                        uiCapacityModeHint = value;
-                        continue;
-                    }
-                    effectiveProperties.set(fullKey, value);
-                }
-            }
+    // This method is no longer needed with unified QueueConfigurationManager
+    // Pending additions are now handled directly in the QueueNode children
+
+    _formatQueueNodeRecursive(queueNode, parentPath, schedulerInfoModel, selectedPartition, forValidationOnly) {
+        const basePath = queueNode.fullPath;
+
+        // Skip deleted nodes
+        if (queueNode.isDeleted()) {
+            return null;
         }
 
-        return { effectiveProperties, uiCapacityModeHint };
-    }
-
-    _applyPendingAdditions(formattedNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly) {
-        let activeChildrenCount = 0;
-
-        // If no changeLog or missing methods, no pending additions to apply
-        if (!changeLog || typeof changeLog.getQueueAdditions !== 'function') {
-            return activeChildrenCount;
+        // Skip non-queue nodes unless they have queue children
+        if (!queueNode.isQueue && queueNode.children.size === 0) {
+            return null;
         }
 
-        for (const addChange of changeLog.getQueueAdditions()) {
-            const newQueueParentPath = addChange.path.slice(
-                0, Math.max(0, addChange.path.lastIndexOf('.'))
-            );
-            
-            if (newQueueParentPath === basePath) {
-                const newChildSegment = addChange.path.slice(
-                    Math.max(0, addChange.path.lastIndexOf('.') + 1)
-                );
-                
-                if (!formattedNode.children[newChildSegment]) {
-                    // Use ChangeLog format directly - no conversion needed
-                    const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-                        new Map(), addChange, addChange.path
-                    );
-                    
-                    formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
-                        addChange.path,
-                        newChildSegment,
-                        basePath,
-                        effectiveProperties,
-                        schedulerInfoModel,
-                        selectedPartition,
-                        OPERATION_TYPES.ADD,
-                        changeLog,
-                        uiCapacityModeHint,
-                        forValidationOnly
-                    );
-                    activeChildrenCount++;
-                }
-            }
-        }
-        
-        return activeChildrenCount;
-    }
-
-    _formatNodeRecursive(trieNode, parentPath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly) {
-        const basePath = trieNode.fullPath;
-
-        // Check if queue is marked for deletion (only if changeLog exists and has the method)
-        if (changeLog && typeof changeLog.getQueueDeletions === 'function') {
-            const deletions = changeLog.getQueueDeletions();
-            if (deletions.some(change => change.path === basePath)) {
-                return null;
-            }
-        }
-
-        const addChanges = (changeLog && typeof changeLog.getQueueAdditions === 'function') 
-            ? changeLog.getQueueAdditions().filter(change => change.path === basePath) : [];
-        const updateChanges = (changeLog && typeof changeLog.getQueueUpdates === 'function')
-            ? changeLog.getQueueUpdates().filter(change => change.path === basePath) : [];
-        
         let operationType = null;
-        let effectiveProperties, uiCapacityModeHint;
+        let uiCapacityModeHint = null;
+        const effectiveProperties = queueNode.getEffectiveProperties();
 
-        if (addChanges.length > 0) {
+        // Extract UI capacity mode hint from properties
+        for (const [fullKey, value] of effectiveProperties) {
+            const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+            if (simpleKey === '_ui_capacityMode') {
+                uiCapacityModeHint = value;
+                break;
+            }
+        }
+
+        // Determine operation type
+        if (queueNode.isNew()) {
             operationType = OPERATION_TYPES.ADD;
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), addChanges[0], basePath));
-        } else if (updateChanges.length > 0) {
+        } else if (queueNode.hasPendingChanges()) {
             operationType = OPERATION_TYPES.UPDATE;
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, updateChanges[0], basePath));
-        } else {
-            effectiveProperties = new Map(trieNode.properties);
         }
 
         const formattedNode = this._formatSingleQueueNode(
             basePath,
-            trieNode.segment,
+            queueNode.segment,
             parentPath,
             effectiveProperties,
             schedulerInfoModel,
             selectedPartition,
             operationType,
-            changeLog,
+            queueNode, // Pass the queueNode for pending changes detection
             uiCapacityModeHint,
             forValidationOnly
         );
@@ -184,44 +97,25 @@ class ViewDataFormatterService {
         formattedNode.children = {};
         let activeChildrenCount = 0;
 
-        trieNode.children.forEach((childTrieNode) => {
-            if (childTrieNode.isQueue) {
-                const formattedChild = this._formatNodeRecursive(
-                    childTrieNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly
+        // Process children
+        for (const [childSegment, childNode] of queueNode.children) {
+            if (childNode.isQueue || childNode.children.size > 0) {
+                const formattedChild = this._formatQueueNodeRecursive(
+                    childNode, basePath, schedulerInfoModel, selectedPartition, forValidationOnly
                 );
                 if (formattedChild) {
-                    formattedNode.children[childTrieNode.segment] = formattedChild;
+                    formattedNode.children[childSegment] = formattedChild;
                     activeChildrenCount++;
                 }
             }
-        });
-
-        activeChildrenCount += this._applyPendingAdditions(
-            formattedNode, basePath, changeLog, schedulerInfoModel, selectedPartition, forValidationOnly
-        );
+        }
 
         formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
         return formattedNode;
     }
 
-    _buildAddedRootNode(rootAddChange, schedulerInfoModel, selectedPartition, changeLog, forValidationOnly) {
-        const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-            new Map(), rootAddChange, 'root'
-        );
-        
-        return this._formatSingleQueueNode(
-            'root',
-            'root',
-            null,
-            effectiveProperties,
-            schedulerInfoModel,
-            selectedPartition,
-            OPERATION_TYPES.ADD,
-            changeLog,
-            uiCapacityModeHint,
-            forValidationOnly
-        );
-    }
+    // This method is no longer needed with unified QueueConfigurationManager
+    // Root additions are handled the same as any other queue in the unified structure
 
     /**
      * Formats a single queue node with its effective properties, live data, and UI hints.
@@ -235,15 +129,12 @@ class ViewDataFormatterService {
         schedulerInfoModel,
         selectedPartition,
         changeOperationType,
-        pendingChanges, // Added pendingChanges parameter
+        queueNode, // QueueNode instead of pending changes
         explicitUiModeHint,
         forValidationOnly = false
     ) {
         const isNew = changeOperationType === OPERATION_TYPES.ADD;
-        // Correctly determine if there's a PENDING update for an EXISTING queue
-        const isPendingUpdate = !isNew && pendingChanges && typeof pendingChanges.getQueueUpdates === 'function' 
-            ? pendingChanges.getQueueUpdates().some((change) => change.path === queuePath)
-            : false;
+        const isPendingUpdate = changeOperationType === OPERATION_TYPES.UPDATE;
 
         const formattedNode = {
             path: queuePath,
@@ -492,45 +383,26 @@ class ViewDataFormatterService {
     }
 
     formatQueueDataForEditModal(queuePath, schedulerConfigModel, schedulerInfoModel, appStateModel) {
-        const changeLog = schedulerConfigModel.getChangeLog();
-        const addChanges = changeLog.getQueueAdditions().filter(change => change.path === queuePath);
-        const updateChanges = changeLog.getQueueUpdates().filter(change => change.path === queuePath);
+        const configManager = schedulerConfigModel.getTrieInstance();
+        const queueNode = configManager.getQueueNode(queuePath);
+        
+        if (!queueNode) {
+            console.warn(
+                `ViewDataFormatterService: QueueNode not found for queue path "${queuePath}" in formatQueueDataForEditModal.`
+            );
+            return null;
+        }
 
-        let baseProperties = new Map();
-        let displayName = queuePath.split('.').pop();
+        let baseProperties = queueNode.getEffectiveProperties();
+        let displayName = queueNode.segment;
         let uiCapacityModeHint = null;
-
-        if (addChanges.length > 0) {
-            const addChange = addChanges[0];
-            for (const [fullKey, value] of addChange.properties) {
-                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                if (simpleKey === '_ui_capacityMode') {
-                    uiCapacityModeHint = value;
-                } else {
-                    baseProperties.set(fullKey, value);
-                }
-            }
-            displayName = queuePath.slice(Math.max(0, queuePath.lastIndexOf('.') + 1));
-        } else {
-            const trieNode = schedulerConfigModel.getTrieInstance().getQueueNode(queuePath);
-            if (!trieNode) {
-                console.warn(
-                    `ViewDataFormatterService: TrieNode not found for existing queue path "${queuePath}" in formatQueueDataForEditModal.`
-                );
-                return null;
-            }
-            baseProperties = new Map(trieNode.properties);
-            displayName = trieNode.segment;
-            if (updateChanges.length > 0) {
-                const updateChange = updateChanges[0];
-                for (const [fullKey, value] of updateChange.properties) {
-                    const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                    if (simpleKey === '_ui_capacityMode') {
-                        uiCapacityModeHint = value;
-                    } else {
-                        baseProperties.set(fullKey, value);
-                    }
-                }
+        
+        // Extract UI capacity mode hint
+        for (const [fullKey, value] of baseProperties) {
+            const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+            if (simpleKey === '_ui_capacityMode') {
+                uiCapacityModeHint = value;
+                break;
             }
         }
 
@@ -544,7 +416,7 @@ class ViewDataFormatterService {
             },
             effectiveCapacityMode:
                 uiCapacityModeHint || this._determineEffectiveCapacityMode(queuePath, baseProperties),
-            isNew: addChanges.length > 0,
+            isNew: queueNode.isNew(),
             allPartitions: schedulerInfoModel ? schedulerInfoModel.getPartitions() : [DEFAULT_PARTITION],
         };
 
