@@ -92,7 +92,9 @@ class ApiService {
     }
 
     async _getMock(endpoint, expectJson = true) {
-        const mockFile = `${this.mockDataBasePath}${endpoint}${expectJson ? '.json' : '.xml'}`;
+        const largeSuffix = CONFIG.USE_LARGE_MOCKS ? '-large' : '';
+        const extension = expectJson ? '.json' : '.xml';
+        const mockFile = `${this.mockDataBasePath}${endpoint}${largeSuffix}${extension}`;
         try {
             const response = await fetch(mockFile);
             if (!response.ok) {

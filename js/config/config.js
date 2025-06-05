@@ -5,6 +5,7 @@
 const CONFIG = {
     USER_NAME: 'yarn', // Default user for API calls
     USE_MOCKS: true, // Set to false to use live API, true for mock data
+    USE_LARGE_MOCKS: false,
     API_BASE_URL: globalThis.location.origin || '', // Base URL for API calls
     API_ENDPOINTS: {
         SCHEDULER_CONF: '/ws/v1/cluster/scheduler-conf',
