@@ -51,7 +51,7 @@ const ValidationService = {
             } else if (number_ < 0 || number_ > 100) {
                 errors.push('Percentage capacity must be between 0.0 and 100.0.');
             }
-            return errors.length > 0 ? { value: null, errors: errors } : { value: `${number_.toFixed(1)}%` };
+            return errors.length > 0 ? { value: null, errors: errors } : { value: number_.toFixed(1) };
         }
 
         if (mode === CAPACITY_MODES.WEIGHT) {

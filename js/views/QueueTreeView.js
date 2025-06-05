@@ -19,7 +19,7 @@ class QueueTreeView extends EventEmitter {
         // Virtual scrolling for performance optimization
         this.virtualTree = null;
         this.useVirtualScrolling = false;
-        this.virtualScrollingThreshold = 50; // Enable virtual scrolling for 50+ queues
+        this.virtualScrollingThreshold = 20; // Enable virtual scrolling for 20+ queues
 
         if (!this.treeContainerEl || !this.levelHeadersContainerEl || !this.arrowSvgEl) {
             console.error('QueueTreeView: Required DOM elements (queue-tree, level-headers, or arrow-svg) not found.');
@@ -345,7 +345,6 @@ class QueueTreeView extends EventEmitter {
 
             const svgRect = this.arrowSvgEl.getBoundingClientRect();
             if ((svgRect.width === 0 || svgRect.height === 0) && this.queueElements.size > 1) {
-                // console.warn("QueueTreeView: SVG container has no dimensions, connectors might be misdrawn.");
                 // Could add a single retry attempt here if needed.
             }
             if (this.queueElements.size > 0) {

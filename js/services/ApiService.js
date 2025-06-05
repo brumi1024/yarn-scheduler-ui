@@ -70,7 +70,7 @@ class ApiService {
                     if (requestOptions.method === 'PUT' && responseText.toLowerCase().includes('successfully applied')) {
                         data = responseText;
                     } else {
-                        const configError = new ConfigurationError(
+                        const configError = new ValidationError(
                             'Failed to parse JSON response',
                             'PARSE_ERROR',
                             { endpoint, responseData: responseText.slice(0, 200) }

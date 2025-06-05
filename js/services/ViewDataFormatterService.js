@@ -58,8 +58,10 @@ class ViewDataFormatterService {
         let uiCapacityModeHint = null;
 
         if (pendingEntry) {
-            if (pendingEntry.queueName === queuePath) {
-                if (pendingEntry.params) {
+            // Handle both legacy format and ChangeLog format
+            if (pendingEntry.params) {
+                // Legacy format - for backward compatibility
+                if (pendingEntry.queueName === queuePath) {
                     if (Object.prototype.hasOwnProperty.call(pendingEntry, 'queueName')) {
                         effectiveProperties.clear();
                     }
@@ -72,6 +74,20 @@ class ViewDataFormatterService {
                         const fullKey = PropertyKeyMapper.createFullKey(queuePath, simpleKey);
                         effectiveProperties.set(fullKey, value);
                     }
+                }
+            } else if (pendingEntry.properties) {
+                // New ChangeLog format - direct full key usage
+                if (pendingEntry.type === 'add') {
+                    effectiveProperties.clear();
+                }
+                
+                for (const [fullKey, value] of pendingEntry.properties) {
+                    const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
+                    if (simpleKey === '_ui_capacityMode') {
+                        uiCapacityModeHint = value;
+                        continue;
+                    }
+                    effectiveProperties.set(fullKey, value);
                 }
             }
         }
@@ -98,20 +114,9 @@ class ViewDataFormatterService {
                 );
                 
                 if (!formattedNode.children[newChildSegment]) {
-                    // Convert to legacy format for _buildEffectiveProperties
-                    const legacyEntry = {
-                        queueName: addChange.path, // Add queueName to match the check in _buildEffectiveProperties
-                        params: {}
-                    };
-                    for (const [fullKey, value] of addChange.properties) {
-                        const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                        if (simpleKey) {
-                            legacyEntry.params[simpleKey] = value;
-                        }
-                    }
-                    
+                    // Use ChangeLog format directly - no conversion needed
                     const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-                        new Map(), legacyEntry, addChange.path
+                        new Map(), addChange, addChange.path
                     );
                     
                     formattedNode.children[newChildSegment] = this._formatSingleQueueNode(
@@ -155,31 +160,10 @@ class ViewDataFormatterService {
 
         if (addChanges.length > 0) {
             operationType = OPERATION_TYPES.ADD;
-            // Convert to legacy format for _buildEffectiveProperties
-            const legacyEntry = {
-                params: {}
-            };
-            for (const [fullKey, value] of addChanges[0].properties) {
-                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                if (simpleKey) {
-                    legacyEntry.params[simpleKey] = value;
-                }
-            }
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), legacyEntry, basePath));
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(new Map(), addChanges[0], basePath));
         } else if (updateChanges.length > 0) {
             operationType = OPERATION_TYPES.UPDATE;
-            // Convert to legacy format for _buildEffectiveProperties
-            const legacyEntry = {
-                queueName: basePath, // Add queueName to match the check in _buildEffectiveProperties
-                params: {}
-            };
-            for (const [fullKey, value] of updateChanges[0].properties) {
-                const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-                if (simpleKey) {
-                    legacyEntry.params[simpleKey] = value;
-                }
-            }
-            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, legacyEntry, basePath));
+            ({ effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(trieNode.properties, updateChanges[0], basePath));
         } else {
             effectiveProperties = new Map(trieNode.properties);
         }
@@ -221,19 +205,8 @@ class ViewDataFormatterService {
     }
 
     _buildAddedRootNode(rootAddChange, schedulerInfoModel, selectedPartition, changeLog, forValidationOnly) {
-        // Convert ChangeLog format to legacy format for _buildEffectiveProperties
-        const legacyEntry = {
-            params: {}
-        };
-        for (const [fullKey, value] of rootAddChange.properties) {
-            const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
-            if (simpleKey) {
-                legacyEntry.params[simpleKey] = value;
-            }
-        }
-        
         const { effectiveProperties, uiCapacityModeHint } = this._buildEffectiveProperties(
-            new Map(), legacyEntry, 'root'
+            new Map(), rootAddChange, 'root'
         );
         
         return this._formatSingleQueueNode(
