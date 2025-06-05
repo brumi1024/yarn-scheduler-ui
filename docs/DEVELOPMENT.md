@@ -153,15 +153,42 @@ handleAccessibleLabelsChange(eventData, ...)
 ### 2. Automatic Integration:
 The system automatically handles new properties through:
 - `ViewDataFormatterService._populateConfiguredProperties()`: Auto-populates from metadata
-- `EditQueueModalView._buildHtml()`: Auto-generates form fields
+- `ViewDataFormatterService.formatQueueDataForEditModal()`: Tracks default values in `propertyDefaults`
+- `EditQueueModalView._buildHtml()`: Auto-generates form fields with default indicators
 - `QueueConfigurationManager`: Handles staging and API payload generation
 
-### 3. Testing:
-- Verify field appears in edit modal
+### 3. Default Value Detection:
+New properties automatically get default value indicators when:
+- Property value is `undefined` (using system default)
+- Blue badge appears next to property name in edit modal
+- Tooltip indicates "This field is using the default value"
+
+### 4. Testing:
+- Verify field appears in edit modal with appropriate default indicator
 - Test staging and API payload generation
 - Confirm XML includes new property
+- Verify default indicator toggles correctly when value is modified
 
-## 5. Validation System
+## 5. Recent Improvements
+
+### Scrolling and Layout Fixes
+- **Multiple Horizontal Scrollbars**: Fixed dual scrollbar issue in queue tree
+- **Horizontal Scrolling**: Proper support for deep queue hierarchies
+- **Header Scrolling**: Fixed header/controls scrolling out of view
+- **Queue Tree Layout**: Improved space utilization and scrollbar visibility
+
+### Change Preview System
+- **Preview Changes**: Fixed empty preview when changes exist
+- **Detailed Changes**: Resolved issues with old values showing as null
+- **Capacity Change Detection**: Fixed false positive capacity changes
+- **Change Tracking**: Improved accuracy of change detection
+
+### Virtual Scrolling Removal
+- **Performance**: Removed virtual scrolling for better performance with 500+ queues
+- **Simplified Rendering**: Direct DOM rendering without virtualization complexity
+- **Better UX**: More predictable scrolling behavior
+
+## 6. Validation System
 
 ### Unified QueueValidator (`js/utils/validators/QueueValidator.js`):
 Single-pass validation replacing multiple validator files:
@@ -179,7 +206,7 @@ validate(configModel, formattedHierarchy, schedulerInfo, appState) {
 2. **Model-level**: `SchedulerConfigModel.performStatefulValidation()`
 3. **Pre-apply**: `ConfigurationOrchestrator.applyPendingChanges()`
 
-## 6. Error Handling
+## 7. Error Handling
 
 ### Unified Error Hierarchy:
 ```javascript
@@ -193,7 +220,7 @@ YarnSchedulerError (base)
 - Type-specific error formatting
 - User-friendly notification generation
 
-## 7. Adding New Functionality
+## 8. Adding New Functionality
 
 ### New Queue Property:
 1. Add to `config-metadata-queue.js`
@@ -213,14 +240,33 @@ YarnSchedulerError (base)
 2. Add to `UIStateManager`
 3. Update `MainController._handleTabChange()`
 
-## 8. Performance Features
+## 9. UI Features
 
-- **Virtual Scrolling**: `VirtualQueueTree` for large hierarchies
+### Default Value Indicators
+The edit modal includes visual indicators for properties using default values:
+- Blue badges with gear icons appear next to property names when using defaults
+- Helps users distinguish between configured and default values
+- Implementation in `ViewDataFormatterService` tracks defaults via `propertyDefaults` object
+- CSS styling in `modals.css` with `.default-indicator` class
+
+### Queue Tree Display
+- **Horizontal Scrolling**: Supports deep queue hierarchies with proper scrolling
+- **Sankey Connectors**: Visual hierarchy representation
+- **Status Indicators**: Visual tags for queue states, capacity modes, and auto-creation
+- **Bulk Operations**: Multi-queue selection and operations
+
+### Change Management
+- **Preview Changes**: Detailed view of pending modifications with old/new value comparison
+- **Staging System**: Stage changes before applying to YARN
+- **Validation Pipeline**: Real-time validation with error reporting
+
+## 10. Performance Features
+
 - **Caching**: `SchedulerDataCache` for expensive operations
 - **Bulk Operations**: Efficient multi-queue operations
 - **Single-pass Processing**: Unified data model eliminates multiple traversals
 
-## 9. Development Tips
+## 11. Development Tips
 
 ### Debugging:
 - Use browser DevTools with `CONFIG.DEBUG = true`

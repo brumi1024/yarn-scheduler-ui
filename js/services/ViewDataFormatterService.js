@@ -410,6 +410,7 @@ class ViewDataFormatterService {
             path: queuePath,
             displayName: displayName,
             properties: {},
+            propertyDefaults: {}, // Track which properties are defaults
             nodeLabelData: {
                 accessibleNodeLabelsString: '',
                 labelSpecificParams: {},
@@ -424,7 +425,9 @@ class ViewDataFormatterService {
             for (const [placeholderKey, meta] of Object.entries(category.properties)) {
                 const fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
                 const value = baseProperties.get(fullYarnKey);
-                dataForModal.properties[meta.key] = value === undefined ? String(meta.defaultValue) : String(value);
+                const isDefault = value === undefined;
+                dataForModal.properties[meta.key] = isDefault ? String(meta.defaultValue) : String(value);
+                dataForModal.propertyDefaults[meta.key] = isDefault;
             }
         }
 

@@ -16,10 +16,7 @@ class QueueTreeView extends EventEmitter {
         this._connectorDrawTimeoutId = null; // For debouncing connector drawing
         this._currentFormattedHierarchy = null; // To store the last used data for drawing
 
-        // Virtual scrolling for performance optimization
-        this.virtualTree = null;
-        this.useVirtualScrolling = false;
-        this.virtualScrollingThreshold = 20; // Enable virtual scrolling for 20+ queues
+        // Removed virtual scrolling - traditional rendering works fine for all datasets
 
         if (!this.treeContainerEl || !this.levelHeadersContainerEl || !this.arrowSvgEl) {
             console.error('QueueTreeView: Required DOM elements (queue-tree, level-headers, or arrow-svg) not found.');
@@ -43,56 +40,7 @@ class QueueTreeView extends EventEmitter {
         return this._currentFormattedHierarchy;
     }
 
-    /**
-     * Determines if virtual scrolling should be enabled based on queue count.
-     * @param {Object} formattedHierarchyRoot - The root of the formatted queue hierarchy
-     * @returns {boolean} True if virtual scrolling should be used
-     */
-    _shouldUseVirtualScrolling(formattedHierarchyRoot) {
-        if (!formattedHierarchyRoot) return false;
-        
-        const countQueues = (node) => {
-            let count = 1;
-            if (node.children) {
-                for (const child of Object.values(node.children)) {
-                    if (child && !child.isDeleted) {
-                        count += countQueues(child);
-                    }
-                }
-            }
-            return count;
-        };
-        
-        return countQueues(formattedHierarchyRoot) >= this.virtualScrollingThreshold;
-    }
 
-    /**
-     * Initializes virtual scrolling if needed.
-     * @param {Object} formattedHierarchyRoot - The root of the formatted queue hierarchy
-     */
-    _initializeVirtualScrolling(formattedHierarchyRoot) {
-        if (this._shouldUseVirtualScrolling(formattedHierarchyRoot)) {
-            this.useVirtualScrolling = true;
-            
-            if (!this.virtualTree) {
-                this.virtualTree = new VirtualQueueTree(this.treeContainerEl, {
-                    itemHeight: 120,
-                    itemWidth: 300,
-                    columnGap: 50,
-                    levelIndent: 350,
-                    buffer: 5
-                });
-            }
-            
-            this.virtualTree.setData(formattedHierarchyRoot);
-        } else {
-            this.useVirtualScrolling = false;
-            if (this.virtualTree) {
-                this.virtualTree.destroy();
-                this.virtualTree = null;
-            }
-        }
-    }
 
     /**
      * Renders the entire queue tree.
@@ -107,11 +55,6 @@ class QueueTreeView extends EventEmitter {
             return;
         }
 
-        // Clean up existing virtual tree if switching modes
-        if (this.virtualTree && !this._shouldUseVirtualScrolling(formattedHierarchyRoot)) {
-            this.virtualTree.destroy();
-            this.virtualTree = null;
-        }
 
         DomUtils.empty(this.treeContainerEl);
         DomUtils.empty(this.levelHeadersContainerEl);
@@ -125,122 +68,13 @@ class QueueTreeView extends EventEmitter {
             return;
         }
 
-        // Initialize virtual scrolling if needed
-        this._initializeVirtualScrolling(formattedHierarchyRoot);
-
-        // Use virtual scrolling for large datasets
-        if (this.useVirtualScrolling) {
-            this._renderVirtualized(formattedHierarchyRoot, drawConnectors);
-            return;
-        }
-
-        // Render using traditional method for smaller datasets
+        // Render using traditional method
         this._renderTraditional(formattedHierarchyRoot, drawConnectors);
     }
 
-    /**
-     * Renders queue tree using virtual scrolling for large datasets.
-     * @param {Object} formattedHierarchyRoot - The root of the formatted queue hierarchy
-     * @param {boolean} drawConnectors - Whether to draw connectors
-     */
-    _renderVirtualized(formattedHierarchyRoot, drawConnectors) {
-        if (!this.virtualTree) return;
 
-        console.log(`QueueTreeView: Using virtual scrolling for large hierarchy`);
 
-        // Set up virtual scrolling container styling
-        this.treeContainerEl.style.position = 'relative';
-        this.treeContainerEl.style.height = '600px'; // Fixed height for virtual scrolling
-        this.treeContainerEl.style.overflow = 'hidden';
 
-        // Let virtual tree handle the rendering
-        this.virtualTree.forceUpdate();
-
-        // Render actual queue cards for visible nodes
-        this._renderVisibleVirtualNodes();
-
-        // Level headers for virtual mode
-        const maxDepth = this._calculateMaxDepthOfFormattedTree(formattedHierarchyRoot);
-        this._renderLevelHeaders(maxDepth);
-
-        // Schedule connector drawing for visible nodes only
-        if (drawConnectors) {
-            this._scheduleVirtualConnectorDraw();
-        }
-
-        this._emit('treeRendered', { hasContent: true, virtualized: true });
-    }
-
-    /**
-     * Renders visible virtual nodes as actual DOM elements.
-     */
-    _renderVisibleVirtualNodes() {
-        if (!this.virtualTree) return;
-
-        const visibleNodes = this.virtualTree.getVisibleNodes();
-        const searchTermLC = (this.appStateModel.getCurrentSearchTerm() || '').toLowerCase();
-
-        for (const { node, position } of visibleNodes) {
-            // Create the actual queue card
-            const cardElement = QueueCardView.createCardElement(node, searchTermLC, (eventName, queuePath) => {
-                this._emit(eventName, queuePath);
-            });
-
-            // Position it according to virtual tree layout
-            cardElement.style.position = 'absolute';
-            cardElement.style.left = `${position.x}px`;
-            cardElement.style.top = `${position.y}px`;
-            cardElement.style.width = `${position.width}px`;
-            cardElement.style.height = `${position.height}px`;
-
-            this.treeContainerEl.appendChild(cardElement);
-            this.queueElements.set(node.path, cardElement);
-        }
-    }
-
-    /**
-     * Schedules connector drawing for virtual mode (visible nodes only).
-     */
-    _scheduleVirtualConnectorDraw() {
-        if (!this.arrowSvgEl || !this.virtualTree) return;
-
-        clearTimeout(this._connectorDrawTimeoutId);
-        this._connectorDrawTimeoutId = setTimeout(() => {
-            this.clearConnectors();
-            this._drawVirtualConnectors();
-        }, CONFIG.TIMEOUTS.ARROW_RENDER);
-    }
-
-    /**
-     * Draws connectors for visible virtual nodes only.
-     */
-    _drawVirtualConnectors() {
-        if (!this.virtualTree || !this.arrowSvgEl) return;
-
-        const svgRect = this.arrowSvgEl.getBoundingClientRect();
-        const visibleNodes = this.virtualTree.getVisibleNodes();
-
-        // Create a map of visible node paths for quick lookup
-        const visiblePaths = new Set(visibleNodes.map(({ node }) => node.path));
-
-        // Draw connectors only between visible nodes
-        for (const { node } of visibleNodes) {
-            if (node.children) {
-                for (const child of Object.values(node.children)) {
-                    if (child && !child.isDeleted && visiblePaths.has(child.path)) {
-                        const parentElement = this.queueElements.get(node.path);
-                        const childElement = this.queueElements.get(child.path);
-
-                        if (parentElement && childElement) {
-                            const parentRect = parentElement.getBoundingClientRect();
-                            const childRect = childElement.getBoundingClientRect();
-                            this._drawSankeyLinkToChild(parentRect, childRect, svgRect, this.arrowSvgEl, child);
-                        }
-                    }
-                }
-            }
-        }
-    }
 
     /**
      * Traditional rendering method for smaller datasets.
@@ -432,11 +266,6 @@ class QueueTreeView extends EventEmitter {
      * Cleans up resources when the view is destroyed.
      */
     destroy() {
-        if (this.virtualTree) {
-            this.virtualTree.destroy();
-            this.virtualTree = null;
-        }
-        
         this.queueElements.clear();
         this.clearConnectors();
         
@@ -447,22 +276,17 @@ class QueueTreeView extends EventEmitter {
     }
 
     /**
-     * Scrolls to a specific queue, works with both traditional and virtual modes.
+     * Scrolls to a specific queue.
      * @param {string} queuePath - Full queue path to scroll to
      * @param {Object} options - Scroll options
      */
     scrollToQueue(queuePath, options = {}) {
-        if (this.useVirtualScrolling && this.virtualTree) {
-            this.virtualTree.scrollToQueue(queuePath, options);
-        } else {
-            // Traditional scrolling
-            const element = this.queueElements.get(queuePath);
-            if (element) {
-                element.scrollIntoView({
-                    behavior: options.smooth ? 'smooth' : 'auto',
-                    block: options.center ? 'center' : 'nearest'
-                });
-            }
+        const element = this.queueElements.get(queuePath);
+        if (element) {
+            element.scrollIntoView({
+                behavior: options.smooth ? 'smooth' : 'auto',
+                block: options.center ? 'center' : 'nearest'
+            });
         }
     }
 

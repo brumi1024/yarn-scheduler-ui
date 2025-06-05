@@ -8,23 +8,22 @@ const SCHEDULER_INFO_METADATA = {
     // General Queue Info (applies to both Parent and Leaf if present)
     queueName: { displayName: 'Queue Name' },
     queuePath: { displayName: 'Queue Path' },
-    state: { displayName: 'State' }, // From schedulerInfo, not scheduler-conf
-    type: { displayName: 'Queue Type' }, // e.g., capacitySchedulerLeafQueueInfo or parent type (derived)
-    capacity: { displayName: 'Effective Capacity', unit: '%' }, // From schedulerInfo.capacity (Effective)
+    state: { displayName: 'State' },
+    type: { displayName: 'Queue Type' },
+    capacity: { displayName: 'Effective Capacity', unit: '%' },
     usedCapacity: { displayName: 'Used Capacity', unit: '%' },
-    maxCapacity: { displayName: 'Effective Max Capacity', unit: '%' }, // From schedulerInfo.maxCapacity (Effective)
+    maxCapacity: { displayName: 'Effective Max Capacity', unit: '%' },
     absoluteCapacity: { displayName: 'Absolute Capacity', unit: '%' },
     absoluteMaxCapacity: { displayName: 'Absolute Max Capacity', unit: '%' },
     absoluteUsedCapacity: { displayName: 'Absolute Used Capacity', unit: '%' },
     numApplications: { displayName: 'Total Applications' },
-    maxParallelApps: { displayName: 'Max Parallel Apps' }, // From scheduler info if different from conf
+    maxParallelApps: { displayName: 'Max Parallel Apps' },
     resourcesUsed: {
-        // This is an object in API
         displayName: 'Resources Used',
         memory: { displayName: 'Memory Used', unit: 'MB' },
         vCores: { displayName: 'VCores Used' },
     },
-    mode: { displayName: 'Capacity Mode' }, // As reported by scheduler endpoint
+    mode: { displayName: 'Capacity Mode' },
     weight: { displayName: 'Weight' },
     normalizedWeight: { displayName: 'Normalized Weight' },
 
@@ -35,8 +34,8 @@ const SCHEDULER_INFO_METADATA = {
     allocatedContainers: { displayName: 'Allocated Containers' },
     reservedContainers: { displayName: 'Reserved Containers' },
     pendingContainers: { displayName: 'Pending Containers' },
-    maxApplications: { displayName: 'Max Applications (Queue Limit)' }, // Leaf specific from schedulerInfo
-    userLimitFactor: { displayName: 'User Limit Factor' }, // Leaf specific from schedulerInfo
+    maxApplications: { displayName: 'Max Applications (Queue Limit)' },
+    userLimitFactor: { displayName: 'User Limit Factor' },
 
     // It might be too verbose to list all from `capacities.queueCapacitiesByPartition`
     // Instead, the Info Modal could summarize or pick the default partition's effective/configured resources.
