@@ -188,7 +188,7 @@ const QueueCardView = {
             labelArea.innerHTML = formattedQueue.uiLabels
                 .map(
                     (label) =>
-                        `<span class="${DomUtils.escapeXml(label.cssClass)}" title="${DomUtils.escapeXml(label.title || '')}">${DomUtils.escapeXml(label.text)}</span>`
+                        `<div class="tooltip"><span class="${DomUtils.escapeXml(label.cssClass)}"}">${DomUtils.escapeXml(label.text)}</span><div class="tooltiptext">${DomUtils.escapeXml(label.tooltip)}</div></div>`
                 )
                 .join('');
         } else {

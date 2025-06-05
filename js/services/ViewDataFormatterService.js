@@ -441,21 +441,21 @@ class ViewDataFormatterService {
         labels.push({
             text: `${modeIcons[mode] || '📊'} ${modeText}`,
             cssClass: 'queue-tag tag-mode',
-            title: `Capacity Mode: ${modeText}`,
+            tooltip: `The capacity mode. In Hadoop YARN's Capacity Scheduler, queue capacity modes determine how cluster resources are allocated. Each mode offers different levels of flexibility and control, catering to various organizational requirements for resource management.`,
         });
 
         const configState = formattedNode.state || 'RUNNING';
         labels.push({
             text: configState === 'STOPPED' ? '🛑 Config: Stopped' : '▶️ Config: Running',
             cssClass: `queue-tag tag-state ${configState === 'STOPPED' ? 'tag-stopped' : 'tag-running'}`,
-            title: `Configured State: ${configState}`,
+            tooltip: `The configured queue state. In Hadoop YARN's Capacity Scheduler, the state property defines a queue's operational status. Setting it to RUNNING allows new applications to be submitted to the queue, while STOPPED prevents new submissions but lets existing applications complete, enabling graceful queue draining.`,
         });
 
         if (formattedNode.liveState && formattedNode.liveState !== configState) {
             labels.push({
                 text: formattedNode.liveState === 'STOPPED' ? '‼️ Live: Stopped' : '✳️ Live: Running',
                 cssClass: `queue-tag tag-state ${formattedNode.liveState === 'STOPPED' ? 'tag-stopped-live' : 'tag-running-live'}`,
-                title: `Live State: ${formattedNode.liveState}`,
+                tooltip: `The actual queue state what we can see in the running Resource Manager.`,
             });
         }
 
@@ -464,7 +464,7 @@ class ViewDataFormatterService {
             labels.push({
                 text: '⚡ Auto-Create',
                 cssClass: 'queue-tag tag-auto-create',
-                title: 'Auto Queue Creation Enabled',
+                tooltip: 'Auto Queue Creation. When auto-creation is enabled on a YARN Capacity Scheduler parent queue, it dynamically generates child leaf queues based on user or group mappings, facilitating flexible and scalable resource allocation without manual configuration. These auto-created queues inherit properties from their parent and the parent\'s auto-creation template configurations. It can be automatically deleted after a period of inactivity, typically 300 seconds, unless configured otherwise.',
             });
         }
         return labels;
