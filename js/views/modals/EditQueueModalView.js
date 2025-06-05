@@ -289,12 +289,15 @@ class EditQueueModalView extends BaseModalView {
                         originalValue
                     );
                 } else if (simpleOrPartialKey === 'maximum-capacity') {
-                    // ensure max-capacity formatting
+                    // Detect the actual format of the maximum capacity value and preserve it
+                    const parsed = CapacityValueParser.parse(newValue.trim());
+                    const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
+                    
                     newValue = this.viewDataFormatterService._formatCapacityForDisplay(
                         newValue,
-                        CAPACITY_MODES.ABSOLUTE,
+                        maxCapacityMode,
                         '100%'
-                    ); // Max can be % or vector
+                    );
                 }
 
                 if (hasChanged) {
