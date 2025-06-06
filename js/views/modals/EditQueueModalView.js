@@ -182,16 +182,18 @@ class EditQueueModalView extends BaseModalView {
     _buildAutoCreationSectionHtml(data) {
         const { autoCreationData, isLegacyMode, path, effectiveCapacityMode } = data;
         
-        // Determine which mode should be active and if templates should be shown
+        // Determine which mode should be active and if templates should be shown initially
         const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
         const shouldUseV2 = isWeightMode || !isLegacyMode;
-        const shouldShowTemplates = shouldUseV2 ? autoCreationData.v2Enabled : autoCreationData.v1Enabled;
+        
+        // Use the same logic as the toggle to determine current state
+        const currentValue = shouldUseV2 ? autoCreationData.v2Enabled : autoCreationData.v1Enabled;
 
         const sectionHtml = `
             <div class="auto-creation-section">
                 <h4 class="form-category-title">Auto Queue Creation</h4>
                 ${this._buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode)}
-                ${shouldShowTemplates ? this._buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode) : ''}
+                ${this._buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode, currentValue)}
             </div>
         `;
         return sectionHtml;
@@ -239,7 +241,7 @@ class EditQueueModalView extends BaseModalView {
         `;
     }
 
-    _buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
+    _buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode, isInitiallyVisible = false) {
         const { nonTemplateProperties, v1TemplateProperties, v2TemplateProperties } = autoCreationData;
         
         // Determine auto-creation mode based on capacity mode and legacy settings
@@ -247,12 +249,12 @@ class EditQueueModalView extends BaseModalView {
         const isV2Mode = isWeightMode || !isLegacyMode;
         
         let templateHtml = `
-            <div class="auto-creation-template" id="auto-creation-template">
+            <div class="auto-creation-template" id="auto-creation-template" style="display: ${isInitiallyVisible ? 'block' : 'none'}; opacity: ${isInitiallyVisible ? '1' : '0'}; overflow: hidden;">
                 <h5 style="margin: 15px 0 10px; color: #666;">Auto Queue Creation Configuration</h5>
         `;
 
         if (isV2Mode) {
-            // v2 mode: show v2 non-template properties and v2 template properties
+            // v2 mode: show v2 non-template properties and v2 template properties with tabs
             templateHtml += `
                 <h6 style="margin: 0 0 10px; color: #28a745;">v2 (Flexible) Configuration</h6>
             `;
@@ -271,33 +273,8 @@ class EditQueueModalView extends BaseModalView {
                 }
             }
             
-            // Show v2 template properties with different scopes
-            const scopeLabels = {
-                template: 'General Template',
-                parentTemplate: 'Parent Queue Template', 
-                leafTemplate: 'Leaf Queue Template'
-            };
-            
-            for (const [scopeKey, scopeProps] of Object.entries(v2TemplateProperties)) {
-                if (Object.keys(scopeProps).length > 0) {
-                    templateHtml += `
-                        <h6 style="margin: 15px 0 5px; color: #666;">${scopeLabels[scopeKey]}</h6>
-                        <p class="form-help" style="margin-bottom: 10px;">Properties applied to ${scopeKey === 'template' ? 'all auto-created queues' : scopeKey === 'parentTemplate' ? 'auto-created parent queues' : 'auto-created leaf queues'}:</p>
-                    `;
-                    
-                    for (const [propKey, propData] of Object.entries(scopeProps)) {
-                        const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
-                        templateHtml += this._buildPropertyInputHtml(
-                            fullKey,
-                            `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
-                            propData.meta,
-                            propData.value,
-                            `v2-${scopeKey}-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
-                            propData.isDefault
-                        );
-                    }
-                }
-            }
+            // Add tabbed interface for v2 template properties
+            templateHtml += this._buildV2TemplateTabsHtml(v2TemplateProperties, queuePath)
         } else {
             // v1 mode: show v1 template properties only
             templateHtml += `
@@ -320,6 +297,80 @@ class EditQueueModalView extends BaseModalView {
 
         templateHtml += `</div>`;
         return templateHtml;
+    }
+
+    /**
+     * Builds the tabbed interface for v2 auto-creation template properties.
+     * @param {Object} v2TemplateProperties - v2 template properties grouped by scope
+     * @param {string} queuePath - The queue path
+     * @returns {string} Tabbed template HTML
+     * @private
+     */
+    _buildV2TemplateTabsHtml(v2TemplateProperties, queuePath) {
+        const tabsHtml = `
+            <div class="v2-template-tabs" style="margin-top: 15px;">
+                <h6 style="margin: 0 0 10px; color: #666;">Template Configuration</h6>
+                
+                <!-- Tab Headers -->
+                <div class="template-tab-headers" style="display: flex; border-bottom: 1px solid #dee2e6; margin-bottom: 15px;">
+                    <button type="button" class="template-tab-header active" data-tab="template" style="padding: 8px 16px; border: 1px solid #dee2e6; border-bottom: none; background: white; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 2px;">
+                        General Template
+                    </button>
+                    <button type="button" class="template-tab-header" data-tab="parentTemplate" style="padding: 8px 16px; border: 1px solid #dee2e6; border-bottom: none; background: #f8f9fa; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 2px;">
+                        Parent Template
+                    </button>
+                    <button type="button" class="template-tab-header" data-tab="leafTemplate" style="padding: 8px 16px; border: 1px solid #dee2e6; border-bottom: none; background: #f8f9fa; cursor: pointer; border-radius: 4px 4px 0 0;">
+                        Leaf Template
+                    </button>
+                </div>
+                
+                <!-- Tab Content -->
+                <div class="template-tab-content">
+                    ${this._buildTemplateTabContent('template', v2TemplateProperties.template, queuePath, 'Properties applied to all auto-created queues:', true)}
+                    ${this._buildTemplateTabContent('parentTemplate', v2TemplateProperties.parentTemplate, queuePath, 'Properties applied to auto-created parent queues:', false)}
+                    ${this._buildTemplateTabContent('leafTemplate', v2TemplateProperties.leafTemplate, queuePath, 'Properties applied to auto-created leaf queues:', false)}
+                </div>
+            </div>
+        `;
+        return tabsHtml;
+    }
+    
+    /**
+     * Builds content for a single template tab.
+     * @param {string} scopeKey - The scope key (template, parentTemplate, leafTemplate)
+     * @param {Object} scopeProps - Properties for this scope
+     * @param {string} queuePath - The queue path
+     * @param {string} description - Description for this template type
+     * @param {boolean} isActive - Whether this tab is initially active
+     * @returns {string} Tab content HTML
+     * @private
+     */
+    _buildTemplateTabContent(scopeKey, scopeProps, queuePath, description, isActive) {
+        let contentHtml = `
+            <div class="template-tab-pane" data-tab-content="${scopeKey}" style="display: ${isActive ? 'block' : 'none'};">
+                <p class="form-help" style="margin-bottom: 15px; color: #666; font-style: italic;">${description}</p>
+        `;
+        
+        if (scopeProps && Object.keys(scopeProps).length > 0) {
+            for (const [propKey, propData] of Object.entries(scopeProps)) {
+                const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
+                contentHtml += this._buildPropertyInputHtml(
+                    fullKey,
+                    `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
+                    propData.meta,
+                    propData.value,
+                    `v2-${scopeKey}-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    propData.isDefault
+                );
+            }
+        } else {
+            contentHtml += `
+                <p class="form-help" style="color: #6c757d; font-style: italic;">No template properties configured for this scope.</p>
+            `;
+        }
+        
+        contentHtml += `</div>`;
+        return contentHtml;
     }
 
     _buildCustomPropertiesSectionHtml(queuePath) {
@@ -420,6 +471,11 @@ class EditQueueModalView extends BaseModalView {
             
             capacityModeSelect.addEventListener('change', () => {
                 const newMode = capacityModeSelect.value;
+                const originalMode = capacityModeSelect.dataset.originalMode;
+                
+                // Check for auto-creation mode transition warning
+                this._checkAutoCreationModeTransition(form, originalMode, newMode);
+                
                 // Update capacity input to default for the new mode
                 capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(newMode);
                 // Update placeholder based on new mode
@@ -713,21 +769,273 @@ class EditQueueModalView extends BaseModalView {
         
         if (autoCreationToggle) {
             // Set initial template visibility
-            this._updateTemplateVisibility(autoCreationToggle.value === 'true', templateSection);
+            this._updateTemplateVisibility(autoCreationToggle.checked, templateSection);
             
             autoCreationToggle.addEventListener('change', () => {
-                const enabled = autoCreationToggle.value === 'true';
+                const enabled = autoCreationToggle.checked;
                 this._updateTemplateVisibility(enabled, templateSection);
+                
+                // Clear transition warning if auto-creation is disabled
+                if (!enabled) {
+                    const existingWarning = DomUtils.qs('.auto-creation-transition-warning', this.formContainer);
+                    if (existingWarning) {
+                        existingWarning.remove();
+                    }
+                }
             });
+        }
+        
+        // Bind template tab events for v2 mode
+        this._bindTemplateTabEvents(form);
+    }
+    
+    /**
+     * Binds events for the v2 template tabs functionality.
+     * @param {HTMLElement} form - The form element
+     * @private
+     */
+    _bindTemplateTabEvents(form) {
+        const tabHeaders = form.querySelectorAll('.template-tab-header');
+        
+        for (const tabHeader of tabHeaders) {
+            tabHeader.addEventListener('click', (event) => {
+                event.preventDefault();
+                const targetTab = tabHeader.dataset.tab;
+                this._switchTemplateTab(form, targetTab);
+            });
+        }
+    }
+    
+    /**
+     * Switches to the specified template tab.
+     * @param {HTMLElement} form - The form element
+     * @param {string} targetTab - The target tab name
+     * @private
+     */
+    _switchTemplateTab(form, targetTab) {
+        // Update tab headers
+        const tabHeaders = form.querySelectorAll('.template-tab-header');
+        for (const header of tabHeaders) {
+            if (header.dataset.tab === targetTab) {
+                header.classList.add('active');
+                header.style.background = 'white';
+                header.style.borderBottom = '1px solid white';
+                header.style.zIndex = '10';
+                header.style.position = 'relative';
+            } else {
+                header.classList.remove('active');
+                header.style.background = '#f8f9fa';
+                header.style.borderBottom = '1px solid #dee2e6';
+                header.style.zIndex = '1';
+                header.style.position = 'relative';
+            }
+        }
+        
+        // Update tab content
+        const tabPanes = form.querySelectorAll('.template-tab-pane');
+        for (const pane of tabPanes) {
+            if (pane.dataset.tabContent === targetTab) {
+                pane.style.display = 'block';
+            } else {
+                pane.style.display = 'none';
+            }
         }
     }
 
     _updateTemplateVisibility(enabled, templateSection) {
-        if (templateSection) {
-            templateSection.style.display = enabled ? 'block' : 'none';
+        if (!templateSection) return;
+        
+        if (enabled) {
+            // Show the template section with a smooth slide-down animation
+            templateSection.style.display = 'block';
+            templateSection.style.opacity = '0';
+            templateSection.style.maxHeight = '0';
+            templateSection.style.overflow = 'hidden';
+            templateSection.style.transition = 'all 0.3s ease-in-out';
+            
+            // Trigger animation on next frame
+            requestAnimationFrame(() => {
+                templateSection.style.opacity = '1';
+                templateSection.style.maxHeight = '1000px'; // Large enough to fit content
+            });
+        } else {
+            // Hide the template section with a smooth slide-up animation
+            templateSection.style.transition = 'all 0.3s ease-in-out';
+            templateSection.style.opacity = '0';
+            templateSection.style.maxHeight = '0';
+            
+            // Hide completely after animation
+            setTimeout(() => {
+                if (templateSection.style.opacity === '0') {
+                    templateSection.style.display = 'none';
+                }
+            }, 300);
         }
     }
     
+    /**
+     * Checks if capacity mode change would trigger auto-creation mode transition and shows warning.
+     * @param {HTMLElement} form - The form element
+     * @param {string} originalMode - The original capacity mode
+     * @param {string} newMode - The new capacity mode
+     * @private
+     */
+    _checkAutoCreationModeTransition(form, originalMode, newMode) {
+        // Get current auto-creation state
+        const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
+        if (!autoCreationToggle) return; // No auto-creation toggle found
+        
+        const isAutoCreationEnabled = autoCreationToggle.checked;
+        if (!isAutoCreationEnabled) return; // Auto-creation not enabled, no warning needed
+        
+        // Get effective Legacy Queue Mode setting (considering any pending global changes)
+        const effectiveLegacyMode = this._getEffectiveLegacyMode();
+        
+        // Determine auto-creation modes based on effective legacy mode and capacity modes
+        const originalAutoCreationMode = this._determineAutoCreationMode(originalMode, effectiveLegacyMode);
+        const newAutoCreationMode = this._determineAutoCreationMode(newMode, effectiveLegacyMode);
+        
+        if (originalAutoCreationMode === newAutoCreationMode) return; // No transition, no warning needed
+        
+        // Prepare transition information
+        const transitionType = `${originalAutoCreationMode} → ${newAutoCreationMode}`;
+        let warningMessage = '';
+        
+        if (originalAutoCreationMode === 'v1 Legacy' && newAutoCreationMode === 'v2 Flexible') {
+            warningMessage = `Changing to Weight capacity mode ${effectiveLegacyMode ? '(or disabling Legacy Queue Mode)' : ''} will switch auto queue creation to v2 (Flexible) mode. ` +
+                            `This may affect how child queues are automatically created and their template properties.`;
+        } else if (originalAutoCreationMode === 'v2 Flexible' && newAutoCreationMode === 'v1 Legacy') {
+            warningMessage = `Changing away from Weight capacity mode ${effectiveLegacyMode ? '(or enabling Legacy Queue Mode)' : ''} will switch auto queue creation to v1 (Legacy) mode. ` +
+                            `This may affect how child queues are automatically created and their template properties.`;
+        }
+        
+        if (warningMessage) {
+            // Show warning and potentially stage auto-creation mode changes
+            this._showAutoCreationTransitionWarning(transitionType, warningMessage);
+            this._stageAutoCreationModeChanges(form, originalAutoCreationMode, newAutoCreationMode);
+        }
+    }
+    
+    /**
+     * Gets the effective Legacy Queue Mode setting considering pending global changes.
+     * @returns {boolean} The effective legacy mode setting
+     * @private
+     */
+    _getEffectiveLegacyMode() {
+        // Check if there are pending global changes to legacy mode
+        if (this.controller && this.controller.schedulerConfigModel) {
+            const effectiveGlobalProps = this.controller.schedulerConfigModel.getGlobalConfig();
+            const legacyModeValue = effectiveGlobalProps.get('yarn.scheduler.capacity.legacy-queue-mode.enabled');
+            if (legacyModeValue !== undefined) {
+                return String(legacyModeValue).toLowerCase() === 'true';
+            }
+        }
+        
+        // Fall back to current queue data legacy mode setting
+        return this.currentQueueData?.isLegacyMode ?? true;
+    }
+    
+    /**
+     * Determines the auto-creation mode based on capacity mode and legacy setting.
+     * @param {string} capacityMode - The capacity mode
+     * @param {boolean} isLegacyMode - Whether legacy mode is enabled
+     * @returns {string} The auto-creation mode ('v1 Legacy' or 'v2 Flexible')
+     * @private
+     */
+    _determineAutoCreationMode(capacityMode, isLegacyMode) {
+        if (!isLegacyMode) {
+            // Non-legacy mode: always v2 Flexible
+            return 'v2 Flexible';
+        }
+        
+        // Legacy mode: v2 for weight, v1 for others
+        return capacityMode === CAPACITY_MODES.WEIGHT ? 'v2 Flexible' : 'v1 Legacy';
+    }
+    
+    /**
+     * Stages auto-creation mode changes when transitioning between v1 and v2.
+     * @param {HTMLElement} form - The form element
+     * @param {string} originalMode - The original auto-creation mode
+     * @param {string} newMode - The new auto-creation mode
+     * @private
+     */
+    _stageAutoCreationModeChanges(form, originalMode, newMode) {
+        if (originalMode === newMode) return;
+        
+        // Get current auto-creation toggle values
+        const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
+        const isCurrentlyEnabled = autoCreationToggle?.checked || false;
+        
+        if (!isCurrentlyEnabled) return; // No need to stage changes if auto-creation is disabled
+        
+        // Stage the transition by updating the toggle's data attributes
+        if (originalMode === 'v1 Legacy' && newMode === 'v2 Flexible') {
+            // Transitioning v1 → v2: disable v1, enable v2
+            this._updateAutoCreationToggleForTransition(form, 'auto-create-child-queue.enabled', false);
+            this._updateAutoCreationToggleForTransition(form, 'auto-queue-creation-v2.enabled', true);
+        } else if (originalMode === 'v2 Flexible' && newMode === 'v1 Legacy') {
+            // Transitioning v2 → v1: disable v2, enable v1
+            this._updateAutoCreationToggleForTransition(form, 'auto-queue-creation-v2.enabled', false);
+            this._updateAutoCreationToggleForTransition(form, 'auto-create-child-queue.enabled', true);
+        }
+    }
+    
+    /**
+     * Updates auto-creation toggle for mode transitions.
+     * @param {HTMLElement} form - The form element
+     * @param {string} propertyKey - The property key to update
+     * @param {boolean} enabled - Whether to enable or disable
+     * @private
+     */
+    _updateAutoCreationToggleForTransition(form, propertyKey, enabled) {
+        const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
+        if (autoCreationToggle) {
+            // Update the data attributes to reflect the new mode
+            autoCreationToggle.dataset.simpleKey = propertyKey;
+            autoCreationToggle.checked = enabled;
+            
+            // Update the label
+            const label = autoCreationToggle.closest('.toggle-container')?.querySelector('.toggle-label');
+            if (label) {
+                label.textContent = enabled ? 'true' : 'false';
+                label.classList.toggle('active', enabled);
+            }
+        }
+    }
+    
+    /**
+     * Shows a warning about auto-creation mode transition.
+     * @param {string} transitionType - Description of the transition
+     * @param {string} message - Warning message to display
+     * @private
+     */
+    _showAutoCreationTransitionWarning(transitionType, message) {
+        // Remove any existing warnings
+        const existingWarning = DomUtils.qs('.auto-creation-transition-warning', this.formContainer);
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+        
+        // Create warning element
+        const warningHtml = `
+            <div class="auto-creation-transition-warning" style="margin: 15px 0; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; border-left: 4px solid #f39c12;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    <span style="color: #f39c12; font-weight: bold; flex-shrink: 0;">⚠️</span>
+                    <div>
+                        <strong style="color: #856404;">Auto Queue Creation Mode Transition: ${DomUtils.escapeXml(transitionType)}</strong>
+                        <p style="margin: 5px 0 0 0; color: #856404; line-height: 1.4;">${DomUtils.escapeXml(message)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insert warning after the capacity mode form group
+        const capacityModeGroup = DomUtils.qs('[data-original-mode]', this.formContainer)?.closest('.form-group');
+        if (capacityModeGroup) {
+            capacityModeGroup.insertAdjacentHTML('afterend', warningHtml);
+        }
+    }
+
     /**
      * Validates a custom property row for empty property names.
      * @param {HTMLElement} row - The custom property row element
@@ -765,5 +1073,158 @@ class EditQueueModalView extends BaseModalView {
                 valueInput.title = '';
             }
         }
+    }
+
+    /**
+     * Shows the modal with only template configuration sections.
+     * @param {Object} data - The queue data containing auto-creation template properties
+     */
+    showTemplateConfigOnly(data) {
+        if (!data || !data.autoCreationData) {
+            console.warn('EditQueueModalView: No auto-creation data available for template-only modal');
+            return;
+        }
+
+        // Set current queue data
+        this.currentQueuePath = data.path;
+        this.currentQueueData = data;
+
+        // Update modal title
+        const modalTitleElement = DomUtils.qs('.modal-title', this.modalEl);
+        if (modalTitleElement) {
+            modalTitleElement.textContent = `Template Configuration: ${DomUtils.escapeXml(data.displayName || data.path.split('.').pop())}`;
+        }
+
+        // Clear and build template-only content
+        DomUtils.empty(this.formContainer);
+        this.formContainer.innerHTML = this._buildTemplateOnlyHtml(data);
+
+        // Add modal actions
+        const modalContent = this.formContainer.parentElement.parentElement;
+        const existingActions = modalContent.querySelector('.modal-actions');
+        if (existingActions) {
+            existingActions.remove();
+        }
+
+        const modalActions = document.createElement('div');
+        modalActions.className = 'modal-actions';
+        modalActions.innerHTML = `
+            <button class="btn btn-secondary" id="cancel-template-config-btn">Cancel</button>
+            <button class="btn btn-primary" id="submit-template-config-btn">Stage Changes</button>
+        `;
+        modalContent.appendChild(modalActions);
+
+        // Bind events for template-only mode
+        this._bindTemplateOnlyEvents();
+
+        // Temporarily override _renderContent to prevent it from overwriting our template content
+        const originalRenderContent = this._renderContent;
+        this._renderContent = () => {}; // No-op during template-only show
+        
+        // Show the modal properly with positioning and events
+        super.show(data);
+        
+        // Restore original _renderContent method
+        this._renderContent = originalRenderContent;
+
+        // Upgrade tooltips
+        if (window.TooltipHelper) {
+            TooltipHelper.upgradeModalTooltips(this.formContainer);
+        }
+    }
+
+    /**
+     * Builds HTML for template-only modal.
+     * @param {Object} data - The queue data
+     * @returns {string} Template-only HTML
+     * @private
+     */
+    _buildTemplateOnlyHtml(data) {
+        const { path, displayName, autoCreationData, isLegacyMode, effectiveCapacityMode } = data;
+        
+        let formHTML = `<form id="template-config-form" data-queue-path="${path}" onsubmit="return false;">`;
+
+        // Queue info section
+        formHTML += `
+            <div class="form-group static-info-group">
+                <div class="property-details-column">
+                    <div class="property-display-name">Queue Name</div>
+                    <div class="property-yarn-name">(Template Configuration)</div>
+                </div>
+                <div class="property-value-column">
+                    <input type="text" class="form-input" value="${DomUtils.escapeXml(displayName)}" readonly>
+                </div>
+            </div>
+        `;
+
+        // Auto-creation template section
+        formHTML += this._buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode, true);
+
+        formHTML += `</form>`;
+        return formHTML;
+    }
+
+    /**
+     * Binds events for template-only modal.
+     * @private
+     */
+    _bindTemplateOnlyEvents() {
+        const form = DomUtils.qs('#template-config-form', this.formContainer);
+        if (!form) return;
+
+        // Bind toggle switches
+        this._bindToggleSwitchEvents(form);
+
+        // Bind template tab events
+        this._bindTemplateTabEvents(form);
+
+        // Bind submit button
+        const submitButton = DomUtils.qs('#submit-template-config-btn', this.modalEl);
+        if (submitButton) {
+            submitButton.addEventListener('click', () => {
+                const collectedData = this._collectTemplateOnlyFormData(form);
+                if (Object.keys(collectedData.params).length > 0) {
+                    this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
+                } else {
+                    this.controller.notificationView.showInfo('No changes detected to stage.');
+                }
+            });
+        }
+
+        // Bind cancel button
+        const cancelButton = DomUtils.qs('#cancel-template-config-btn', this.modalEl);
+        if (cancelButton) {
+            cancelButton.addEventListener('click', () => this.hide({ Canceled: true }));
+        }
+    }
+
+    /**
+     * Collects form data from template-only modal.
+     * @param {HTMLElement} form - The form element
+     * @returns {Object} Collected form data
+     * @private
+     */
+    _collectTemplateOnlyFormData(form) {
+        const stagedChanges = { params: {} };
+
+        for (const inputElement of form.querySelectorAll('.form-input')) {
+            const simpleOrPartialKey = inputElement.dataset.simpleKey;
+            const originalValue = inputElement.dataset.originalValue;
+            
+            if (!simpleOrPartialKey) continue;
+
+            let newValue;
+            if (inputElement.type === 'checkbox') {
+                newValue = inputElement.checked ? 'true' : 'false';
+            } else {
+                newValue = inputElement.value.trim();
+            }
+
+            if (newValue !== originalValue) {
+                stagedChanges.params[simpleOrPartialKey] = newValue;
+            }
+        }
+
+        return stagedChanges;
     }
 }

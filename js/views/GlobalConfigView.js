@@ -34,8 +34,13 @@ class GlobalConfigView extends EventEmitter {
             this._updateSaveButtonState();
         });
 
-        this.containerEl.addEventListener('change', () => {
+        this.containerEl.addEventListener('change', (event) => {
             this._updateSaveButtonState();
+            
+            // Check for legacy queue mode changes that affect auto-creation
+            if (event.target.dataset?.propName === 'yarn.scheduler.capacity.legacy-queue-mode.enabled') {
+                this._checkLegacyModeAutoCreationImpact(event.target);
+            }
         });
     }
 
@@ -422,6 +427,84 @@ class GlobalConfigView extends EventEmitter {
         return Object.keys(customProperties).length > 0 ? customProperties : null;
     }
     
+    /**
+     * Checks if changing Legacy Queue Mode would impact auto-creation configurations.
+     * @param {HTMLElement} toggleInput - The legacy queue mode toggle input
+     * @private
+     */
+    _checkLegacyModeAutoCreationImpact(toggleInput) {
+        const newLegacyModeValue = toggleInput.checked;
+        const originalValue = toggleInput.dataset.originalValue;
+        const originalLegacyMode = String(originalValue).toLowerCase() === 'true';
+        
+        if (newLegacyModeValue === originalLegacyMode) {
+            // No change, remove any existing warning
+            this._removeLegacyModeWarning();
+            return;
+        }
+        
+        let warningMessage = '';
+        let impactDescription = '';
+        
+        if (originalLegacyMode && !newLegacyModeValue) {
+            // Disabling legacy mode: all auto-creation switches to v2
+            impactDescription = 'Disabling Legacy Queue Mode → All Auto-Creation switches to v2 Flexible';
+            warningMessage = 'Disabling Legacy Queue Mode will force all queues with auto queue creation to use v2 (Flexible) mode, ' +
+                            'regardless of their capacity mode. This may affect how child queues are created and their template properties.';
+        } else if (!originalLegacyMode && newLegacyModeValue) {
+            // Enabling legacy mode: auto-creation mode depends on capacity mode
+            impactDescription = 'Enabling Legacy Queue Mode → Auto-Creation mode depends on capacity mode';
+            warningMessage = 'Enabling Legacy Queue Mode will change auto queue creation behavior: ' +
+                            'queues with Weight capacity will use v2 (Flexible) mode, while queues with Percentage/Absolute capacity will use v1 (Legacy) mode. ' +
+                            'This may affect how child queues are created and their template properties.';
+        }
+        
+        if (warningMessage) {
+            this._showLegacyModeAutoCreationWarning(impactDescription, warningMessage);
+        }
+    }
+    
+    /**
+     * Shows a warning about legacy mode impact on auto-creation.
+     * @param {string} impactDescription - Description of the impact
+     * @param {string} message - Warning message to display
+     * @private
+     */
+    _showLegacyModeAutoCreationWarning(impactDescription, message) {
+        // Remove any existing warning
+        this._removeLegacyModeWarning();
+        
+        // Create warning element
+        const warningHtml = `
+            <div class="legacy-mode-auto-creation-warning" style="margin: 15px 0; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; border-left: 4px solid #f39c12;">
+                <div style="display: flex; align-items: flex-start; gap: 8px;">
+                    <span style="color: #f39c12; font-weight: bold; flex-shrink: 0;">⚠️</span>
+                    <div>
+                        <strong style="color: #856404;">Auto Queue Creation Impact: ${DomUtils.escapeXml(impactDescription)}</strong>
+                        <p style="margin: 5px 0 0 0; color: #856404; line-height: 1.4;">${DomUtils.escapeXml(message)}</p>
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Insert warning after the legacy queue mode config item
+        const legacyModeItem = this.containerEl.querySelector('[data-property-name="yarn.scheduler.capacity.legacy-queue-mode.enabled"]');
+        if (legacyModeItem) {
+            legacyModeItem.insertAdjacentHTML('afterend', warningHtml);
+        }
+    }
+    
+    /**
+     * Removes any existing legacy mode auto-creation warning.
+     * @private
+     */
+    _removeLegacyModeWarning() {
+        const existingWarning = this.containerEl.querySelector('.legacy-mode-auto-creation-warning');
+        if (existingWarning) {
+            existingWarning.remove();
+        }
+    }
+
     /**
      * Validates a custom property row for empty property names.
      * @param {HTMLElement} row - The custom property row element

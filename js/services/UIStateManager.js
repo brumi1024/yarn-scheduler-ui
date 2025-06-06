@@ -157,6 +157,29 @@ class UIStateManager {
     }
 
     /**
+     * Shows the template configuration modal for auto-creation queues
+     * @param {string} queuePath - Queue to show template config for
+     * @param {Object} dataModels - Data models for modal
+     * @param {ViewDataFormatterService} viewDataFormatterService - For formatting data
+     * @param {NotificationView} notificationView - For error notifications
+     */
+    showTemplateConfigModal(queuePath, dataModels, viewDataFormatterService, notificationView) {
+        const editData = viewDataFormatterService.formatQueueDataForEditModal(
+            queuePath,
+            dataModels.schedulerConfigModel,
+            dataModels.schedulerInfoModel,
+            dataModels.appStateModel
+        );
+        if (editData && editData.autoCreationData && 
+            (editData.autoCreationData.v1Enabled || editData.autoCreationData.v2Enabled)) {
+            // Use the edit modal but show only auto-creation templates
+            this.views.editQueueModalView.showTemplateConfigOnly(editData);
+        } else {
+            notificationView.showError(`No auto-creation templates configured for queue: ${queuePath}`);
+        }
+    }
+
+    /**
      * Clears the current edit queue path (called when modal is hidden)
      */
     clearEditQueuePath() {

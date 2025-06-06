@@ -177,6 +177,12 @@ const QueueCardView = {
             dropdown.classList.toggle('show');
         });
 
+        // Add template configuration button if auto-creation is enabled
+        const templateButton = this._createTemplateConfigButton(formattedQueue, eventEmitterCallback);
+        if (templateButton) {
+            buttonGroup.append(templateButton);
+        }
+        
         buttonGroup.append(infoButton);
         buttonGroup.append(actionsMenuContainer);
         titleBar.append(nameElement);
@@ -212,5 +218,71 @@ const QueueCardView = {
         card.append(capacitySection);
 
         return card;
+    },
+
+    /**
+     * Creates a template configuration button if auto-creation is enabled for the queue.
+     * @param {Object} formattedQueue - The formatted queue object
+     * @param {Function} eventEmitterCallback - Callback for emitting events
+     * @returns {HTMLElement|null} Template button element or null if not applicable
+     * @private
+     */
+    _createTemplateConfigButton(formattedQueue, eventEmitterCallback) {
+        // Check if auto-creation is enabled for this queue
+        const hasAutoCreation = this._hasAutoCreationEnabled(formattedQueue);
+        
+        if (!hasAutoCreation) {
+            return null;
+        }
+
+        const templateButton = DomUtils.createElement('button', 'queue-template-btn', {
+            title: 'Configure Auto-Creation Templates',
+            'aria-label': 'Configure auto-creation templates',
+        });
+        
+        templateButton.innerHTML = `
+            <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+              <rect x="3" y="4" width="18" height="2" stroke="currentColor" stroke-width="2" fill="currentColor"/>
+              <rect x="3" y="11" width="18" height="2" stroke="currentColor" stroke-width="2" fill="currentColor"/>
+              <rect x="3" y="18" width="18" height="2" stroke="currentColor" stroke-width="2" fill="currentColor"/>
+              <circle cx="6" cy="5" r="1" fill="white"/>
+              <circle cx="6" cy="12" r="1" fill="white"/>
+              <circle cx="6" cy="19" r="1" fill="white"/>
+            </svg>`;
+            
+        templateButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            eventEmitterCallback('templateConfigClicked', formattedQueue.path);
+        });
+
+        return templateButton;
+    },
+
+    /**
+     * Checks if auto-creation is enabled for the given queue.
+     * @param {Object} formattedQueue - The formatted queue object
+     * @returns {boolean} True if auto-creation is enabled
+     * @private
+     */
+    _hasAutoCreationEnabled(formattedQueue) {
+        // Check for auto-creation indicators in the queue data
+        // Use effectiveProperties which is a Map containing all queue properties
+        const effectiveProperties = formattedQueue.effectiveProperties;
+        if (!effectiveProperties) {
+            return false;
+        }
+        
+        // Check for v1 auto-creation
+        const v1AutoCreateKey = `yarn.scheduler.capacity.${formattedQueue.path}.auto-create-child-queue.enabled`;
+        const v1AutoCreateValue = effectiveProperties.get(v1AutoCreateKey);
+        const v1AutoCreateEnabled = String(v1AutoCreateValue || '').toLowerCase() === 'true';
+        
+        // Check for v2 auto-creation
+        const v2AutoCreateKey = `yarn.scheduler.capacity.${formattedQueue.path}.auto-queue-creation-v2.enabled`;
+        const v2AutoCreateValue = effectiveProperties.get(v2AutoCreateKey);
+        const v2AutoCreateEnabled = String(v2AutoCreateValue || '').toLowerCase() === 'true';
+        
+        
+        return v1AutoCreateEnabled || v2AutoCreateEnabled;
     },
 };
