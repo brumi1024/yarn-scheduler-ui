@@ -5,6 +5,7 @@ class TabView extends EventEmitter {
 
         this.navTabs = DomUtils.qsa('.nav-tab');
         this.tabPanes = DomUtils.qsa('.tab-pane');
+        this.diagnosticButton = DomUtils.getById('diagnostic-button');
 
         // Contextual control containers
         this.queueConfigControls = DomUtils.getById('queue-config-controls');
@@ -14,6 +15,13 @@ class TabView extends EventEmitter {
 
         this._bindNavTabClicks();
         this.appStateModel.subscribe('currentTabChanged', this.render.bind(this));
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const hamburgerMenu = document.getElementById('hamburger-menu');
+        hamburgerButton.addEventListener('click', function () {
+            hamburgerMenu.style.display = hamburgerMenu.style.display === 'none'
+                ? 'block'
+                : 'none'
+        });
     }
 
     _bindNavTabClicks() {
@@ -27,6 +35,9 @@ class TabView extends EventEmitter {
                 }
             });
         }
+        this.diagnosticButton.addEventListener('click', () => {
+            this._emit('diagnostic')
+        })
     }
 
     /**

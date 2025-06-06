@@ -14,6 +14,7 @@ body {
 }
 
 .header {
+    display: flex;
     background: white;
     border-bottom: 1px solid #e0e0e0;
     padding: 0 20px;
@@ -38,6 +39,66 @@ body {
     color: #007bff;
     border-bottom-color: #007bff;
 }
+
+.hamburger {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    width: 40px;
+    height: 40px;
+    padding: 6px;
+    margin: 8px 8px 8px auto;
+    background: white;
+    border: 1px solid #ccc;
+    border-radius: 8px;
+    cursor: pointer;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.08);
+    transition: background 0.2s ease, box-shadow 0.2s ease;
+}
+
+.hamburger:hover {
+    background: #f9f9f9;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.12);
+}
+
+.hamburger .bar {
+    height: 3px;
+    width: 24px;
+    background-color: #333;
+    border-radius: 2px;
+    transition: all 0.3s ease;
+    margin: 3px 0;
+}
+
+/* Hamburger dropdown */
+.hamburger-menu {
+    position: absolute;
+    top: 50px; /* Adjust if needed */
+    right: 20px;
+    background: white;
+    border: 1px solid #ccc;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    z-index: 101;
+}
+
+.hamburger-menu ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+}
+
+.hamburger-menu li a {
+    display: block;
+    padding: 10px 15px;
+    color: #333;
+    text-decoration: none;
+}
+
+.hamburger-menu li a:hover {
+    background-color: #f0f0f0;
+}
+
 
 .controls {
     /* This is the main controls bar, e.g., for queue config tab */
@@ -334,6 +395,12 @@ body {
     background: #6c757d;
     color: white;
 }
+
+.btn-info {
+    background: #786c7d;
+    color: white;
+}
+
 .btn-secondary:disabled {
     background: #e0e0e0 !important;
     color: #6c757d !important;
