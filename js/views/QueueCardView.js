@@ -185,12 +185,20 @@ const QueueCardView = {
         const divider = DomUtils.createElement('hr', 'queue-card-divider');
         const labelArea = DomUtils.createElement('div', 'queue-label-area');
         if (formattedQueue.uiLabels && formattedQueue.uiLabels.length > 0) {
-            labelArea.innerHTML = formattedQueue.uiLabels
-                .map(
-                    (label) =>
-                        `<div class="tooltip"><span class="${DomUtils.escapeXml(label.cssClass)}"}">${DomUtils.escapeXml(label.text)}</span><div class="tooltiptext">${DomUtils.escapeXml(label.tooltip)}</div></div>`
-                )
-                .join('');
+            // Create label elements without old tooltip structure
+            for (const label of formattedQueue.uiLabels) {
+                const labelElement = DomUtils.createElement('span', label.cssClass, null, label.text);
+                
+                // Apply unified tooltip if content exists
+                if (label.tooltip && window.TooltipHelper) {
+                    TooltipHelper.attachTooltip(labelElement, label.tooltip, {
+                        position: 'top',
+                        delay: 500
+                    });
+                }
+                
+                labelArea.appendChild(labelElement);
+            }
         } else {
             labelArea.style.minHeight = '24px'; // Keep space consistent
         }

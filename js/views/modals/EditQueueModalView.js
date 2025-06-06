@@ -31,6 +31,11 @@ class EditQueueModalView extends BaseModalView {
 
         this.formContainer.innerHTML = this._buildHtml(data);
         this._bindFormEvents(data);
+        
+        // Upgrade info icon tooltips to unified system
+        if (window.TooltipHelper) {
+            TooltipHelper.upgradeModalTooltips(this.formContainer);
+        }
     }
 
     _buildHtml(data) {
