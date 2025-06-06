@@ -127,8 +127,22 @@ class ConfigurationOrchestrator {
      * @param {Object} formData - Global config form data
      */
     stageGlobalConfigUpdate(formData) {
-        if (formData && formData.params && Object.keys(formData.params).length > 0) {
-            this.schedulerConfigModel.stageGlobalUpdate(formData.params);
+        const { params, customProperties } = formData;
+        let hasChanges = false;
+        
+        // Stage standard global property updates
+        if (params && Object.keys(params).length > 0) {
+            this.schedulerConfigModel.stageGlobalUpdate(params);
+            hasChanges = true;
+        }
+        
+        // Stage custom global property updates
+        if (customProperties && Object.keys(customProperties).length > 0) {
+            this.schedulerConfigModel.stageGlobalUpdate(customProperties);
+            hasChanges = true;
+        }
+        
+        if (hasChanges) {
             this.notificationView.showInfo('Global settings changes staged.');
         }
     }

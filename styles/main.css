@@ -551,7 +551,7 @@ body {
     user-select: none;
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    gap: 8px;
 }
 
 .collapsible-header:hover {
@@ -574,6 +574,163 @@ body {
     text-transform: uppercase;
     font-weight: 600;
     letter-spacing: 0.5px;
+}
+
+.change-section-header {
+    margin: 0 0 16px 0;
+    font-size: 16px;
+    color: #333;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+}
+
+.global-changes .change-section-header {
+    border-left-color: #6f42c1;
+    background: #f8f7ff;
+}
+
+.global-changes-container {
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #6f42c1;
+    border-radius: 8px;
+    background: white;
+    margin-bottom: 20px;
+}
+
+.global-changes-container .change-section-header {
+    border-bottom: 1px solid #e0e0e0;
+    border-left: none;
+    margin-bottom: 0;
+    border-radius: 8px 8px 0 0;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.global-changes-container .change-section-header:hover {
+    background: #f0f0f8;
+}
+
+.global-changes-container .change-section-header.collapsed {
+    border-bottom: none;
+}
+
+.global-changes-container .change-section-header .toggle-icon {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+    color: #666;
+}
+
+.global-changes-container .change-section-header .change-count {
+    font-size: 12px;
+    color: #666;
+    font-weight: normal;
+    margin-left: auto;
+}
+
+.global-change-content {
+    padding: 16px;
+    background: white;
+}
+
+.queue-changes .change-section-header {
+    border-left-color: #007bff;
+    background: #f8f9fa;
+}
+
+.queue-changes-container {
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #007bff;
+    border-radius: 8px;
+    background: white;
+    margin-bottom: 20px;
+}
+
+.queue-changes-container .change-section-header {
+    border-bottom: 1px solid #e0e0e0;
+    border-left: none;
+    margin-bottom: 0;
+    border-radius: 8px 8px 0 0;
+}
+
+.queue-change-section {
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.queue-change-section:last-child {
+    border-bottom: none;
+}
+
+.queue-section-header {
+    margin: 0;
+    padding: 12px 16px;
+    background: #fafafa;
+    border-bottom: 1px solid #f0f0f0;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    transition: background-color 0.2s ease;
+}
+
+.queue-section-header:hover {
+    background: #f0f0f0;
+}
+
+.queue-section-header.collapsed {
+    border-bottom: none;
+}
+
+.queue-section-header .toggle-icon {
+    font-size: 12px;
+    transition: transform 0.2s ease;
+    color: #666;
+}
+
+.queue-section-header .queue-name {
+    flex: 1;
+}
+
+.queue-section-header .change-count {
+    font-size: 12px;
+    color: #666;
+    font-weight: normal;
+}
+
+.queue-change-content {
+    padding: 16px;
+    background: white;
+}
+
+.operation-subsection {
+    margin-bottom: 16px;
+}
+
+.operation-header {
+    margin: 0 0 8px 0;
+    font-size: 14px;
+    color: #555;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 8px;
+    background: #f8f9fa;
+    border-radius: 4px;
+    border-left: 3px solid #dee2e6;
 }
 
 .change-item {
@@ -647,6 +804,29 @@ body {
     font-size: 12px;
 }
 
+.change-property {
+    margin-bottom: 8px;
+}
+
+.full-property-name {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 13px;
+    font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
+    font-weight: 500;
+    word-break: break-all;
+    display: inline-block;
+    max-width: 100%;
+}
+
+.operation-description {
+    font-size: 14px;
+    color: #333;
+    font-weight: 500;
+}
+
 .change-values {
     font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
     font-size: 13px;
@@ -658,6 +838,9 @@ body {
     padding: 4px 8px;
     border-radius: 4px;
     margin-bottom: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
 .new-value {
@@ -665,6 +848,49 @@ body {
     background: #f0fff4;
     padding: 4px 8px;
     border-radius: 4px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.value-label {
+    font-weight: 600;
+    font-size: 12px;
+    opacity: 0.8;
+}
+
+/* Staged changes indicators */
+.staged-indicator {
+    background: #e3f2fd;
+    color: #1565c0;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 11px;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.has-staged-changes {
+    background: #f8f9ff;
+    border-left: 3px solid #1565c0;
+    padding-left: 12px;
+}
+
+.has-staged-changes .config-item-col-right {
+    background: #f0f4ff;
+    border-radius: 4px;
+}
+
+.property-edit-item.has-staged-changes {
+    background: #f8f9ff;
+    border-left: 3px solid #1565c0;
+    padding-left: 12px;
+}
+
+.property-edit-item.has-staged-changes .property-value-column {
+    background: #f0f4ff;
+    border-radius: 4px;
+    padding: 8px;
 }
 
 .more-changes {
@@ -918,3 +1144,31 @@ body {
     
 }
 
+
+/* Global config collapsible styles */
+.config-group-title.collapsible {
+    cursor: pointer;
+    user-select: none;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.config-group-title.collapsible:hover {
+    color: #0066cc;
+}
+
+.config-group-title.collapsible .collapse-icon {
+    display: inline-block;
+    transition: transform 0.2s;
+    font-size: 12px;
+}
+
+.config-group-title.collapsible:not(.collapsed) .collapse-icon {
+    transform: rotate(90deg);
+}
+
+/* Custom properties group with yellow border - higher specificity */
+.config-group.custom-properties-group {
+    border-left: 3px solid #ffc107 !important; /* Yellow border instead of blue */
+}

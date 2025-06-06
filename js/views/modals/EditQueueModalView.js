@@ -30,6 +30,25 @@ class EditQueueModalView extends BaseModalView {
             modalTitleElement.textContent = `Edit Queue: ${DomUtils.escapeXml(data.displayName || data.path.split('.').pop())}`;
 
         this.formContainer.innerHTML = this._buildHtml(data);
+        
+        // Add modal actions as a separate section outside the form
+        const modalContent = this.formContainer.parentElement.parentElement; // Go up to modal-content
+        
+        // Remove existing modal actions if they exist
+        const existingActions = modalContent.querySelector('.modal-actions');
+        if (existingActions) {
+            existingActions.remove();
+        }
+        
+        // Create new modal actions
+        const modalActions = document.createElement('div');
+        modalActions.className = 'modal-actions';
+        modalActions.innerHTML = `
+            <button class="btn btn-secondary" id="cancel-edit-queue-btn">Cancel</button>
+            <button class="btn btn-primary" id="submit-edit-queue-btn">Stage Changes</button>
+        `;
+        modalContent.appendChild(modalActions);
+        
         this._bindFormEvents(data);
         
         // Upgrade info icon tooltips to unified system
@@ -100,11 +119,7 @@ class EditQueueModalView extends BaseModalView {
         // Custom Properties Section
         formHTML += this._buildCustomPropertiesSectionHtml(path);
 
-        formHTML += `</form>
-                     <div class="modal-actions">
-                        <button class="btn btn-secondary" id="cancel-edit-queue-btn">Cancel</button>
-                        <button class="btn btn-primary" id="submit-edit-queue-btn">Stage Changes</button>
-                     </div>`;
+        formHTML += `</form>`;
         return formHTML;
     }
 
@@ -437,7 +452,7 @@ class EditQueueModalView extends BaseModalView {
                     this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
                 } else {
                     this.controller.notificationView.showInfo('No changes detected to stage.');
-                    this.hide({ Canceled: true, NoChanges: true }); // Close if no changes
+                    // Keep modal open - don't close when no changes
                 }
             });
         }
@@ -654,6 +669,17 @@ class EditQueueModalView extends BaseModalView {
                 if (row) row.remove();
             });
         }
+        
+        // Bind input events for validation
+        const inputs = container.querySelectorAll(`#${rowId} input`);
+        for (const input of inputs) {
+            input.addEventListener('input', () => {
+                this._validateCustomPropertyRow(input.closest('.custom-property-row'));
+            });
+            input.addEventListener('blur', () => {
+                this._validateCustomPropertyRow(input.closest('.custom-property-row'));
+            });
+        }
     }
 
     _collectCustomProperties(form) {
@@ -699,6 +725,45 @@ class EditQueueModalView extends BaseModalView {
     _updateTemplateVisibility(enabled, templateSection) {
         if (templateSection) {
             templateSection.style.display = enabled ? 'block' : 'none';
+        }
+    }
+    
+    /**
+     * Validates a custom property row for empty property names.
+     * @param {HTMLElement} row - The custom property row element
+     * @private
+     */
+    _validateCustomPropertyRow(row) {
+        if (!row) return;
+        
+        const suffixInput = row.querySelector('[data-custom-property="suffix"]');
+        const valueInput = row.querySelector('[data-custom-property="value"]');
+        
+        if (suffixInput && valueInput) {
+            const suffix = suffixInput.value.trim();
+            const value = valueInput.value.trim();
+            
+            // Show error for empty property name if value is provided
+            if (!suffix && value) {
+                suffixInput.classList.add('invalid');
+                suffixInput.style.borderColor = '#dc3545';
+                suffixInput.title = 'Property name cannot be empty';
+            } else {
+                suffixInput.classList.remove('invalid');
+                suffixInput.style.borderColor = '';
+                suffixInput.title = '';
+            }
+            
+            // Show error for empty value if property name is provided
+            if (suffix && !value) {
+                valueInput.classList.add('invalid');
+                valueInput.style.borderColor = '#dc3545';
+                valueInput.title = 'Property value cannot be empty';
+            } else {
+                valueInput.classList.remove('invalid');
+                valueInput.style.borderColor = '';
+                valueInput.title = '';
+            }
         }
     }
 }

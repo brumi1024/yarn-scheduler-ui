@@ -82,7 +82,7 @@
             <div id="scheduler-config-content" class="tab-pane" style="display: none">
                 <div class="controls">
                     <div class="tab-title-header">Global Scheduler Settings</div>
-                    <button class="btn btn-success" id="save-global-config-btn">Save Changes</button>
+                    <button class="btn btn-primary" id="save-global-config-btn">Stage Changes</button>
                 </div>
                 <div id="global-scheduler-settings-container" style="padding: 20px">
                     <p>This section will display global scheduler configurations that are not specific to any queue.</p>
@@ -144,7 +144,9 @@
                     <h2 class="modal-title" id="modal-title">Edit Queue</h2>
                     <button class="close-btn">×</button>
                 </div>
-                <div id="edit-form-container"></div>
+                <div class="modal-body">
+                    <div id="edit-form-container"></div>
+                </div>
             </div>
         </div>
 
@@ -154,7 +156,9 @@
                     <h2 class="modal-title">Add New Queue</h2>
                     <button class="close-btn">×</button>
                 </div>
-                <div id="add-form-container"></div>
+                <div class="modal-body">
+                    <div id="add-form-container"></div>
+                </div>
             </div>
         </div>
 

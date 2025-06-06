@@ -269,8 +269,9 @@ class UIStateManager {
     _renderGlobalConfigView(schedulerConfigModel) {
         if (this.views.globalConfigView && schedulerConfigModel) {
             const configData = schedulerConfigModel.getGlobalConfig();
-            const editMode = this.appStateModel.isGlobalConfigInEditMode();
-            this.views.globalConfigView.render(configData, editMode);
+            const pendingChanges = schedulerConfigModel._queueConfigManager ? 
+                schedulerConfigModel._queueConfigManager.pendingGlobalChanges : new Map();
+            this.views.globalConfigView.render(configData, pendingChanges);
         }
     }
 

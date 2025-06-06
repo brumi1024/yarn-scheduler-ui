@@ -137,37 +137,79 @@ class ChangePreview {
         let html = '<div class="change-diff">';
         
         if (this.options.collapsible) {
-            html += '<h4 class="collapsible-header">Detailed Changes <span class="toggle-icon">▼</span></h4>';
+            html += '<h4 class="collapsible-header"><span class="toggle-icon">▼</span> Detailed Changes</h4>';
             html += '<div class="collapsible-content">';
         } else {
             html += '<h4>Detailed Changes</h4>';
         }
 
-        const groupedChanges = this._groupChangesByType();
+        const groupedChanges = this._groupChangesByQueueAndGlobal();
         let totalShown = 0;
         let totalRemaining = 0;
         
-        for (const [type, changes] of Object.entries(groupedChanges)) {
-            if (changes.length === 0) continue;
+        // Show global changes first
+        if (groupedChanges.global && groupedChanges.global.length > 0) {
+            html += `<div class="change-group global-changes-container">`;
+            html += `<h5 class="change-section-header collapsible-header">`;
+            html += `<span class="toggle-icon">▼</span>`;
+            html += `🌐 Global Scheduler Configuration`;
+            html += `<span class="change-count">(${groupedChanges.global.length} change${groupedChanges.global.length !== 1 ? 's' : ''})</span>`;
+            html += `</h5>`;
             
-            html += `<div class="change-group">`;
-            html += `<h5 class="change-type-header">${this._getTypeDisplayName(type)}</h5>`;
+            html += `<div class="global-change-content collapsible-content">`;
             
-            const canShow = Math.max(0, this.options.maxChanges - totalShown);
-            const changesToShow = changes.slice(0, canShow);
+            const globalByOperation = this._groupChangesByOperation(groupedChanges.global);
+            const { content: globalContent, shown: globalShown, remaining: globalRemaining } = 
+                this._generateOperationSections(globalByOperation, totalShown);
             
-            for (const change of changesToShow) {
-                html += this._generateChangeItem(change);
-                totalShown++;
+            html += globalContent;
+            totalShown += globalShown;
+            totalRemaining += globalRemaining;
+            
+            html += '</div>'; // End collapsible-content
+            html += '</div>'; // End global-changes-container
+        }
+        
+        // Show queue changes grouped together with collapsible sections
+        const queueNames = Object.keys(groupedChanges.queues).sort();
+        if (queueNames.length > 0) {
+            html += `<div class="change-group queue-changes-container">`;
+            html += `<h5 class="change-section-header">📋 Queue Configuration Changes</h5>`;
+            
+            for (const queuePath of queueNames) {
+                const queueChanges = groupedChanges.queues[queuePath];
+                if (queueChanges.length === 0) continue;
+                
+                if (totalShown >= this.options.maxChanges) {
+                    totalRemaining += queueChanges.length;
+                    continue;
+                }
+                
+                // Individual queue section with collapsible content
+                html += `<div class="queue-change-section">`;
+                html += `<h6 class="queue-section-header collapsible-header" data-queue="${DomUtils.escapeXml(queuePath)}">`;
+                html += `<span class="toggle-icon">▼</span>`;
+                html += `<span class="queue-name"><code>${DomUtils.escapeXml(queuePath)}</code></span>`;
+                html += `<span class="change-count">(${queueChanges.length} change${queueChanges.length !== 1 ? 's' : ''})</span>`;
+                html += `</h6>`;
+                
+                html += `<div class="queue-change-content collapsible-content">`;
+                
+                const queueByOperation = this._groupChangesByOperation(queueChanges);
+                const { content: queueContent, shown: queueShown, remaining: queueRemaining } = 
+                    this._generateOperationSections(queueByOperation, totalShown);
+                
+                html += queueContent;
+                totalShown += queueShown;
+                totalRemaining += queueRemaining;
+                
+                html += '</div>'; // End collapsible-content
+                html += '</div>'; // End queue-change-section
+                
+                if (totalShown >= this.options.maxChanges) break;
             }
             
-            if (changes.length > changesToShow.length) {
-                totalRemaining += changes.length - changesToShow.length;
-            }
-            
-            html += '</div>';
-            
-            if (totalShown >= this.options.maxChanges) break;
+            html += '</div>'; // End queue-changes-container
         }
         
         if (totalRemaining > 0) {
@@ -194,17 +236,26 @@ class ChangePreview {
         html += '<div class="change-icon">' + this._getOperationIcon(operation) + '</div>';
         html += '<div class="change-details">';
         
-        // Queue and property info
-        if (queuePath) {
-            html += `<div class="change-location">`;
-            html += `<strong>Queue:</strong> <code>${DomUtils.escapeXml(queuePath)}</code>`;
-            if (property) {
-                html += ` → <strong>${DomUtils.escapeXml(property)}</strong>`;
-            }
+        // Show full YARN property name prominently
+        if (fullKey) {
+            html += `<div class="change-property">`;
+            html += `<code class="full-property-name">${DomUtils.escapeXml(fullKey)}</code>`;
             html += '</div>';
-        } else if (fullKey) {
-            html += `<div class="change-location">`;
-            html += `<strong>Property:</strong> <code>${DomUtils.escapeXml(fullKey)}</code>`;
+        } else if (queuePath && property) {
+            // Construct full property name if not provided
+            const constructedFullKey = `yarn.scheduler.capacity.${queuePath}.${property}`;
+            html += `<div class="change-property">`;
+            html += `<code class="full-property-name">${DomUtils.escapeXml(constructedFullKey)}</code>`;
+            html += '</div>';
+        } else if (queuePath && operation === OPERATION_TYPES.ADD) {
+            // For queue additions, show operation description
+            html += `<div class="change-property">`;
+            html += `<span class="operation-description">Add Queue: <strong>${DomUtils.escapeXml(queuePath)}</strong></span>`;
+            html += '</div>';
+        } else if (queuePath && operation === OPERATION_TYPES.DELETE) {
+            // For queue deletions, show operation description
+            html += `<div class="change-property">`;
+            html += `<span class="operation-description">Delete Queue: <strong>${DomUtils.escapeXml(queuePath)}</strong></span>`;
             html += '</div>';
         }
         
@@ -213,11 +264,11 @@ class ChangePreview {
             html += '<div class="change-values">';
             
             if (operation === OPERATION_TYPES.UPDATE && oldValue !== undefined) {
-                html += `<div class="old-value">- ${DomUtils.escapeXml(String(oldValue))}</div>`;
+                html += `<div class="old-value"><span class="value-label">From:</span> ${DomUtils.escapeXml(String(oldValue))}</div>`;
             }
             
-            if (newValue !== undefined) {
-                html += `<div class="new-value">+ ${DomUtils.escapeXml(String(newValue))}</div>`;
+            if (newValue !== undefined && newValue !== 'New Queue') {
+                html += `<div class="new-value"><span class="value-label">To:</span> ${DomUtils.escapeXml(String(newValue))}</div>`;
             }
             
             html += '</div>';
@@ -261,23 +312,290 @@ class ChangePreview {
     }
 
     /**
-     * Groups changes by operation type.
-     * @returns {Object} Grouped changes
+     * Groups changes by queue and global configuration.
+     * @returns {Object} Grouped changes with global and queues properties
      */
-    _groupChangesByType() {
+    _groupChangesByQueueAndGlobal() {
+        const groups = {
+            global: [],
+            queues: {}
+        };
+        
+        for (const change of this.changes) {
+            // Determine if this is a global change
+            const isGlobalChange = this._isGlobalProperty(change.fullKey);
+            
+            if (isGlobalChange) {
+                groups.global.push(change);
+            } else {
+                // Group by queue path - extract from fullKey if queuePath is missing
+                let queuePath = change.queuePath;
+                
+                // If queuePath is missing but this is a queue property, extract it from fullKey
+                if (!queuePath && change.fullKey && change.fullKey.startsWith('yarn.scheduler.capacity.root.')) {
+                    queuePath = this._extractQueuePathFromProperty(change.fullKey);
+                }
+                
+                if (!groups.queues[queuePath]) {
+                    groups.queues[queuePath] = [];
+                }
+                groups.queues[queuePath].push(change);
+            }
+        }
+        
+        return groups;
+    }
+    
+    /**
+     * Determines if a property key represents a global scheduler property.
+     * @param {string} propertyKey - The full YARN property key
+     * @returns {boolean} True if this is a global property
+     * @private
+     */
+    _isGlobalProperty(propertyKey) {
+        if (!propertyKey) return false;
+        
+        // Simplified logic: Queue properties start with yarn.scheduler.capacity.root
+        // Everything else under yarn.scheduler.capacity is global
+        if (propertyKey.startsWith('yarn.scheduler.capacity.root')) {
+            return false; // This is a queue property
+        }
+        
+        // If it starts with yarn.scheduler.capacity but not .root, it's global
+        if (propertyKey.startsWith('yarn.scheduler.capacity.')) {
+            return true; // This is a global property
+        }
+        
+        return true;
+    }
+    
+    /**
+     * Extracts the queue path from a YARN property key based on actual queue hierarchy.
+     * Uses the definitive queue structure from scheduler configuration.
+     * @param {string} propertyKey - Full YARN property key
+     * @returns {string} The queue path or null if not determinable
+     * @private
+     */
+    _extractQueuePathFromProperty(propertyKey) {
+        if (!propertyKey || !propertyKey.startsWith('yarn.scheduler.capacity.root.')) {
+            return null;
+        }
+        
+        // Remove the prefix: yarn.scheduler.capacity.root.TEST_C.TEST_AAA.test -> TEST_C.TEST_AAA.test
+        const withoutPrefix = propertyKey.substring('yarn.scheduler.capacity.root.'.length);
+        const parts = withoutPrefix.split('.');
+        
+        if (parts.length === 0) {
+            return 'root'; // This is a root property
+        }
+        
+        // Try to access the actual queue hierarchy from the scheduler configuration
+        const queueHierarchy = this._getQueueHierarchy();
+        if (queueHierarchy) {
+            // Use definitive queue structure to determine longest valid queue path
+            const validQueuePath = this._findLongestValidQueuePath('root', parts, queueHierarchy);
+            if (validQueuePath) {
+                return validQueuePath;
+            }
+        }
+        
+        // Fallback to heuristic-based detection if hierarchy is not available
+        return this._extractQueuePathHeuristic(parts);
+    }
+    
+    /**
+     * Gets the queue hierarchy from the scheduler configuration.
+     * @returns {Object|null} Queue hierarchy object or null if not available
+     * @private
+     */
+    _getQueueHierarchy() {
+        try {
+            // Try to access global app instance and scheduler configuration
+            if (typeof window !== 'undefined' && window.app && window.app.schedulerConfigModel) {
+                const config = window.app.schedulerConfigModel.getSchedulerConfig();
+                if (config && config.scheduler && config.scheduler['schedulerInfo']) {
+                    return config.scheduler['schedulerInfo'];
+                }
+            }
+            
+            // Alternative access through global CONFIG if available
+            if (typeof window !== 'undefined' && window.schedulerConfig) {
+                return window.schedulerConfig;
+            }
+            
+            return null;
+        } catch (error) {
+            console.warn('Could not access queue hierarchy for property classification:', error);
+            return null;
+        }
+    }
+    
+    /**
+     * Finds the longest valid queue path by checking against actual queue hierarchy.
+     * @param {string} currentPath - Current queue path being built
+     * @param {Array<string>} remainingParts - Remaining property parts to check
+     * @param {Object} queueData - Queue hierarchy data
+     * @returns {string|null} Longest valid queue path or null
+     * @private
+     */
+    _findLongestValidQueuePath(currentPath, remainingParts, queueData) {
+        if (remainingParts.length === 0) {
+            return currentPath;
+        }
+        
+        // Check if current queue has a 'queues' property defining child queues
+        const queueInfo = this._findQueueInHierarchy(currentPath, queueData);
+        if (!queueInfo || !queueInfo.queues) {
+            // No child queues defined, current path is the longest valid
+            return currentPath;
+        }
+        
+        // Get list of valid child queue names
+        const childQueueNames = queueInfo.queues.queue ? 
+            (Array.isArray(queueInfo.queues.queue) ? queueInfo.queues.queue.map(q => q.queueName) : [queueInfo.queues.queue.queueName]) :
+            [];
+        
+        // Check if the next part is a valid child queue
+        const nextQueueName = remainingParts[0];
+        if (childQueueNames.includes(nextQueueName)) {
+            // This is a valid child queue, continue recursively
+            const nextPath = currentPath + '.' + nextQueueName;
+            return this._findLongestValidQueuePath(nextPath, remainingParts.slice(1), queueData);
+        } else {
+            // Next part is not a valid child queue, current path is the longest valid
+            return currentPath;
+        }
+    }
+    
+    /**
+     * Finds a specific queue in the hierarchy data.
+     * @param {string} queuePath - Queue path to find (e.g., 'root.default.engineering')
+     * @param {Object} queueData - Queue hierarchy data
+     * @returns {Object|null} Queue information or null if not found
+     * @private
+     */
+    _findQueueInHierarchy(queuePath, queueData) {
+        const pathParts = queuePath.split('.');
+        let currentQueue = queueData;
+        
+        // Navigate through the hierarchy following the path
+        for (let i = 0; i < pathParts.length; i++) {
+            const queueName = pathParts[i];
+            
+            if (i === 0 && queueName === 'root') {
+                // Start at root, continue to next part
+                continue;
+            }
+            
+            // Look for this queue name in current level
+            if (currentQueue.queues && currentQueue.queues.queue) {
+                const queues = Array.isArray(currentQueue.queues.queue) ? currentQueue.queues.queue : [currentQueue.queues.queue];
+                const foundQueue = queues.find(q => q.queueName === queueName);
+                
+                if (foundQueue) {
+                    currentQueue = foundQueue;
+                } else {
+                    return null; // Queue not found in hierarchy
+                }
+            } else {
+                return null; // No child queues at this level
+            }
+        }
+        
+        return currentQueue;
+    }
+    
+    /**
+     * Fallback heuristic-based queue path extraction when hierarchy is not available.
+     * Since any string can be a valid queue name, we assume the last part is the property.
+     * @param {Array<string>} parts - Property parts after removing 'yarn.scheduler.capacity.root.'
+     * @returns {string} Best guess queue path
+     * @private
+     */
+    _extractQueuePathHeuristic(parts) {
+        // Without access to the actual queue hierarchy, we can only assume
+        // that the last part is the property name and everything before it is the queue path
+        if (parts.length > 1) {
+            return 'root.' + parts.slice(0, -1).join('.');
+        }
+        
+        return 'root';
+    }
+
+    /**
+     * Groups changes by operation type.
+     * @param {Array} changes - Array of changes to group
+     * @returns {Object} Changes grouped by operation type
+     * @private
+     */
+    _groupChangesByOperation(changes) {
         const groups = {
             [OPERATION_TYPES.ADD]: [],
             [OPERATION_TYPES.UPDATE]: [],
             [OPERATION_TYPES.DELETE]: []
         };
         
-        for (const change of this.changes) {
+        for (const change of changes) {
             if (groups[change.operation]) {
                 groups[change.operation].push(change);
             }
         }
         
         return groups;
+    }
+    
+    /**
+     * Generates HTML sections for each operation type.
+     * @param {Object} operationGroups - Changes grouped by operation
+     * @param {number} currentShown - Number of items already shown
+     * @returns {Object} Object with content, shown count, and remaining count
+     * @private
+     */
+    _generateOperationSections(operationGroups, currentShown) {
+        let html = '';
+        let totalShown = 0;
+        let totalRemaining = 0;
+        
+        // Order: additions, changes, removals
+        const operationOrder = [
+            { type: OPERATION_TYPES.ADD, title: 'Additions', icon: '➕' },
+            { type: OPERATION_TYPES.UPDATE, title: 'Changes', icon: '📝' },
+            { type: OPERATION_TYPES.DELETE, title: 'Removals', icon: '🗑️' }
+        ];
+        
+        for (const { type, title, icon } of operationOrder) {
+            const changes = operationGroups[type] || [];
+            if (changes.length === 0) continue;
+            
+            const remainingSpace = Math.max(0, this.options.maxChanges - (currentShown + totalShown));
+            if (remainingSpace === 0) {
+                totalRemaining += changes.length;
+                continue;
+            }
+            
+            html += `<div class="operation-subsection">`;
+            html += `<h6 class="operation-header">${icon} ${title}</h6>`;
+            
+            const changesToShow = changes.slice(0, remainingSpace);
+            for (const change of changesToShow) {
+                html += this._generateChangeItem(change);
+                totalShown++;
+            }
+            
+            if (changes.length > changesToShow.length) {
+                totalRemaining += changes.length - changesToShow.length;
+            }
+            
+            html += '</div>';
+            
+            if (totalShown + currentShown >= this.options.maxChanges) break;
+        }
+        
+        return {
+            content: html,
+            shown: totalShown,
+            remaining: totalRemaining
+        };
     }
 
     /**
@@ -327,11 +645,42 @@ class ChangePreview {
                 const content = header.nextElementSibling;
                 const icon = header.querySelector('.toggle-icon');
                 
-                if (content && icon) {
-                    content.style.display = content.style.display === 'none' ? 'block' : 'none';
-                    icon.textContent = content.style.display === 'none' ? '▶' : '▼';
+                if (content && content.classList.contains('collapsible-content')) {
+                    const isCollapsed = content.style.display === 'none';
+                    content.style.display = isCollapsed ? 'block' : 'none';
+                    
+                    if (icon) {
+                        icon.textContent = isCollapsed ? '▼' : '▶';
+                    }
+                    
+                    // Add visual feedback for collapsed state
+                    header.classList.toggle('collapsed', !isCollapsed);
                 }
             });
+        }
+        
+        // Set initial state for sections
+        const allCollapsibleHeaders = this.container.querySelectorAll('.collapsible-header');
+        for (const header of allCollapsibleHeaders) {
+            const content = header.nextElementSibling;
+            const icon = header.querySelector('.toggle-icon');
+            
+            if (content && content.classList.contains('collapsible-content')) {
+                // Check if this is the main "Detailed Changes" header
+                const isMainDetailedChanges = header.textContent.includes('Detailed Changes');
+                
+                if (isMainDetailedChanges) {
+                    // Keep main "Detailed Changes" section open
+                    content.style.display = 'block';
+                    if (icon) icon.textContent = '▼';
+                    header.classList.remove('collapsed');
+                } else {
+                    // Collapse queue and global sections for better overview
+                    content.style.display = 'none';
+                    if (icon) icon.textContent = '▶';
+                    header.classList.add('collapsed');
+                }
+            }
         }
     }
 
@@ -345,9 +694,20 @@ class ChangePreview {
         const allChanges = changeLog.getChanges();
         
         for (const change of allChanges) {
+            // Reclassify UPDATE operations as ADD when property wasn't previously configured
+            let displayOperation = change.operation;
+            
+            if (change.operation === OPERATION_TYPES.UPDATE && 
+                change.queuePath && 
+                change.propertyKey &&
+                (change.oldValue === undefined || change.oldValue === null || change.oldValue === '')) {
+                // This is setting a property that wasn't explicitly configured before (was using defaults)
+                displayOperation = OPERATION_TYPES.ADD;
+            }
+            
             changes.push({
                 id: change.id,
-                operation: change.operation,
+                operation: displayOperation,
                 queuePath: change.queuePath,
                 property: change.propertyKey ? PropertyKeyMapper.toSimpleKey(change.propertyKey) : null,
                 fullKey: change.propertyKey,
@@ -360,72 +720,4 @@ class ChangePreview {
         return changes;
     }
 
-    /**
-     * Converts legacy pending changes to preview format.
-     * @param {Object} pendingChanges - Legacy pending changes object
-     * @returns {Array} Array of changes for preview
-     */
-    static fromLegacyPendingChanges(pendingChanges) {
-        const changes = [];
-        
-        // Process queue additions
-        if (pendingChanges.addQueues) {
-            for (const queueData of pendingChanges.addQueues) {
-                changes.push({
-                    id: `add-${queueData.queueName}`,
-                    operation: OPERATION_TYPES.ADD,
-                    queuePath: queueData.queueName,
-                    property: null,
-                    newValue: 'New Queue'
-                });
-                
-                // Add property changes for the new queue
-                for (const [key, value] of Object.entries(queueData.params)) {
-                    // Skip UI helper fields that should not be shown to users
-                    if (key === '_ui_capacityMode') continue;
-                    
-                    changes.push({
-                        id: `add-${queueData.queueName}-${key}`,
-                        operation: OPERATION_TYPES.ADD,
-                        queuePath: queueData.queueName,
-                        property: key,
-                        newValue: value
-                    });
-                }
-            }
-        }
-        
-        // Process queue deletions
-        if (pendingChanges.removeQueues) {
-            for (const queuePath of pendingChanges.removeQueues) {
-                changes.push({
-                    id: `delete-${queuePath}`,
-                    operation: OPERATION_TYPES.DELETE,
-                    queuePath: queuePath,
-                    property: null,
-                    oldValue: 'Queue'
-                });
-            }
-        }
-        
-        // Process queue updates
-        if (pendingChanges.updateQueues) {
-            for (const queueData of pendingChanges.updateQueues) {
-                for (const [key, value] of Object.entries(queueData.params)) {
-                    // Skip UI helper fields that should not be shown to users
-                    if (key === '_ui_capacityMode') continue;
-                    
-                    changes.push({
-                        id: `update-${queueData.queueName}-${key}`,
-                        operation: OPERATION_TYPES.UPDATE,
-                        queuePath: queueData.queueName,
-                        property: key,
-                        newValue: value
-                    });
-                }
-            }
-        }
-        
-        return changes;
-    }
 }

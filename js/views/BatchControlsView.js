@@ -129,8 +129,9 @@ class BatchControlsView extends EventEmitter {
     renderVisibility(changeCount = -1) {
         // If changeCount isn't passed, this method would ideally get it from SchedulerConfigModel.hasPendingChanges()
         // For now, this.render() passes it. Controller will call this.render().
-        const isActiveTabQueueConfig = this.appStateModel.getCurrentTab() === 'queue-config-content';
-        const shouldShow = changeCount > 0 && isActiveTabQueueConfig;
+        const currentTab = this.appStateModel.getCurrentTab();
+        const isActiveTabWithChanges = (currentTab === 'queue-config-content' || currentTab === 'scheduler-config-content');
+        const shouldShow = changeCount > 0 && isActiveTabWithChanges;
 
         if (shouldShow) {
             DomUtils.show(this.batchControlsEl, 'flex');
@@ -148,7 +149,7 @@ class BatchControlsView extends EventEmitter {
 
     /**
      * Updates the change preview with current changes.
-     * @param {Object} changes - Changes to preview (ChangeLog or legacy format)
+     * @param {Object} changes - Changes to preview (ChangeLog format)
      */
     updateChangePreview(changes) {
         if (!this.changePreview) return;
@@ -158,9 +159,6 @@ class BatchControlsView extends EventEmitter {
         if (changes && typeof changes.getChanges === 'function') {
             // ChangeLog format
             previewChanges = ChangePreview.fromChangeLog(changes);
-        } else if (changes) {
-            // Legacy pending changes format
-            previewChanges = ChangePreview.fromLegacyPendingChanges(changes);
         }
 
         this.changePreview.setChanges(previewChanges);

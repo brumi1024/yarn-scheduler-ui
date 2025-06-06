@@ -411,7 +411,8 @@ class QueueConfigurationManager {
         
         for (const [key, value] of Object.entries(properties)) {
             if (!this.oldGlobalProperties.has(key)) {
-                this.oldGlobalProperties.set(key, this.globalProperties.get(key) || '');
+                // Store the actual original value - if it was undefined, keep it as undefined
+                this.oldGlobalProperties.set(key, this.globalProperties.get(key));
             }
             this.pendingGlobalChanges.set(key, value);
         }
@@ -694,6 +695,23 @@ class QueueConfigurationManager {
                 oldValue: null,
                 newValue: null
             });
+        }
+        
+        // Collect global changes
+        if (this.pendingGlobalChanges.size > 0) {
+            for (const [fullKey, newValue] of this.pendingGlobalChanges) {
+                const oldValue = this.oldGlobalProperties.get(fullKey);
+                // If oldValue is undefined, this is a new property (ADD operation)
+                const operation = oldValue === undefined ? 'ADD' : 'UPDATE';
+                allChanges.push({
+                    id: this.globalChangeId || 'global-change',
+                    operation: operation,
+                    queuePath: null, // Global changes don't have a queue path
+                    propertyKey: fullKey,
+                    oldValue: oldValue === undefined ? null : oldValue,
+                    newValue: newValue
+                });
+            }
         }
         
         return allChanges;
