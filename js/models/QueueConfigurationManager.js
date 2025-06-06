@@ -550,8 +550,8 @@ class QueueConfigurationManager {
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    // Use full YARN property key and clean the value for API
-                    params[fullKey] = this._cleanValueForApi(value, simpleKey);
+                    // Use simple key for queue operations as per YARN API documentation
+                    params[simpleKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.addQueues.push({
@@ -563,8 +563,8 @@ class QueueConfigurationManager {
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    // Use full YARN property key and clean the value for API
-                    params[fullKey] = this._cleanValueForApi(value, simpleKey);
+                    // Use simple key for queue operations as per YARN API documentation
+                    params[simpleKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.updateQueues.push({
