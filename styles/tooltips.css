@@ -11,7 +11,7 @@
     text-align: left;
     border-radius: 4px;
     padding: 10px 12px;
-    z-index: 1001; /* Above modals (1000) but below critical UI */
+    z-index: 9999; /* Ensure tooltips appear above all other elements including control bars */
     opacity: 0;
     transition: opacity 0.2s ease-in-out;
     font-size: 0.85rem;

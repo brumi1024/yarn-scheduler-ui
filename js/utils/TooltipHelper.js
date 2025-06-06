@@ -196,6 +196,7 @@ class TooltipHelper {
 
     /**
      * Calculates the optimal position for a tooltip with smart positioning.
+     * Specifically handles control bar collisions and viewport edge cases.
      * @param {HTMLElement} element - The trigger element
      * @param {HTMLElement} tooltip - The tooltip element
      * @param {string} preferredPosition - The preferred position
@@ -208,14 +209,19 @@ class TooltipHelper {
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
         
-        // Get control bar height to avoid collision
-        const controlBar = document.querySelector('.controls');
-        const controlBarHeight = controlBar ? controlBar.getBoundingClientRect().bottom : 0;
+        // Enhanced control bar detection - check for multiple possible control elements
+        const controlElements = [
+            document.querySelector('.controls'),
+            document.querySelector('.header'),
+            document.querySelector('.nav-tabs')
+        ].filter(Boolean);
+        
+        const controlBarHeight = controlElements.length > 0 
+            ? Math.max(...controlElements.map(el => el.getBoundingClientRect().bottom))
+            : 0;
         
         const spacing = 8; // Space between element and tooltip
         
-        let position = { left: 0, top: 0, placement: preferredPosition };
-
         // Calculate positions for each placement option
         const positions = {
             top: {
@@ -240,39 +246,59 @@ class TooltipHelper {
             }
         };
 
-        // Start with preferred position
-        position = positions[preferredPosition];
+        // Enhanced collision detection function
+        const wouldCollideWithControlBar = (pos) => {
+            return pos.top < controlBarHeight + spacing;
+        };
 
-        // Check if preferred position would collide with control bar
-        if (position.top < controlBarHeight) {
-            // Try bottom placement first
-            if (positions.bottom.top + tooltipRect.height <= viewportHeight - spacing) {
-                position = positions.bottom;
-            } else {
-                // Try right if there's space
-                if (positions.right.left + tooltipRect.width <= viewportWidth - spacing) {
-                    position = positions.right;
-                } else if (positions.left.left >= spacing) {
-                    // Try left as last resort
-                    position = positions.left;
-                } else {
-                    // Force bottom placement even if it goes off-screen
-                    position = positions.bottom;
+        const wouldFitInViewport = (pos) => {
+            return pos.left >= spacing && 
+                   pos.left + tooltipRect.width <= viewportWidth - spacing &&
+                   pos.top >= controlBarHeight + spacing &&
+                   pos.top + tooltipRect.height <= viewportHeight - spacing;
+        };
+
+        // Smart positioning algorithm with priority order
+        let position = positions[preferredPosition];
+        
+        // If preferred position doesn't work, try alternatives in order of preference
+        if (!wouldFitInViewport(position) || wouldCollideWithControlBar(position)) {
+            // For queue cards at the top, prioritize bottom placement
+            const alternativeOrder = preferredPosition === 'top' 
+                ? ['bottom', 'right', 'left', 'top']
+                : ['bottom', 'top', 'right', 'left'];
+            
+            let bestPosition = position;
+            
+            for (const placement of alternativeOrder) {
+                const testPosition = positions[placement];
+                
+                if (wouldFitInViewport(testPosition) && !wouldCollideWithControlBar(testPosition)) {
+                    bestPosition = testPosition;
+                    break;
                 }
             }
+            
+            position = bestPosition;
         }
 
-        // Check horizontal boundaries and adjust
+        // Final adjustments for horizontal boundaries
         if (position.left < spacing) {
             position.left = spacing;
         } else if (position.left + tooltipRect.width > viewportWidth - spacing) {
             position.left = viewportWidth - tooltipRect.width - spacing;
         }
 
-        // Check vertical boundaries for top/bottom placements
-        if ((position.placement === 'top' || position.placement === 'bottom') && 
-            position.top < controlBarHeight) {
-            position.top = controlBarHeight + spacing;
+        // Final adjustment for control bar collision (force it below if necessary)
+        if (position.top < controlBarHeight + spacing) {
+            if (position.placement === 'top' || position.placement === 'bottom') {
+                // For top/bottom placements, force below control bar
+                position.top = Math.max(controlBarHeight + spacing, elementRect.bottom + spacing);
+                position.placement = 'bottom';
+            } else {
+                // For left/right placements, adjust vertical position
+                position.top = Math.max(controlBarHeight + spacing, position.top);
+            }
         }
 
         return position;
