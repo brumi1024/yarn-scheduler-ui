@@ -14,14 +14,8 @@ class TabView extends EventEmitter {
         this.nodeLabelsControls = DomUtils.qs('#node-labels-content > .controls');
 
         this._bindNavTabClicks();
+        this._bindHamburgerMenu();
         this.appStateModel.subscribe('currentTabChanged', this.render.bind(this));
-        const hamburgerButton = document.getElementById('hamburger-button');
-        const hamburgerMenu = document.getElementById('hamburger-menu');
-        hamburgerButton.addEventListener('click', function () {
-            hamburgerMenu.style.display = hamburgerMenu.style.display === 'none'
-                ? 'block'
-                : 'none'
-        });
     }
 
     _bindNavTabClicks() {
@@ -38,6 +32,32 @@ class TabView extends EventEmitter {
         this.diagnosticButton.addEventListener('click', () => {
             this._emit('diagnostic')
         })
+    }
+
+    _bindHamburgerMenu() {
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const hamburgerMenu = document.getElementById('hamburger-menu');
+        
+        if (!hamburgerButton || !hamburgerMenu) return;
+
+        // Toggle hamburger menu on button click
+        hamburgerButton.addEventListener('click', (e) => {
+            e.stopPropagation();
+            // Hide all queue dropdowns first (using the same pattern as queue cards)
+            for (const dropdown of DomUtils.qsa('.queue-dropdown.show')) {
+                dropdown.classList.remove('show');
+            }
+            // Toggle hamburger menu
+            hamburgerMenu.classList.toggle('show');
+        });
+
+        // Global click handler to close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            // If click is not inside the hamburger menu, close it
+            if (!hamburgerMenu.contains(e.target) && !hamburgerButton.contains(e.target)) {
+                hamburgerMenu.classList.remove('show');
+            }
+        });
     }
 
     /**

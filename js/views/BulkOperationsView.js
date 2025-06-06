@@ -20,7 +20,7 @@ class BulkOperationsView extends EventEmitter {
         // Create bulk operations toolbar
         this.toolbar = document.createElement('div');
         this.toolbar.className = 'bulk-operations-toolbar';
-        this.toolbar.style.display = 'none';
+        this.toolbar.style.display = 'none'; // Initially hidden
         
         this.toolbar.innerHTML = `
             <div class="bulk-selection-info">
@@ -115,21 +115,35 @@ class BulkOperationsView extends EventEmitter {
     }
 
     /**
-     * Shows the bulk operations toolbar.
+     * Shows the bulk operations toolbar with smooth animation.
      */
     show() {
         this.isVisible = true;
         this.toolbar.style.display = 'flex';
+        
+        // Trigger animation on next frame to ensure display property is applied first
+        requestAnimationFrame(() => {
+            this.toolbar.classList.add('show');
+        });
+        
         this._emit('visibilityChanged', true);
     }
 
     /**
-     * Hides the bulk operations toolbar.
+     * Hides the bulk operations toolbar with smooth animation.
      */
     hide() {
         this.isVisible = false;
-        this.toolbar.style.display = 'none';
+        this.toolbar.classList.remove('show');
         this.bulkOperations.clearSelection();
+        
+        // Hide completely after animation
+        setTimeout(() => {
+            if (!this.isVisible) {
+                this.toolbar.style.display = 'none';
+            }
+        }, 300); // Match CSS transition duration
+        
         this._emit('visibilityChanged', false);
     }
 

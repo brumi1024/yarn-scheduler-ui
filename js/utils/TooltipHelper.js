@@ -92,7 +92,7 @@ class TooltipHelper {
                 TooltipHelper.attachTooltip(icon, content, {
                     position: 'top',
                     delay: 500,
-                    maxWidth: 280 // Slightly wider for longer descriptions
+                    maxWidth: 280
                 });
             }
         }
