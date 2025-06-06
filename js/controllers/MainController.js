@@ -231,8 +231,11 @@ class MainController {
             this.queueTreeView.clearConnectors();
         }
         if (this.batchControlsView) {
-            if (tabId === 'queue-config-content') this.renderBatchControls();
-            else this.batchControlsView.hide();
+            if (tabId === 'queue-config-content' || tabId === 'scheduler-config-content') {
+                this.renderBatchControls();
+            } else {
+                this.batchControlsView.hide();
+            }
         }
 
         switch (tabId) {

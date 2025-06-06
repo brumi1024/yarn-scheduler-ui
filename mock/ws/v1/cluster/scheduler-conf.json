@@ -13,7 +13,7 @@
             "value": "40"
         },
         {
-            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.m7kIjsqti2rNMvvCejwXoCd9c1mxMj4V.capacity",
+            "name": "yarn.scheduler.capacity.root.TEST_B.FOO.capacity.capacity",
             "value": "100"
         },
         {
