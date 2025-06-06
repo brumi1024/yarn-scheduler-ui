@@ -10,7 +10,7 @@ class DiagnosticService {
         const downloadAnchorNode = document.createElement('a');
         downloadAnchorNode.setAttribute("href", dataStr);
         downloadAnchorNode.setAttribute("download",  "diagnostic-" + Date.now() + ".json");
-        document.body.appendChild(downloadAnchorNode); // Required for Firefox
+        document.body.append(downloadAnchorNode); // Required for Firefox
         downloadAnchorNode.click();
         downloadAnchorNode.remove();
     }

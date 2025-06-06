@@ -28,7 +28,7 @@ class TabView extends EventEmitter {
                 }
             });
         }
-        this.diagnosticButton.addEventListener('click', (event) => {
+        this.diagnosticButton.addEventListener('click', () => {
             this._emit('diagnostic')
         })
     }
