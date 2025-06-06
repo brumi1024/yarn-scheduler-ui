@@ -135,7 +135,7 @@ const QueueCardView = {
         });
 
         const actionsMenuContainer = DomUtils.createElement('span', 'queue-actions-menu');
-        const menuButton = DomUtils.createElement('button', 'c', {
+        const menuButton = DomUtils.createElement('button', 'queue-menu-btn', {
             'aria-label': 'Queue actions',
             tabindex: '0',
         });
