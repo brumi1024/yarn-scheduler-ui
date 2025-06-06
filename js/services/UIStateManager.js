@@ -18,10 +18,8 @@ class UIStateManager {
         // Tab changes
         this.appStateModel.subscribe('currentTabChanged', (tabId) => this._handleTabChange(tabId));
         
-        // Partition/search/sort changes
+        // Partition changes - search/sort are handled by MainController
         this.appStateModel.subscribe('selectedPartitionChanged', () => this._renderQueueRelatedViews());
-        this.appStateModel.subscribe('searchTermChanged', () => this._renderQueueTreeView());
-        this.appStateModel.subscribe('sortCriteriaChanged', () => this._renderQueueTreeView());
         
         // Global config edit mode
         this.appStateModel.subscribe('globalConfigEditModeChanged', () => {
@@ -366,21 +364,15 @@ class UIStateManager {
      * @private
      */
     _adjustQueueLayoutForBulkBar(showingBulkBar) {
-        const treeContainer = document.getElementById('queue-tree');
-        if (!treeContainer) return;
-
-        if (showingBulkBar) {
-            treeContainer.style.marginTop = '80px'; // Adjust based on toolbar height
-        } else {
-            treeContainer.style.marginTop = '';
-        }
-
-        // Re-render connectors after layout change
+        // With the new smooth animation system, the bulk toolbar handles its own spacing
+        // No need to manually adjust margins which can cause scrollbar issues
+        
+        // Only re-render connectors after a brief delay to account for animations
         setTimeout(() => {
             if (this.views.queueTreeView && this.views.queueTreeView.getCurrentFormattedHierarchy()) {
                 this.views.queueTreeView.clearConnectors();
                 this.views.queueTreeView._scheduleConnectorDraw(this.views.queueTreeView.getCurrentFormattedHierarchy());
             }
-        }, 100);
+        }, 350); // Slightly longer delay to account for animation duration
     }
 }
