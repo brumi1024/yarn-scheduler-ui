@@ -5,6 +5,7 @@ class TabView extends EventEmitter {
 
         this.navTabs = DomUtils.qsa('.nav-tab');
         this.tabPanes = DomUtils.qsa('.tab-pane');
+        this.diagnosticButton = DomUtils.getById('diagnostic-button');
 
         // Contextual control containers
         this.queueConfigControls = DomUtils.getById('queue-config-controls');
@@ -27,6 +28,9 @@ class TabView extends EventEmitter {
                 }
             });
         }
+        this.diagnosticButton.addEventListener('click', (event) => {
+            this._emit('diagnostic')
+        })
     }
 
     /**

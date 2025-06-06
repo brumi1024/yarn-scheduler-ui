@@ -50,6 +50,12 @@ class MainController {
             this.notificationView
         );
 
+        this.diagnosticService = new DiagnosticService(
+            this.appStateModel,
+            this.schedulerConfigModel,
+            this.schedulerInfoModel
+        );
+
         this._bindAppEvents();
     }
 
@@ -79,6 +85,7 @@ class MainController {
 
         // --- View Event Listeners ---
         this.tabView.subscribe('tabClicked', (tabId) => this.appStateModel.setCurrentTab(tabId));
+        this.tabView.subscribe('diagnostic', () => this.diagnosticService.run());
 
         if (this.controlsView) {
             this.controlsView.subscribe('partitionSelected', (partition) =>
