@@ -17,9 +17,22 @@
                 <li class="nav-tab" data-tab="placement-rules-content">Placement Rules</li>
                 <li class="nav-tab" data-tab="node-labels-content">Node Labels</li>
             </ul>
-            <button class="diagnostic-button" id="diagnostic-button">
-                <span class="icon">💾</span> Download Diagnostics
+
+            <!-- Hamburger Menu Button -->
+            <button class="hamburger" id="hamburger-button" aria-label="Toggle navigation">
+                <span class="bar"></span>
+                <span class="bar"></span>
+                <span class="bar"></span>
             </button>
+
+            <!-- Optional dropdown menu -->
+            <div class="hamburger-menu" id="hamburger-menu" style="display: none;">
+                <ul>
+                    <li><a href="#" id="diagnostic-button">Download Diagnostics</a></li>
+                    <li><a href="#">About</a></li>
+                    <li><a href="#">Help</a></li>
+                </ul>
+            </div>
         </div>
 
         <div class="controls" id="queue-config-controls">
@@ -158,6 +171,21 @@
                 <div id="info-form-container"></div>
             </div>
         </div>
+
+        <script>
+            document.addEventListener('DOMContentLoaded', function () {
+                const hamburgerButton = document.getElementById('hamburger-button');
+                const hamburgerMenu = document.getElementById('hamburger-menu');
+
+                hamburgerButton.addEventListener('click', function () {
+                    if (hamburgerMenu.style.display === 'none' || hamburgerMenu.style.display === '') {
+                        hamburgerMenu.style.display = 'block';
+                    } else {
+                        hamburgerMenu.style.display = 'none';
+                    }
+                });
+            });
+        </script>
 
         <!-- MVC Framework Scripts -->
         <script src="js/config/config.js"></script>
