@@ -1,0 +1,130 @@
+/* Unified Tooltip Styles */
+
+.has-tooltip {
+    cursor: help;
+}
+
+.unified-tooltip {
+    position: fixed;
+    background-color: #212529;
+    color: #f8f9fa;
+    text-align: left;
+    border-radius: 4px;
+    padding: 10px 12px;
+    z-index: 9999; /* Ensure tooltips appear above all other elements including control bars */
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    line-height: 1.4;
+    border: 1px solid #dee2e6;
+    pointer-events: none; /* Prevent tooltip from interfering with mouse events */
+    word-wrap: break-word;
+}
+
+.unified-tooltip.tooltip-visible {
+    opacity: 1;
+}
+
+/* Arrow styles for different placements */
+.unified-tooltip::after {
+    content: "";
+    position: absolute;
+    border-width: 6px;
+    border-style: solid;
+}
+
+.unified-tooltip.tooltip-top::after {
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: #212529 transparent transparent transparent;
+}
+
+.unified-tooltip.tooltip-bottom::after {
+    bottom: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-color: transparent transparent #212529 transparent;
+}
+
+.unified-tooltip.tooltip-left::after {
+    top: 50%;
+    left: 100%;
+    transform: translateY(-50%);
+    border-color: transparent transparent transparent #212529;
+}
+
+.unified-tooltip.tooltip-right::after {
+    top: 50%;
+    right: 100%;
+    transform: translateY(-50%);
+    border-color: transparent #212529 transparent transparent;
+}
+
+/* Legacy tooltip styles - keep for existing queue cards during transition */
+.tooltip {
+    position: relative;
+    display: inline-block;
+    cursor: pointer;
+}
+
+.tooltip .tooltiptext {
+    visibility: hidden;
+    width: 220px;
+    background-color: #212529;
+    color: #f8f9fa;
+    text-align: left;
+    border-radius: 4px;
+    padding: 10px 12px;
+    position: absolute;
+    z-index: 10;
+    bottom: 125%;
+    left: 50%;
+    transform: translateX(-50%);
+    opacity: 0;
+    transition: opacity 0.2s ease-in-out;
+    font-size: 0.85rem;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+    line-height: 1.4;
+    border: 1px solid #dee2e6;
+}
+
+.tooltip .tooltiptext::after {
+    content: "";
+    position: absolute;
+    top: 100%;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 6px;
+    border-style: solid;
+    border-color: #212529 transparent transparent transparent;
+}
+
+.tooltip:hover .tooltiptext {
+    visibility: visible;
+    opacity: 1;
+}
+
+/* Accessibility improvements */
+.has-tooltip:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 768px) {
+    .unified-tooltip {
+        max-width: 250px;
+        font-size: 0.8rem;
+        padding: 8px 10px;
+    }
+}
+
+@media (max-width: 480px) {
+    .unified-tooltip {
+        max-width: 200px;
+        font-size: 0.75rem;
+        padding: 6px 8px;
+    }
+}
