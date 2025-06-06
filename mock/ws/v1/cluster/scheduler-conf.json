@@ -2,7 +2,7 @@
     "property": [
         {
             "name": "yarn.scheduler.capacity.legacy-queue-mode.enabled",
-            "value": "false"
+            "value": "true"
         },
         {
             "name": "yarn.scheduler.capacity.root.TEST_B.FOO.maximum-capacity",

@@ -130,7 +130,8 @@
 }
 
 .queue-info-btn,
-.queue-menu-btn {
+.queue-menu-btn,
+.queue-template-btn {
     border: 1.5px solid #bdbdbd;
     border-radius: 6px;
     background: #f5f7fa;
@@ -150,7 +151,9 @@
 .queue-info-btn:hover,
 .queue-info-btn:focus,
 .queue-menu-btn:hover,
-.queue-menu-btn:focus {
+.queue-menu-btn:focus,
+.queue-template-btn:hover,
+.queue-template-btn:focus {
     border-color: #1976d2;
     box-shadow: 0 2px 6px rgba(33, 150, 243, 0.1);
     background: #e3f0fd;

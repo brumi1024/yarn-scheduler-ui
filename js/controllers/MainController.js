@@ -120,6 +120,7 @@ class MainController {
         if (this.queueTreeView) {
             this.queueTreeView.subscribe('editQueueClicked', (queuePath) => this.handleOpenEditQueueModal(queuePath));
             this.queueTreeView.subscribe('infoQueueClicked', (queuePath) => this.handleOpenInfoQueueModal(queuePath));
+            this.queueTreeView.subscribe('templateConfigClicked', (queuePath) => this.handleOpenTemplateConfigModal(queuePath));
             this.queueTreeView.subscribe('addChildQueueClicked', (parentPath) =>
                 this.handleOpenAddQueueModal(parentPath)
             );
@@ -340,6 +341,15 @@ class MainController {
 
     handleOpenInfoQueueModal(queuePath) {
         this.uiStateManager.showInfoQueueModal(
+            queuePath,
+            { schedulerConfigModel: this.schedulerConfigModel, schedulerInfoModel: this.schedulerInfoModel, appStateModel: this.appStateModel },
+            this.viewDataFormatterService,
+            this.notificationView
+        );
+    }
+
+    handleOpenTemplateConfigModal(queuePath) {
+        this.uiStateManager.showTemplateConfigModal(
             queuePath,
             { schedulerConfigModel: this.schedulerConfigModel, schedulerInfoModel: this.schedulerInfoModel, appStateModel: this.appStateModel },
             this.viewDataFormatterService,
