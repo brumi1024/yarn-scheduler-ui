@@ -9,6 +9,7 @@
         <link rel="stylesheet" href="styles/modals.css" />
         <link rel="stylesheet" href="styles/notification.css" />
         <link rel="stylesheet" href="styles/tooltips.css" />
+        <link rel="stylesheet" href="styles/toggle-switch.css" />
     </head>
     <body>
         <div class="header">
@@ -63,15 +64,7 @@
             <div id="scheduler-config-content" class="tab-pane" style="display: none">
                 <div class="controls">
                     <div class="tab-title-header">Global Scheduler Settings</div>
-                    <div id="global-config-actions" style="margin-left: auto; display: flex; gap: 10px">
-                        <button class="btn btn-secondary" id="edit-global-config-btn">Edit Settings</button>
-                        <button class="btn btn-success" id="save-global-config-btn" style="display: none">
-                            Save Changes
-                        </button>
-                        <button class="btn btn-secondary" id="cancel-global-config-btn" style="display: none">
-                            Cancel
-                        </button>
-                    </div>
+                    <button class="btn btn-success" id="save-global-config-btn">Save Changes</button>
                 </div>
                 <div id="global-scheduler-settings-container" style="padding: 20px">
                     <p>This section will display global scheduler configurations that are not specific to any queue.</p>

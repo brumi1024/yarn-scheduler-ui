@@ -212,10 +212,13 @@ class EditQueueModalView extends BaseModalView {
                     ${warningText ? `<p class="form-help" style="color: #dc3545; margin-top: 5px;">${warningText}</p>` : ''}
                 </div>
                 <div class="property-value-column">
-                    <select class="form-input" id="auto-creation-enabled" data-simple-key="${propertyKey}" data-original-value="${currentValue ? 'true' : 'false'}" ${cannotEnableLegacy && !shouldUseV2 ? 'disabled' : ''}>
-                        <option value="false" ${!currentValue ? 'selected' : ''}>false</option>
-                        <option value="true" ${currentValue ? 'selected' : ''}>true</option>
-                    </select>
+                    <div class="toggle-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" class="form-input" id="auto-creation-enabled" data-simple-key="${propertyKey}" data-original-value="${currentValue ? 'true' : 'false'}" ${currentValue ? 'checked' : ''} ${cannotEnableLegacy && !shouldUseV2 ? 'disabled' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label ${currentValue ? 'active' : ''}">${currentValue ? 'true' : 'false'}</span>
+                    </div>
                 </div>
             </div>
         `;
@@ -353,10 +356,14 @@ class EditQueueModalView extends BaseModalView {
             }
             html += `</select>`;
         } else if (meta.type === 'boolean') {
-            html += `<select class="form-input" id="${inputId}" ${dataAttributes}>
-                        <option value="true" ${String(currentValue) === 'true' ? 'selected' : ''}>true</option>
-                        <option value="false" ${String(currentValue) === 'false' ? 'selected' : ''}>false</option>
-                     </select>`;
+            const isChecked = String(currentValue) === 'true';
+            html += `<div class="toggle-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="${inputId}" ${dataAttributes} ${isChecked ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label ${isChecked ? 'active' : ''}">${isChecked ? 'true' : 'false'}</span>
+                     </div>`;
         } else {
             let inputType = meta.type === 'number' || meta.type === 'percentage' ? 'number' : 'text';
             if (
@@ -404,6 +411,9 @@ class EditQueueModalView extends BaseModalView {
                 this._updateCapacityPlaceholder(capacityInput, newMode);
             });
         }
+
+        // Bind toggle switch events for boolean properties
+        this._bindToggleSwitchEvents(form);
 
         const accessibleLabelsInputElement = DomUtils.qs('#edit-queue-accessible-node-labels-list-input', form);
         if (accessibleLabelsInputElement) {
@@ -460,7 +470,15 @@ class EditQueueModalView extends BaseModalView {
 
             const simpleOrPartialKey = inputElement.dataset.simpleKey;
             const originalValue = inputElement.dataset.originalValue;
-            let newValue = inputElement.value.trim(); // Trim all input values
+            
+            // Handle different input types
+            let newValue;
+            if (inputElement.type === 'checkbox') {
+                // For toggle switches (boolean properties)
+                newValue = inputElement.checked ? 'true' : 'false';
+            } else {
+                newValue = inputElement.value.trim(); // Trim all input values
+            }
 
             if (simpleOrPartialKey) {
                 let hasChanged = newValue !== originalValue;
@@ -560,6 +578,28 @@ class EditQueueModalView extends BaseModalView {
             }
         }
         capacityInput.setAttribute('placeholder', placeholder);
+    }
+
+    /**
+     * Binds toggle switch events to update labels when switches are toggled.
+     * @param {HTMLElement} form - The form element containing toggle switches
+     * @private
+     */
+    _bindToggleSwitchEvents(form) {
+        const toggleSwitches = form.querySelectorAll('.toggle-switch input[type="checkbox"]');
+        
+        for (const toggleInput of toggleSwitches) {
+            toggleInput.addEventListener('change', (event) => {
+                const isChecked = event.target.checked;
+                const toggleContainer = event.target.closest('.toggle-container');
+                const label = toggleContainer.querySelector('.toggle-label');
+                
+                if (label) {
+                    label.textContent = isChecked ? 'true' : 'false';
+                    label.classList.toggle('active', isChecked);
+                }
+            });
+        }
     }
 
     _bindCustomPropertiesEvents(form) {
