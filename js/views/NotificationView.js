@@ -14,6 +14,31 @@ class NotificationView {
             loading:
                 '<div class="loading-spinner" style="width:18px;height:18px;border-width:2px;border-top-color:#6b7280;"></div>',
         };
+
+        this.eventUnsubscribers = [];
+    }
+
+    /**
+     * Initialize EventBus subscriptions
+     * Called after all scripts are loaded
+     */
+    init() {
+        // Use helper function to get EventBus instance
+        const eventBus = getEventBus();
+        
+        if (!eventBus || typeof eventBus.on !== 'function') {
+            console.error('EventBus is not properly initialized:', eventBus);
+            return;
+        }
+        
+        // Subscribe to EventBus notifications
+        this.eventUnsubscribers.push(
+            eventBus.on('notification:success', (message) => this.showSuccess(message)),
+            eventBus.on('notification:error', (message) => this.showError(message)),
+            eventBus.on('notification:warning', (message) => this.showWarning(message)),
+            eventBus.on('notification:info', (message) => this.showInfo(message)),
+            eventBus.on('notification:loading', (message) => this.show({ message, type: 'loading', duration: 0 }))
+        );
     }
 
     showSuccess(message) {

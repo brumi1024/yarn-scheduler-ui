@@ -62,10 +62,7 @@ class BaseModalView extends EventEmitter {
         
         // Clean up any tooltips in the modal
         if (window.TooltipHelper) {
-            const tooltipElements = this.modalEl.querySelectorAll('.has-tooltip');
-            for (const element of tooltipElements) {
-                TooltipHelper.removeTooltip(element);
-            }
+            TooltipHelper.cleanupTooltipsInContainer(this.modalEl);
         }
         
         this.modalEl.classList.remove('show');
@@ -111,6 +108,7 @@ class BaseModalView extends EventEmitter {
             this.modalEl.removeEventListener('click', this._boundHandleOverlayClick);
         }
         this._emit('destroyed');
-        this.events = {}; // Clear listeners
+        // Don't clear all event listeners - modals are reused and need to maintain controller subscriptions
+        // this.events = {}; // Clear listeners
     }
 }

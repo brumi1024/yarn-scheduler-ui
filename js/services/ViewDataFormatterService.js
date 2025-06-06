@@ -29,9 +29,6 @@ class ViewDataFormatterService {
         return typeof valueString === 'string' && valueString.startsWith('[') && valueString.endsWith(']');
     }
 
-    _mapSimpleKeyToFullYarnKey(queuePath, simpleOrPartialKey) {
-        return PropertyKeyMapper.toFullKey(queuePath, simpleOrPartialKey);
-    }
 
     formatQueueHierarchyForView(schedulerConfigModel, schedulerInfoModel, appStateModel, forValidationOnly = false) {
         const configManager = schedulerConfigModel.getSchedulerTrieRoot();
@@ -59,6 +56,14 @@ class ViewDataFormatterService {
         // Skip non-queue nodes unless they have queue children
         if (!queueNode.isQueue && queueNode.children.size === 0) {
             return null;
+        }
+
+        // Filter by selected partition - skip queues that don't have access to it
+        if (selectedPartition && selectedPartition !== DEFAULT_PARTITION && selectedPartition !== '*') {
+            const effectiveProperties = queueNode.getEffectiveProperties();
+            if (!this._queueHasAccessToPartition(basePath, effectiveProperties, selectedPartition)) {
+                return null;
+            }
         }
 
         let operationType = null;
@@ -112,6 +117,54 @@ class ViewDataFormatterService {
 
         formattedNode.queueType = activeChildrenCount > 0 ? 'parent' : 'leaf';
         return formattedNode;
+    }
+
+    /**
+     * Checks if a queue has access to a specific partition/node label
+     * @param {string} queuePath - Queue path
+     * @param {Map} effectiveProperties - Queue's effective properties
+     * @param {string} selectedPartition - The partition to check access for
+     * @returns {boolean} True if queue has access to the partition
+     * @private
+     */
+    _queueHasAccessToPartition(queuePath, effectiveProperties, selectedPartition) {
+        // Root queue always has access to all partitions
+        if (queuePath === 'root') {
+            return true;
+        }
+
+        // Get accessible node labels for this queue
+        const anlKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
+        const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
+        const accessibleLabelsString = String(effectiveProperties.get(anlKey) || anlDefault);
+
+        // Parse accessible labels
+        if (accessibleLabelsString === '*') {
+            // Queue has access to all partitions
+            return true;
+        }
+
+        if (accessibleLabelsString.trim() === ' ' || accessibleLabelsString.trim() === '') {
+            // Queue only has access to default partition
+            return selectedPartition === DEFAULT_PARTITION;
+        }
+
+        // If using default value ('*'), queue has access to all partitions
+        if (accessibleLabelsString === anlDefault && anlDefault === '*') {
+            return true;
+        }
+
+        // Check if selected partition is in the accessible labels list
+        const accessibleLabels = accessibleLabelsString.split(',')
+            .map(label => label.trim())
+            .filter(label => label && label !== '*');
+
+        // If '*' is in the list, queue has access to all partitions
+        if (accessibleLabelsString.includes('*')) {
+            return true;
+        }
+
+        return accessibleLabels.includes(selectedPartition);
     }
 
     // This method is no longer needed with unified QueueConfigurationManager
@@ -200,7 +253,7 @@ class ViewDataFormatterService {
         }
 
         // --- Handle Node Label Specific Capacities for Display ---
-        this._applyPartitionSpecificDisplayCapacity(formattedNode, queuePath, effectiveProperties, selectedPartition);
+        NodeLabelService.applyPartitionSpecificDisplayCapacity(formattedNode, queuePath, effectiveProperties, selectedPartition, this);
 
         if (forValidationOnly) return formattedNode;
 
@@ -263,37 +316,11 @@ class ViewDataFormatterService {
                 formattedNode[meta.key] = value;
             }
         }
-        const labelsListKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-        const anlFullPlaceholderKey = `yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`;
-        const anlDefault = NODE_LABEL_CONFIG_METADATA[anlFullPlaceholderKey]?.defaultValue || '*';
+        const labelsListKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
+        const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
         formattedNode['accessible-node-labels'] = String(effectiveProperties.get(labelsListKey) || anlDefault);
     }
 
-    _applyPartitionSpecificDisplayCapacity(formattedNode, queuePath, effectiveProperties, selectedPartition) {
-        if (selectedPartition && selectedPartition !== DEFAULT_PARTITION && selectedPartition !== '*') {
-            const labelCapacityKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels.${selectedPartition}.capacity`;
-            const labelMaxCapacityKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels.${selectedPartition}.maximum-capacity`;
-
-            if (effectiveProperties.has(labelCapacityKey)) {
-                const labelCapacityValue = effectiveProperties.get(labelCapacityKey);
-                formattedNode.capacityDisplayForLabel = this._formatCapacityForDisplay(
-                    labelCapacityValue,
-                    CAPACITY_MODES.PERCENTAGE,
-                    '100%'
-                );
-                formattedNode.capacityDetailsForLabel = [];
-            }
-            if (effectiveProperties.has(labelMaxCapacityKey)) {
-                const labelMaxCapacityValue = effectiveProperties.get(labelMaxCapacityKey);
-                formattedNode.maxCapacityDisplayForLabel = this._formatCapacityForDisplay(
-                    labelMaxCapacityValue,
-                    CAPACITY_MODES.PERCENTAGE,
-                    '100%'
-                );
-                formattedNode.maxCapacityDetailsForLabel = [];
-            }
-        }
-    }
 
     _determineEffectiveCapacityMode(queuePath, effectiveProperties) {
         return CapacityValueParser.determineMode(queuePath, effectiveProperties);
@@ -310,8 +337,23 @@ class ViewDataFormatterService {
     _formatCapacityForDisplay(rawValue, mode, defaultValueForEmptyOrInvalid) {
         let valueString = rawValue !== undefined && rawValue !== null ? String(rawValue).trim() : '';
 
-        if (valueString === '' || valueString === null || valueString === undefined) {
-            valueString = String(defaultValueForEmptyOrInvalid).trim();
+        if (!valueString) {
+            valueString = String(defaultValueForEmptyOrInvalid || '').trim();
+        }
+
+        if (!valueString) {
+            return mode === CAPACITY_MODES.PERCENTAGE ? '0%' : '0';
+        }
+
+        // Parse and format using CapacityValueParser
+        const parsed = CapacityValueParser.parse(valueString);
+        if (parsed.isValid) {
+            // Add % symbol for percentage display
+            if (parsed.type === CAPACITY_MODES.PERCENTAGE) {
+                return `${parsed.value.toFixed(1)}%`;
+            }
+            // Format using the standard formatter
+            return CapacityValueParser.format(parsed);
         }
 
         if (!Number.isNaN(Number.parseFloat(valueString))) {
@@ -320,24 +362,11 @@ class ViewDataFormatterService {
             if (mode === CAPACITY_MODES.WEIGHT) return `${number_.toFixed(1)}w`;
         }
 
-        if (mode === CAPACITY_MODES.PERCENTAGE && valueString.endsWith('%')) return valueString;
-        if (mode === CAPACITY_MODES.WEIGHT && valueString.endsWith('w')) return valueString;
-        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && this._isVectorString(valueString))
-            return valueString;
-
-        if (!Number.isNaN(Number.parseFloat(valueString))) {
-            // Check again if it was just a number but wrong mode initially
-            const number_ = Number.parseFloat(valueString);
-            if (mode === CAPACITY_MODES.PERCENTAGE) return `${number_.toFixed(1)}%`;
-            if (mode === CAPACITY_MODES.WEIGHT) return `${number_.toFixed(1)}w`;
-        }
-
-        // If it's supposed to be absolute/vector but isn't, return default vector
         if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && !this._isVectorString(valueString)) {
             return this._getDefaultCapacityValue(CAPACITY_MODES.ABSOLUTE);
         }
 
-        return String(defaultValueForEmptyOrInvalid); // Last resort
+        return String(defaultValueForEmptyOrInvalid);
     }
 
     _generateUILabels(formattedNode, effectiveProperties, queuePath) {
@@ -371,27 +400,8 @@ class ViewDataFormatterService {
             });
         }
 
-        // Check for both v1 and v2 auto-creation using effectiveProperties
-        const v1AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-create-child-queue.enabled`;
-        const v2AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.enabled`;
-        const v1AutoCreateEnabled = String(effectiveProperties.get(v1AutoCreateKey) || '').toLowerCase() === 'true';
-        const v2AutoCreateEnabled = String(effectiveProperties.get(v2AutoCreateKey) || '').toLowerCase() === 'true';
-        
-        if (v1AutoCreateEnabled) {
-            labels.push({
-                text: '⚡ Auto-Create v1',
-                cssClass: 'queue-tag tag-auto-create-v1',
-                tooltip: 'Legacy Auto Queue Creation (v1). Automatically creates child leaf queues based on user or group mappings using traditional template properties. These queues inherit properties from the parent\'s leaf-queue-template configuration and can be automatically deleted after inactivity.',
-            });
-        }
-        
-        if (v2AutoCreateEnabled) {
-            labels.push({
-                text: '🚀 Auto-Create v2',
-                cssClass: 'queue-tag tag-auto-create-v2',
-                tooltip: 'Flexible Auto Queue Creation (v2). Advanced auto-creation mode with support for different template scopes (general, parent, leaf), management policies, and enhanced flexibility. Available in weight-based capacity modes and non-legacy queue configurations.',
-            });
-        }
+        const autoCreationLabels = AutoCreationService.generateAutoCreationLabels(queuePath, effectiveProperties);
+        labels.push(...autoCreationLabels);
         return labels;
     }
 
@@ -447,32 +457,40 @@ class ViewDataFormatterService {
             isLegacyMode: isLegacyMode,
         };
 
+        // Get selected partition for context-aware property mapping
+        const selectedPartition = appStateModel.getSelectedNodeLabel();
+        
         for (const category of QUEUE_CONFIG_METADATA) {
             for (const [placeholderKey, meta] of Object.entries(category.properties)) {
-                const fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
+                let fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
+                
+                // For capacity and maximum-capacity, use label-specific properties if a partition is selected
+                if (selectedPartition && selectedPartition !== DEFAULT_PARTITION) {
+                    if (meta.key === 'capacity') {
+                        fullYarnKey = NodeLabelService.getLabelCapacityKey(queuePath, selectedPartition);
+                    } else if (meta.key === 'maximum-capacity') {
+                        fullYarnKey = NodeLabelService.getLabelMaxCapacityKey(queuePath, selectedPartition);
+                    }
+                }
+                
                 const value = baseProperties.get(fullYarnKey);
                 const isDefault = value === undefined;
                 // Show empty string for unconfigured properties, actual value for configured ones
                 dataForModal.properties[meta.key] = isDefault ? '' : String(value);
-                dataForModal.propertyDefaults[meta.key] = isDefault;
+                // Use DefaultValueProvider to check if using default
+                dataForModal.propertyDefaults[meta.key] = isDefault || 
+                    DefaultValueProvider.isUsingDefault(queuePath, meta.key, value);
             }
         }
+        
+        // Add partition context information
+        dataForModal.selectedPartition = selectedPartition;
 
-        const anlKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-        const anlFullPlaceholderKey = `yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`;
-        const anlDefault = NODE_LABEL_CONFIG_METADATA[anlFullPlaceholderKey]?.defaultValue || '*';
-        dataForModal.nodeLabelData.accessibleNodeLabelsString = String(baseProperties.get(anlKey) || anlDefault);
-
-        for (const [key, value] of baseProperties.entries()) {
-            const labelPrefix = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels.`;
-            if (key.startsWith(labelPrefix) && key !== anlKey) {
-                const simpleSubKey = key.slice(labelPrefix.length);
-                dataForModal.nodeLabelData.labelSpecificParams[simpleSubKey] = String(value);
-            }
-        }
+        // Populate node label data using NodeLabelService
+        NodeLabelService.populateNodeLabelData(dataForModal, queuePath, baseProperties);
 
         // Populate auto-creation data
-        this._populateAutoCreationData(dataForModal, queuePath, baseProperties);
+        AutoCreationService.populateAutoCreationData(dataForModal, queuePath, baseProperties);
 
         return dataForModal;
     }
@@ -628,107 +646,10 @@ class ViewDataFormatterService {
             }
         }
 
-        infoData.nodeLabelInfo.push({
-            label: 'Accessible Node Labels (Effective)',
-            value: targetNode['accessible-node-labels'],
-        });
-        const labelPrefix = `yarn.scheduler.capacity.${targetNode.path}.accessible-node-labels.`;
-        for (const [key, value] of targetNode.effectiveProperties.entries()) {
-            if (
-                key.startsWith(labelPrefix) &&
-                key !== `yarn.scheduler.capacity.${targetNode.path}.accessible-node-labels`
-            ) {
-                const subKey = key.slice(labelPrefix.length);
-                infoData.nodeLabelInfo.push({ label: `Effective Label '${subKey}'`, value: String(value) });
-            }
-        }
+        // Populate node label info using NodeLabelService
+        NodeLabelService.populateNodeLabelInfo(infoData, targetNode);
 
         return infoData;
     }
 
-    _populateAutoCreationData(dataForModal, queuePath, baseProperties) {
-        // Check if auto-creation is enabled (check both v1 and v2)
-        const v1AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-create-child-queue.enabled`;
-        const v2AutoCreateKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.enabled`;
-        const v1AutoCreateValue = baseProperties.get(v1AutoCreateKey);
-        const v2AutoCreateValue = baseProperties.get(v2AutoCreateKey);
-        
-        // Auto-creation is enabled if either v1 or v2 is enabled
-        dataForModal.autoCreationData.enabled = 
-            String(v1AutoCreateValue).toLowerCase() === 'true' || 
-            String(v2AutoCreateValue).toLowerCase() === 'true';
-            
-        // Store which mode is enabled
-        dataForModal.autoCreationData.v1Enabled = String(v1AutoCreateValue).toLowerCase() === 'true';
-        dataForModal.autoCreationData.v2Enabled = String(v2AutoCreateValue).toLowerCase() === 'true';
-
-        // Populate non-template properties from AUTO_CREATION_CONFIG_METADATA
-        dataForModal.autoCreationData.nonTemplateProperties = {};
-        for (const [placeholderKey, meta] of Object.entries(AUTO_CREATION_CONFIG_METADATA)) {
-            const fullKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
-            const value = baseProperties.get(fullKey);
-            const isDefault = value === undefined;
-            
-            dataForModal.autoCreationData.nonTemplateProperties[meta.key] = {
-                value: isDefault ? '' : String(value),
-                isDefault: isDefault,
-                meta: meta,
-            };
-        }
-
-        // Populate template properties dynamically from QUEUE_CONFIG_METADATA
-        dataForModal.autoCreationData.templateProperties = {};
-        
-        // v1 template properties: yarn.scheduler.capacity.<queue-path>.leaf-queue-template.<property>
-        dataForModal.autoCreationData.v1TemplateProperties = {};
-        
-        // v2 template properties with different scopes
-        dataForModal.autoCreationData.v2TemplateProperties = {
-            template: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.template.<property>
-            parentTemplate: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.parent-template.<property>
-            leafTemplate: {}, // yarn.scheduler.capacity.<queue-path>.auto-queue-creation-v2.leaf-template.<property>
-        };
-
-        // Generate template properties from queue metadata
-        for (const category of QUEUE_CONFIG_METADATA) {
-            for (const [placeholderKey, meta] of Object.entries(category.properties)) {
-                if (meta.availableInTemplate) {
-                    // v1 template property
-                    const v1FullKey = `yarn.scheduler.capacity.${queuePath}.leaf-queue-template.${meta.key}`;
-                    const v1Value = baseProperties.get(v1FullKey);
-                    const v1IsDefault = v1Value === undefined;
-                    
-                    dataForModal.autoCreationData.v1TemplateProperties[meta.key] = {
-                        value: v1IsDefault ? '' : String(v1Value),
-                        isDefault: v1IsDefault,
-                        meta: meta,
-                    };
-
-                    // v2 template properties
-                    const v2Scopes = ['template', 'parent-template', 'leaf-template'];
-                    for (const scope of v2Scopes) {
-                        const v2FullKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.${scope}.${meta.key}`;
-                        const v2Value = baseProperties.get(v2FullKey);
-                        const v2IsDefault = v2Value === undefined;
-                        
-                        // Convert 'parent-template' -> 'parentTemplate', 'leaf-template' -> 'leafTemplate'
-                        const scopeKey = scope.includes('-') ? 
-                            scope.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) : 
-                            scope;
-                        
-                        // Ensure the nested object exists
-                        if (!dataForModal.autoCreationData.v2TemplateProperties[scopeKey]) {
-                            dataForModal.autoCreationData.v2TemplateProperties[scopeKey] = {};
-                        }
-                        
-                        dataForModal.autoCreationData.v2TemplateProperties[scopeKey][meta.key] = {
-                            value: v2IsDefault ? '' : String(v2Value),
-                            isDefault: v2IsDefault,
-                            meta: meta,
-                        };
-                    }
-                }
-            }
-        }
-    }
 }

@@ -6,6 +6,8 @@
  * implementations between queue cards and form modals.
  */
 class TooltipHelper {
+    static managedElements = new WeakMap();
+    static boundHandlers = new WeakMap();
     /**
      * Creates and attaches a tooltip to the given element.
      * @param {HTMLElement} element - The element to attach tooltip to
@@ -38,11 +40,23 @@ class TooltipHelper {
             isVisible: false
         };
 
+        // Create bound handlers for this element
+        const handlers = {
+            mouseenter: TooltipHelper._handleMouseEnter.bind(null, element),
+            mouseleave: TooltipHelper._handleMouseLeave.bind(null, element),
+            focus: TooltipHelper._handleFocus.bind(null, element),
+            blur: TooltipHelper._handleBlur.bind(null, element)
+        };
+        
+        // Store handlers for cleanup
+        TooltipHelper.boundHandlers.set(element, handlers);
+        TooltipHelper.managedElements.set(element, true);
+        
         // Add event listeners
-        element.addEventListener('mouseenter', TooltipHelper._handleMouseEnter);
-        element.addEventListener('mouseleave', TooltipHelper._handleMouseLeave);
-        element.addEventListener('focus', TooltipHelper._handleFocus);
-        element.addEventListener('blur', TooltipHelper._handleBlur);
+        element.addEventListener('mouseenter', handlers.mouseenter);
+        element.addEventListener('mouseleave', handlers.mouseleave);
+        element.addEventListener('focus', handlers.focus);
+        element.addEventListener('blur', handlers.blur);
 
         // Mark element as having tooltip
         element.classList.add('has-tooltip');
@@ -64,16 +78,33 @@ class TooltipHelper {
         TooltipHelper._hideTooltip(element);
 
         // Remove event listeners
-        element.removeEventListener('mouseenter', TooltipHelper._handleMouseEnter);
-        element.removeEventListener('mouseleave', TooltipHelper._handleMouseLeave);
-        element.removeEventListener('focus', TooltipHelper._handleFocus);
-        element.removeEventListener('blur', TooltipHelper._handleBlur);
+        const handlers = TooltipHelper.boundHandlers.get(element);
+        if (handlers) {
+            element.removeEventListener('mouseenter', handlers.mouseenter);
+            element.removeEventListener('mouseleave', handlers.mouseleave);
+            element.removeEventListener('focus', handlers.focus);
+            element.removeEventListener('blur', handlers.blur);
+            TooltipHelper.boundHandlers.delete(element);
+        }
 
         // Clean up data
         delete element._tooltipData;
         element.classList.remove('has-tooltip');
+        TooltipHelper.managedElements.delete(element);
     }
 
+    /**
+     * Removes all tooltips from elements within a container
+     * @param {HTMLElement} container - The container element
+     */
+    static cleanupTooltipsInContainer(container) {
+        if (!container) return;
+        
+        const tooltipElements = container.querySelectorAll('.has-tooltip');
+        for (const element of tooltipElements) {
+            TooltipHelper.removeTooltip(element);
+        }
+    }
 
     /**
      * Upgrades modal info icons to use unified tooltip system.
@@ -99,8 +130,7 @@ class TooltipHelper {
     }
 
     // Private event handlers
-    static _handleMouseEnter(event) {
-        const element = event.currentTarget;
+    static _handleMouseEnter(element, event) {
         const data = element._tooltipData;
         if (!data) return;
 
@@ -115,19 +145,16 @@ class TooltipHelper {
         }, data.config.delay);
     }
 
-    static _handleMouseLeave(event) {
-        const element = event.currentTarget;
+    static _handleMouseLeave(element, event) {
         TooltipHelper._hideTooltip(element);
     }
 
-    static _handleFocus(event) {
-        const element = event.currentTarget;
+    static _handleFocus(element, event) {
         // Show immediately on focus for accessibility
         TooltipHelper._showTooltip(element);
     }
 
-    static _handleBlur(event) {
-        const element = event.currentTarget;
+    static _handleBlur(element, event) {
         TooltipHelper._hideTooltip(element);
     }
 

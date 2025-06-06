@@ -4,6 +4,7 @@ class EditQueueModalView extends BaseModalView {
         this.currentQueuePath = null;
         this.currentQueueData = null; // To store the data passed to show() for re-rendering node labels
         this.viewDataFormatterService = controller.viewDataFormatterService; // For default capacity values
+        this.eventCleanupCallbacks = []; // Track event listeners for cleanup
     }
 
     /**
@@ -21,6 +22,9 @@ class EditQueueModalView extends BaseModalView {
             if (this.formContainer) this.formContainer.innerHTML = '<p>Queue data not available for editing.</p>';
             return;
         }
+        
+        // Clean up previous event listeners before re-rendering
+        this._cleanupEventListeners();
         DomUtils.empty(this.formContainer);
         this.currentQueuePath = data.path;
         this.currentQueueData = data; // Store for potential partial re-renders (node labels)
@@ -49,12 +53,12 @@ class EditQueueModalView extends BaseModalView {
         `;
         modalContent.appendChild(modalActions);
         
-        this._bindFormEvents(data);
-        
-        // Upgrade info icon tooltips to unified system
+        // Upgrade info icon tooltips to unified system BEFORE binding events
         if (window.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
+        
+        this._bindFormEvents(data.path, data.effectiveCapacityMode);
     }
 
     _buildHtml(data) {
@@ -70,6 +74,17 @@ class EditQueueModalView extends BaseModalView {
                         <div class="property-details-column"><div class="property-display-name">Queue Path</div><div class="property-yarn-name">(Read-only)</div></div>
                         <div class="property-value-column"><input type="text" class="form-input" value="${DomUtils.escapeXml(path)}" readonly></div>
                      </div>`;
+
+        // Partition context indicator
+        if (data.selectedPartition && data.selectedPartition !== DEFAULT_PARTITION) {
+            formHTML += `<div class="partition-context-indicator">
+                            <div class="partition-context-icon">⚠️</div>
+                            <div class="partition-context-text">
+                                <strong>Editing ${DomUtils.escapeXml(data.selectedPartition)} Partition</strong><br>
+                                Capacity values apply to ${DomUtils.escapeXml(data.selectedPartition)} labeled nodes only
+                            </div>
+                         </div>`;
+        }
 
         // Capacity Mode
         const capacityModeTooltip = isLegacyMode 
@@ -123,60 +138,186 @@ class EditQueueModalView extends BaseModalView {
         return formHTML;
     }
 
+    /**
+     * Cleans up event listeners to prevent memory leaks and conflicts
+     * @private
+     */
+    _cleanupEventListeners() {
+        // Execute all cleanup callbacks
+        for (const cleanup of this.eventCleanupCallbacks) {
+            try {
+                cleanup();
+            } catch (error) {
+                console.warn('Error during event listener cleanup:', error);
+            }
+        }
+        this.eventCleanupCallbacks = [];
+    }
+
+    /**
+     * Override hide to ensure event cleanup
+     */
+    hide(result) {
+        this._cleanupEventListeners();
+        super.hide(result);
+    }
+
     _buildNodeLabelSectionHtml(queuePath, nodeLabelData) {
         let sectionHtml = `<h4 class="form-category-title">Node Label Configurations</h4>`;
-        const anlMeta =
-            NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
-        const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+        
+        // Build visual label selector
+        sectionHtml += this._buildAccessibleLabelsChips(queuePath, nodeLabelData.accessibleNodeLabelsString);
 
-        sectionHtml += this._buildPropertyInputHtml(
-            anlMeta.key,
-            anlFullKey,
-            anlMeta,
-            nodeLabelData.accessibleNodeLabelsString,
-            'accessible-node-labels-list-input', // Specific ID for this input
-            false // Node labels are never defaults in this context
-        );
-
-        // Area to display/edit per-label configurations
-        sectionHtml += `<div id="per-label-configs-container" class="per-label-configs-container" style="margin-top: 10px; padding-left:15px; border-left: 2px solid #eee;">`;
-
+        // Parse current labels to build tabs
         const currentLabelsResult = ValidationService.validateNodeLabelsString(
             nodeLabelData.accessibleNodeLabelsString
         );
         const currentLabels = currentLabelsResult.isValid ? currentLabelsResult.labels : [];
+        const filteredLabels = currentLabels.filter(label => label && label !== '*' && label !== '');
 
-        if (currentLabels.length > 0 && currentLabels[0] !== '*' && currentLabels[0] !== '') {
-            for (const label of currentLabels) {
-                if (!label) continue;
-                sectionHtml += `<h5 class="label-config-subtitle">Label: '${DomUtils.escapeXml(label)}'</h5>`;
-                for (const [placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA.perLabelProperties)) {
-                    const simpleSubKey = `${label}.${meta.key}`; // e.g., "gpu.capacity"
-                    const fullYarnPropertyName = placeholderKey
-                        .replace(Q_PATH_PLACEHOLDER, queuePath)
-                        .replace('<label_name>', label);
-                    const currentValue =
-                        nodeLabelData.labelSpecificParams[simpleSubKey] === undefined
-                            ? String(meta.defaultValue)
-                            : String(nodeLabelData.labelSpecificParams[simpleSubKey]);
-                    const augmentedMeta = { ...meta, displayName: meta.displayName.replace('Label', '') }; // Remove generic "Label" prefix for brevity
-                    sectionHtml += this._buildPropertyInputHtml(
-                        simpleSubKey,
-                        fullYarnPropertyName,
-                        augmentedMeta,
-                        currentValue,
-                        `label-${label}-${meta.key}`,
-                        nodeLabelData.labelSpecificParams[simpleSubKey] === undefined // Is default if not explicitly set
-                    );
-                }
-            }
+        if (filteredLabels.length > 0) {
+            // Build tabbed interface for per-label configurations
+            sectionHtml += this._buildNodeLabelTabsHtml(queuePath, nodeLabelData, filteredLabels);
         } else if (currentLabels.length === 0 || currentLabels[0] === '') {
-            sectionHtml += `<p class="form-help">No specific labels configured. Edit 'Accessible Node Labels' above to add specific labels.</p>`;
+            sectionHtml += `<div style="margin-top: 15px; padding: 12px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; border-left: 4px solid #6c757d;">
+                <p class="form-help" style="margin: 0; color: #6c757d;">No specific labels configured. Edit 'Accessible Node Labels' above to add specific labels.</p>
+            </div>`;
         } else if (currentLabels[0] === '*') {
-            sectionHtml += `<p class="form-help">Queue has access to all ('*') labels. To set specific capacities per label, list them explicitly above instead of using '*'.</p>`;
+            sectionHtml += `<div style="margin-top: 15px; padding: 12px; background-color: #f8f9fa; border: 1px solid #dee2e6; border-radius: 4px; border-left: 4px solid #6c757d;">
+                <p class="form-help" style="margin: 0; color: #6c757d;">Queue has access to all ('*') labels. To set specific capacities per label, list them explicitly above instead of using '*'.</p>
+            </div>`;
         }
-        sectionHtml += `</div>`;
+        
         return sectionHtml;
+    }
+
+    /**
+     * Builds the tabbed interface for node label capacity configurations.
+     * @param {string} queuePath - The queue path
+     * @param {Object} nodeLabelData - Node label data containing parameters
+     * @param {string[]} labels - Array of accessible labels
+     * @returns {string} Tabbed node label HTML
+     * @private
+     */
+    _buildNodeLabelTabsHtml(queuePath, nodeLabelData, labels) {
+        const tabsHtml = `
+            <div class="node-label-tabs" style="margin-top: 15px; border-left: 4px solid #007bff; padding: 15px 15px 0 15px; background-color: #f8f9fa; border-radius: 4px;">
+                <h6 style="margin: 0 0 10px 0; color: #666;">Label-Specific Capacity Configuration</h6>
+                
+                <!-- Tab Headers -->
+                <div class="node-label-tab-headers" style="display: flex; border-bottom: 1px solid #dee2e6; margin-bottom: 15px;">
+                    ${labels.map((label, index) => `
+                        <button type="button" class="node-label-tab-header ${index === 0 ? 'active' : ''}" data-label-tab="${label}" style="padding: 8px 16px; border: 1px solid #dee2e6; border-bottom: none; background: ${index === 0 ? 'white' : '#f8f9fa'}; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 2px;">
+                            ${DomUtils.escapeXml(label)}
+                        </button>
+                    `).join('')}
+                </div>
+                
+                <!-- Tab Content -->
+                <div class="node-label-tab-content" style="margin-bottom: 15px; padding: 0 10px;">
+                    ${labels.map((label, index) => 
+                        this._buildNodeLabelTabContent(label, queuePath, nodeLabelData, index === 0)
+                    ).join('')}
+                </div>
+            </div>
+        `;
+        return tabsHtml;
+    }
+    
+    /**
+     * Builds content for a single node label tab.
+     * @param {string} label - The node label name
+     * @param {string} queuePath - The queue path
+     * @param {Object} nodeLabelData - Node label data containing parameters
+     * @param {boolean} isActive - Whether this tab is initially active
+     * @returns {string} Tab content HTML
+     * @private
+     */
+    _buildNodeLabelTabContent(label, queuePath, nodeLabelData, isActive) {
+        let contentHtml = `
+            <div class="node-label-tab-pane" data-label-tab-content="${label}" style="display: ${isActive ? 'block' : 'none'};">
+                <p class="form-help" style="margin-bottom: 15px; color: #666; font-style: italic;">Capacity configuration for nodes with label '${DomUtils.escapeXml(label)}':</p>
+        `;
+        
+        // Build property inputs for this label
+        const hasProperties = Object.keys(NODE_LABEL_CONFIG_METADATA.perLabelProperties).length > 0;
+        
+        if (hasProperties) {
+            for (const [placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA.perLabelProperties)) {
+                const simpleSubKey = `${label}.${meta.key}`; // e.g., "gpu.capacity"
+                const fullYarnPropertyName = placeholderKey
+                    .replace(Q_PATH_PLACEHOLDER, queuePath)
+                    .replace('<label_name>', label);
+                const currentValue =
+                    nodeLabelData.labelSpecificParams[simpleSubKey] === undefined
+                        ? String(meta.defaultValue)
+                        : String(nodeLabelData.labelSpecificParams[simpleSubKey]);
+                const augmentedMeta = { ...meta, displayName: meta.displayName.replace('Label', '') }; // Remove generic "Label" prefix for brevity
+                contentHtml += this._buildPropertyInputHtml(
+                    simpleSubKey,
+                    fullYarnPropertyName,
+                    augmentedMeta,
+                    currentValue,
+                    `label-${label}-${meta.key}`,
+                    nodeLabelData.labelSpecificParams[simpleSubKey] === undefined // Is default if not explicitly set
+                );
+            }
+        } else {
+            contentHtml += `
+                <p class="form-help" style="color: #6c757d; font-style: italic;">No label-specific properties configured for this label.</p>
+            `;
+        }
+        
+        contentHtml += `</div>`;
+        return contentHtml;
+    }
+
+    /**
+     * Builds visual chip selector for accessible node labels
+     * @private
+     */
+    _buildAccessibleLabelsChips(queuePath, accessibleLabelsString) {
+        const isRootQueue = NodeLabelService.isRootQueue(queuePath);
+        const availableLabels = NodeLabelService.getAvailableNodeLabels(this.controller.schedulerInfoModel, this.controller.nodesInfoModel);
+        const currentLabels = NodeLabelService.formatLabelsForChips(accessibleLabelsString);
+        
+        let html = `<div class="form-group">
+                        <label class="form-label">Accessible Node Labels</label>`;
+        
+        if (isRootQueue) {
+            html += `<p class="form-help">Root queue has access to all node labels.</p>`;
+        } else {
+            html += `<div class="node-label-chips" id="node-label-chips">`;
+            
+            // Add chips for all available labels
+            for (const label of availableLabels) {
+                const isEnabled = currentLabels.some(chip => chip.name === label);
+                const chipClass = isEnabled ? 'node-label-chip enabled' : 'node-label-chip';
+                html += `<button type="button" class="${chipClass}" data-label="${label}">
+                            ${DomUtils.escapeXml(label)}
+                         </button>`;
+            }
+            
+            if (availableLabels.length === 0) {
+                html += `<p class="form-help">No node labels available in cluster.</p>`;
+            }
+            
+            html += `</div>`;
+        }
+        
+        // Hidden input to store the actual value
+        const anlMeta = NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
+        const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+        
+        html += `<input type="hidden" 
+                        class="form-input" 
+                        id="edit-queue-accessible-node-labels-list-input"
+                        data-simple-key="${anlMeta.key}"
+                        data-original-value="${DomUtils.escapeXml(accessibleLabelsString)}"
+                        value="${DomUtils.escapeXml(accessibleLabelsString)}" />`;
+        
+        html += `</div>`;
+        return html;
     }
 
     _buildAutoCreationSectionHtml(data) {
@@ -462,47 +603,108 @@ class EditQueueModalView extends BaseModalView {
         const form = DomUtils.qs('#edit-queue-form', this.formContainer);
         if (!form) return;
 
+        this._bindCapacityModeEvents(form);
+        this._bindToggleSwitchEvents(form);
+        this._bindAccessibleLabelsEvents(form, originalEffectiveCapacityMode);
+        this._bindFormActionButtons(form, originalEffectiveCapacityMode);
+        this._bindCustomPropertiesEvents(form);
+        this._bindAutoCreationEvents(form);
+        this._bindNodeLabelTabEvents(form);
+    }
+
+    /**
+     * Binds capacity mode selection events
+     * @private
+     */
+    _bindCapacityModeEvents(form) {
         const capacityModeSelect = DomUtils.qs('#edit-capacity-mode', form);
         const capacityInput = DomUtils.qs('[data-simple-key="capacity"] .form-input', form);
 
-        if (capacityModeSelect && capacityInput) {
-            // Set initial placeholder
-            this._updateCapacityPlaceholder(capacityInput, capacityModeSelect.value);
+        if (!capacityModeSelect || !capacityInput) return;
+
+        // Set initial placeholder
+        this._updateCapacityPlaceholder(capacityInput, capacityModeSelect.value);
+        
+        const changeHandler = () => {
+            const newMode = capacityModeSelect.value;
+            const originalMode = capacityModeSelect.dataset.originalMode;
             
-            capacityModeSelect.addEventListener('change', () => {
-                const newMode = capacityModeSelect.value;
-                const originalMode = capacityModeSelect.dataset.originalMode;
-                
-                // Check for auto-creation mode transition warning
-                this._checkAutoCreationModeTransition(form, originalMode, newMode);
-                
-                // Update capacity input to default for the new mode
-                capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(newMode);
-                // Update placeholder based on new mode
-                this._updateCapacityPlaceholder(capacityInput, newMode);
-            });
-        }
+            // Check for auto-creation mode transition warning
+            this._checkAutoCreationModeTransition(form, originalMode, newMode);
+            
+            // Update capacity input to default for the new mode
+            capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(newMode);
+            // Update placeholder based on new mode
+            this._updateCapacityPlaceholder(capacityInput, newMode);
+        };
+        
+        capacityModeSelect.addEventListener('change', changeHandler);
+        this.eventCleanupCallbacks.push(() => capacityModeSelect.removeEventListener('change', changeHandler));
+    }
 
-        // Bind toggle switch events for boolean properties
-        this._bindToggleSwitchEvents(form);
-
+    /**
+     * Binds accessible node labels input events
+     * @private
+     */
+    _bindAccessibleLabelsEvents(form, originalEffectiveCapacityMode) {
         const accessibleLabelsInputElement = DomUtils.qs('#edit-queue-accessible-node-labels-list-input', form);
-        if (accessibleLabelsInputElement) {
-            accessibleLabelsInputElement.addEventListener('change', () => {
-                const newLabelsString = accessibleLabelsInputElement.value;
-                // Request controller to re-render node label section based on this new list
-                this._emit('accessibleLabelsListChanged', {
-                    queuePath: this.currentQueuePath,
-                    newLabelsString: newLabelsString,
-                    // Pass current form data so controller can merge and re-request formatting
-                    currentFormParams: this._collectFormData(form, originalEffectiveCapacityMode).params,
-                });
+        if (!accessibleLabelsInputElement) return;
+
+        // Bind chip click events
+        const chipsContainer = DomUtils.qs('#node-label-chips', form);
+        if (chipsContainer) {
+            chipsContainer.addEventListener('click', (event) => {
+                if (event.target.classList.contains('node-label-chip')) {
+                    const chip = event.target;
+                    const label = chip.dataset.label;
+                    const isCurrentlyEnabled = chip.classList.contains('enabled');
+                    
+                    // Toggle chip state
+                    if (isCurrentlyEnabled) {
+                        chip.classList.remove('enabled');
+                    } else {
+                        chip.classList.add('enabled');
+                    }
+                    
+                    // Update hidden input value
+                    const currentLabels = NodeLabelService.formatLabelsForChips(accessibleLabelsInputElement.value);
+                    const newLabelsString = NodeLabelService.updateAccessibleLabels(
+                        currentLabels, 
+                        label, 
+                        !isCurrentlyEnabled
+                    );
+                    
+                    accessibleLabelsInputElement.value = newLabelsString;
+                    
+                    // Emit change event for re-rendering
+                    this._emit('accessibleLabelsListChanged', {
+                        queuePath: this.currentQueuePath,
+                        newLabelsString: newLabelsString,
+                        currentFormParams: this._collectFormData(form, originalEffectiveCapacityMode).params,
+                    });
+                }
             });
         }
 
+        // Also handle direct input changes (for backwards compatibility)
+        accessibleLabelsInputElement.addEventListener('change', () => {
+            const newLabelsString = accessibleLabelsInputElement.value;
+            this._emit('accessibleLabelsListChanged', {
+                queuePath: this.currentQueuePath,
+                newLabelsString: newLabelsString,
+                currentFormParams: this._collectFormData(form, originalEffectiveCapacityMode).params,
+            });
+        });
+    }
+
+    /**
+     * Binds submit and cancel button events
+     * @private
+     */
+    _bindFormActionButtons(form, originalEffectiveCapacityMode) {
         const submitButton = DomUtils.qs('#submit-edit-queue-btn', this.modalEl);
         if (submitButton) {
-            submitButton.addEventListener('click', () => {
+            const submitHandler = () => {
                 const collectedData = this._collectFormData(form, originalEffectiveCapacityMode);
                 if (Object.keys(collectedData.params).length > 0) {
                     this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
@@ -510,116 +712,162 @@ class EditQueueModalView extends BaseModalView {
                     this.controller.notificationView.showInfo('No changes detected to stage.');
                     // Keep modal open - don't close when no changes
                 }
+            };
+            submitButton.addEventListener('click', submitHandler);
+            this.eventCleanupCallbacks.push(() => {
+                submitButton.removeEventListener('click', submitHandler);
             });
         }
+
         const cancelButton = DomUtils.qs('#cancel-edit-queue-btn', this.modalEl);
         if (cancelButton) {
-            cancelButton.addEventListener('click', () => this.hide({ Canceled: true }));
+            const cancelHandler = () => this.hide({ Canceled: true });
+            cancelButton.addEventListener('click', cancelHandler);
+            this.eventCleanupCallbacks.push(() => cancelButton.removeEventListener('click', cancelHandler));
         }
-
-        // Bind custom properties events
-        this._bindCustomPropertiesEvents(form);
-        
-        // Bind auto-creation events
-        this._bindAutoCreationEvents(form);
     }
 
     _collectFormData(form, originalCapacityMode) {
-        const stagedChanges = { params: {} }; // Uses simple keys for standard props, partial for labels
-        let capacityModeChanged = false;
-
-        const capacityModeSelect = DomUtils.qs('#edit-capacity-mode', form);
-        const newCapacityMode = capacityModeSelect.value;
-
-        if (newCapacityMode !== originalCapacityMode) {
-            stagedChanges.params['_ui_capacityMode'] = newCapacityMode;
-            capacityModeChanged = true;
-        }
-
+        const stagedChanges = { params: {} };
+        const capacityModeData = this._handleCapacityModeChange(form, originalCapacityMode, stagedChanges);
+        
+        // Process all form inputs
         for (const inputElement of form.querySelectorAll('.form-input')) {
             if (inputElement.id === 'edit-capacity-mode') continue;
-
-            const simpleOrPartialKey = inputElement.dataset.simpleKey;
-            const originalValue = inputElement.dataset.originalValue;
-            
-            // Handle different input types
-            let newValue;
-            if (inputElement.type === 'checkbox') {
-                // For toggle switches (boolean properties)
-                newValue = inputElement.checked ? 'true' : 'false';
-            } else {
-                newValue = inputElement.value.trim(); // Trim all input values
-            }
-
-            if (simpleOrPartialKey) {
-                let hasChanged = newValue !== originalValue;
-                const userActuallyChangedValue = hasChanged; // Track if user actually modified this field
-                
-
-                // Handle capacity fields with user intent awareness
-                if (simpleOrPartialKey === 'capacity' || simpleOrPartialKey.endsWith('.capacity')) {
-                    if (!userActuallyChangedValue) {
-                        // User didn't change this capacity field, don't stage it
-                        hasChanged = false;
-                    } else if (simpleOrPartialKey === 'capacity' && capacityModeChanged) {
-                        // Special handling for capacity when mode changes and user modified it
-                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                            newValue,
-                            newCapacityMode,
-                            this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode)
-                        );
-                        hasChanged = true; // Consider it changed if mode changed and user modified it
-                    } else if (
-                        this.viewDataFormatterService._isVectorString(originalValue) &&
-                        this._isEffectivelyEmptyVector(newValue)
-                    ) {
-                        // If original was a vector like [memory=0] and new value is "[]", consider it a change to empty
-                        newValue = '[]';
-                        hasChanged = originalValue !== '[]';
-                    } else if (simpleOrPartialKey === 'capacity') {
-                        // ensure capacity formatting for its current mode
-                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                            newValue,
-                            newCapacityMode,
-                            originalValue
-                        );
-                        // Recheck for changes after formatting to avoid false positives
-                        hasChanged = newValue !== originalValue;
-                    }
-                } else if (simpleOrPartialKey === 'maximum-capacity') {
-                    // Only format and stage maximum-capacity if user actually changed it
-                    if (userActuallyChangedValue) {
-                        // Detect the actual format of the maximum capacity value and preserve it
-                        const parsed = CapacityValueParser.parse(newValue.trim());
-                        const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
-                        
-                        newValue = this.viewDataFormatterService._formatCapacityForDisplay(
-                            newValue,
-                            maxCapacityMode,
-                            '100%'
-                        );
-                        // Recheck for changes after formatting to avoid false positives
-                        hasChanged = newValue !== originalValue;
-                    } else {
-                        // User didn't change maximum-capacity, don't stage it
-                        hasChanged = false;
-                    }
-                }
-
-                if (hasChanged) {
-                    stagedChanges.params[simpleOrPartialKey] = newValue;
-                }
-            }
+            this._processFormInput(inputElement, stagedChanges, capacityModeData);
         }
         
         // Collect custom properties
         const customProperties = this._collectCustomProperties(form);
         if (customProperties) {
-            // Custom properties use full YARN keys, not simple keys
             stagedChanges.customProperties = customProperties;
         }
         
         return stagedChanges;
+    }
+
+    /**
+     * Handles capacity mode changes and returns mode data
+     * @private
+     */
+    _handleCapacityModeChange(form, originalCapacityMode, stagedChanges) {
+        const capacityModeSelect = DomUtils.qs('#edit-capacity-mode', form);
+        const newCapacityMode = capacityModeSelect.value;
+        const capacityModeChanged = newCapacityMode !== originalCapacityMode;
+
+        if (capacityModeChanged) {
+            stagedChanges.params['_ui_capacityMode'] = newCapacityMode;
+        }
+
+        return { newCapacityMode, capacityModeChanged };
+    }
+
+    /**
+     * Processes a single form input element
+     * @private
+     */
+    _processFormInput(inputElement, stagedChanges, { newCapacityMode, capacityModeChanged }) {
+        const simpleOrPartialKey = inputElement.dataset.simpleKey;
+        const originalValue = inputElement.dataset.originalValue;
+        
+        if (!simpleOrPartialKey) return;
+        
+        const newValue = this._extractInputValue(inputElement);
+        const userActuallyChangedValue = newValue !== originalValue;
+        
+        const processedValue = this._processValueByType(
+            simpleOrPartialKey, 
+            newValue, 
+            originalValue, 
+            userActuallyChangedValue, 
+            newCapacityMode, 
+            capacityModeChanged
+        );
+        
+        if (processedValue.hasChanged) {
+            stagedChanges.params[simpleOrPartialKey] = processedValue.value;
+        }
+    }
+
+    /**
+     * Extracts value from input element based on type
+     * @private
+     */
+    _extractInputValue(inputElement) {
+        if (inputElement.type === 'checkbox') {
+            return inputElement.checked ? 'true' : 'false';
+        }
+        return inputElement.value.trim();
+    }
+
+    /**
+     * Processes value based on property type (capacity, maximum-capacity, or regular)
+     * @private
+     */
+    _processValueByType(key, newValue, originalValue, userChanged, newCapacityMode, capacityModeChanged) {
+        if (key === 'capacity' || key.endsWith('.capacity')) {
+            return this._processCapacityValue(key, newValue, originalValue, userChanged, newCapacityMode, capacityModeChanged);
+        } else if (key === 'maximum-capacity') {
+            return this._processMaximumCapacityValue(newValue, originalValue, userChanged);
+        } else {
+            return { value: newValue, hasChanged: newValue !== originalValue };
+        }
+    }
+
+    /**
+     * Processes capacity field values with special formatting logic
+     * @private
+     */
+    _processCapacityValue(key, newValue, originalValue, userChanged, newCapacityMode, capacityModeChanged) {
+        if (!userChanged) {
+            return { value: newValue, hasChanged: false };
+        }
+
+        if (key === 'capacity' && capacityModeChanged) {
+            const formattedValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                newValue,
+                newCapacityMode,
+                this.viewDataFormatterService._getDefaultCapacityValue(newCapacityMode)
+            );
+            return { value: formattedValue, hasChanged: true };
+        }
+
+        if (this.viewDataFormatterService._isVectorString(originalValue) && 
+            this._isEffectivelyEmptyVector(newValue)) {
+            return { value: '[]', hasChanged: originalValue !== '[]' };
+        }
+
+        if (key === 'capacity') {
+            const formattedValue = this.viewDataFormatterService._formatCapacityForDisplay(
+                newValue,
+                newCapacityMode,
+                originalValue
+            );
+            return { value: formattedValue, hasChanged: formattedValue !== originalValue };
+        }
+
+        return { value: newValue, hasChanged: newValue !== originalValue };
+    }
+
+    /**
+     * Processes maximum capacity field values
+     * @private
+     */
+    _processMaximumCapacityValue(newValue, originalValue, userChanged) {
+        if (!userChanged) {
+            return { value: newValue, hasChanged: false };
+        }
+
+        const parsed = CapacityValueParser.parse(newValue.trim());
+        const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
+        
+        const formattedValue = this.viewDataFormatterService._formatCapacityForDisplay(
+            newValue,
+            maxCapacityMode,
+            '100%'
+        );
+        
+        return { value: formattedValue, hasChanged: formattedValue !== originalValue };
     }
 
     _isEffectivelyEmptyVector(value) {
@@ -660,7 +908,7 @@ class EditQueueModalView extends BaseModalView {
         const toggleSwitches = form.querySelectorAll('.toggle-switch input[type="checkbox"]');
         
         for (const toggleInput of toggleSwitches) {
-            toggleInput.addEventListener('change', (event) => {
+            const changeHandler = (event) => {
                 const isChecked = event.target.checked;
                 const toggleContainer = event.target.closest('.toggle-container');
                 const label = toggleContainer.querySelector('.toggle-label');
@@ -669,7 +917,10 @@ class EditQueueModalView extends BaseModalView {
                     label.textContent = isChecked ? 'true' : 'false';
                     label.classList.toggle('active', isChecked);
                 }
-            });
+            };
+            
+            toggleInput.addEventListener('change', changeHandler);
+            this.eventCleanupCallbacks.push(() => toggleInput.removeEventListener('change', changeHandler));
         }
     }
 
@@ -787,6 +1038,61 @@ class EditQueueModalView extends BaseModalView {
         
         // Bind template tab events for v2 mode
         this._bindTemplateTabEvents(form);
+    }
+    
+    /**
+     * Binds events for the node label tabs functionality.
+     * @param {HTMLElement} form - The form element
+     * @private
+     */
+    _bindNodeLabelTabEvents(form) {
+        const tabHeaders = form.querySelectorAll('.node-label-tab-header');
+        
+        for (const tabHeader of tabHeaders) {
+            const clickHandler = (event) => {
+                event.preventDefault();
+                const targetLabel = tabHeader.dataset.labelTab;
+                this._switchNodeLabelTab(form, targetLabel);
+            };
+            tabHeader.addEventListener('click', clickHandler);
+            this.eventCleanupCallbacks.push(() => tabHeader.removeEventListener('click', clickHandler));
+        }
+    }
+    
+    /**
+     * Switches to the specified node label tab.
+     * @param {HTMLElement} form - The form element
+     * @param {string} targetLabel - The target label name
+     * @private
+     */
+    _switchNodeLabelTab(form, targetLabel) {
+        // Update tab headers with different border color
+        const tabHeaders = form.querySelectorAll('.node-label-tab-header');
+        for (const header of tabHeaders) {
+            if (header.dataset.labelTab === targetLabel) {
+                header.classList.add('active');
+                header.style.background = 'white';
+                header.style.borderBottom = '1px solid white';
+                header.style.zIndex = '10';
+                header.style.position = 'relative';
+            } else {
+                header.classList.remove('active');
+                header.style.background = '#f8f9fa';
+                header.style.borderBottom = '1px solid #dee2e6';
+                header.style.zIndex = '1';
+                header.style.position = 'relative';
+            }
+        }
+        
+        // Update tab content
+        const tabPanes = form.querySelectorAll('.node-label-tab-pane');
+        for (const pane of tabPanes) {
+            if (pane.dataset.labelTabContent === targetLabel) {
+                pane.style.display = 'block';
+            } else {
+                pane.style.display = 'none';
+            }
+        }
     }
     
     /**

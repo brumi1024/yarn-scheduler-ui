@@ -4,6 +4,7 @@ class MainController {
         this.appStateModel = new AppStateModel();
         this.schedulerConfigModel = new SchedulerConfigModel();
         this.schedulerInfoModel = new SchedulerInfoModel();
+        this.nodesInfoModel = new NodesInfoModel();
 
         // Services
         this.apiService = new ApiService(CONFIG.API_BASE_URL, CONFIG.USE_MOCKS, CONFIG.MOCK_DATA_BASE_PATH);
@@ -12,6 +13,7 @@ class MainController {
         // Views
         this.loadingView = new LoadingView(this.appStateModel);
         this.notificationView = new NotificationView();
+        this.notificationView.init(); // Initialize EventBus subscriptions
         this.tabView = new TabView(this.appStateModel);
         this.controlsView = new ControlsView(this.appStateModel);
         this.batchControlsView = new BatchControlsView(this.appStateModel);
@@ -29,8 +31,7 @@ class MainController {
         this.configurationOrchestrator = new ConfigurationOrchestrator(
             this.schedulerConfigModel,
             this.schedulerInfoModel,
-            this.apiService,
-            this.notificationView
+            this.apiService
         );
         
         this.uiStateManager = new UIStateManager(this.appStateModel, {
@@ -46,8 +47,7 @@ class MainController {
         
         this.changeManager = new ChangeManager(
             this.schedulerConfigModel,
-            ValidationService,
-            this.notificationView
+            ValidationService
         );
 
         this.diagnosticService = new DiagnosticService(
@@ -82,6 +82,9 @@ class MainController {
 
         // --- SchedulerInfoModel Listeners ---
         this.schedulerInfoModel.subscribe('infoLoaded', (result) => this._handleSchedulerInfoLoaded(result));
+
+        // --- NodesInfoModel Listeners ---
+        this.nodesInfoModel.subscribe('nodesInfoLoaded', (result) => this._handleNodesInfoLoaded(result));
 
         // --- View Event Listeners ---
         this.tabView.subscribe('tabClicked', (tabId) => this.appStateModel.setCurrentTab(tabId));
@@ -157,9 +160,10 @@ class MainController {
         let configSuccess = false;
 
         try {
-            const [configResult, infoResult] = await Promise.all([
+            const [configResult, infoResult, nodesResult] = await Promise.all([
                 this.apiService.fetchSchedulerConfig(),
                 this.apiService.fetchSchedulerInfo(),
+                this.apiService.fetchClusterNodes(),
             ]);
 
             if (configResult.status === 200 && configResult.data) {
@@ -177,6 +181,14 @@ class MainController {
                 this.schedulerInfoModel.loadSchedulerInfo(null);
                 this.notificationView.showWarning(infoResult.error ||
                     `Failed to fetch scheduler info (status: ${infoResult.status})`);
+            }
+
+            if (nodesResult.status === 200 && nodesResult.data) {
+                this.nodesInfoModel.loadNodesInfo(nodesResult.data);
+            } else {
+                this.nodesInfoModel.loadNodesInfo(null);
+                this.notificationView.showWarning(nodesResult.error ||
+                    `Failed to fetch cluster nodes (status: ${nodesResult.status})`);
             }
         } catch (error) {
             console.error('MainController init error:', error);
@@ -205,7 +217,18 @@ class MainController {
 
     _handleSchedulerInfoLoaded(result) {
         if (result.success && this.controlsView) {
-            this.controlsView.renderPartitions(this.schedulerInfoModel.getPartitions());
+            // Use merged node labels from both scheduler info and cluster nodes
+            const nodeLabels = NodeLabelService.getAvailableNodeLabels(this.schedulerInfoModel, this.nodesInfoModel);
+            this.controlsView.renderNodeLabels(nodeLabels);
+        }
+        this._tryRenderInitialViews();
+    }
+
+    _handleNodesInfoLoaded(result) {
+        if (result.success && this.controlsView) {
+            // Re-render node labels with merged data when nodes info loads
+            const nodeLabels = NodeLabelService.getAvailableNodeLabels(this.schedulerInfoModel, this.nodesInfoModel);
+            this.controlsView.renderNodeLabels(nodeLabels);
         }
         this._tryRenderInitialViews();
     }
@@ -287,13 +310,13 @@ class MainController {
     }
 
     handleAddNewQueue(formData) {
-        const success = this.changeManager.stageAddQueue(
+        const result = this.changeManager.stageAddQueue(
             formData,
             this.viewDataFormatterService,
             { schedulerConfigModel: this.schedulerConfigModel, schedulerInfoModel: this.schedulerInfoModel, appStateModel: this.appStateModel }
         );
-        if (success) {
-            this.addQueueModalView.hide();
+        if (result.isSuccess()) {
+            this.uiStateManager.hideModal('addQueueModalView');
         }
     }
 
@@ -317,26 +340,30 @@ class MainController {
     }
 
     handleStageQueueChanges(queuePath, formData) {
-        const success = this.changeManager.stageUpdateQueue(
+        const selectedPartition = this.appStateModel.getSelectedNodeLabel();
+        const result = this.changeManager.stageUpdateQueue(
             queuePath,
             formData,
-            this.viewDataFormatterService
+            this.viewDataFormatterService,
+            selectedPartition
         );
-        if (success) {
-            this.editQueueModalView.hide();
+        if (result.isSuccess()) {
+            this.uiStateManager.hideModal('editQueueModalView');
         }
     }
 
     handleDeleteQueue(queuePath) {
-        this.changeManager.stageDeleteQueue(
+        const result = this.changeManager.stageDeleteQueue(
             queuePath,
             this.viewDataFormatterService,
             { schedulerConfigModel: this.schedulerConfigModel, schedulerInfoModel: this.schedulerInfoModel, appStateModel: this.appStateModel }
         );
+        // Note: Result handling is optional for delete operations as the UI updates reactively
     }
 
     handleUndoDeleteQueue(queuePath) {
-        this.changeManager.undoDeleteQueue(queuePath);
+        const result = this.changeManager.undoDeleteQueue(queuePath);
+        // Note: Result handling is optional for undo operations as the UI updates reactively
     }
 
     handleOpenInfoQueueModal(queuePath) {

@@ -2,10 +2,9 @@
  * @file ChangeManager - Handles staging, previewing, and applying configuration changes
  */
 class ChangeManager {
-    constructor(schedulerConfigModel, validationService, notificationView) {
+    constructor(schedulerConfigModel, validationService) {
         this.schedulerConfigModel = schedulerConfigModel;
         this.validationService = validationService;
-        this.notificationView = notificationView;
     }
 
     /**
@@ -13,7 +12,7 @@ class ChangeManager {
      * @param {Object} formData - Form data from add queue modal
      * @param {ViewDataFormatterService} viewDataFormatterService - For validation and formatting
      * @param {Object} dataModels - Data models for validation
-     * @returns {boolean} Success status
+     * @returns {Result<boolean>} Result containing success status or error
      */
     stageAddQueue(formData, viewDataFormatterService, dataModels) {
         const { parentPath, queueName, params } = formData;
@@ -21,8 +20,8 @@ class ChangeManager {
         // Validate queue name
         const nameValidation = this.validationService.isValidQueueNameChars(queueName);
         if (!nameValidation.isValid) {
-            this.notificationView.showError(nameValidation.message);
-            return false;
+            getEventBus().emit('notification:error', nameValidation.message);
+            return Result.failure(nameValidation.message);
         }
 
         // Validate capacity
@@ -31,8 +30,9 @@ class ChangeManager {
             params._ui_capacityMode
         );
         if (capacityValidation.errors || capacityValidation.error) {
-            this.notificationView.showError(`Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`);
-            return false;
+            const errorMsg = `Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`;
+            getEventBus().emit('notification:error', errorMsg);
+            return Result.failure(errorMsg);
         }
         params.capacity = capacityValidation.value;
 
@@ -46,21 +46,23 @@ class ChangeManager {
             true
         );
         if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-            this.notificationView.showError(`Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`);
-            return false;
+            const errorMsg = `Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`;
+            getEventBus().emit('notification:error', errorMsg);
+            return Result.failure(errorMsg);
         }
         params['maximum-capacity'] = maxCapacityValidation.value;
 
         // Check for duplicate queue names
         const newPath = parentPath === 'root' ? `root.${queueName}` : `${parentPath}.${queueName}`;
-        if (this._isQueueNameDuplicate(newPath, parentPath, queueName, viewDataFormatterService, dataModels)) {
-            return false;
+        const duplicateResult = this._isQueueNameDuplicate(newPath, parentPath, queueName, viewDataFormatterService, dataModels);
+        if (duplicateResult.isFailure()) {
+            return duplicateResult;
         }
 
         // Stage the addition
         this.schedulerConfigModel.stageAddQueue(newPath, params);
-        this.notificationView.showSuccess(`Queue "${queueName}" staged for addition under "${parentPath}".`);
-        return true;
+        getEventBus().emit('notification:success', `Queue "${queueName}" staged for addition under "${parentPath}".`);
+        return Result.success(true);
     }
 
     /**
@@ -68,9 +70,10 @@ class ChangeManager {
      * @param {string} queuePath - Path of queue to update
      * @param {Object} formData - Form data from edit modal
      * @param {ViewDataFormatterService} viewDataFormatterService - For validation
-     * @returns {boolean} Success status
+     * @param {string} selectedPartition - Currently selected partition/node label
+     * @returns {Result<boolean>} Result containing success status or error
      */
-    stageUpdateQueue(queuePath, formData, viewDataFormatterService) {
+    stageUpdateQueue(queuePath, formData, viewDataFormatterService, selectedPartition = DEFAULT_PARTITION) {
         const { params, customProperties } = formData;
 
         // Validate capacity if changed
@@ -81,7 +84,7 @@ class ChangeManager {
                     this.schedulerConfigModel.getQueueNodeProperties(queuePath) ||
                     new Map(
                         Object.entries(params).map(([k, v]) => [
-                            viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, k),
+                            PropertyKeyMapper.toFullKey(queuePath, k),
                             v,
                         ])
                     )
@@ -92,8 +95,9 @@ class ChangeManager {
                 modeForValidation
             );
             if (capacityValidation.errors || capacityValidation.error) {
-                this.notificationView.showError(`Invalid Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`);
-                return false;
+                const errorMsg = `Invalid Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`;
+                getEventBus().emit('notification:error', errorMsg);
+                return Result.failure(errorMsg);
             }
             params.capacity = capacityValidation.value;
         }
@@ -109,14 +113,21 @@ class ChangeManager {
                 true
             );
             if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-                this.notificationView.showError(`Invalid Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`);
-                return false;
+                const errorMsg = `Invalid Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`;
+                getEventBus().emit('notification:error', errorMsg);
+                return Result.failure(errorMsg);
             }
             params['maximum-capacity'] = maxCapacityValidation.value;
         }
 
-        // Stage standard property updates
-        this.schedulerConfigModel.stageUpdateQueue(queuePath, params);
+        // Map simple keys to full YARN keys, considering selected partition
+        const mappedParams = PropertyKeyMapper.convertToFullKeys(params, queuePath, selectedPartition);
+        
+        // Stage standard property updates - pass mappedParams directly to avoid double conversion
+        this.schedulerConfigModel.getTrieInstance().stageUpdateQueue(queuePath, mappedParams);
+        
+        // Manually emit pendingChangesUpdated since we bypassed SchedulerConfigModel
+        this.schedulerConfigModel._emit('pendingChangesUpdated', this.schedulerConfigModel.getTrieInstance());
         
         // Stage custom property updates if any
         if (customProperties && Object.keys(customProperties).length > 0) {
@@ -124,8 +135,8 @@ class ChangeManager {
             this.schedulerConfigModel.stageGlobalUpdate(customProperties);
         }
         
-        this.notificationView.showSuccess(`Changes for queue "${queuePath.split('.').pop()}" staged.`);
-        return true;
+        getEventBus().emit('notification:success', `Changes for queue "${queuePath.split('.').pop()}" staged.`);
+        return Result.success(true);
     }
 
     /**
@@ -133,13 +144,13 @@ class ChangeManager {
      * @param {string} queuePath - Path of queue to delete
      * @param {ViewDataFormatterService} viewDataFormatterService - For validation
      * @param {Object} dataModels - Data models for validation
-     * @returns {boolean} Success status
+     * @returns {Result<boolean>} Result containing success status or error
      */
     stageDeleteQueue(queuePath, viewDataFormatterService, dataModels) {
         if (!globalThis.confirm(
             `Are you sure you want to mark queue "${queuePath}" for deletion? \nThis will also remove any other staged changes for this queue.`
         )) {
-            return false;
+            return Result.failure('User cancelled deletion');
         }
 
         // Validate deletability
@@ -158,22 +169,22 @@ class ChangeManager {
         if (nodeToValidate) {
             const deletability = this.validationService.checkDeletability(nodeToValidate);
             if (!deletability.canDelete) {
-                this.notificationView.showWarning(deletability.reason);
-                return false;
+                getEventBus().emit('notification:warning', deletability.reason);
+                return Result.failure(deletability.reason);
             }
         } else if (queuePath !== 'root') {
-            this.notificationView.showWarning(`Could not fully validate deletability for ${queuePath}. Staging deletion.`);
+            getEventBus().emit('notification:warning', `Could not fully validate deletability for ${queuePath}. Staging deletion.`);
         }
 
         this.schedulerConfigModel.stageRemoveQueue(queuePath);
-        this.notificationView.showInfo(`Queue "${queuePath}" marked for deletion.`);
-        return true;
+        getEventBus().emit('notification:info', `Queue "${queuePath}" marked for deletion.`);
+        return Result.success(true);
     }
 
     /**
      * Undoes a queue deletion
      * @param {string} queuePath - Path of queue to undelete
-     * @returns {boolean} Success status
+     * @returns {Result<boolean>} Result containing success status or error
      */
     undoDeleteQueue(queuePath) {
         const changeLog = this.schedulerConfigModel.getChangeLog();
@@ -183,11 +194,12 @@ class ChangeManager {
         if (deleteChange) {
             changeLog.removeChange(deleteChange.id);
             this.schedulerConfigModel._emit('pendingChangesUpdated', changeLog);
-            this.notificationView.showInfo(`Deletion mark for "${queuePath}" undone.`);
-            return true;
+            getEventBus().emit('notification:info', `Deletion mark for "${queuePath}" undone.`);
+            return Result.success(true);
         } else {
-            this.notificationView.showWarning(`Queue "${queuePath}" was not marked for deletion.`);
-            return false;
+            const errorMsg = `Queue "${queuePath}" was not marked for deletion.`;
+            getEventBus().emit('notification:warning', errorMsg);
+            return Result.failure(errorMsg);
         }
     }
 
@@ -216,7 +228,7 @@ class ChangeManager {
             temporaryEffectiveProperties.clear();
             for (const [simpleKey, value] of Object.entries(currentFormParams)) {
                 if (simpleKey === '_ui_capacityMode') continue;
-                const fullKey = viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
+                const fullKey = PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                 temporaryEffectiveProperties.set(fullKey, value);
             }
@@ -232,14 +244,14 @@ class ChangeManager {
             }
             for (const [simpleKey, value] of Object.entries(currentFormParams)) {
                 if (simpleKey === '_ui_capacityMode') continue;
-                const fullKey = viewDataFormatterService._mapSimpleKeyToFullYarnKey(queuePath, simpleKey) ||
+                const fullKey = PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                 temporaryEffectiveProperties.set(fullKey, value);
             }
         }
 
-        // Set the new accessible node labels
-        const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+        // Set the new accessible node labels using metadata-driven key
+        const anlFullKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
         temporaryEffectiveProperties.set(anlFullKey, newLabelsString);
 
         // Create mock objects for data formatting
@@ -269,19 +281,21 @@ class ChangeManager {
 
         if (refreshedModalData) {
             editQueueModalView.show(refreshedModalData);
-            this.notificationView.showInfo('Node label fields updated. Please review.');
+            getEventBus().emit('notification:info', 'Node label fields updated. Please review.');
             return true;
         } else {
-            this.notificationView.showError('Error refreshing node label fields in modal.');
+            getEventBus().emit('notification:error', 'Error refreshing node label fields in modal.');
             return false;
         }
     }
 
     // Private helper methods
 
+
     /**
      * Checks if a queue name would be duplicate
      * @private
+     * @returns {Result<boolean>} Result indicating if duplicate exists
      */
     _isQueueNameDuplicate(newPath, parentPath, queueName, viewDataFormatterService, dataModels) {
         const currentHierarchyForValidation = viewDataFormatterService.formatQueueHierarchyForView(
@@ -300,10 +314,11 @@ class ChangeManager {
             parentNodeToCheck.children &&
             parentNodeToCheck.children[queueName] &&
             !parentNodeToCheck.children[queueName].isDeleted) {
-            this.notificationView.showError(`A queue named "${queueName}" effectively already exists under "${parentPath}".`);
-            return true;
+            const errorMsg = `A queue named "${queueName}" effectively already exists under "${parentPath}".`;
+            getEventBus().emit('notification:error', errorMsg);
+            return Result.failure(errorMsg);
         }
-        return false;
+        return Result.success(false);
     }
 
     /**

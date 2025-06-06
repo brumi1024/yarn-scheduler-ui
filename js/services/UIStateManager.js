@@ -112,6 +112,20 @@ class UIStateManager {
     }
 
     /**
+     * Hides a modal and calls destroy to clean up event listeners
+     * @param {string} modalName - Name of the modal in views
+     */
+    hideModal(modalName) {
+        const modal = this.views[modalName];
+        if (modal) {
+            modal.hide();
+            if (modal.destroy) {
+                modal.destroy();
+            }
+        }
+    }
+
+    /**
      * Shows the edit queue modal
      * @param {string} queuePath - Queue to edit
      * @param {Object} dataModels - Data models for modal

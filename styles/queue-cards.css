@@ -46,7 +46,7 @@
     width: 100%;
     height: 100%;
     pointer-events: none; /* Allows clicks to pass through to cards */
-    z-index: 0; /* Below cards */
+    z-index: 1; /* Above background, below cards */
     overflow: visible; /* Ensure connectors can extend beyond container */
 }
 
@@ -380,29 +380,29 @@
 
 /* Sankey Link Styles */
 .sankey-link {
-    fill-opacity: 0.55; /* Adjusted for better visibility */
-    stroke-width: 0.5;
-    stroke-opacity: 0.6;
+    fill-opacity: 0.7; /* Good visibility without being overwhelming */
+    stroke-width: 1.0; /* Clean stroke width */
+    stroke-opacity: 0.8; /* Visible stroke */
     transition:
         fill-opacity 0.2s ease-in-out,
         stroke-opacity 0.2s ease-in-out;
 }
 .sankey-link:hover {
-    fill-opacity: 0.75;
-    stroke-opacity: 0.9;
+    fill-opacity: 0.95; /* Increased for hover state */
+    stroke-opacity: 1.0; /* Full opacity on hover */
 }
 .sankey-link.state-running {
-    fill: #90caf9;
-    stroke: #64b5f6;
-} /* Lighter blue */
+    fill: #64b5f6;
+    stroke: #42a5f5;
+} /* Vibrant blue for running queues */
 .sankey-link.state-stopped {
-    fill: #ef9a9a;
-    stroke: #e57373;
-} /* Lighter red */
+    fill: #e57373;
+    stroke: #f44336;
+} /* Vibrant red for stopped queues */
 .sankey-link.state-unknown {
-    fill: #e0e0e0;
-    stroke: #bdbdbd;
-} /* Light grey */
+    fill: #bdbdbd;
+    stroke: #9e9e9e;
+} /* Visible grey for unknown state */
 
 /* Responsive adjustments */
 @media (max-width: 1200px) {

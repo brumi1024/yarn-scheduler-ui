@@ -8,6 +8,7 @@ class SchedulerInfoModel extends EventEmitter {
         super();
         this._schedulerInfo = null; // Raw object from API
         this._partitions = [DEFAULT_PARTITION]; // Initialize with default partition
+        this._nodeLabels = []; // Available node labels in the cluster
         this._dataCache = new SchedulerDataCache(); // Performance optimization
         this._useCache = true; // Can be disabled for testing
     }
@@ -22,6 +23,7 @@ class SchedulerInfoModel extends EventEmitter {
             console.error('SchedulerInfoModel: Invalid schedulerInfoData received.');
             this._schedulerInfo = null;
             this._partitions = [DEFAULT_PARTITION];
+            this._nodeLabels = [];
             this._dataCache.clearCache();
             this._emit('infoLoaded', { success: false, error: 'Invalid scheduler info data' });
             return;
@@ -43,6 +45,7 @@ class SchedulerInfoModel extends EventEmitter {
         console.log(`SchedulerInfoModel: Data processing took ${processingTime.toFixed(2)}ms`);
 
         this._extractPartitions();
+        this._extractNodeLabels();
         this._emit('infoLoaded', { success: true, processingTime });
     }
 
@@ -82,6 +85,42 @@ class SchedulerInfoModel extends EventEmitter {
             extractFromQueueRecursive(this._schedulerInfo); // Start from root
         }
         this._partitions = [...partitions].sort();
+    }
+
+    /**
+     * Extracts unique node labels from the loaded scheduler info.
+     * @private
+     */
+    _extractNodeLabels() {
+        const nodeLabels = new Set();
+        
+        if (this._schedulerInfo) {
+            const extractFromQueueRecursive = (queueInfo) => {
+                if (!queueInfo) return;
+
+                // Check nodeLabels array on queues
+                if (queueInfo.nodeLabels) {
+                    for (const label of queueInfo.nodeLabels) {
+                        if (label && label !== '*' && label !== '' && label !== DEFAULT_PARTITION) {
+                            nodeLabels.add(label);
+                        }
+                    }
+                }
+
+                // Recurse through child queues
+                if (queueInfo.queues && queueInfo.queues.queue) {
+                    const children = Array.isArray(queueInfo.queues.queue)
+                        ? queueInfo.queues.queue
+                        : [queueInfo.queues.queue];
+                    for (const child of children) {
+                        extractFromQueueRecursive(child);
+                    }
+                }
+            };
+            extractFromQueueRecursive(this._schedulerInfo);
+        }
+        
+        this._nodeLabels = [...nodeLabels].sort();
     }
 
     /**
@@ -152,6 +191,14 @@ class SchedulerInfoModel extends EventEmitter {
      */
     getPartitions() {
         return [...this._partitions];
+    }
+
+    /**
+     * Returns a copy of the available node labels.
+     * @returns {Array<string>} Array of node labels
+     */
+    getNodeLabels() {
+        return [...this._nodeLabels];
     }
 
     /**

@@ -10,6 +10,7 @@ const CONFIG = {
     API_ENDPOINTS: {
         SCHEDULER_CONF: '/ws/v1/cluster/scheduler-conf',
         SCHEDULER_INFO: '/ws/v1/cluster/scheduler',
+        CLUSTER_NODES: '/ws/v1/cluster/nodes',
         // CLUSTER_INFO: "/ws/v1/cluster/info", // If needed later
     },
     TIMEOUTS: {

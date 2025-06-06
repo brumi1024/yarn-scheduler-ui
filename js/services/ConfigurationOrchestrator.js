@@ -2,11 +2,10 @@
  * @file ConfigurationOrchestrator - Coordinates config loading, validation, and mutation workflows
  */
 class ConfigurationOrchestrator {
-    constructor(schedulerConfigModel, schedulerInfoModel, apiService, notificationView) {
+    constructor(schedulerConfigModel, schedulerInfoModel, apiService) {
         this.schedulerConfigModel = schedulerConfigModel;
         this.schedulerInfoModel = schedulerInfoModel;
         this.apiService = apiService;
-        this.notificationView = notificationView;
     }
 
     /**
@@ -26,7 +25,7 @@ class ConfigurationOrchestrator {
             return { configSuccess, infoSuccess };
         } catch (error) {
             console.error('ConfigurationOrchestrator init error:', error);
-            this.notificationView.showError(`Configuration initialization failed: ${error.message}`);
+            getEventBus().emit('notification:error', `Configuration initialization failed: ${error.message}`);
             this.schedulerConfigModel.loadSchedulerConfig([]);
             this.schedulerInfoModel.loadSchedulerInfo(null);
             return { configSuccess: false, infoSuccess: false };
@@ -48,7 +47,7 @@ class ConfigurationOrchestrator {
 
         const result = await this.initializeConfiguration();
         if (result.configSuccess) {
-            this.notificationView.showSuccess('Data refreshed from server.');
+            getEventBus().emit('notification:success', 'Data refreshed from server.');
         }
         return result.configSuccess;
     }
@@ -67,16 +66,12 @@ class ConfigurationOrchestrator {
         );
 
         if (validationErrors.length > 0) {
-            this.notificationView.show({
-                message: `Cannot apply: ${validationErrors.map((e) => e.message).join('; ')}`,
-                type: 'error',
-                duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR + 2000,
-            });
+            getEventBus().emit('notification:error', `Cannot apply: ${validationErrors.map((e) => e.message).join('; ')}`);
             return false;
         }
 
         if (!this.schedulerConfigModel.hasPendingChanges()) {
-            this.notificationView.showInfo('No changes to apply.');
+            getEventBus().emit('notification:info', 'No changes to apply.');
             return true;
         }
 
@@ -86,7 +81,7 @@ class ConfigurationOrchestrator {
         const result = await this.apiService.putSchedulerChanges(apiPayload);
 
         if (this._isSuccessfulResponse(result)) {
-            this.notificationView.showSuccess('Configuration changes applied successfully!');
+            getEventBus().emit('notification:success', 'Configuration changes applied successfully!');
             this.schedulerConfigModel.clearPendingChanges();
             
             // Reload configuration from server
@@ -95,11 +90,7 @@ class ConfigurationOrchestrator {
         } else {
             const errorDetail = result.error || 
                 (typeof result.data === 'string' ? result.data : 'Unknown YARN error or non-string response.');
-            this.notificationView.show({
-                message: `Failed to apply changes: ${errorDetail}`,
-                type: 'error',
-                duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR + 7000,
-            });
+            getEventBus().emit('notification:error', `Failed to apply changes: ${errorDetail}`);
             return false;
         }
     }
@@ -110,13 +101,13 @@ class ConfigurationOrchestrator {
      */
     discardPendingChanges() {
         if (!this.schedulerConfigModel.hasPendingChanges()) {
-            this.notificationView.showInfo('No pending changes to discard.');
+            getEventBus().emit('notification:info', 'No pending changes to discard.');
             return false;
         }
 
         if (globalThis.confirm('Are you sure you want to discard all pending local changes? This action cannot be undone.')) {
             this.schedulerConfigModel.clearPendingChanges();
-            this.notificationView.showInfo('All pending changes discarded.');
+            getEventBus().emit('notification:info', 'All pending changes discarded.');
             return true;
         }
         return false;
@@ -149,13 +140,13 @@ class ConfigurationOrchestrator {
         if (legacyModeChange) {
             const queueUpdates = this._stageAutoCreationModeTransitions(legacyModeChange);
             if (queueUpdates > 0) {
-                this.notificationView.showInfo(`Global settings changes staged. Automatically updated ${queueUpdates} queue auto-creation configurations.`);
+                getEventBus().emit('notification:info', `Global settings changes staged. Automatically updated ${queueUpdates} queue auto-creation configurations.`);
                 return; // Early return to avoid duplicate notification
             }
         }
         
         if (hasChanges) {
-            this.notificationView.showInfo('Global settings changes staged.');
+            getEventBus().emit('notification:info', 'Global settings changes staged.');
         }
     }
     
@@ -224,9 +215,11 @@ class ConfigurationOrchestrator {
         const queueProperties = this.schedulerConfigModel.getQueueNodeProperties(queuePath);
         if (!queueProperties) return false;
         
-        // Check if queue has auto-creation enabled (either v1 or v2)
-        const v1Enabled = String(queueProperties.get(`yarn.scheduler.capacity.${queuePath}.auto-create-child-queue.enabled`) || 'false').toLowerCase() === 'true';
-        const v2Enabled = String(queueProperties.get(`yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.enabled`) || 'false').toLowerCase() === 'true';
+        // Check if queue has auto-creation enabled (either v1 or v2) using metadata-driven keys
+        const v1AutoCreateKey = AutoCreationService.getV1EnabledKey(queuePath);
+        const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
+        const v1Enabled = String(queueProperties.get(v1AutoCreateKey) || 'false').toLowerCase() === 'true';
+        const v2Enabled = String(queueProperties.get(v2AutoCreateKey) || 'false').toLowerCase() === 'true';
         
         if (!v1Enabled && !v2Enabled) return false; // No auto-creation enabled, nothing to do
         
@@ -305,7 +298,7 @@ class ConfigurationOrchestrator {
             return true;
         } else {
             this.schedulerConfigModel.loadSchedulerConfig([]);
-            this.notificationView.showError(configResult.error ||
+            getEventBus().emit('notification:error', configResult.error ||
                 `Failed to fetch scheduler configuration (status: ${configResult.status})`);
             return false;
         }
@@ -321,7 +314,7 @@ class ConfigurationOrchestrator {
             return true;
         } else {
             this.schedulerInfoModel.loadSchedulerInfo(null);
-            this.notificationView.showWarning(infoResult.error ||
+            getEventBus().emit('notification:warning', infoResult.error ||
                 `Failed to fetch scheduler info (status: ${infoResult.status})`);
             return false;
         }

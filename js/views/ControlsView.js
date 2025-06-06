@@ -82,6 +82,30 @@ class ControlsView extends EventEmitter {
         this.renderSelectedPartition(this.appStateModel.getSelectedPartition());
     }
 
+    /**
+     * Renders node labels in the partition selector
+     * @param {Array<string>} nodeLabels - Available node labels
+     */
+    renderNodeLabels(nodeLabels) {
+        if (!this.partitionSelectEl) return;
+        
+        DomUtils.empty(this.partitionSelectEl);
+        
+        // Add default partition
+        const defaultOption = DomUtils.createElement('option', null, 
+            { value: DEFAULT_PARTITION }, 'Default');
+        this.partitionSelectEl.append(defaultOption);
+        
+        // Add node labels
+        for (const label of (nodeLabels || [])) {
+            const option = DomUtils.createElement('option', null, 
+                { value: label }, label);
+            this.partitionSelectEl.append(option);
+        }
+        
+        this.renderSelectedPartition(this.appStateModel.getSelectedPartition());
+    }
+
     renderSelectedPartition(selectedPartition) {
         if (this.partitionSelectEl && this.partitionSelectEl.value !== selectedPartition) {
             this.partitionSelectEl.value = selectedPartition;
