@@ -1,77 +1,53 @@
 class GlobalConfigView extends EventEmitter {
-    constructor(appStateModel) {
+    constructor() {
         super();
-        this.appStateModel = appStateModel; // To get current edit mode state
-
         this.containerEl = DomUtils.getById('global-scheduler-settings-container');
-        this.actionsContainerEl = DomUtils.getById('global-config-actions'); // The div holding the buttons
+        this.saveBtn = DomUtils.getById('save-global-config-btn');
 
-        if (!this.containerEl || !this.actionsContainerEl) {
-            console.error('GlobalConfigView: Required DOM elements not found.');
+        if (!this.containerEl) {
+            console.error('GlobalConfigView: Required DOM element not found.');
             return;
         }
 
-        // Buttons are within the actionsContainerEl, specific to this view/tab
-        this.editBtn = DomUtils.getById('edit-global-config-btn');
-        this.saveBtn = DomUtils.getById('save-global-config-btn');
-        this.cancelBtn = DomUtils.getById('cancel-global-config-btn');
-
-        this._bindLocalEvents();
-
-        // Subscribe to AppStateModel for edit mode changes relevant to this view
-        this.appStateModel.subscribe('globalConfigEditModeChanged', (isEditing) => {
-            // The controller will call this.render() with the necessary data
-            // when both mode and data are ready. This subscription just ensures
-            // buttons update if mode is toggled programmatically for any other reason.
-            this._updateButtonVisibility(isEditing);
-        });
+        this._bindEvents();
     }
 
-    _bindLocalEvents() {
-        if (this.editBtn) {
-            this.editBtn.addEventListener('click', () => this._emit('editGlobalConfigClicked'));
-        }
+    _bindEvents() {
+        // Bind save button click
         if (this.saveBtn) {
             this.saveBtn.addEventListener('click', () => {
                 const formData = this._collectFormData();
                 if (Object.keys(formData.params).length > 0) {
                     this._emit('saveGlobalConfigClicked', formData);
                 } else {
-                    // No actual changes were made, treat as cancel or just switch mode
-                    this._emit('cancelGlobalConfigClicked'); // Or a specific "noChangesToSave" event
                     this._emit('showNotification', { message: 'No changes detected to save.', type: 'info' });
                 }
             });
         }
-        if (this.cancelBtn) {
-            this.cancelBtn.addEventListener('click', () => this._emit('cancelGlobalConfigClicked'));
-        }
-    }
 
-    _updateButtonVisibility(isEditing) {
-        if (!this.editBtn || !this.saveBtn || !this.cancelBtn) return;
-        DomUtils.show(this.editBtn, isEditing ? 'none' : 'inline-block');
-        DomUtils.show(this.saveBtn, isEditing ? 'inline-block' : 'none');
-        DomUtils.show(this.cancelBtn, isEditing ? 'inline-block' : 'none');
+        // Bind change events to update save button state
+        this.containerEl.addEventListener('input', () => {
+            this._updateSaveButtonState();
+        });
+
+        this.containerEl.addEventListener('change', () => {
+            this._updateSaveButtonState();
+        });
     }
 
     /**
      * Renders the global scheduler settings page.
      * @param {Map<string, string>} globalConfigData - Map of full YARN property name to value from SchedulerConfigModel.
-     * @param {boolean} isInEditMode - Current edit mode state from AppStateModel.
      */
-    render(globalConfigData, isInEditMode) {
+    render(globalConfigData) {
         if (!this.containerEl) return;
         DomUtils.empty(this.containerEl);
-        this._updateButtonVisibility(isInEditMode);
 
         if (!GLOBAL_CONFIG_METADATA || GLOBAL_CONFIG_METADATA.length === 0) {
             this.containerEl.innerHTML =
                 '<p>No global scheduler settings categories are defined in the UI metadata.</p>';
-            if (this.editBtn) this.editBtn.disabled = true;
             return;
         }
-        if (this.editBtn) this.editBtn.disabled = false;
 
         let html = '';
         for (const group of GLOBAL_CONFIG_METADATA) {
@@ -81,15 +57,17 @@ class GlobalConfigView extends EventEmitter {
 
                 for (const [propertyName, metadata] of Object.entries(group.properties)) {
                     const liveValue = globalConfigData ? globalConfigData.get(propertyName) : undefined;
-                    const currentValue = liveValue === undefined ? metadata.defaultValue : liveValue;
-                    const isDefaultUsed = liveValue === undefined;
+                    // For empty inputs, use empty string to show placeholder; for display, use default
+                    const inputValue = liveValue === undefined ? '' : liveValue;
+                    const isDefault = liveValue === undefined;
                     const inputId = `global-config-${propertyName.replaceAll('.', '-')}`;
-                    const displayNameSuffix =
-                        isDefaultUsed && !isInEditMode ? ' <em class="default-value-indicator">(default)</em>' : '';
 
                     html += `<div class="config-item" data-property-name="${DomUtils.escapeXml(propertyName)}">
                                 <div class="config-item-col-left">
-                                    <div class="config-display-name">${DomUtils.escapeXml(metadata.displayName)}${displayNameSuffix}</div>
+                                    <div class="config-display-name">
+                                        <span>${DomUtils.escapeXml(metadata.displayName)}</span>
+                                        ${isDefault ? '<span class="default-indicator" title="This field is using the default value">Default</span>' : ''}
+                                    </div>
                                     <div class="config-yarn-property">${DomUtils.escapeXml(propertyName)}</div>
                                 </div>
                                 <div class="config-item-col-middle config-description">
@@ -97,7 +75,7 @@ class GlobalConfigView extends EventEmitter {
                                 </div>
                                 <div class="config-item-col-right config-item-value-control">`;
 
-                    html += isInEditMode ? this._buildInputControl(inputId, metadata, currentValue, propertyName) : `<span class="config-value-display">${DomUtils.escapeXml(String(currentValue))}</span>`;
+                    html += this._buildInputControl(inputId, metadata, inputValue, propertyName);
                     html += `       </div></div>`;
                 }
                 html += `</div>`;
@@ -105,36 +83,63 @@ class GlobalConfigView extends EventEmitter {
         }
 
         this.containerEl.innerHTML = html || '<p>No global scheduler settings are configured for display.</p>';
+        
+        // Bind toggle switch events
+        this._bindToggleSwitchEvents();
+        
+        // Set initial save button state
+        this._updateSaveButtonState();
     }
 
     _buildInputControl(inputId, metadata, currentValue, propertyName) {
-        let inputHtml = '';
-        // Escape for HTML attributes
+        // Escape for HTML attributes  
         const escapedCurrentValue = DomUtils.escapeXml(String(currentValue));
         const escapedPropertyName = DomUtils.escapeXml(propertyName);
+        const escapedDefaultValue = DomUtils.escapeXml(String(metadata.defaultValue || ''));
 
-        const dataAttributes = `data-original-value="${escapedCurrentValue}" data-prop-name="${escapedPropertyName}"`;
+        const dataAttributes = `data-original-value="${escapedDefaultValue}" data-prop-name="${escapedPropertyName}"`;
 
         if (metadata.type === 'boolean') {
-            inputHtml = `<select id="${inputId}" class="config-value-input" ${dataAttributes}>
-                            <option value="true" ${String(currentValue) === 'true' ? 'selected' : ''}>true</option>
-                            <option value="false" ${String(currentValue) === 'false' ? 'selected' : ''}>false</option>
-                         </select>`;
+            // For boolean inputs, handle both empty and actual values
+            const isChecked = currentValue === '' ? (metadata.defaultValue === 'true' || metadata.defaultValue === true) : String(currentValue) === 'true';
+            const effectiveValue = currentValue === '' ? (isChecked ? 'true' : 'false') : String(currentValue);
+            
+            return `<div class="toggle-container">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="${inputId}" class="config-value-input" ${dataAttributes} ${isChecked ? 'checked' : ''}>
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span class="toggle-label ${isChecked ? 'active' : ''}">${effectiveValue}</span>
+                     </div>`;
         } else if (metadata.type === 'number' || metadata.type === 'percentage') {
             let attributes = `type="number" value="${escapedCurrentValue}" ${dataAttributes}`;
             if (metadata.step !== undefined) attributes += ` step="${metadata.step}"`;
             if (metadata.min !== undefined) attributes += ` min="${metadata.min}"`;
             if (metadata.max !== undefined) attributes += ` max="${metadata.max}"`;
-            if (metadata.type === 'percentage' && metadata.step === undefined) attributes += ` step="0.01"`; // Default step for %
+            if (metadata.type === 'percentage' && metadata.step === undefined) attributes += ` step="0.01"`;
             if (metadata.type === 'percentage' && metadata.min === undefined) attributes += ` min="0"`;
-            if (metadata.type === 'percentage' && metadata.max === undefined) attributes += ` max="1"`; // Default max for %
+            if (metadata.type === 'percentage' && metadata.max === undefined) attributes += ` max="1"`;
+            
+            // Add placeholder for empty fields
+            if (metadata.placeholder) {
+                attributes += ` placeholder="${DomUtils.escapeXml(metadata.placeholder)}"`;
+            } else if (metadata.defaultValue !== undefined) {
+                attributes += ` placeholder="Default: ${escapedDefaultValue}"`;
+            }
 
-            inputHtml = `<input id="${inputId}" class="config-value-input" ${attributes}>`;
+            return `<input id="${inputId}" class="config-value-input" ${attributes}>`;
         } else {
-            // Default to text
-            inputHtml = `<input type="text" id="${inputId}" class="config-value-input" value="${escapedCurrentValue}" ${dataAttributes}>`;
+            // Default to text with placeholder
+            let attributes = `type="text" value="${escapedCurrentValue}" ${dataAttributes}`;
+            
+            if (metadata.placeholder) {
+                attributes += ` placeholder="${DomUtils.escapeXml(metadata.placeholder)}"`;
+            } else if (metadata.defaultValue !== undefined) {
+                attributes += ` placeholder="Default: ${escapedDefaultValue}"`;
+            }
+
+            return `<input id="${inputId}" class="config-value-input" ${attributes}>`;
         }
-        return inputHtml;
     }
 
     _collectFormData() {
@@ -146,7 +151,15 @@ class GlobalConfigView extends EventEmitter {
             if (inputElement) {
                 const propertyName = inputElement.dataset.propName;
                 const originalValue = inputElement.dataset.originalValue;
-                const newValue = inputElement.value;
+                
+                // Handle different input types
+                let newValue;
+                if (inputElement.type === 'checkbox') {
+                    // For toggle switches (boolean properties)
+                    newValue = inputElement.checked ? 'true' : 'false';
+                } else {
+                    newValue = inputElement.value;
+                }
 
                 // Only include changed values
                 if (newValue !== originalValue) {
@@ -155,5 +168,42 @@ class GlobalConfigView extends EventEmitter {
             }
         }
         return formData;
+    }
+
+    /**
+     * Updates the save button state based on whether there are changes.
+     * @private
+     */
+    _updateSaveButtonState() {
+        if (!this.saveBtn) return;
+        
+        const formData = this._collectFormData();
+        const hasChanges = Object.keys(formData.params).length > 0;
+        
+        this.saveBtn.disabled = !hasChanges;
+        
+        // Update button text to provide better feedback
+        this.saveBtn.textContent = hasChanges ? 'Save Changes' : 'No Changes';
+    }
+
+    /**
+     * Binds toggle switch events to update labels when switches are toggled.
+     * @private
+     */
+    _bindToggleSwitchEvents() {
+        const toggleSwitches = this.containerEl.querySelectorAll('.toggle-switch input[type="checkbox"]');
+        
+        for (const toggleInput of toggleSwitches) {
+            toggleInput.addEventListener('change', (event) => {
+                const isChecked = event.target.checked;
+                const toggleContainer = event.target.closest('.toggle-container');
+                const label = toggleContainer.querySelector('.toggle-label');
+                
+                if (label) {
+                    label.textContent = isChecked ? 'true' : 'false';
+                    label.classList.toggle('active', isChecked);
+                }
+            });
+        }
     }
 }
