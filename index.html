@@ -20,9 +20,11 @@
 
             <!-- Hamburger Menu Button -->
             <button class="hamburger" id="hamburger-button" aria-label="Toggle navigation">
-                <span class="bar"></span>
-                <span class="bar"></span>
-                <span class="bar"></span>
+                <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
+                    <circle cx="5" cy="12" r="2"/>
+                    <circle cx="12" cy="12" r="2"/>
+                    <circle cx="19" cy="12" r="2"/>
+                </svg>
             </button>
 
             <!-- Optional dropdown menu -->
@@ -33,18 +35,6 @@
                     <li><a href="#">Help</a></li>
                 </ul>
             </div>
-
-            <script>
-                document.addEventListener('DOMContentLoaded', function () {
-                    const hamburgerButton = document.getElementById('hamburger-button');
-                    const hamburgerMenu = document.getElementById('hamburger-menu');
-                    hamburgerButton.addEventListener('click', function () {
-                        hamburgerMenu.style.display = hamburgerMenu.style.display === 'none'
-                            ? 'block'
-                            : 'none'
-                    });
-                });
-            </script>
         </div>
 
         <div class="controls" id="queue-config-controls">

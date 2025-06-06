@@ -15,6 +15,13 @@ class TabView extends EventEmitter {
 
         this._bindNavTabClicks();
         this.appStateModel.subscribe('currentTabChanged', this.render.bind(this));
+        const hamburgerButton = document.getElementById('hamburger-button');
+        const hamburgerMenu = document.getElementById('hamburger-menu');
+        hamburgerButton.addEventListener('click', function () {
+            hamburgerMenu.style.display = hamburgerMenu.style.display === 'none'
+                ? 'block'
+                : 'none'
+        });
     }
 
     _bindNavTabClicks() {
