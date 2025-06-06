@@ -38,69 +38,32 @@ const ValidationService = {
      */
     parseAndValidateCapacityValue(capacityString, mode, allowEmptyVector = false) {
         const string_ = String(capacityString || '').trim();
-        const errors = [];
-
+        
+        // Handle empty vector case
+        if (string_ === '[]' && allowEmptyVector && (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR)) {
+            return { value: '[]' };
+        }
+        
+        // Use CapacityValueParser for validation
+        const validationResult = CapacityValueParser.validate(string_, mode, allowEmptyVector);
+        
+        if (!validationResult.isValid) {
+            return { value: null, errors: validationResult.errors };
+        }
+        
+        // Format the value based on mode
         if (mode === CAPACITY_MODES.PERCENTAGE) {
-            let numberString = string_;
-            if (string_.endsWith('%')) {
-                numberString = string_.slice(0, -1);
-            }
-            const number_ = Number.parseFloat(numberString);
-            if (Number.isNaN(number_)) {
-                errors.push('Percentage capacity must be a number.');
-            } else if (number_ < 0 || number_ > 100) {
-                errors.push('Percentage capacity must be between 0.0 and 100.0.');
-            }
-            return errors.length > 0 ? { value: null, errors: errors } : { value: number_.toFixed(1) };
+            const parsed = CapacityValueParser.parse(string_);
+            return { value: parsed.value.toFixed(1) };
         }
-
+        
         if (mode === CAPACITY_MODES.WEIGHT) {
-            let numberString = string_;
-            if (string_.endsWith('w')) {
-                numberString = string_.slice(0, -1);
-            }
-            const number_ = Number.parseFloat(numberString);
-            if (Number.isNaN(number_)) {
-                errors.push('Weight capacity must be a number.');
-            } else if (number_ < 0) {
-                errors.push('Weight capacity must be non-negative.');
-            }
-            // YARN might support integer weights better, but UI can standardize to one decimal for 'w'
-            return errors.length > 0 ? { value: null, errors: errors } : { value: `${number_.toFixed(1)}w` };
+            const parsed = CapacityValueParser.parse(string_);
+            return { value: `${parsed.value.toFixed(1)}w` };
         }
-
-        if (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) {
-            if (!string_.startsWith('[') || !string_.endsWith(']')) {
-                errors.push('Absolute capacity must be enclosed in brackets, e.g., [memory=1024,vcores=1].');
-            } else if (string_ === '[]' && !allowEmptyVector) {
-                errors.push('Absolute capacity vector cannot be empty unless explicitly allowed.');
-            }
-            // TODO: Deeper validation of vector content (key=value pairs, valid resource names)
-            // For example: '[memory=100mb,vcores=2]' - '100mb' would be an issue. Needs to be numeric.
-            if (string_ !== '[]') {
-                const content = string_.slice(1, -1);
-                const pairs = content.split(',');
-                if (content && pairs.length === 0) errors.push('Invalid format inside absolute capacity brackets.');
-                for (const pair of pairs) {
-                    const parts = pair.split('=');
-                    if (parts.length !== 2 || !parts[0].trim() || !parts[1].trim()) {
-                        errors.push(
-                            `Invalid resource entry in vector: "${pair}". Expected format "resourceName=value".`
-                        );
-                        continue;
-                    }
-                    const resourceValue = parts[1].trim();
-                    // Check if value is numeric (ignoring units for now, YARN handles units)
-                    // More robust parsing might extract numeric part and unit separately for stricter validation
-                    if (Number.isNaN(Number.parseFloat(resourceValue))) {
-                        // Checks if the beginning of the string is a number
-                        errors.push(`Resource value in "${pair}" must be numeric.`);
-                    }
-                }
-            }
-            return errors.length > 0 ? { value: null, errors: errors } : { value: string_ };
-        }
-        return { value: null, error: `Unknown capacity mode: ${mode}` };
+        
+        // For absolute and vector modes, return the validated value
+        return { value: validationResult.value };
     },
 
     /**

@@ -76,54 +76,6 @@ class QueueNode {
         this.timestamp = null;
     }
 
-    /**
-     * Stages an addition operation
-     */
-    stageAdd(properties, changeId) {
-        this.pendingOperation = 'add';
-        this.pendingProperties = new Map(properties);
-        this.oldProperties.clear();
-        this.changeId = changeId;
-        this.timestamp = Date.now();
-        this.isQueue = true;
-    }
-
-    /**
-     * Stages an update operation
-     */
-    stageUpdate(properties, changeId) {
-        if (this.pendingOperation === 'add') {
-            // If it's already a new addition, just update the properties
-            for (const [key, value] of properties) {
-                this.pendingProperties.set(key, value);
-            }
-        } else {
-            this.pendingOperation = 'update';
-            // Store original values for rollback
-            for (const [key] of properties) {
-                if (!this.oldProperties.has(key)) {
-                    this.oldProperties.set(key, this.baseProperties.get(key) || '');
-                }
-            }
-            // Apply new values
-            for (const [key, value] of properties) {
-                this.pendingProperties.set(key, value);
-            }
-            this.changeId = changeId;
-            this.timestamp = Date.now();
-        }
-    }
-
-    /**
-     * Stages a deletion operation
-     */
-    stageDelete(changeId) {
-        this.pendingOperation = 'delete';
-        this.pendingProperties.clear();
-        this.oldProperties.clear();
-        this.changeId = changeId;
-        this.timestamp = Date.now();
-    }
 }
 
 /**
@@ -307,20 +259,7 @@ class QueueConfigurationManager {
      * Determines if a property that starts with yarn.scheduler.capacity. is actually a global property
      */
     _isGlobalCapacityProperty(propertyName) {
-        const remainder = propertyName.slice(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
-        
-        // Known global properties that start with yarn.scheduler.capacity.
-        const globalCapacityProperties = [
-            'legacy-queue-mode.enabled',
-            'schedule-asynchronously.enable',
-            'node-locality-delay',
-            'maximum-am-resource-percent',
-            'maximum-applications',
-            'user-limit-factor',
-            // Add other global capacity properties as needed
-        ];
-        
-        return globalCapacityProperties.includes(remainder);
+        return PropertyKeyMapper.isGlobalProperty(propertyName);
     }
 
     /**
@@ -373,7 +312,12 @@ class QueueConfigurationManager {
     stageAddQueue(queuePath, properties) {
         const changeId = this._generateChangeId();
         const node = this._getOrCreateQueueNode(queuePath);
-        node.stageAdd(properties, changeId);
+        node.pendingOperation = 'add';
+        node.pendingProperties = new Map(properties);
+        node.oldProperties.clear();
+        node.changeId = changeId;
+        node.timestamp = Date.now();
+        node.isQueue = true;
         return changeId;
     }
 
@@ -386,7 +330,27 @@ class QueueConfigurationManager {
             throw new Error(`Cannot update non-existent queue: ${queuePath}`);
         }
         const changeId = this._generateChangeId();
-        node.stageUpdate(properties, changeId);
+        
+        if (node.pendingOperation === 'add') {
+            // If it's already a new addition, just update the properties
+            for (const [key, value] of properties) {
+                node.pendingProperties.set(key, value);
+            }
+        } else {
+            node.pendingOperation = 'update';
+            // Store original values for rollback
+            for (const [key] of properties) {
+                if (!node.oldProperties.has(key)) {
+                    node.oldProperties.set(key, node.baseProperties.get(key) || '');
+                }
+            }
+            // Apply new values
+            for (const [key, value] of properties) {
+                node.pendingProperties.set(key, value);
+            }
+            node.changeId = changeId;
+            node.timestamp = Date.now();
+        }
         return changeId;
     }
 
@@ -399,7 +363,11 @@ class QueueConfigurationManager {
             throw new Error(`Cannot delete non-existent queue: ${queuePath}`);
         }
         const changeId = this._generateChangeId();
-        node.stageDelete(changeId);
+        node.pendingOperation = 'delete';
+        node.pendingProperties.clear();
+        node.oldProperties.clear();
+        node.changeId = changeId;
+        node.timestamp = Date.now();
         return changeId;
     }
 

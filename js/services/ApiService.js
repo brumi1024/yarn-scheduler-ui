@@ -141,6 +141,24 @@ class ApiService {
     }
 
     /**
+     * Fetches cluster nodes information including node labels.
+     * @returns {Promise<{status: number, data: Object|null, error?: string}>}
+     *          On success, data is cluster nodes object like `nodes.json`.
+     */
+    async fetchClusterNodes() {
+        if (this.useMocks) {
+            return this._getMock(CONFIG.API_ENDPOINTS.CLUSTER_NODES, true);
+        }
+        return this._makeRequest(
+            CONFIG.API_ENDPOINTS.CLUSTER_NODES,
+            {
+                headers: { Accept: 'application/json' },
+            },
+            true
+        );
+    }
+
+    /**
      * Builds the XML payload for scheduler configuration mutation.
      * @param {Object} batchChanges - The changes to apply.
      * @param {Array<string>} batchChanges.removeQueues

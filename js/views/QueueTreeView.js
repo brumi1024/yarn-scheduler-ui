@@ -1,6 +1,6 @@
-const MIN_SANKEY_LINK_WIDTH = 20; // Minimum width in pixels for a link
-const MAX_SANKEY_LINK_WIDTH = 200; // Maximum width in pixels for a link
-const DEFAULT_SANKEY_LINK_WIDTH = 40; // Default width if capacity info is unavailable
+const MIN_SANKEY_LINK_WIDTH = 8; // Minimum width in pixels for a link
+const MAX_SANKEY_LINK_WIDTH = 60; // Maximum width in pixels for a link (fits within 120px gap)
+const DEFAULT_SANKEY_LINK_WIDTH = 20; // Default width if capacity info is unavailable
 const MIN_VISIBLE_SANKEY_WIDTH = 2; // Smallest pixel value to ensure link is drawn
 
 class QueueTreeView extends EventEmitter {
@@ -15,8 +15,6 @@ class QueueTreeView extends EventEmitter {
         this.queueElements = new Map(); // Stores DOM elements of queue cards, keyed by queuePath
         this._connectorDrawTimeoutId = null; // For debouncing connector drawing
         this._currentFormattedHierarchy = null; // To store the last used data for drawing
-
-        // Removed virtual scrolling - traditional rendering works fine for all datasets
 
         if (!this.treeContainerEl || !this.levelHeadersContainerEl || !this.arrowSvgEl) {
             console.error('QueueTreeView: Required DOM elements (queue-tree, level-headers, or arrow-svg) not found.');
@@ -225,9 +223,9 @@ class QueueTreeView extends EventEmitter {
         const startX = parentRect.right - svgRect.left;
         const endX = childRect.left - svgRect.left;
 
-        if (startX >= endX - dynamicWidth) {
-            // Ensure there's space for the link
-            // console.warn(`Skipping link from ${childNode.parentPath} to ${childNode.path} due to layout.`);
+
+        if (startX >= endX - 10) {
+            // Ensure there's at least 10px space for the link
             return;
         }
 

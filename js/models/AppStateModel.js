@@ -26,6 +26,14 @@ class AppStateModel extends EventEmitter {
     getSelectedPartition() {
         return this._selectedPartition;
     }
+    
+    /**
+     * Gets the currently selected node label (alias for partition)
+     * @returns {string} Currently selected node label
+     */
+    getSelectedNodeLabel() {
+        return this._selectedPartition;
+    }
     isGlobalConfigInEditMode() {
         return this._isGlobalConfigInEditMode;
     }

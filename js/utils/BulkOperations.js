@@ -292,7 +292,7 @@ class BulkOperations {
             const nodeProperties = this.schedulerConfigModel.getQueueNodeProperties(queuePath);
             if (!nodeProperties) return null;
             
-            const capacityKey = `yarn.scheduler.capacity.${queuePath}.capacity`;
+            const capacityKey = PropertyKeyMapper.createFullKey(queuePath, 'capacity');
             const capacityValue = nodeProperties.get(capacityKey);
             
             if (!capacityValue) return null;

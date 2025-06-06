@@ -53,12 +53,13 @@ class QueueValidator {
         }
 
         // 3. Node label validation (from NodeLabelValidator)
-        if (node.effectiveProperties) {
-            const accessibleLabels = this._getPropertyValue(node, 'accessible-node-labels');
-            if (accessibleLabels) {
-                this._validateAccessibleLabels(accessibleLabels, nodeLabels, fullPath, errors);
-            }
-        }
+        // TODO: Disabled for now - node label existence validation not needed
+        // if (node.effectiveProperties) {
+        //     const accessibleLabels = this._getPropertyValue(node, 'accessible-node-labels');
+        //     if (accessibleLabels) {
+        //         this._validateAccessibleLabels(accessibleLabels, nodeLabels, fullPath, errors);
+        //     }
+        // }
 
         // 4. Process children and capacity sum validation (from CapacitySumValidator)
         if (node.children) {

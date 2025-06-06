@@ -243,7 +243,7 @@ class ChangePreview {
             html += '</div>';
         } else if (queuePath && property) {
             // Construct full property name if not provided
-            const constructedFullKey = `yarn.scheduler.capacity.${queuePath}.${property}`;
+            const constructedFullKey = PropertyKeyMapper.createFullKey(queuePath, property);
             html += `<div class="change-property">`;
             html += `<code class="full-property-name">${DomUtils.escapeXml(constructedFullKey)}</code>`;
             html += '</div>';
@@ -353,20 +353,8 @@ class ChangePreview {
      * @private
      */
     _isGlobalProperty(propertyKey) {
-        if (!propertyKey) return false;
-        
-        // Simplified logic: Queue properties start with yarn.scheduler.capacity.root
-        // Everything else under yarn.scheduler.capacity is global
-        if (propertyKey.startsWith('yarn.scheduler.capacity.root')) {
-            return false; // This is a queue property
-        }
-        
-        // If it starts with yarn.scheduler.capacity but not .root, it's global
-        if (propertyKey.startsWith('yarn.scheduler.capacity.')) {
-            return true; // This is a global property
-        }
-        
-        return true;
+        // Use centralized PropertyKeyMapper for consistency
+        return PropertyKeyMapper.isGlobalProperty(propertyKey);
     }
     
     /**
@@ -507,14 +495,15 @@ class ChangePreview {
     
     /**
      * Fallback heuristic-based queue path extraction when hierarchy is not available.
-     * Since any string can be a valid queue name, we assume the last part is the property.
+     * WARNING: This is unreliable and should only be used as last resort.
+     * The only reliable way is to check against actual .queues properties.
      * @param {Array<string>} parts - Property parts after removing 'yarn.scheduler.capacity.root.'
      * @returns {string} Best guess queue path
      * @private
      */
     _extractQueuePathHeuristic(parts) {
-        // Without access to the actual queue hierarchy, we can only assume
-        // that the last part is the property name and everything before it is the queue path
+        // Without access to the actual queue hierarchy, we can only guess
+        // This is inherently unreliable since queue names can contain dots
         if (parts.length > 1) {
             return 'root.' + parts.slice(0, -1).join('.');
         }
