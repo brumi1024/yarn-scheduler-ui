@@ -42,11 +42,10 @@ class AutoCreationService {
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
         const v1AutoCreateValue = baseProperties.get(v1AutoCreateKey);
         const v2AutoCreateValue = baseProperties.get(v2AutoCreateKey);
-        
-        dataForModal.autoCreationData.enabled = 
-            String(v1AutoCreateValue).toLowerCase() === 'true' || 
-            String(v2AutoCreateValue).toLowerCase() === 'true';
-            
+
+        dataForModal.autoCreationData.enabled =
+            String(v1AutoCreateValue).toLowerCase() === 'true' || String(v2AutoCreateValue).toLowerCase() === 'true';
+
         dataForModal.autoCreationData.v1Enabled = String(v1AutoCreateValue).toLowerCase() === 'true';
         dataForModal.autoCreationData.v2Enabled = String(v2AutoCreateValue).toLowerCase() === 'true';
 
@@ -56,7 +55,7 @@ class AutoCreationService {
             const fullKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
             const value = baseProperties.get(fullKey);
             const isDefault = value === undefined;
-            
+
             dataForModal.autoCreationData.nonTemplateProperties[meta.key] = {
                 value: isDefault ? '' : String(value),
                 isDefault: isDefault,
@@ -78,7 +77,7 @@ class AutoCreationService {
                     const v1FullKey = `yarn.scheduler.capacity.${queuePath}.leaf-queue-template.${meta.key}`;
                     const v1Value = baseProperties.get(v1FullKey);
                     const v1IsDefault = v1Value === undefined;
-                    
+
                     dataForModal.autoCreationData.v1TemplateProperties[meta.key] = {
                         value: v1IsDefault ? '' : String(v1Value),
                         isDefault: v1IsDefault,
@@ -90,15 +89,15 @@ class AutoCreationService {
                         const v2FullKey = `yarn.scheduler.capacity.${queuePath}.auto-queue-creation-v2.${scope}.${meta.key}`;
                         const v2Value = baseProperties.get(v2FullKey);
                         const v2IsDefault = v2Value === undefined;
-                        
-                        const scopeKey = scope.includes('-') ? 
-                            scope.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase()) : 
-                            scope;
-                        
+
+                        const scopeKey = scope.includes('-')
+                            ? scope.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase())
+                            : scope;
+
                         if (!dataForModal.autoCreationData.v2TemplateProperties[scopeKey]) {
                             dataForModal.autoCreationData.v2TemplateProperties[scopeKey] = {};
                         }
-                        
+
                         dataForModal.autoCreationData.v2TemplateProperties[scopeKey][meta.key] = {
                             value: v2IsDefault ? '' : String(v2Value),
                             isDefault: v2IsDefault,
@@ -121,14 +120,14 @@ class AutoCreationService {
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
         const v1AutoCreateValue = properties.get(v1AutoCreateKey);
         const v2AutoCreateValue = properties.get(v2AutoCreateKey);
-        
+
         const v1Enabled = String(v1AutoCreateValue).toLowerCase() === 'true';
         const v2Enabled = String(v2AutoCreateValue).toLowerCase() === 'true';
-        
+
         return {
             enabled: v1Enabled || v2Enabled,
             v1Enabled: v1Enabled,
-            v2Enabled: v2Enabled
+            v2Enabled: v2Enabled,
         };
     }
 
@@ -144,23 +143,25 @@ class AutoCreationService {
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
         const v1AutoCreateEnabled = String(effectiveProperties.get(v1AutoCreateKey) || '').toLowerCase() === 'true';
         const v2AutoCreateEnabled = String(effectiveProperties.get(v2AutoCreateKey) || '').toLowerCase() === 'true';
-        
+
         if (v1AutoCreateEnabled) {
             labels.push({
                 text: '⚡ Auto-Create v1',
                 cssClass: 'queue-tag tag-auto-create-v1',
-                tooltip: 'Legacy Auto Queue Creation (v1). Automatically creates child leaf queues based on user or group mappings using traditional template properties. These queues inherit properties from the parent leaf-queue-template configuration and can be automatically deleted after inactivity.',
+                tooltip:
+                    'Legacy Auto Queue Creation (v1). Automatically creates child leaf queues based on user or group mappings using traditional template properties. These queues inherit properties from the parent leaf-queue-template configuration and can be automatically deleted after inactivity.',
             });
         }
-        
+
         if (v2AutoCreateEnabled) {
             labels.push({
                 text: '🚀 Auto-Create v2',
                 cssClass: 'queue-tag tag-auto-create-v2',
-                tooltip: 'Flexible Auto Queue Creation (v2). Advanced auto-creation mode with support for different template scopes (general, parent, leaf), management policies, and enhanced flexibility. Available in weight-based capacity modes and non-legacy queue configurations.',
+                tooltip:
+                    'Flexible Auto Queue Creation (v2). Advanced auto-creation mode with support for different template scopes (general, parent, leaf), management policies, and enhanced flexibility. Available in weight-based capacity modes and non-legacy queue configurations.',
             });
         }
-        
+
         return labels;
     }
 }

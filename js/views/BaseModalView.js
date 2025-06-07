@@ -59,12 +59,12 @@ class BaseModalView extends EventEmitter {
      */
     hide(reason = { Canceled: true }) {
         if (!this.modalEl) return;
-        
+
         // Clean up any tooltips in the modal
         if (window.TooltipHelper) {
             TooltipHelper.cleanupTooltipsInContainer(this.modalEl);
         }
-        
+
         this.modalEl.classList.remove('show');
         this._emit('modalHidden', { modalId: this.modalId, reason });
     }

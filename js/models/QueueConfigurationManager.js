@@ -11,17 +11,17 @@ class QueueNode {
         this.segment = segment; // Queue name segment (e.g., "default")
         this.fullPath = ''; // Full path (e.g., "root.default")
         this.isQueue = false; // Whether this represents an actual queue
-        
+
         // Current state (from loaded configuration)
         this.baseProperties = new Map(); // Original properties from server
-        
+
         // Pending changes
         this.pendingOperation = null; // 'add' | 'update' | 'delete' | null
         this.pendingProperties = new Map(); // Staged property changes
         this.oldProperties = new Map(); // Original values for rollback
         this.changeId = null; // Unique ID for this change
         this.timestamp = null; // When change was staged
-        
+
         // Tree structure
         this.children = new Map(); // Map<string, QueueNode>
         this.parent = null; // Reference to parent node
@@ -75,7 +75,6 @@ class QueueNode {
         this.changeId = null;
         this.timestamp = null;
     }
-
 }
 
 /**
@@ -88,7 +87,7 @@ class QueueConfigurationManager {
         this.pendingGlobalChanges = new Map(); // Pending global changes
         this.oldGlobalProperties = new Map(); // Original global values for rollback
         this.globalChangeId = null;
-        
+
         this._changeIdCounter = 0;
         this._YARN_SCHEDULER_CAPACITY_PREFIX = 'yarn.scheduler.capacity.';
         this._QUEUES_SUFFIX = '.queues';
@@ -112,41 +111,33 @@ class QueueConfigurationManager {
         const queueDefinitions = new Map();
         const otherProperties = [];
 
-        // Pass 1: Identify queue hierarchy and global properties
         for (const prop of schedulerConfigProperties) {
             if (!prop.name || typeof prop.name !== 'string') continue;
 
             if (prop.name.startsWith(this._YARN_SCHEDULER_CAPACITY_PREFIX)) {
                 if (prop.name.endsWith(this._QUEUES_SUFFIX)) {
-                    // Queue definition property
                     const queuePath = prop.name.slice(
                         this._YARN_SCHEDULER_CAPACITY_PREFIX.length,
                         -this._QUEUES_SUFFIX.length
                     );
-                    const childNames = (prop.value || '').split(',')
-                        .map(name => name.trim())
-                        .filter(name => name.length > 0);
+                    const childNames = (prop.value || '')
+                        .split(',')
+                        .map((name) => name.trim())
+                        .filter((name) => name.length > 0);
                     queueDefinitions.set(queuePath, new Set(childNames));
                 } else {
-                    // Check if this is actually a global property that happens to start with capacity prefix
                     if (this._isGlobalCapacityProperty(prop.name)) {
-                        // Global property that starts with yarn.scheduler.capacity.
                         this.globalProperties.set(prop.name, prop.value || '');
                     } else {
-                        // Queue property
                         otherProperties.push(prop);
                     }
                 }
             } else {
-                // Global property
                 this.globalProperties.set(prop.name, prop.value || '');
             }
         }
 
-        // Pass 2: Build the queue hierarchy
         this._buildQueueHierarchy(queueDefinitions);
-
-        // Pass 3: Assign properties to queue nodes
         this._assignPropertiesToQueues(otherProperties);
     }
 
@@ -157,14 +148,13 @@ class QueueConfigurationManager {
         const processedPaths = new Set(['root']);
         const pendingPaths = new Map(queueDefinitions);
 
-        // Process queue definitions until all are handled
         while (pendingPaths.size > 0) {
             let progressMade = false;
 
             for (const [parentPath, childNames] of pendingPaths) {
                 if (processedPaths.has(parentPath)) {
                     const parentNode = this._getOrCreateQueueNode(parentPath);
-                    
+
                     for (const childName of childNames) {
                         const childPath = parentPath === 'root' ? `root.${childName}` : `${parentPath}.${childName}`;
                         const childNode = this._getOrCreateQueueNode(childPath);
@@ -182,7 +172,9 @@ class QueueConfigurationManager {
             }
 
             if (!progressMade && pendingPaths.size > 0) {
-                console.warn('QueueConfigurationManager: Circular dependency or missing parent queues detected:', [...pendingPaths.keys()]);
+                console.warn('QueueConfigurationManager: Circular dependency or missing parent queues detected:', [
+                    ...pendingPaths.keys(),
+                ]);
                 break;
             }
         }
@@ -211,8 +203,7 @@ class QueueConfigurationManager {
 
         const remainder = propertyName.slice(this._YARN_SCHEDULER_CAPACITY_PREFIX.length);
         const segments = remainder.split('.');
-        
-        // Find the longest valid queue path
+
         for (let i = segments.length - 1; i >= 1; i--) {
             const candidatePath = segments.slice(0, i).join('.');
             if (this._isValidQueuePath(candidatePath)) {
@@ -289,7 +280,7 @@ class QueueConfigurationManager {
      */
     getAllQueuePaths() {
         const paths = [];
-        
+
         function collectPaths(node) {
             if (node.isQueue && !node.isDeleted()) {
                 paths.push(node.fullPath);
@@ -302,7 +293,7 @@ class QueueConfigurationManager {
         if (this.rootNode) {
             collectPaths(this.rootNode);
         }
-        
+
         return paths.sort();
     }
 
@@ -330,7 +321,7 @@ class QueueConfigurationManager {
             throw new Error(`Cannot update non-existent queue: ${queuePath}`);
         }
         const changeId = this._generateChangeId();
-        
+
         if (node.pendingOperation === 'add') {
             // If it's already a new addition, just update the properties
             for (const [key, value] of properties) {
@@ -376,7 +367,7 @@ class QueueConfigurationManager {
      */
     stageGlobalUpdate(properties) {
         this.globalChangeId = this._generateChangeId();
-        
+
         for (const [key, value] of Object.entries(properties)) {
             if (!this.oldGlobalProperties.has(key)) {
                 // Store the actual original value - if it was undefined, keep it as undefined
@@ -384,7 +375,7 @@ class QueueConfigurationManager {
             }
             this.pendingGlobalChanges.set(key, value);
         }
-        
+
         return this.globalChangeId;
     }
 
@@ -433,7 +424,7 @@ class QueueConfigurationManager {
         if (this.rootNode) {
             return this._nodeHasPendingChanges(this.rootNode);
         }
-        
+
         return false;
     }
 
@@ -457,7 +448,7 @@ class QueueConfigurationManager {
      */
     getChangesSummary() {
         const summary = { added: 0, modified: 0, deleted: 0, global: 0 };
-        
+
         if (this.pendingGlobalChanges.size > 0) {
             summary.global = 1;
         }
@@ -494,7 +485,7 @@ class QueueConfigurationManager {
             addQueues: [],
             updateQueues: [],
             removeQueues: [],
-            globalUpdates: {}
+            globalUpdates: {},
         };
 
         // Collect queue changes
@@ -519,26 +510,24 @@ class QueueConfigurationManager {
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    // Use simple key for queue operations as per YARN API documentation
                     params[simpleKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.addQueues.push({
                 queueName: node.fullPath,
-                params: params
+                params: params,
             });
         } else if (node.pendingOperation === 'update') {
             const params = {};
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
                 if (simpleKey !== '_ui_capacityMode') {
-                    // Use simple key for queue operations as per YARN API documentation
                     params[simpleKey] = this._cleanValueForApi(value, simpleKey);
                 }
             }
             payload.updateQueues.push({
                 queueName: node.fullPath,
-                params: params
+                params: params,
             });
         } else if (node.pendingOperation === 'delete') {
             payload.removeQueues.push(node.fullPath);
@@ -560,14 +549,14 @@ class QueueConfigurationManager {
             return String(value);
         }
 
-        // Remove % characters from percentage capacity values for YARN API
-        // YARN expects numeric values for percentages, not with % suffix
-        if (simpleKey === 'capacity' || simpleKey === 'maximum-capacity' || 
-            simpleKey.endsWith('.capacity') || simpleKey.endsWith('.maximum-capacity')) {
-            
-            // Only clean percentage values (ending with %), keep weight (w) and vector formats
+        if (
+            simpleKey === 'capacity' ||
+            simpleKey === 'maximum-capacity' ||
+            simpleKey.endsWith('.capacity') ||
+            simpleKey.endsWith('.maximum-capacity')
+        ) {
             if (value.endsWith('%') && !value.startsWith('[')) {
-                return value.slice(0, -1); // Remove the % character
+                return value.slice(0, -1);
             }
         }
 
@@ -620,7 +609,7 @@ class QueueConfigurationManager {
      */
     getChanges() {
         const allChanges = [];
-        
+
         // Collect additions
         const additions = this.getQueueAdditions();
         for (const addition of additions) {
@@ -631,11 +620,11 @@ class QueueConfigurationManager {
                     queuePath: addition.path,
                     propertyKey: fullKey,
                     oldValue: null,
-                    newValue: value
+                    newValue: value,
                 });
             }
         }
-        
+
         // Collect updates
         const updates = this.getQueueUpdates();
         for (const update of updates) {
@@ -647,11 +636,11 @@ class QueueConfigurationManager {
                     queuePath: update.path,
                     propertyKey: fullKey,
                     oldValue: oldValue,
-                    newValue: value
+                    newValue: value,
                 });
             }
         }
-        
+
         // Collect deletions
         const deletions = this.getQueueDeletions();
         for (const deletion of deletions) {
@@ -661,10 +650,10 @@ class QueueConfigurationManager {
                 queuePath: deletion.path,
                 propertyKey: null,
                 oldValue: null,
-                newValue: null
+                newValue: null,
             });
         }
-        
+
         // Collect global changes
         if (this.pendingGlobalChanges.size > 0) {
             for (const [fullKey, newValue] of this.pendingGlobalChanges) {
@@ -677,11 +666,11 @@ class QueueConfigurationManager {
                     queuePath: null, // Global changes don't have a queue path
                     propertyKey: fullKey,
                     oldValue: oldValue === undefined ? null : oldValue,
-                    newValue: newValue
+                    newValue: newValue,
                 });
             }
         }
-        
+
         return allChanges;
     }
 
@@ -720,7 +709,7 @@ class QueueConfigurationManager {
                 id: node.changeId,
                 type: 'add',
                 path: node.fullPath,
-                properties: new Map(node.pendingProperties)
+                properties: new Map(node.pendingProperties),
             });
         }
         for (const child of node.children.values()) {
@@ -738,7 +727,7 @@ class QueueConfigurationManager {
                 type: 'update',
                 path: node.fullPath,
                 properties: new Map(node.pendingProperties),
-                oldProperties: new Map(node.oldProperties)
+                oldProperties: new Map(node.oldProperties),
             });
         }
         for (const child of node.children.values()) {
@@ -754,7 +743,7 @@ class QueueConfigurationManager {
             deletions.push({
                 id: node.changeId,
                 type: 'delete',
-                path: node.fullPath
+                path: node.fullPath,
             });
         }
         for (const child of node.children.values()) {

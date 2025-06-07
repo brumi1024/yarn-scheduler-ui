@@ -1,6 +1,6 @@
 /**
  * TooltipHelper - Unified tooltip behavior across the application
- * 
+ *
  * Provides consistent tooltip behavior with smart positioning to avoid
  * viewport edges and control bar collisions. Replaces the inconsistent
  * implementations between queue cards and form modals.
@@ -26,7 +26,7 @@ class TooltipHelper {
             position: options.position || 'top',
             maxWidth: options.maxWidth || 220,
             allowHtml: options.allowHtml || false,
-            ...options
+            ...options,
         };
 
         // Remove any existing tooltip
@@ -37,7 +37,7 @@ class TooltipHelper {
             content,
             config,
             timeoutId: null,
-            isVisible: false
+            isVisible: false,
         };
 
         // Create bound handlers for this element
@@ -45,13 +45,13 @@ class TooltipHelper {
             mouseenter: TooltipHelper._handleMouseEnter.bind(null, element),
             mouseleave: TooltipHelper._handleMouseLeave.bind(null, element),
             focus: TooltipHelper._handleFocus.bind(null, element),
-            blur: TooltipHelper._handleBlur.bind(null, element)
+            blur: TooltipHelper._handleBlur.bind(null, element),
         };
-        
+
         // Store handlers for cleanup
         TooltipHelper.boundHandlers.set(element, handlers);
         TooltipHelper.managedElements.set(element, true);
-        
+
         // Add event listeners
         element.addEventListener('mouseenter', handlers.mouseenter);
         element.addEventListener('mouseleave', handlers.mouseleave);
@@ -99,7 +99,7 @@ class TooltipHelper {
      */
     static cleanupTooltipsInContainer(container) {
         if (!container) return;
-        
+
         const tooltipElements = container.querySelectorAll('.has-tooltip');
         for (const element of tooltipElements) {
             TooltipHelper.removeTooltip(element);
@@ -112,18 +112,18 @@ class TooltipHelper {
      */
     static upgradeModalTooltips(modalElement) {
         const infoIcons = modalElement.querySelectorAll('.info-icon[title]');
-        
+
         for (const icon of infoIcons) {
             const content = icon.getAttribute('title');
             if (content) {
                 // Remove the title attribute to prevent browser tooltip
                 icon.removeAttribute('title');
-                
+
                 // Apply unified tooltip
                 TooltipHelper.attachTooltip(icon, content, {
                     position: 'top',
                     delay: 500,
-                    maxWidth: 280
+                    maxWidth: 280,
                 });
             }
         }
@@ -171,7 +171,7 @@ class TooltipHelper {
         const tooltip = document.createElement('div');
         tooltip.className = 'unified-tooltip';
         tooltip.style.maxWidth = `${data.config.maxWidth}px`;
-        
+
         if (data.config.allowHtml) {
             tooltip.innerHTML = data.content;
         } else {
@@ -180,10 +180,10 @@ class TooltipHelper {
 
         // Add to DOM temporarily to measure
         document.body.appendChild(tooltip);
-        
+
         // Calculate smart position
         const position = TooltipHelper._calculatePosition(element, tooltip, data.config.position);
-        
+
         // Apply position
         tooltip.style.left = `${position.left}px`;
         tooltip.style.top = `${position.top}px`;
@@ -191,7 +191,7 @@ class TooltipHelper {
 
         // Show with animation
         tooltip.classList.add('tooltip-visible');
-        
+
         // Store reference and mark as visible
         element._tooltipElement = tooltip;
         data.isVisible = true;
@@ -235,42 +235,43 @@ class TooltipHelper {
         const tooltipRect = tooltip.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
         const viewportHeight = window.innerHeight;
-        
+
         // Enhanced control bar detection - check for multiple possible control elements
         const controlElements = [
             document.querySelector('.controls'),
             document.querySelector('.header'),
-            document.querySelector('.nav-tabs')
+            document.querySelector('.nav-tabs'),
         ].filter(Boolean);
-        
-        const controlBarHeight = controlElements.length > 0 
-            ? Math.max(...controlElements.map(el => el.getBoundingClientRect().bottom))
-            : 0;
-        
+
+        const controlBarHeight =
+            controlElements.length > 0
+                ? Math.max(...controlElements.map((el) => el.getBoundingClientRect().bottom))
+                : 0;
+
         const spacing = 8; // Space between element and tooltip
-        
+
         // Calculate positions for each placement option
         const positions = {
             top: {
                 left: elementRect.left + (elementRect.width - tooltipRect.width) / 2,
                 top: elementRect.top - tooltipRect.height - spacing,
-                placement: 'top'
+                placement: 'top',
             },
             bottom: {
                 left: elementRect.left + (elementRect.width - tooltipRect.width) / 2,
                 top: elementRect.bottom + spacing,
-                placement: 'bottom'
+                placement: 'bottom',
             },
             left: {
                 left: elementRect.left - tooltipRect.width - spacing,
                 top: elementRect.top + (elementRect.height - tooltipRect.height) / 2,
-                placement: 'left'
+                placement: 'left',
             },
             right: {
                 left: elementRect.right + spacing,
                 top: elementRect.top + (elementRect.height - tooltipRect.height) / 2,
-                placement: 'right'
-            }
+                placement: 'right',
+            },
         };
 
         // Enhanced collision detection function
@@ -279,33 +280,34 @@ class TooltipHelper {
         };
 
         const wouldFitInViewport = (pos) => {
-            return pos.left >= spacing && 
-                   pos.left + tooltipRect.width <= viewportWidth - spacing &&
-                   pos.top >= controlBarHeight + spacing &&
-                   pos.top + tooltipRect.height <= viewportHeight - spacing;
+            return (
+                pos.left >= spacing &&
+                pos.left + tooltipRect.width <= viewportWidth - spacing &&
+                pos.top >= controlBarHeight + spacing &&
+                pos.top + tooltipRect.height <= viewportHeight - spacing
+            );
         };
 
         // Smart positioning algorithm with priority order
         let position = positions[preferredPosition];
-        
+
         // If preferred position doesn't work, try alternatives in order of preference
         if (!wouldFitInViewport(position) || wouldCollideWithControlBar(position)) {
             // For queue cards at the top, prioritize bottom placement
-            const alternativeOrder = preferredPosition === 'top' 
-                ? ['bottom', 'right', 'left', 'top']
-                : ['bottom', 'top', 'right', 'left'];
-            
+            const alternativeOrder =
+                preferredPosition === 'top' ? ['bottom', 'right', 'left', 'top'] : ['bottom', 'top', 'right', 'left'];
+
             let bestPosition = position;
-            
+
             for (const placement of alternativeOrder) {
                 const testPosition = positions[placement];
-                
+
                 if (wouldFitInViewport(testPosition) && !wouldCollideWithControlBar(testPosition)) {
                     bestPosition = testPosition;
                     break;
                 }
             }
-            
+
             position = bestPosition;
         }
 
@@ -330,7 +332,6 @@ class TooltipHelper {
 
         return position;
     }
-
 }
 
 // Export for use in other modules

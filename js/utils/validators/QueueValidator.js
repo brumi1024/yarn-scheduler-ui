@@ -7,10 +7,9 @@ class QueueValidator {
         const errors = [];
         const queueNames = new Set();
         const nodeLabels = this._getAvailableNodeLabels(schedulerInfoModel);
-        
-        // Single-pass validation through the hierarchy
+
         this._validateNode(formattedHierarchy, errors, queueNames, nodeLabels);
-        
+
         return errors;
     }
 
@@ -18,72 +17,58 @@ class QueueValidator {
         if (!node) return;
 
         const fullPath = node.path || 'root';
-        
-        // 1. Queue name validation (from QueueNameValidator)
+
         if (queueNames.has(fullPath)) {
             errors.push({
                 type: 'DUPLICATE_QUEUE_NAME',
                 message: `Duplicate queue path: "${fullPath}"`,
-                queuePath: fullPath
+                queuePath: fullPath,
             });
         } else {
             queueNames.add(fullPath);
         }
 
-        // Validate queue name format
         const queueName = fullPath.split('.').pop();
         if (!this._isValidQueueName(queueName)) {
             errors.push({
                 type: 'INVALID_QUEUE_NAME',
                 message: `Invalid queue name: "${queueName}". Names must contain only letters, numbers, hyphens, and underscores.`,
-                queuePath: fullPath
+                queuePath: fullPath,
             });
         }
 
-        // 2. Queue state validation (from QueueStateValidator)
         if (node.effectiveProperties) {
             const state = this._getPropertyValue(node, 'state');
             if (state && !['RUNNING', 'STOPPED'].includes(state)) {
                 errors.push({
                     type: 'INVALID_QUEUE_STATE',
                     message: `Invalid queue state: "${state}". Must be RUNNING or STOPPED.`,
-                    queuePath: fullPath
+                    queuePath: fullPath,
                 });
             }
         }
 
-        // 3. Node label validation (from NodeLabelValidator)
         // TODO: Disabled for now - node label existence validation not needed
-        // if (node.effectiveProperties) {
-        //     const accessibleLabels = this._getPropertyValue(node, 'accessible-node-labels');
-        //     if (accessibleLabels) {
-        //         this._validateAccessibleLabels(accessibleLabels, nodeLabels, fullPath, errors);
-        //     }
-        // }
 
-        // 4. Process children and capacity sum validation (from CapacitySumValidator)
         if (node.children) {
-            const children = Object.values(node.children).filter(child => !child.isDeleted);
-            
+            const children = Object.values(node.children).filter((child) => !child.isDeleted);
+
             if (children.length > 0) {
-                // Validate capacity sum for percentage-based queues only
-                const percentageChildren = children.filter(child => {
+                const percentageChildren = children.filter((child) => {
                     const capacity = this._getCapacityValue(child);
                     return capacity && !capacity.endsWith('w') && !capacity.startsWith('[');
                 });
-                
-                const weightChildren = children.filter(child => {
+
+                const weightChildren = children.filter((child) => {
                     const capacity = this._getCapacityValue(child);
                     return capacity && capacity.endsWith('w');
                 });
-                
-                const absoluteChildren = children.filter(child => {
+
+                const absoluteChildren = children.filter((child) => {
                     const capacity = this._getCapacityValue(child);
                     return capacity && capacity.startsWith('[');
                 });
 
-                // Only validate percentage sum if ALL children are percentage-based
-                // Mixed modes (percentage + weight + absolute) are allowed in non-legacy mode
                 if (percentageChildren.length > 0 && weightChildren.length === 0 && absoluteChildren.length === 0) {
                     const capacitySum = this._calculateCapacitySum(percentageChildren);
                     if (Math.abs(capacitySum - 100) > 0.01) {
@@ -91,12 +76,11 @@ class QueueValidator {
                             type: 'CAPACITY_SUM_ERROR',
                             message: `Queue "${fullPath}" children capacity sum is ${capacitySum.toFixed(2)}%, must equal 100%`,
                             queuePath: fullPath,
-                            details: { actualSum: capacitySum, expectedSum: 100 }
+                            details: { actualSum: capacitySum, expectedSum: 100 },
                         });
                     }
                 }
 
-                // Recursively validate children
                 for (const child of children) {
                     this._validateNode(child, errors, queueNames, nodeLabels, fullPath);
                 }
@@ -106,10 +90,10 @@ class QueueValidator {
 
     _getAvailableNodeLabels(schedulerInfoModel) {
         if (!schedulerInfoModel) return new Set();
-        
+
         try {
             const nodeLabels = schedulerInfoModel.getNodeLabels();
-            return new Set(nodeLabels.map(label => label.name));
+            return new Set(nodeLabels.map((label) => label.name));
         } catch (error) {
             return new Set();
         }
@@ -122,11 +106,9 @@ class QueueValidator {
 
     _getPropertyValue(node, propertyKey) {
         if (!node.effectiveProperties) return null;
-        
+
         const fullKey = PropertyKeyMapper.createFullKey(node.path, propertyKey);
-        return node.effectiveProperties.get ? 
-            node.effectiveProperties.get(fullKey) : 
-            node.effectiveProperties[fullKey];
+        return node.effectiveProperties.get ? node.effectiveProperties.get(fullKey) : node.effectiveProperties[fullKey];
     }
 
     _getCapacityValue(node) {
@@ -142,19 +124,19 @@ class QueueValidator {
     }
 
     _validateAccessibleLabels(accessibleLabels, availableLabels, queuePath, errors) {
-        if (accessibleLabels === '*') return; // Wildcard is always valid
-        
-        const labels = accessibleLabels.split(',').map(label => label.trim());
+        if (accessibleLabels === '*') return;
+
+        const labels = accessibleLabels.split(',').map((label) => label.trim());
         for (const label of labels) {
             if (label && !availableLabels.has(label)) {
                 errors.push({
                     type: 'INVALID_NODE_LABEL',
                     message: `Queue "${queuePath}" references non-existent node label: "${label}"`,
                     queuePath: queuePath,
-                    details: { 
-                        invalidLabel: label, 
-                        availableLabels: Array.from(availableLabels) 
-                    }
+                    details: {
+                        invalidLabel: label,
+                        availableLabels: Array.from(availableLabels),
+                    },
                 });
             }
         }

@@ -75,7 +75,7 @@ class ControlsView extends EventEmitter {
     renderPartitions(partitions) {
         if (!this.partitionSelectEl) return;
         DomUtils.empty(this.partitionSelectEl);
-        for (const partition of (partitions || [DEFAULT_PARTITION])) {
+        for (const partition of partitions || [DEFAULT_PARTITION]) {
             const option = DomUtils.createElement('option', null, { value: partition }, partition || 'default');
             this.partitionSelectEl.append(option);
         }
@@ -88,21 +88,19 @@ class ControlsView extends EventEmitter {
      */
     renderNodeLabels(nodeLabels) {
         if (!this.partitionSelectEl) return;
-        
+
         DomUtils.empty(this.partitionSelectEl);
-        
+
         // Add default partition
-        const defaultOption = DomUtils.createElement('option', null, 
-            { value: DEFAULT_PARTITION }, 'Default');
+        const defaultOption = DomUtils.createElement('option', null, { value: DEFAULT_PARTITION }, 'Default');
         this.partitionSelectEl.append(defaultOption);
-        
+
         // Add node labels
-        for (const label of (nodeLabels || [])) {
-            const option = DomUtils.createElement('option', null, 
-                { value: label }, label);
+        for (const label of nodeLabels || []) {
+            const option = DomUtils.createElement('option', null, { value: label }, label);
             this.partitionSelectEl.append(option);
         }
-        
+
         this.renderSelectedPartition(this.appStateModel.getSelectedPartition());
     }
 

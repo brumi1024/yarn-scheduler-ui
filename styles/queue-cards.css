@@ -381,7 +381,7 @@
 /* Sankey Link Styles */
 .sankey-link {
     fill-opacity: 0.7; /* Good visibility without being overwhelming */
-    stroke-width: 1.0; /* Clean stroke width */
+    stroke-width: 1; /* Clean stroke width */
     stroke-opacity: 0.8; /* Visible stroke */
     transition:
         fill-opacity 0.2s ease-in-out,
@@ -389,7 +389,7 @@
 }
 .sankey-link:hover {
     fill-opacity: 0.95; /* Increased for hover state */
-    stroke-opacity: 1.0; /* Full opacity on hover */
+    stroke-opacity: 1; /* Full opacity on hover */
 }
 .sankey-link.state-running {
     fill: #64b5f6;

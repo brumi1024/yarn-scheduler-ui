@@ -54,7 +54,13 @@ class ChangeManager {
 
         // Check for duplicate queue names
         const newPath = parentPath === 'root' ? `root.${queueName}` : `${parentPath}.${queueName}`;
-        const duplicateResult = this._isQueueNameDuplicate(newPath, parentPath, queueName, viewDataFormatterService, dataModels);
+        const duplicateResult = this._isQueueNameDuplicate(
+            newPath,
+            parentPath,
+            queueName,
+            viewDataFormatterService,
+            dataModels
+        );
         if (duplicateResult.isFailure()) {
             return duplicateResult;
         }
@@ -78,18 +84,14 @@ class ChangeManager {
 
         // Validate capacity if changed
         if (Object.prototype.hasOwnProperty.call(params, 'capacity')) {
-            const modeForValidation = params._ui_capacityMode ||
+            const modeForValidation =
+                params._ui_capacityMode ||
                 viewDataFormatterService._determineEffectiveCapacityMode(
                     queuePath,
                     this.schedulerConfigModel.getQueueNodeProperties(queuePath) ||
-                    new Map(
-                        Object.entries(params).map(([k, v]) => [
-                            PropertyKeyMapper.toFullKey(queuePath, k),
-                            v,
-                        ])
-                    )
+                        new Map(Object.entries(params).map(([k, v]) => [PropertyKeyMapper.toFullKey(queuePath, k), v]))
                 );
-            
+
             const capacityValidation = this.validationService.parseAndValidateCapacityValue(
                 params.capacity,
                 modeForValidation
@@ -120,21 +122,16 @@ class ChangeManager {
             params['maximum-capacity'] = maxCapacityValidation.value;
         }
 
-        // Map simple keys to full YARN keys, considering selected partition
         const mappedParams = PropertyKeyMapper.convertToFullKeys(params, queuePath, selectedPartition);
-        
-        // Stage standard property updates - pass mappedParams directly to avoid double conversion
+
         this.schedulerConfigModel.getTrieInstance().stageUpdateQueue(queuePath, mappedParams);
-        
-        // Manually emit pendingChangesUpdated since we bypassed SchedulerConfigModel
+
         this.schedulerConfigModel._emit('pendingChangesUpdated', this.schedulerConfigModel.getTrieInstance());
-        
-        // Stage custom property updates if any
+
         if (customProperties && Object.keys(customProperties).length > 0) {
-            // Custom properties are already full YARN keys, so we pass them directly
             this.schedulerConfigModel.stageGlobalUpdate(customProperties);
         }
-        
+
         getEventBus().emit('notification:success', `Changes for queue "${queuePath.split('.').pop()}" staged.`);
         return Result.success(true);
     }
@@ -147,9 +144,11 @@ class ChangeManager {
      * @returns {Result<boolean>} Result containing success status or error
      */
     stageDeleteQueue(queuePath, viewDataFormatterService, dataModels) {
-        if (!globalThis.confirm(
-            `Are you sure you want to mark queue "${queuePath}" for deletion? \nThis will also remove any other staged changes for this queue.`
-        )) {
+        if (
+            !globalThis.confirm(
+                `Are you sure you want to mark queue "${queuePath}" for deletion? \nThis will also remove any other staged changes for this queue.`
+            )
+        ) {
             return Result.failure('User cancelled deletion');
         }
 
@@ -173,7 +172,10 @@ class ChangeManager {
                 return Result.failure(deletability.reason);
             }
         } else if (queuePath !== 'root') {
-            getEventBus().emit('notification:warning', `Could not fully validate deletability for ${queuePath}. Staging deletion.`);
+            getEventBus().emit(
+                'notification:warning',
+                `Could not fully validate deletability for ${queuePath}. Staging deletion.`
+            );
         }
 
         this.schedulerConfigModel.stageRemoveQueue(queuePath);
@@ -189,8 +191,8 @@ class ChangeManager {
     undoDeleteQueue(queuePath) {
         const changeLog = this.schedulerConfigModel.getChangeLog();
         const deletions = changeLog.getQueueDeletions();
-        const deleteChange = deletions.find(change => change.path === queuePath);
-        
+        const deleteChange = deletions.find((change) => change.path === queuePath);
+
         if (deleteChange) {
             changeLog.removeChange(deleteChange.id);
             this.schedulerConfigModel._emit('pendingChangesUpdated', changeLog);
@@ -212,7 +214,13 @@ class ChangeManager {
      * @param {string} currentEditQueuePath - Current queue being edited
      * @returns {boolean} Success status
      */
-    handleAccessibleLabelsChange(eventData, viewDataFormatterService, dataModels, editQueueModalView, currentEditQueuePath) {
+    handleAccessibleLabelsChange(
+        eventData,
+        viewDataFormatterService,
+        dataModels,
+        editQueueModalView,
+        currentEditQueuePath
+    ) {
         const { queuePath, newLabelsString, currentFormParams } = eventData;
         if (currentEditQueuePath !== queuePath) return false;
 
@@ -221,20 +229,21 @@ class ChangeManager {
         const temporaryEffectiveProperties = new Map(baseTrieNode ? baseTrieNode.properties : undefined);
 
         const changeLog = this.schedulerConfigModel.getChangeLog();
-        const addChanges = changeLog.getQueueAdditions().filter(change => change.path === queuePath);
-        
+        const addChanges = changeLog.getQueueAdditions().filter((change) => change.path === queuePath);
+
         if (addChanges.length > 0) {
             // For new queues, clear properties and use form params
             temporaryEffectiveProperties.clear();
             for (const [simpleKey, value] of Object.entries(currentFormParams)) {
                 if (simpleKey === '_ui_capacityMode') continue;
-                const fullKey = PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
+                const fullKey =
+                    PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                 temporaryEffectiveProperties.set(fullKey, value);
             }
         } else {
             // For existing queues, apply pending updates and form params
-            const updateChanges = changeLog.getQueueUpdates().filter(change => change.path === queuePath);
+            const updateChanges = changeLog.getQueueUpdates().filter((change) => change.path === queuePath);
             if (updateChanges.length > 0) {
                 for (const [fullKey, value] of updateChanges[0].properties) {
                     const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
@@ -244,7 +253,8 @@ class ChangeManager {
             }
             for (const [simpleKey, value] of Object.entries(currentFormParams)) {
                 if (simpleKey === '_ui_capacityMode') continue;
-                const fullKey = PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
+                const fullKey =
+                    PropertyKeyMapper.toFullKey(queuePath, simpleKey) ||
                     `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
                 temporaryEffectiveProperties.set(fullKey, value);
             }
@@ -266,7 +276,9 @@ class ChangeManager {
         const mockSchedulerConfigModelForFormatter = {
             getTrieInstance: () => ({
                 getQueueNode: (p) =>
-                    p === queuePath ? temporaryTrieNodeLike : this.schedulerConfigModel.getTrieInstance().getQueueNode(p),
+                    p === queuePath
+                        ? temporaryTrieNodeLike
+                        : this.schedulerConfigModel.getTrieInstance().getQueueNode(p),
             }),
             getChangeLog: () => this.schedulerConfigModel.getChangeLog(),
         };
@@ -291,7 +303,6 @@ class ChangeManager {
 
     // Private helper methods
 
-
     /**
      * Checks if a queue name would be duplicate
      * @private
@@ -310,10 +321,12 @@ class ChangeManager {
             parentNodeToCheck = this._findNodeInHierarchy(currentHierarchyForValidation, parentPath);
         }
 
-        if (parentNodeToCheck &&
+        if (
+            parentNodeToCheck &&
             parentNodeToCheck.children &&
             parentNodeToCheck.children[queueName] &&
-            !parentNodeToCheck.children[queueName].isDeleted) {
+            !parentNodeToCheck.children[queueName].isDeleted
+        ) {
             const errorMsg = `A queue named "${queueName}" effectively already exists under "${parentPath}".`;
             getEventBus().emit('notification:error', errorMsg);
             return Result.failure(errorMsg);

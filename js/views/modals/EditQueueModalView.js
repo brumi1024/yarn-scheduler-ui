@@ -22,29 +22,24 @@ class EditQueueModalView extends BaseModalView {
             if (this.formContainer) this.formContainer.innerHTML = '<p>Queue data not available for editing.</p>';
             return;
         }
-        
-        // Clean up previous event listeners before re-rendering
+
         this._cleanupEventListeners();
         DomUtils.empty(this.formContainer);
         this.currentQueuePath = data.path;
-        this.currentQueueData = data; // Store for potential partial re-renders (node labels)
+        this.currentQueueData = data;
 
         const modalTitleElement = DomUtils.qs('.modal-title', this.modalEl);
         if (modalTitleElement)
             modalTitleElement.textContent = `Edit Queue: ${DomUtils.escapeXml(data.displayName || data.path.split('.').pop())}`;
 
         this.formContainer.innerHTML = this._buildHtml(data);
-        
-        // Add modal actions as a separate section outside the form
-        const modalContent = this.formContainer.parentElement.parentElement; // Go up to modal-content
-        
-        // Remove existing modal actions if they exist
+
+        const modalContent = this.formContainer.parentElement.parentElement;
+
         const existingActions = modalContent.querySelector('.modal-actions');
         if (existingActions) {
             existingActions.remove();
         }
-        
-        // Create new modal actions
         const modalActions = document.createElement('div');
         modalActions.className = 'modal-actions';
         modalActions.innerHTML = `
@@ -52,17 +47,17 @@ class EditQueueModalView extends BaseModalView {
             <button class="btn btn-primary" id="submit-edit-queue-btn">Stage Changes</button>
         `;
         modalContent.appendChild(modalActions);
-        
-        // Upgrade info icon tooltips to unified system BEFORE binding events
+
         if (window.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
-        
+
         this._bindFormEvents(data.path, data.effectiveCapacityMode);
     }
 
     _buildHtml(data) {
-        const { path, displayName, properties, propertyDefaults, nodeLabelData, effectiveCapacityMode, isLegacyMode } = data;
+        const { path, displayName, properties, propertyDefaults, nodeLabelData, effectiveCapacityMode, isLegacyMode } =
+            data;
         let formHTML = `<form id="edit-queue-form" data-queue-path="${path}" onsubmit="return false;">`;
 
         // Static Info
@@ -87,10 +82,10 @@ class EditQueueModalView extends BaseModalView {
         }
 
         // Capacity Mode
-        const capacityModeTooltip = isLegacyMode 
-            ? "Determines how queue capacity is specified. In legacy mode, all queues in a hierarchy must use the same capacity mode."
-            : "Determines how queue capacity is specified. Non-legacy mode allows mixing capacity modes and Resource Vectors.";
-            
+        const capacityModeTooltip = isLegacyMode
+            ? 'Determines how queue capacity is specified. In legacy mode, all queues in a hierarchy must use the same capacity mode.'
+            : 'Determines how queue capacity is specified. Non-legacy mode allows mixing capacity modes and Resource Vectors.';
+
         formHTML += `<div class="form-group property-edit-item">
                         <div class="property-details-column">
                             <div class="property-display-name"><span>Capacity Mode</span><span class="info-icon" title="${DomUtils.escapeXml(capacityModeTooltip)}">ⓘ</span></div>
@@ -164,7 +159,7 @@ class EditQueueModalView extends BaseModalView {
 
     _buildNodeLabelSectionHtml(queuePath, nodeLabelData) {
         let sectionHtml = `<h4 class="form-category-title">Node Label Configurations</h4>`;
-        
+
         // Build visual label selector
         sectionHtml += this._buildAccessibleLabelsChips(queuePath, nodeLabelData.accessibleNodeLabelsString);
 
@@ -173,7 +168,7 @@ class EditQueueModalView extends BaseModalView {
             nodeLabelData.accessibleNodeLabelsString
         );
         const currentLabels = currentLabelsResult.isValid ? currentLabelsResult.labels : [];
-        const filteredLabels = currentLabels.filter(label => label && label !== '*' && label !== '');
+        const filteredLabels = currentLabels.filter((label) => label && label !== '*' && label !== '');
 
         if (filteredLabels.length > 0) {
             // Build tabbed interface for per-label configurations
@@ -187,7 +182,7 @@ class EditQueueModalView extends BaseModalView {
                 <p class="form-help" style="margin: 0; color: #6c757d;">Queue has access to all ('*') labels. To set specific capacities per label, list them explicitly above instead of using '*'.</p>
             </div>`;
         }
-        
+
         return sectionHtml;
     }
 
@@ -206,24 +201,30 @@ class EditQueueModalView extends BaseModalView {
                 
                 <!-- Tab Headers -->
                 <div class="node-label-tab-headers" style="display: flex; border-bottom: 1px solid #dee2e6; margin-bottom: 15px;">
-                    ${labels.map((label, index) => `
+                    ${labels
+                        .map(
+                            (label, index) => `
                         <button type="button" class="node-label-tab-header ${index === 0 ? 'active' : ''}" data-label-tab="${label}" style="padding: 8px 16px; border: 1px solid #dee2e6; border-bottom: none; background: ${index === 0 ? 'white' : '#f8f9fa'}; cursor: pointer; border-radius: 4px 4px 0 0; margin-right: 2px;">
                             ${DomUtils.escapeXml(label)}
                         </button>
-                    `).join('')}
+                    `
+                        )
+                        .join('')}
                 </div>
                 
                 <!-- Tab Content -->
                 <div class="node-label-tab-content" style="margin-bottom: 15px; padding: 0 10px;">
-                    ${labels.map((label, index) => 
-                        this._buildNodeLabelTabContent(label, queuePath, nodeLabelData, index === 0)
-                    ).join('')}
+                    ${labels
+                        .map((label, index) =>
+                            this._buildNodeLabelTabContent(label, queuePath, nodeLabelData, index === 0)
+                        )
+                        .join('')}
                 </div>
             </div>
         `;
         return tabsHtml;
     }
-    
+
     /**
      * Builds content for a single node label tab.
      * @param {string} label - The node label name
@@ -238,10 +239,10 @@ class EditQueueModalView extends BaseModalView {
             <div class="node-label-tab-pane" data-label-tab-content="${label}" style="display: ${isActive ? 'block' : 'none'};">
                 <p class="form-help" style="margin-bottom: 15px; color: #666; font-style: italic;">Capacity configuration for nodes with label '${DomUtils.escapeXml(label)}':</p>
         `;
-        
+
         // Build property inputs for this label
         const hasProperties = Object.keys(NODE_LABEL_CONFIG_METADATA.perLabelProperties).length > 0;
-        
+
         if (hasProperties) {
             for (const [placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA.perLabelProperties)) {
                 const simpleSubKey = `${label}.${meta.key}`; // e.g., "gpu.capacity"
@@ -267,7 +268,7 @@ class EditQueueModalView extends BaseModalView {
                 <p class="form-help" style="color: #6c757d; font-style: italic;">No label-specific properties configured for this label.</p>
             `;
         }
-        
+
         contentHtml += `</div>`;
         return contentHtml;
     }
@@ -278,55 +279,59 @@ class EditQueueModalView extends BaseModalView {
      */
     _buildAccessibleLabelsChips(queuePath, accessibleLabelsString) {
         const isRootQueue = NodeLabelService.isRootQueue(queuePath);
-        const availableLabels = NodeLabelService.getAvailableNodeLabels(this.controller.schedulerInfoModel, this.controller.nodesInfoModel);
+        const availableLabels = NodeLabelService.getAvailableNodeLabels(
+            this.controller.schedulerInfoModel,
+            this.controller.nodesInfoModel
+        );
         const currentLabels = NodeLabelService.formatLabelsForChips(accessibleLabelsString);
-        
+
         let html = `<div class="form-group">
                         <label class="form-label">Accessible Node Labels</label>`;
-        
+
         if (isRootQueue) {
             html += `<p class="form-help">Root queue has access to all node labels.</p>`;
         } else {
             html += `<div class="node-label-chips" id="node-label-chips">`;
-            
+
             // Add chips for all available labels
             for (const label of availableLabels) {
-                const isEnabled = currentLabels.some(chip => chip.name === label);
+                const isEnabled = currentLabels.some((chip) => chip.name === label);
                 const chipClass = isEnabled ? 'node-label-chip enabled' : 'node-label-chip';
                 html += `<button type="button" class="${chipClass}" data-label="${label}">
                             ${DomUtils.escapeXml(label)}
                          </button>`;
             }
-            
+
             if (availableLabels.length === 0) {
                 html += `<p class="form-help">No node labels available in cluster.</p>`;
             }
-            
+
             html += `</div>`;
         }
-        
+
         // Hidden input to store the actual value
-        const anlMeta = NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
+        const anlMeta =
+            NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
         const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-        
+
         html += `<input type="hidden" 
                         class="form-input" 
                         id="edit-queue-accessible-node-labels-list-input"
                         data-simple-key="${anlMeta.key}"
                         data-original-value="${DomUtils.escapeXml(accessibleLabelsString)}"
                         value="${DomUtils.escapeXml(accessibleLabelsString)}" />`;
-        
+
         html += `</div>`;
         return html;
     }
 
     _buildAutoCreationSectionHtml(data) {
         const { autoCreationData, isLegacyMode, path, effectiveCapacityMode } = data;
-        
+
         // Determine which mode should be active and if templates should be shown initially
         const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
         const shouldUseV2 = isWeightMode || !isLegacyMode;
-        
+
         // Use the same logic as the toggle to determine current state
         const currentValue = shouldUseV2 ? autoCreationData.v2Enabled : autoCreationData.v1Enabled;
 
@@ -343,20 +348,21 @@ class EditQueueModalView extends BaseModalView {
     _buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
         const { enabled, hasChildren, v1Enabled, v2Enabled } = autoCreationData;
         const cannotEnableLegacy = isLegacyMode && hasChildren;
-        
+
         // Determine which auto-creation mode should be used
         const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
         const shouldUseV2 = isWeightMode || !isLegacyMode;
         const autoCreationMode = shouldUseV2 ? 'v2 (Flexible)' : 'v1 (Legacy)';
-        
+
         // Determine which property to show and its current value
         const propertyKey = shouldUseV2 ? 'auto-queue-creation-v2.enabled' : 'auto-create-child-queue.enabled';
         const fullPropertyName = `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${propertyKey}`;
         const currentValue = shouldUseV2 ? v2Enabled : v1Enabled;
-        
-        const warningText = cannotEnableLegacy && !shouldUseV2
-            ? 'Legacy auto queue creation cannot be enabled on queues that have existing children.'
-            : '';
+
+        const warningText =
+            cannotEnableLegacy && !shouldUseV2
+                ? 'Legacy auto queue creation cannot be enabled on queues that have existing children.'
+                : '';
 
         return `
             <div class="form-group property-edit-item">
@@ -382,13 +388,19 @@ class EditQueueModalView extends BaseModalView {
         `;
     }
 
-    _buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode, isInitiallyVisible = false) {
+    _buildAutoCreationTemplateHtml(
+        autoCreationData,
+        isLegacyMode,
+        queuePath,
+        effectiveCapacityMode,
+        isInitiallyVisible = false
+    ) {
         const { nonTemplateProperties, v1TemplateProperties, v2TemplateProperties } = autoCreationData;
-        
+
         // Determine auto-creation mode based on capacity mode and legacy settings
         const isWeightMode = effectiveCapacityMode === CAPACITY_MODES.WEIGHT;
         const isV2Mode = isWeightMode || !isLegacyMode;
-        
+
         let templateHtml = `
             <div class="auto-creation-template" id="auto-creation-template" style="display: ${isInitiallyVisible ? 'block' : 'none'}; opacity: ${isInitiallyVisible ? '1' : '0'}; overflow: hidden;">
                 <h5 style="margin: 15px 0 10px; color: #666;">Auto Queue Creation Configuration</h5>
@@ -399,7 +411,7 @@ class EditQueueModalView extends BaseModalView {
             templateHtml += `
                 <h6 style="margin: 0 0 10px; color: #28a745;">v2 (Flexible) Configuration</h6>
             `;
-            
+
             // Show v2 non-template properties (excluding the main toggle)
             for (const [propKey, propData] of Object.entries(nonTemplateProperties)) {
                 if (propData.meta.v2Property && propData.meta.key !== 'auto-queue-creation-v2.enabled') {
@@ -413,16 +425,16 @@ class EditQueueModalView extends BaseModalView {
                     );
                 }
             }
-            
+
             // Add tabbed interface for v2 template properties
-            templateHtml += this._buildV2TemplateTabsHtml(v2TemplateProperties, queuePath)
+            templateHtml += this._buildV2TemplateTabsHtml(v2TemplateProperties, queuePath);
         } else {
             // v1 mode: show v1 template properties only
             templateHtml += `
                 <h6 style="margin: 0 0 10px; color: #856404;">v1 (Legacy) Template Properties</h6>
                 <p class="form-help" style="margin-bottom: 15px;">These properties will be applied to automatically created child queues:</p>
             `;
-            
+
             for (const [propKey, propData] of Object.entries(v1TemplateProperties)) {
                 const fullKey = `leaf-queue-template.${propData.meta.key}`;
                 templateHtml += this._buildPropertyInputHtml(
@@ -475,7 +487,7 @@ class EditQueueModalView extends BaseModalView {
         `;
         return tabsHtml;
     }
-    
+
     /**
      * Builds content for a single template tab.
      * @param {string} scopeKey - The scope key (template, parentTemplate, leafTemplate)
@@ -491,7 +503,7 @@ class EditQueueModalView extends BaseModalView {
             <div class="template-tab-pane" data-tab-content="${scopeKey}" style="display: ${isActive ? 'block' : 'none'};">
                 <p class="form-help" style="margin-bottom: 15px; color: #666; font-style: italic;">${description}</p>
         `;
-        
+
         if (scopeProps && Object.keys(scopeProps).length > 0) {
             for (const [propKey, propData] of Object.entries(scopeProps)) {
                 const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
@@ -509,7 +521,7 @@ class EditQueueModalView extends BaseModalView {
                 <p class="form-help" style="color: #6c757d; font-style: italic;">No template properties configured for this scope.</p>
             `;
         }
-        
+
         contentHtml += `</div>`;
         return contentHtml;
     }
@@ -538,7 +550,14 @@ class EditQueueModalView extends BaseModalView {
         return sectionHtml;
     }
 
-    _buildPropertyInputHtml(simpleOrPartialKey, fullYarnPropertyName, meta, currentValue, idPrefix = null, isDefault = false) {
+    _buildPropertyInputHtml(
+        simpleOrPartialKey,
+        fullYarnPropertyName,
+        meta,
+        currentValue,
+        idPrefix = null,
+        isDefault = false
+    ) {
         // Build the custom HTML structure for edit queue modal
         const inputIdBase = (idPrefix || simpleOrPartialKey).replaceAll(/[^\w-]/g, '-');
         const inputId = `edit-queue-${inputIdBase}`;
@@ -558,7 +577,7 @@ class EditQueueModalView extends BaseModalView {
         // Generate the appropriate input based on metadata
         if (meta.type === 'enum') {
             html += `<select class="form-input" id="${inputId}" ${dataAttributes}>`;
-            for (const opt of (meta.options || [])) {
+            for (const opt of meta.options || []) {
                 html += `<option value="${DomUtils.escapeXml(opt)}" ${currentValue === opt ? 'selected' : ''}>${DomUtils.escapeXml(opt)}</option>`;
             }
             html += `</select>`;
@@ -593,7 +612,7 @@ class EditQueueModalView extends BaseModalView {
 
             html += `<input class="form-input" id="${inputId}" ${attributes}>`;
         }
-        
+
         html += `        </div>
                     </div>`;
         return html;
@@ -624,20 +643,20 @@ class EditQueueModalView extends BaseModalView {
 
         // Set initial placeholder
         this._updateCapacityPlaceholder(capacityInput, capacityModeSelect.value);
-        
+
         const changeHandler = () => {
             const newMode = capacityModeSelect.value;
             const originalMode = capacityModeSelect.dataset.originalMode;
-            
+
             // Check for auto-creation mode transition warning
             this._checkAutoCreationModeTransition(form, originalMode, newMode);
-            
+
             // Update capacity input to default for the new mode
             capacityInput.value = this.viewDataFormatterService._getDefaultCapacityValue(newMode);
             // Update placeholder based on new mode
             this._updateCapacityPlaceholder(capacityInput, newMode);
         };
-        
+
         capacityModeSelect.addEventListener('change', changeHandler);
         this.eventCleanupCallbacks.push(() => capacityModeSelect.removeEventListener('change', changeHandler));
     }
@@ -658,24 +677,24 @@ class EditQueueModalView extends BaseModalView {
                     const chip = event.target;
                     const label = chip.dataset.label;
                     const isCurrentlyEnabled = chip.classList.contains('enabled');
-                    
+
                     // Toggle chip state
                     if (isCurrentlyEnabled) {
                         chip.classList.remove('enabled');
                     } else {
                         chip.classList.add('enabled');
                     }
-                    
+
                     // Update hidden input value
                     const currentLabels = NodeLabelService.formatLabelsForChips(accessibleLabelsInputElement.value);
                     const newLabelsString = NodeLabelService.updateAccessibleLabels(
-                        currentLabels, 
-                        label, 
+                        currentLabels,
+                        label,
                         !isCurrentlyEnabled
                     );
-                    
+
                     accessibleLabelsInputElement.value = newLabelsString;
-                    
+
                     // Emit change event for re-rendering
                     this._emit('accessibleLabelsListChanged', {
                         queuePath: this.currentQueuePath,
@@ -730,19 +749,19 @@ class EditQueueModalView extends BaseModalView {
     _collectFormData(form, originalCapacityMode) {
         const stagedChanges = { params: {} };
         const capacityModeData = this._handleCapacityModeChange(form, originalCapacityMode, stagedChanges);
-        
+
         // Process all form inputs
         for (const inputElement of form.querySelectorAll('.form-input')) {
             if (inputElement.id === 'edit-capacity-mode') continue;
             this._processFormInput(inputElement, stagedChanges, capacityModeData);
         }
-        
+
         // Collect custom properties
         const customProperties = this._collectCustomProperties(form);
         if (customProperties) {
             stagedChanges.customProperties = customProperties;
         }
-        
+
         return stagedChanges;
     }
 
@@ -769,21 +788,21 @@ class EditQueueModalView extends BaseModalView {
     _processFormInput(inputElement, stagedChanges, { newCapacityMode, capacityModeChanged }) {
         const simpleOrPartialKey = inputElement.dataset.simpleKey;
         const originalValue = inputElement.dataset.originalValue;
-        
+
         if (!simpleOrPartialKey) return;
-        
+
         const newValue = this._extractInputValue(inputElement);
         const userActuallyChangedValue = newValue !== originalValue;
-        
+
         const processedValue = this._processValueByType(
-            simpleOrPartialKey, 
-            newValue, 
-            originalValue, 
-            userActuallyChangedValue, 
-            newCapacityMode, 
+            simpleOrPartialKey,
+            newValue,
+            originalValue,
+            userActuallyChangedValue,
+            newCapacityMode,
             capacityModeChanged
         );
-        
+
         if (processedValue.hasChanged) {
             stagedChanges.params[simpleOrPartialKey] = processedValue.value;
         }
@@ -806,7 +825,14 @@ class EditQueueModalView extends BaseModalView {
      */
     _processValueByType(key, newValue, originalValue, userChanged, newCapacityMode, capacityModeChanged) {
         if (key === 'capacity' || key.endsWith('.capacity')) {
-            return this._processCapacityValue(key, newValue, originalValue, userChanged, newCapacityMode, capacityModeChanged);
+            return this._processCapacityValue(
+                key,
+                newValue,
+                originalValue,
+                userChanged,
+                newCapacityMode,
+                capacityModeChanged
+            );
         } else if (key === 'maximum-capacity') {
             return this._processMaximumCapacityValue(newValue, originalValue, userChanged);
         } else {
@@ -832,8 +858,7 @@ class EditQueueModalView extends BaseModalView {
             return { value: formattedValue, hasChanged: true };
         }
 
-        if (this.viewDataFormatterService._isVectorString(originalValue) && 
-            this._isEffectivelyEmptyVector(newValue)) {
+        if (this.viewDataFormatterService._isVectorString(originalValue) && this._isEffectivelyEmptyVector(newValue)) {
             return { value: '[]', hasChanged: originalValue !== '[]' };
         }
 
@@ -860,13 +885,13 @@ class EditQueueModalView extends BaseModalView {
 
         const parsed = CapacityValueParser.parse(newValue.trim());
         const maxCapacityMode = parsed.isValid ? parsed.type : CAPACITY_MODES.PERCENTAGE;
-        
+
         const formattedValue = this.viewDataFormatterService._formatCapacityForDisplay(
             newValue,
             maxCapacityMode,
             '100%'
         );
-        
+
         return { value: formattedValue, hasChanged: formattedValue !== originalValue };
     }
 
@@ -906,19 +931,19 @@ class EditQueueModalView extends BaseModalView {
      */
     _bindToggleSwitchEvents(form) {
         const toggleSwitches = form.querySelectorAll('.toggle-switch input[type="checkbox"]');
-        
+
         for (const toggleInput of toggleSwitches) {
             const changeHandler = (event) => {
                 const isChecked = event.target.checked;
                 const toggleContainer = event.target.closest('.toggle-container');
                 const label = toggleContainer.querySelector('.toggle-label');
-                
+
                 if (label) {
                     label.textContent = isChecked ? 'true' : 'false';
                     label.classList.toggle('active', isChecked);
                 }
             };
-            
+
             toggleInput.addEventListener('change', changeHandler);
             this.eventCleanupCallbacks.push(() => toggleInput.removeEventListener('change', changeHandler));
         }
@@ -928,7 +953,7 @@ class EditQueueModalView extends BaseModalView {
         const header = DomUtils.qs('#custom-properties-header', form);
         const content = DomUtils.qs('#custom-properties-content', form);
         const addButton = DomUtils.qs('#add-custom-property-btn', form);
-        
+
         if (header && content) {
             header.addEventListener('click', () => {
                 const isCollapsed = header.classList.contains('collapsed');
@@ -941,7 +966,7 @@ class EditQueueModalView extends BaseModalView {
                 }
             });
         }
-        
+
         if (addButton) {
             addButton.addEventListener('click', () => {
                 this._addCustomPropertyRow();
@@ -952,10 +977,10 @@ class EditQueueModalView extends BaseModalView {
     _addCustomPropertyRow() {
         const container = DomUtils.qs('#custom-properties-list', this.formContainer);
         if (!container) return;
-        
+
         const rowId = `custom-prop-${Date.now()}`;
         const prefix = DomUtils.qs('#queue-path-prefix', this.formContainer)?.value || '';
-        
+
         const rowHtml = `
             <div class="custom-property-row" id="${rowId}">
                 <span style="flex: 0 0 auto; font-family: monospace; font-size: 12px;">${DomUtils.escapeXml(prefix)}</span>
@@ -965,9 +990,9 @@ class EditQueueModalView extends BaseModalView {
                 <button type="button" class="btn-remove" data-row-id="${rowId}">Remove</button>
             </div>
         `;
-        
+
         container.insertAdjacentHTML('beforeend', rowHtml);
-        
+
         // Bind remove button
         const removeBtn = container.querySelector(`#${rowId} .btn-remove`);
         if (removeBtn) {
@@ -976,7 +1001,7 @@ class EditQueueModalView extends BaseModalView {
                 if (row) row.remove();
             });
         }
-        
+
         // Bind input events for validation
         const inputs = container.querySelectorAll(`#${rowId} input`);
         for (const input of inputs) {
@@ -992,40 +1017,40 @@ class EditQueueModalView extends BaseModalView {
     _collectCustomProperties(form) {
         const customPropertyRows = form.querySelectorAll('.custom-property-row');
         if (customPropertyRows.length === 0) return null;
-        
+
         const prefix = DomUtils.qs('#queue-path-prefix', form)?.value || '';
         const customProperties = {};
-        
+
         for (const row of customPropertyRows) {
             const suffixInput = row.querySelector('[data-custom-property="suffix"]');
             const valueInput = row.querySelector('[data-custom-property="value"]');
-            
+
             if (suffixInput && valueInput) {
                 const suffix = suffixInput.value.trim();
                 const value = valueInput.value.trim();
-                
+
                 if (suffix && value) {
                     const fullKey = prefix + suffix;
                     customProperties[fullKey] = value;
                 }
             }
         }
-        
+
         return Object.keys(customProperties).length > 0 ? customProperties : null;
     }
 
     _bindAutoCreationEvents(form) {
         const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
         const templateSection = DomUtils.qs('#auto-creation-template', form);
-        
+
         if (autoCreationToggle) {
             // Set initial template visibility
             this._updateTemplateVisibility(autoCreationToggle.checked, templateSection);
-            
+
             autoCreationToggle.addEventListener('change', () => {
                 const enabled = autoCreationToggle.checked;
                 this._updateTemplateVisibility(enabled, templateSection);
-                
+
                 // Clear transition warning if auto-creation is disabled
                 if (!enabled) {
                     const existingWarning = DomUtils.qs('.auto-creation-transition-warning', this.formContainer);
@@ -1035,11 +1060,11 @@ class EditQueueModalView extends BaseModalView {
                 }
             });
         }
-        
+
         // Bind template tab events for v2 mode
         this._bindTemplateTabEvents(form);
     }
-    
+
     /**
      * Binds events for the node label tabs functionality.
      * @param {HTMLElement} form - The form element
@@ -1047,7 +1072,7 @@ class EditQueueModalView extends BaseModalView {
      */
     _bindNodeLabelTabEvents(form) {
         const tabHeaders = form.querySelectorAll('.node-label-tab-header');
-        
+
         for (const tabHeader of tabHeaders) {
             const clickHandler = (event) => {
                 event.preventDefault();
@@ -1058,7 +1083,7 @@ class EditQueueModalView extends BaseModalView {
             this.eventCleanupCallbacks.push(() => tabHeader.removeEventListener('click', clickHandler));
         }
     }
-    
+
     /**
      * Switches to the specified node label tab.
      * @param {HTMLElement} form - The form element
@@ -1083,7 +1108,7 @@ class EditQueueModalView extends BaseModalView {
                 header.style.position = 'relative';
             }
         }
-        
+
         // Update tab content
         const tabPanes = form.querySelectorAll('.node-label-tab-pane');
         for (const pane of tabPanes) {
@@ -1094,7 +1119,7 @@ class EditQueueModalView extends BaseModalView {
             }
         }
     }
-    
+
     /**
      * Binds events for the v2 template tabs functionality.
      * @param {HTMLElement} form - The form element
@@ -1102,7 +1127,7 @@ class EditQueueModalView extends BaseModalView {
      */
     _bindTemplateTabEvents(form) {
         const tabHeaders = form.querySelectorAll('.template-tab-header');
-        
+
         for (const tabHeader of tabHeaders) {
             tabHeader.addEventListener('click', (event) => {
                 event.preventDefault();
@@ -1111,7 +1136,7 @@ class EditQueueModalView extends BaseModalView {
             });
         }
     }
-    
+
     /**
      * Switches to the specified template tab.
      * @param {HTMLElement} form - The form element
@@ -1136,7 +1161,7 @@ class EditQueueModalView extends BaseModalView {
                 header.style.position = 'relative';
             }
         }
-        
+
         // Update tab content
         const tabPanes = form.querySelectorAll('.template-tab-pane');
         for (const pane of tabPanes) {
@@ -1150,7 +1175,7 @@ class EditQueueModalView extends BaseModalView {
 
     _updateTemplateVisibility(enabled, templateSection) {
         if (!templateSection) return;
-        
+
         if (enabled) {
             // Show the template section with a smooth slide-down animation
             templateSection.style.display = 'block';
@@ -1158,7 +1183,7 @@ class EditQueueModalView extends BaseModalView {
             templateSection.style.maxHeight = '0';
             templateSection.style.overflow = 'hidden';
             templateSection.style.transition = 'all 0.3s ease-in-out';
-            
+
             // Trigger animation on next frame
             requestAnimationFrame(() => {
                 templateSection.style.opacity = '1';
@@ -1169,7 +1194,7 @@ class EditQueueModalView extends BaseModalView {
             templateSection.style.transition = 'all 0.3s ease-in-out';
             templateSection.style.opacity = '0';
             templateSection.style.maxHeight = '0';
-            
+
             // Hide completely after animation
             setTimeout(() => {
                 if (templateSection.style.opacity === '0') {
@@ -1178,7 +1203,7 @@ class EditQueueModalView extends BaseModalView {
             }, 300);
         }
     }
-    
+
     /**
      * Checks if capacity mode change would trigger auto-creation mode transition and shows warning.
      * @param {HTMLElement} form - The form element
@@ -1190,38 +1215,40 @@ class EditQueueModalView extends BaseModalView {
         // Get current auto-creation state
         const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
         if (!autoCreationToggle) return; // No auto-creation toggle found
-        
+
         const isAutoCreationEnabled = autoCreationToggle.checked;
         if (!isAutoCreationEnabled) return; // Auto-creation not enabled, no warning needed
-        
+
         // Get effective Legacy Queue Mode setting (considering any pending global changes)
         const effectiveLegacyMode = this._getEffectiveLegacyMode();
-        
+
         // Determine auto-creation modes based on effective legacy mode and capacity modes
         const originalAutoCreationMode = this._determineAutoCreationMode(originalMode, effectiveLegacyMode);
         const newAutoCreationMode = this._determineAutoCreationMode(newMode, effectiveLegacyMode);
-        
+
         if (originalAutoCreationMode === newAutoCreationMode) return; // No transition, no warning needed
-        
+
         // Prepare transition information
         const transitionType = `${originalAutoCreationMode} → ${newAutoCreationMode}`;
         let warningMessage = '';
-        
+
         if (originalAutoCreationMode === 'v1 Legacy' && newAutoCreationMode === 'v2 Flexible') {
-            warningMessage = `Changing to Weight capacity mode ${effectiveLegacyMode ? '(or disabling Legacy Queue Mode)' : ''} will switch auto queue creation to v2 (Flexible) mode. ` +
-                            `This may affect how child queues are automatically created and their template properties.`;
+            warningMessage =
+                `Changing to Weight capacity mode ${effectiveLegacyMode ? '(or disabling Legacy Queue Mode)' : ''} will switch auto queue creation to v2 (Flexible) mode. ` +
+                `This may affect how child queues are automatically created and their template properties.`;
         } else if (originalAutoCreationMode === 'v2 Flexible' && newAutoCreationMode === 'v1 Legacy') {
-            warningMessage = `Changing away from Weight capacity mode ${effectiveLegacyMode ? '(or enabling Legacy Queue Mode)' : ''} will switch auto queue creation to v1 (Legacy) mode. ` +
-                            `This may affect how child queues are automatically created and their template properties.`;
+            warningMessage =
+                `Changing away from Weight capacity mode ${effectiveLegacyMode ? '(or enabling Legacy Queue Mode)' : ''} will switch auto queue creation to v1 (Legacy) mode. ` +
+                `This may affect how child queues are automatically created and their template properties.`;
         }
-        
+
         if (warningMessage) {
             // Show warning and potentially stage auto-creation mode changes
             this._showAutoCreationTransitionWarning(transitionType, warningMessage);
             this._stageAutoCreationModeChanges(form, originalAutoCreationMode, newAutoCreationMode);
         }
     }
-    
+
     /**
      * Gets the effective Legacy Queue Mode setting considering pending global changes.
      * @returns {boolean} The effective legacy mode setting
@@ -1236,11 +1263,11 @@ class EditQueueModalView extends BaseModalView {
                 return String(legacyModeValue).toLowerCase() === 'true';
             }
         }
-        
+
         // Fall back to current queue data legacy mode setting
         return this.currentQueueData?.isLegacyMode ?? true;
     }
-    
+
     /**
      * Determines the auto-creation mode based on capacity mode and legacy setting.
      * @param {string} capacityMode - The capacity mode
@@ -1253,11 +1280,11 @@ class EditQueueModalView extends BaseModalView {
             // Non-legacy mode: always v2 Flexible
             return 'v2 Flexible';
         }
-        
+
         // Legacy mode: v2 for weight, v1 for others
         return capacityMode === CAPACITY_MODES.WEIGHT ? 'v2 Flexible' : 'v1 Legacy';
     }
-    
+
     /**
      * Stages auto-creation mode changes when transitioning between v1 and v2.
      * @param {HTMLElement} form - The form element
@@ -1267,13 +1294,13 @@ class EditQueueModalView extends BaseModalView {
      */
     _stageAutoCreationModeChanges(form, originalMode, newMode) {
         if (originalMode === newMode) return;
-        
+
         // Get current auto-creation toggle values
         const autoCreationToggle = DomUtils.qs('#auto-creation-enabled', form);
         const isCurrentlyEnabled = autoCreationToggle?.checked || false;
-        
+
         if (!isCurrentlyEnabled) return; // No need to stage changes if auto-creation is disabled
-        
+
         // Stage the transition by updating the toggle's data attributes
         if (originalMode === 'v1 Legacy' && newMode === 'v2 Flexible') {
             // Transitioning v1 → v2: disable v1, enable v2
@@ -1285,7 +1312,7 @@ class EditQueueModalView extends BaseModalView {
             this._updateAutoCreationToggleForTransition(form, 'auto-create-child-queue.enabled', true);
         }
     }
-    
+
     /**
      * Updates auto-creation toggle for mode transitions.
      * @param {HTMLElement} form - The form element
@@ -1299,7 +1326,7 @@ class EditQueueModalView extends BaseModalView {
             // Update the data attributes to reflect the new mode
             autoCreationToggle.dataset.simpleKey = propertyKey;
             autoCreationToggle.checked = enabled;
-            
+
             // Update the label
             const label = autoCreationToggle.closest('.toggle-container')?.querySelector('.toggle-label');
             if (label) {
@@ -1308,7 +1335,7 @@ class EditQueueModalView extends BaseModalView {
             }
         }
     }
-    
+
     /**
      * Shows a warning about auto-creation mode transition.
      * @param {string} transitionType - Description of the transition
@@ -1321,7 +1348,7 @@ class EditQueueModalView extends BaseModalView {
         if (existingWarning) {
             existingWarning.remove();
         }
-        
+
         // Create warning element
         const warningHtml = `
             <div class="auto-creation-transition-warning" style="margin: 15px 0; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; border-left: 4px solid #f39c12;">
@@ -1334,7 +1361,7 @@ class EditQueueModalView extends BaseModalView {
                 </div>
             </div>
         `;
-        
+
         // Insert warning after the capacity mode form group
         const capacityModeGroup = DomUtils.qs('[data-original-mode]', this.formContainer)?.closest('.form-group');
         if (capacityModeGroup) {
@@ -1349,14 +1376,14 @@ class EditQueueModalView extends BaseModalView {
      */
     _validateCustomPropertyRow(row) {
         if (!row) return;
-        
+
         const suffixInput = row.querySelector('[data-custom-property="suffix"]');
         const valueInput = row.querySelector('[data-custom-property="value"]');
-        
+
         if (suffixInput && valueInput) {
             const suffix = suffixInput.value.trim();
             const value = valueInput.value.trim();
-            
+
             // Show error for empty property name if value is provided
             if (!suffix && value) {
                 suffixInput.classList.add('invalid');
@@ -1367,7 +1394,7 @@ class EditQueueModalView extends BaseModalView {
                 suffixInput.style.borderColor = '';
                 suffixInput.title = '';
             }
-            
+
             // Show error for empty value if property name is provided
             if (suffix && !value) {
                 valueInput.classList.add('invalid');
@@ -1426,10 +1453,10 @@ class EditQueueModalView extends BaseModalView {
         // Temporarily override _renderContent to prevent it from overwriting our template content
         const originalRenderContent = this._renderContent;
         this._renderContent = () => {}; // No-op during template-only show
-        
+
         // Show the modal properly with positioning and events
         super.show(data);
-        
+
         // Restore original _renderContent method
         this._renderContent = originalRenderContent;
 
@@ -1447,7 +1474,7 @@ class EditQueueModalView extends BaseModalView {
      */
     _buildTemplateOnlyHtml(data) {
         const { path, displayName, autoCreationData, isLegacyMode, effectiveCapacityMode } = data;
-        
+
         let formHTML = `<form id="template-config-form" data-queue-path="${path}" onsubmit="return false;">`;
 
         // Queue info section
@@ -1464,7 +1491,13 @@ class EditQueueModalView extends BaseModalView {
         `;
 
         // Auto-creation template section
-        formHTML += this._buildAutoCreationTemplateHtml(autoCreationData, isLegacyMode, path, effectiveCapacityMode, true);
+        formHTML += this._buildAutoCreationTemplateHtml(
+            autoCreationData,
+            isLegacyMode,
+            path,
+            effectiveCapacityMode,
+            true
+        );
 
         formHTML += `</form>`;
         return formHTML;
@@ -1516,7 +1549,7 @@ class EditQueueModalView extends BaseModalView {
         for (const inputElement of form.querySelectorAll('.form-input')) {
             const simpleOrPartialKey = inputElement.dataset.simpleKey;
             const originalValue = inputElement.dataset.originalValue;
-            
+
             if (!simpleOrPartialKey) continue;
 
             let newValue;

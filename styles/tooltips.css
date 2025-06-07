@@ -28,7 +28,7 @@
 
 /* Arrow styles for different placements */
 .unified-tooltip::after {
-    content: "";
+    content: '';
     position: absolute;
     border-width: 6px;
     border-style: solid;
@@ -91,7 +91,7 @@
 }
 
 .tooltip .tooltiptext::after {
-    content: "";
+    content: '';
     position: absolute;
     top: 100%;
     left: 50%;

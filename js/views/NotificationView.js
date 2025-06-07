@@ -25,12 +25,12 @@ class NotificationView {
     init() {
         // Use helper function to get EventBus instance
         const eventBus = getEventBus();
-        
+
         if (!eventBus || typeof eventBus.on !== 'function') {
             console.error('EventBus is not properly initialized:', eventBus);
             return;
         }
-        
+
         // Subscribe to EventBus notifications
         this.eventUnsubscribers.push(
             eventBus.on('notification:success', (message) => this.showSuccess(message)),
@@ -44,29 +44,29 @@ class NotificationView {
     showSuccess(message) {
         this.show({
             message: message,
-            type: 'success'
-        })
+            type: 'success',
+        });
     }
 
     showInfo(message) {
         this.show({
             message: message,
-            type: 'info'
-        })
+            type: 'info',
+        });
     }
 
     showWarning(message) {
         this.show({
             message: message,
-            type: 'warning'
-        })
+            type: 'warning',
+        });
     }
 
     showError(message) {
         this.show({
             message: message,
-            type: 'error'
-        })
+            type: 'error',
+        });
     }
 
     /**

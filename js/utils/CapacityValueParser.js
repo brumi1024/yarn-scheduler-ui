@@ -15,7 +15,7 @@ class CapacityValueParser {
                 value: null,
                 unit: null,
                 isValid: false,
-                error: 'Invalid or empty capacity value'
+                error: 'Invalid or empty capacity value',
             };
         }
 
@@ -96,7 +96,7 @@ class CapacityValueParser {
         return {
             isValid: errors.length === 0,
             value: errors.length === 0 ? this.format(parsed) : null,
-            errors
+            errors,
         };
     }
 
@@ -109,7 +109,7 @@ class CapacityValueParser {
     static determineMode(queuePath, properties) {
         const capacityKey = PropertyKeyMapper.createFullKey(queuePath, 'capacity');
         const capacityValue = properties.get(capacityKey);
-        
+
         if (!capacityValue) {
             return CAPACITY_MODES.PERCENTAGE;
         }
@@ -154,7 +154,7 @@ class CapacityValueParser {
                 value: null,
                 unit: '%',
                 isValid: false,
-                error: 'Invalid percentage format'
+                error: 'Invalid percentage format',
             };
         }
 
@@ -163,7 +163,7 @@ class CapacityValueParser {
             value: numValue,
             unit: '%',
             isValid: true,
-            originalValue: value
+            originalValue: value,
         };
     }
 
@@ -176,7 +176,7 @@ class CapacityValueParser {
                 value: null,
                 unit: 'w',
                 isValid: false,
-                error: 'Invalid weight format or value <= 0'
+                error: 'Invalid weight format or value <= 0',
             };
         }
 
@@ -185,7 +185,7 @@ class CapacityValueParser {
             value: numValue,
             unit: 'w',
             isValid: true,
-            originalValue: value
+            originalValue: value,
         };
     }
 
@@ -196,14 +196,14 @@ class CapacityValueParser {
                 value: null,
                 unit: 'absolute',
                 isValid: false,
-                error: 'Invalid absolute resource format - missing resource assignments'
+                error: 'Invalid absolute resource format - missing resource assignments',
             };
         }
 
         const resources = value.slice(1, -1).split(',');
         const parsedResources = {};
         let hasNonAbsoluteValue = false;
-        
+
         for (const resource of resources) {
             const [key, val] = resource.split('=');
             if (!key || !val) {
@@ -212,17 +212,17 @@ class CapacityValueParser {
                     value: null,
                     unit: 'absolute',
                     isValid: false,
-                    error: `Invalid resource format: ${resource}`
+                    error: `Invalid resource format: ${resource}`,
                 };
             }
             const trimmedKey = key.trim();
             const trimmedVal = val.trim();
-            
+
             // Check if this is a mixed mode vector (contains %, w, or other units)
             if (trimmedVal.endsWith('%') || trimmedVal.endsWith('w')) {
                 hasNonAbsoluteValue = true;
             }
-            
+
             parsedResources[trimmedKey] = trimmedVal;
         }
 
@@ -235,7 +235,7 @@ class CapacityValueParser {
             unit: capacityType === CAPACITY_MODES.VECTOR ? 'vector' : 'absolute',
             isValid: true,
             originalValue: value,
-            isMixedVector: hasNonAbsoluteValue
+            isMixedVector: hasNonAbsoluteValue,
         };
     }
 }

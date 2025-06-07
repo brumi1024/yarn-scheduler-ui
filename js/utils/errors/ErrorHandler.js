@@ -7,7 +7,7 @@ class ErrorHandler {
             maxRetries: 3,
             baseDelay: 1000,
             maxDelay: 10000,
-            backoffFactor: 2
+            backoffFactor: 2,
         };
     }
 
@@ -33,8 +33,11 @@ class ErrorHandler {
                 }
 
                 const delay = this._calculateDelay(attempt, config);
-                console.warn(`Operation failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay}ms:`, error.message);
-                
+                console.warn(
+                    `Operation failed (attempt ${attempt + 1}/${config.maxRetries + 1}), retrying in ${delay}ms:`,
+                    error.message
+                );
+
                 await this._delay(delay);
             }
         }
@@ -54,7 +57,7 @@ class ErrorHandler {
         if (error.name === 'TypeError' && error.message.includes('fetch')) {
             return new ApiError('Network error occurred', 'NETWORK_ERROR', {
                 statusCode: 0,
-                originalError: error.message
+                originalError: error.message,
             });
         }
 
@@ -62,14 +65,14 @@ class ErrorHandler {
         if (error.name === 'AbortError' || error.message.includes('timeout')) {
             return new ApiError('Request timed out', 'TIMEOUT_ERROR', {
                 statusCode: 408,
-                originalError: error.message
+                originalError: error.message,
             });
         }
 
         // Parse errors
         if (error instanceof SyntaxError) {
             return new ValidationError('Failed to parse response data', 'PARSE_ERROR', {
-                originalError: error.message
+                originalError: error.message,
             });
         }
 
@@ -77,13 +80,13 @@ class ErrorHandler {
         if (error.status || error.statusCode) {
             return new ApiError(error.message || 'API request failed', 'API_ERROR', {
                 statusCode: error.status || error.statusCode,
-                originalError: error.message
+                originalError: error.message,
             });
         }
 
         // Fallback to generic error
         return new YarnSchedulerError(error.message || 'Unknown error occurred', 'UNKNOWN_ERROR', {
-            originalError: error.message
+            originalError: error.message,
         });
     }
 
@@ -112,11 +115,8 @@ class ErrorHandler {
      * Calculates exponential backoff delay
      */
     _calculateDelay(attempt, config) {
-        const delay = Math.min(
-            config.baseDelay * Math.pow(config.backoffFactor, attempt),
-            config.maxDelay
-        );
-        
+        const delay = Math.min(config.baseDelay * Math.pow(config.backoffFactor, attempt), config.maxDelay);
+
         // Add jitter to avoid thundering herd
         return delay + Math.random() * 1000;
     }
@@ -125,7 +125,7 @@ class ErrorHandler {
      * Creates a delay promise
      */
     _delay(ms) {
-        return new Promise(resolve => setTimeout(resolve, ms));
+        return new Promise((resolve) => setTimeout(resolve, ms));
     }
 
     /**
@@ -155,7 +155,7 @@ class ErrorHandler {
     formatForNotification(error) {
         const baseNotification = {
             type: 'error',
-            duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR
+            duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR,
         };
 
         if (error instanceof ValidationError) {
@@ -163,7 +163,7 @@ class ErrorHandler {
                 ...baseNotification,
                 message: error.getUserMessage(),
                 type: 'warning',
-                duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.WARNING
+                duration: CONFIG.TIMEOUTS.NOTIFICATION_DURATION.WARNING,
             };
         }
 
@@ -171,15 +171,15 @@ class ErrorHandler {
             return {
                 ...baseNotification,
                 message: error.getUserMessage(),
-                duration: error.isRetryable() ? 
-                    CONFIG.TIMEOUTS.NOTIFICATION_DURATION.WARNING : 
-                    CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR + 2000
+                duration: error.isRetryable()
+                    ? CONFIG.TIMEOUTS.NOTIFICATION_DURATION.WARNING
+                    : CONFIG.TIMEOUTS.NOTIFICATION_DURATION.ERROR + 2000,
             };
         }
 
         return {
             ...baseNotification,
-            message: error.message || 'An unexpected error occurred'
+            message: error.message || 'An unexpected error occurred',
         };
     }
 }

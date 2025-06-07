@@ -137,7 +137,6 @@ body {
     border-radius: 8px 8px 0 0;
 }
 
-
 .controls {
     /* This is the main controls bar, e.g., for queue config tab */
     background: white;
@@ -498,7 +497,7 @@ body {
 
 /* Optional arrow pointer */
 .tooltip .tooltiptext::after {
-    content: "";
+    content: '';
     position: absolute;
     top: 100%; /* Below the tooltip */
     left: 50%;
@@ -971,8 +970,6 @@ body {
     margin-top: 4px;
 }
 
-
-
 /* Change Preview Modal Styles */
 .change-preview-modal {
     position: fixed;
@@ -1023,8 +1020,6 @@ body {
     padding: 15px 20px 20px 20px;
     margin-top: 0;
 }
-
-
 
 /* Bulk Operations Styles */
 .bulk-operations-toolbar {
@@ -1101,7 +1096,6 @@ body {
     background: white;
 }
 
-
 .checkbox-label {
     display: flex;
     align-items: center;
@@ -1170,13 +1164,13 @@ body {
         align-items: stretch;
         gap: 12px;
     }
-    
+
     .bulk-actions {
         flex-direction: column;
         align-items: stretch;
         gap: 12px;
     }
-    
+
     .bulk-action-group {
         justify-content: space-between;
     }
@@ -1187,15 +1181,13 @@ body {
         margin: 8px;
         padding: 8px 12px;
     }
-    
+
     .bulk-action-group {
         flex-direction: column;
         align-items: stretch;
         gap: 4px;
     }
-    
 }
-
 
 /* Global config collapsible styles */
 .config-group-title.collapsible {

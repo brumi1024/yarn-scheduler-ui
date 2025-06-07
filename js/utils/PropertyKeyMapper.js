@@ -30,41 +30,37 @@ class PropertyKeyMapper {
             return null;
         }
 
-        // Extract queue path and property from the full key
         const withoutPrefix = fullKey.replace('yarn.scheduler.capacity.', '');
         const parts = withoutPrefix.split('.');
-        
+
         if (parts.length < 2) {
             return null;
         }
-        
-        // Handle auto-creation properties which have complex structures
-        if (withoutPrefix.includes('auto-create-child-queue.') || 
+
+        if (
+            withoutPrefix.includes('auto-create-child-queue.') ||
             withoutPrefix.includes('auto-queue-creation-v2.') ||
-            withoutPrefix.includes('leaf-queue-template.')) {
-            
-            // For auto-creation properties, preserve the full property structure after queue path
-            // Find the queue path by looking for known property patterns
+            withoutPrefix.includes('leaf-queue-template.')
+        ) {
             let queuePathLength = 0;
             for (let i = 0; i < parts.length; i++) {
                 const remainingParts = parts.slice(i);
                 const remaining = remainingParts.join('.');
-                
-                if (remaining.startsWith('auto-create-child-queue.') ||
+
+                if (
+                    remaining.startsWith('auto-create-child-queue.') ||
                     remaining.startsWith('auto-queue-creation-v2.') ||
-                    remaining.startsWith('leaf-queue-template.')) {
+                    remaining.startsWith('leaf-queue-template.')
+                ) {
                     queuePathLength = i;
                     break;
                 }
             }
-            
+
             if (queuePathLength > 0) {
-                // Return everything after the queue path
                 return parts.slice(queuePathLength).join('.');
             }
         }
-        
-        // For regular queue properties, return just the last part
         return parts[parts.length - 1];
     }
 
@@ -81,7 +77,6 @@ class PropertyKeyMapper {
             return null;
         }
 
-        // Try to match against known metadata patterns first
         for (const category of QUEUE_CONFIG_METADATA) {
             for (const placeholderKey in category.properties) {
                 const pattern = placeholderKey.replace(Q_PATH_PLACEHOLDER, '([^.]+(?:\\.[^.]+)*)');
@@ -92,13 +87,10 @@ class PropertyKeyMapper {
                 }
             }
         }
-
-        // Fallback: This is unreliable for multi-part properties
-        // The proper way is to use the queue structure from .queues properties
         const withoutPrefix = fullKey.replace('yarn.scheduler.capacity.', '');
         const parts = withoutPrefix.split('.');
         if (parts.length < 2) return null;
-        
+
         return parts.slice(0, -1).join('.');
     }
 
@@ -113,9 +105,7 @@ class PropertyKeyMapper {
         }
 
         const withoutPrefix = fullKey.replace('yarn.scheduler.capacity.', '');
-        
-        // Queue properties ALWAYS start with 'root.' after the prefix
-        // Global properties NEVER start with 'root.'
+
         return !withoutPrefix.startsWith('root.');
     }
 
@@ -128,12 +118,12 @@ class PropertyKeyMapper {
      */
     static convertToFullKeys(simpleParams, queuePath, selectedPartition = DEFAULT_PARTITION) {
         const fullKeyMap = new Map();
-        
+
         for (const [simpleKey, value] of Object.entries(simpleParams)) {
             if (simpleKey === '_ui_capacityMode') continue;
-            
+
             let fullKey;
-            
+
             if (selectedPartition && selectedPartition !== DEFAULT_PARTITION) {
                 // Map partition-specific properties
                 if (simpleKey === 'capacity') {
@@ -148,14 +138,14 @@ class PropertyKeyMapper {
                 // Standard mapping for default partition
                 fullKey = this.toFullKey(queuePath, simpleKey);
             }
-            
+
             if (!fullKey) {
                 fullKey = `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
             }
-            
+
             fullKeyMap.set(fullKey, value);
         }
-        
+
         return fullKeyMap;
     }
 
@@ -166,7 +156,6 @@ class PropertyKeyMapper {
      * @returns {string} Full YARN key
      */
     static createFullKey(queuePath, simpleKey) {
-        return this.toFullKey(queuePath, simpleKey) || 
-               `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
+        return this.toFullKey(queuePath, simpleKey) || `yarn.scheduler.capacity.${queuePath}.${simpleKey}`;
     }
 }

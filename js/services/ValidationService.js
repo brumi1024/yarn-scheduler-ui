@@ -38,30 +38,34 @@ const ValidationService = {
      */
     parseAndValidateCapacityValue(capacityString, mode, allowEmptyVector = false) {
         const string_ = String(capacityString || '').trim();
-        
+
         // Handle empty vector case
-        if (string_ === '[]' && allowEmptyVector && (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR)) {
+        if (
+            string_ === '[]' &&
+            allowEmptyVector &&
+            (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR)
+        ) {
             return { value: '[]' };
         }
-        
+
         // Use CapacityValueParser for validation
         const validationResult = CapacityValueParser.validate(string_, mode, allowEmptyVector);
-        
+
         if (!validationResult.isValid) {
             return { value: null, errors: validationResult.errors };
         }
-        
+
         // Format the value based on mode
         if (mode === CAPACITY_MODES.PERCENTAGE) {
             const parsed = CapacityValueParser.parse(string_);
             return { value: parsed.value.toFixed(1) };
         }
-        
+
         if (mode === CAPACITY_MODES.WEIGHT) {
             const parsed = CapacityValueParser.parse(string_);
             return { value: `${parsed.value.toFixed(1)}w` };
         }
-        
+
         // For absolute and vector modes, return the validated value
         return { value: validationResult.value };
     },

@@ -169,7 +169,7 @@
 }
 
 .default-indicator::before {
-    content: "⚙️";
+    content: '⚙️';
     margin-right: 3px;
     font-size: 8px;
 }

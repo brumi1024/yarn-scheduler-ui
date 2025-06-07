@@ -39,7 +39,11 @@ class ConfigurationOrchestrator {
      */
     async refreshConfiguration(hasPendingChanges = false) {
         if (hasPendingChanges) {
-            if (!globalThis.confirm('Refreshing data from the server will discard any unapplied local changes. Continue?')) {
+            if (
+                !globalThis.confirm(
+                    'Refreshing data from the server will discard any unapplied local changes. Continue?'
+                )
+            ) {
                 return false;
             }
             this.schedulerConfigModel.clearPendingChanges();
@@ -66,7 +70,10 @@ class ConfigurationOrchestrator {
         );
 
         if (validationErrors.length > 0) {
-            getEventBus().emit('notification:error', `Cannot apply: ${validationErrors.map((e) => e.message).join('; ')}`);
+            getEventBus().emit(
+                'notification:error',
+                `Cannot apply: ${validationErrors.map((e) => e.message).join('; ')}`
+            );
             return false;
         }
 
@@ -83,12 +90,13 @@ class ConfigurationOrchestrator {
         if (this._isSuccessfulResponse(result)) {
             getEventBus().emit('notification:success', 'Configuration changes applied successfully!');
             this.schedulerConfigModel.clearPendingChanges();
-            
+
             // Reload configuration from server
             await this.initializeConfiguration();
             return true;
         } else {
-            const errorDetail = result.error || 
+            const errorDetail =
+                result.error ||
                 (typeof result.data === 'string' ? result.data : 'Unknown YARN error or non-string response.');
             getEventBus().emit('notification:error', `Failed to apply changes: ${errorDetail}`);
             return false;
@@ -105,7 +113,11 @@ class ConfigurationOrchestrator {
             return false;
         }
 
-        if (globalThis.confirm('Are you sure you want to discard all pending local changes? This action cannot be undone.')) {
+        if (
+            globalThis.confirm(
+                'Are you sure you want to discard all pending local changes? This action cannot be undone.'
+            )
+        ) {
             this.schedulerConfigModel.clearPendingChanges();
             getEventBus().emit('notification:info', 'All pending changes discarded.');
             return true;
@@ -120,36 +132,35 @@ class ConfigurationOrchestrator {
     stageGlobalConfigUpdate(formData) {
         const { params, customProperties } = formData;
         let hasChanges = false;
-        
-        // Check if Legacy Queue Mode is being changed before staging global updates
+
         const legacyModeChange = this._detectLegacyModeChange(params);
-        
-        // Stage standard global property updates
+
         if (params && Object.keys(params).length > 0) {
             this.schedulerConfigModel.stageGlobalUpdate(params);
             hasChanges = true;
         }
-        
-        // Stage custom global property updates
+
         if (customProperties && Object.keys(customProperties).length > 0) {
             this.schedulerConfigModel.stageGlobalUpdate(customProperties);
             hasChanges = true;
         }
-        
-        // Auto-stage queue configuration updates if Legacy Queue Mode changed
+
         if (legacyModeChange) {
             const queueUpdates = this._stageAutoCreationModeTransitions(legacyModeChange);
             if (queueUpdates > 0) {
-                getEventBus().emit('notification:info', `Global settings changes staged. Automatically updated ${queueUpdates} queue auto-creation configurations.`);
-                return; // Early return to avoid duplicate notification
+                getEventBus().emit(
+                    'notification:info',
+                    `Global settings changes staged. Automatically updated ${queueUpdates} queue auto-creation configurations.`
+                );
+                return;
             }
         }
-        
+
         if (hasChanges) {
             getEventBus().emit('notification:info', 'Global settings changes staged.');
         }
     }
-    
+
     /**
      * Detects if Legacy Queue Mode is being changed and returns transition info.
      * @param {Object} params - Global config parameters
@@ -158,27 +169,27 @@ class ConfigurationOrchestrator {
      */
     _detectLegacyModeChange(params) {
         if (!params) return null;
-        
+
         const legacyModeProperty = 'yarn.scheduler.capacity.legacy-queue-mode.enabled';
         if (!(legacyModeProperty in params)) return null;
-        
+
         // Get current effective value
         const currentGlobalConfig = this.schedulerConfigModel.getGlobalConfig();
         const currentValue = currentGlobalConfig.get(legacyModeProperty);
         const currentLegacyMode = String(currentValue || 'true').toLowerCase() === 'true';
-        
+
         // Get new value
         const newLegacyMode = String(params[legacyModeProperty]).toLowerCase() === 'true';
-        
+
         if (currentLegacyMode === newLegacyMode) return null; // No change
-        
+
         return {
             from: currentLegacyMode,
             to: newLegacyMode,
-            property: legacyModeProperty
+            property: legacyModeProperty,
         };
     }
-    
+
     /**
      * Stages auto-creation mode transitions for all queues when Legacy Queue Mode changes.
      * @param {Object} legacyModeChange - Legacy mode transition info
@@ -188,20 +199,20 @@ class ConfigurationOrchestrator {
     _stageAutoCreationModeTransitions(legacyModeChange) {
         const { from: fromLegacyMode, to: toLegacyMode } = legacyModeChange;
         let updatedQueues = 0;
-        
+
         // Get all queue paths
         const allQueuePaths = this.schedulerConfigModel.getAllQueuePaths();
-        
+
         for (const queuePath of allQueuePaths) {
             const queueUpdates = this._stageQueueAutoCreationModeTransition(queuePath, fromLegacyMode, toLegacyMode);
             if (queueUpdates) {
                 updatedQueues++;
             }
         }
-        
+
         return updatedQueues;
     }
-    
+
     /**
      * Stages auto-creation mode transition for a specific queue.
      * @param {string} queuePath - The queue path
@@ -214,28 +225,28 @@ class ConfigurationOrchestrator {
         // Get queue properties to check current auto-creation state
         const queueProperties = this.schedulerConfigModel.getQueueNodeProperties(queuePath);
         if (!queueProperties) return false;
-        
+
         // Check if queue has auto-creation enabled (either v1 or v2) using metadata-driven keys
         const v1AutoCreateKey = AutoCreationService.getV1EnabledKey(queuePath);
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
         const v1Enabled = String(queueProperties.get(v1AutoCreateKey) || 'false').toLowerCase() === 'true';
         const v2Enabled = String(queueProperties.get(v2AutoCreateKey) || 'false').toLowerCase() === 'true';
-        
+
         if (!v1Enabled && !v2Enabled) return false; // No auto-creation enabled, nothing to do
-        
+
         // Determine capacity mode to understand current/future auto-creation mode
         const capacityValue = queueProperties.get(`yarn.scheduler.capacity.${queuePath}.capacity`) || '';
         const capacityMode = this._determineCapacityMode(capacityValue);
-        
+
         // Determine what auto-creation mode should be used
         const fromAutoCreationMode = this._determineAutoCreationMode(capacityMode, fromLegacyMode);
         const toAutoCreationMode = this._determineAutoCreationMode(capacityMode, toLegacyMode);
-        
+
         if (fromAutoCreationMode === toAutoCreationMode) return false; // No mode change needed
-        
+
         // Stage the transition
         const updateParams = {};
-        
+
         if (fromAutoCreationMode === 'v1' && toAutoCreationMode === 'v2') {
             // v1 → v2: disable v1, enable v2
             if (v1Enabled) {
@@ -243,21 +254,21 @@ class ConfigurationOrchestrator {
             }
             updateParams['auto-queue-creation-v2.enabled'] = 'true';
         } else if (fromAutoCreationMode === 'v2' && toAutoCreationMode === 'v1') {
-            // v2 → v1: disable v2, enable v1  
+            // v2 → v1: disable v2, enable v1
             if (v2Enabled) {
                 updateParams['auto-queue-creation-v2.enabled'] = 'false';
             }
             updateParams['auto-create-child-queue.enabled'] = 'true';
         }
-        
+
         if (Object.keys(updateParams).length > 0) {
             this.schedulerConfigModel.stageUpdateQueue(queuePath, updateParams);
             return true;
         }
-        
+
         return false;
     }
-    
+
     /**
      * Determines capacity mode from capacity value.
      * @param {string} capacityValue - The capacity value
@@ -270,7 +281,7 @@ class ConfigurationOrchestrator {
         if (capacityValue.includes('%') || !isNaN(parseFloat(capacityValue))) return 'percentage';
         return 'percentage'; // Default fallback
     }
-    
+
     /**
      * Determines auto-creation mode based on capacity mode and legacy setting.
      * @param {string} capacityMode - The capacity mode
@@ -283,7 +294,7 @@ class ConfigurationOrchestrator {
             // Non-legacy mode: always v2
             return 'v2';
         }
-        
+
         // Legacy mode: v2 for weight, v1 for others
         return capacityMode === 'weight' ? 'v2' : 'v1';
     }
@@ -298,8 +309,10 @@ class ConfigurationOrchestrator {
             return true;
         } else {
             this.schedulerConfigModel.loadSchedulerConfig([]);
-            getEventBus().emit('notification:error', configResult.error ||
-                `Failed to fetch scheduler configuration (status: ${configResult.status})`);
+            getEventBus().emit(
+                'notification:error',
+                configResult.error || `Failed to fetch scheduler configuration (status: ${configResult.status})`
+            );
             return false;
         }
     }
@@ -314,8 +327,10 @@ class ConfigurationOrchestrator {
             return true;
         } else {
             this.schedulerInfoModel.loadSchedulerInfo(null);
-            getEventBus().emit('notification:warning', infoResult.error ||
-                `Failed to fetch scheduler info (status: ${infoResult.status})`);
+            getEventBus().emit(
+                'notification:warning',
+                infoResult.error || `Failed to fetch scheduler info (status: ${infoResult.status})`
+            );
             return false;
         }
     }
@@ -325,9 +340,11 @@ class ConfigurationOrchestrator {
      * @private
      */
     _isSuccessfulResponse(result) {
-        return result.status === 200 && 
-               result.data && 
-               typeof result.data === 'string' && 
-               result.data.toLowerCase().includes('successfully applied');
+        return (
+            result.status === 200 &&
+            result.data &&
+            typeof result.data === 'string' &&
+            result.data.toLowerCase().includes('successfully applied')
+        );
     }
 }
