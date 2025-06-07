@@ -3,6 +3,7 @@
 This document provides comprehensive guidance for developers working on the YARN Scheduler UI, including architecture overview, extension points, and best practices.
 
 ## Table of Contents
+
 - [Architecture Overview](#architecture-overview)
 - [Core Data Model](#core-data-model)
 - [Key Services](#key-services)
@@ -82,17 +83,17 @@ class QueueNode {
   segment: string              // Queue name (e.g., "default")
   fullPath: string             // Full path (e.g., "root.default")
   isQueue: boolean             // True if actual queue, false if placeholder
-  
+
   // State Management
   baseProperties: Map          // Original properties from server
   pendingOperation: string     // 'add', 'update', 'delete', or null
   pendingProperties: Map       // Staged changes
   oldProperties: Map           // For rollback
-  
+
   // Hierarchy
   parent: QueueNode
   children: Map<string, QueueNode>
-  
+
   // Key Methods
   getEffectiveProperties()     // Returns merged base + pending
   isNew()                      // pendingOperation === 'add'
@@ -104,6 +105,7 @@ class QueueNode {
 ### Important: Queue Path Parsing
 
 The system correctly parses queue paths by:
+
 1. First parsing all `.queues` properties to build hierarchy
 2. Using actual queue structure to determine valid paths
 3. Finding longest valid queue path for multi-part properties
@@ -115,6 +117,7 @@ The system correctly parses queue paths by:
 ### ConfigurationOrchestrator
 
 Manages configuration workflows:
+
 - Loading and refreshing configurations
 - Applying changes with validation
 - Coordinating API mutations
@@ -123,6 +126,7 @@ Manages configuration workflows:
 ### UIStateManager
 
 Coordinates UI components:
+
 - Modal lifecycle management
 - View rendering coordination
 - Bulk operations visibility
@@ -131,6 +135,7 @@ Coordinates UI components:
 ### ChangeManager
 
 Handles staging operations:
+
 - Queue add/update/delete with validation
 - Accessible labels changes
 - Custom property management
@@ -139,6 +144,7 @@ Handles staging operations:
 ### ViewDataFormatterService
 
 Transforms data for display:
+
 - Queue hierarchy formatting
 - Capacity value formatting
 - UI label generation
@@ -158,15 +164,15 @@ Add to `js/config/config-metadata-queue.js`:
   type: 'string',              // 'string', 'number', 'boolean', 'enum'
   defaultValue: 'default',
   placeholder: 'Default: default',
-  
+
   // Optional fields
   availableInTemplate: true,   // Include in auto-creation templates
   v2Property: true,            // Mark as v2-only feature
   semanticRole: 'special-key', // For programmatic lookup
-  
+
   // For enum types
   options: ['option1', 'option2'],
-  
+
   // For number types
   min: 0,
   max: 100,
@@ -178,6 +184,7 @@ Add to `js/config/config-metadata-queue.js`:
 ### Step 2: Automatic Integration
 
 The system automatically:
+
 - Generates form fields in edit modal
 - Handles staging and validation
 - Creates API payloads
@@ -236,28 +243,31 @@ Endpoint: `/ws/v1/cluster/scheduler-conf`
 ### Payload Format
 
 **Queue Operations**: Use simple keys
+
 ```json
 {
-  "queue-name": "root.default",
-  "params": {
-    "capacity": "50",
-    "maximum-capacity": "100"
-  }
+    "queue-name": "root.default",
+    "params": {
+        "capacity": "50",
+        "maximum-capacity": "100"
+    }
 }
 ```
 
 **Global Operations**: Use full property names
+
 ```json
 {
-  "global-updates": {
-    "yarn.scheduler.capacity.legacy-queue-mode.enabled": "false"
-  }
+    "global-updates": {
+        "yarn.scheduler.capacity.legacy-queue-mode.enabled": "false"
+    }
 }
 ```
 
 ### Value Processing
 
 The system automatically:
+
 - Removes `%` from percentage values
 - Preserves `w` suffix for weights
 - Keeps vector format `[memory=50%,vcores=2]`
@@ -268,6 +278,7 @@ The system automatically:
 ### Modal System
 
 All modals extend `BaseModalView`:
+
 - Automatic event cleanup
 - Consistent lifecycle management
 - Tooltip integration
@@ -276,6 +287,7 @@ All modals extend `BaseModalView`:
 ### Key Modal Features
 
 #### EditQueueModalView
+
 - Tabbed interfaces for complex configurations
 - Dynamic capacity mode switching
 - Custom property support
@@ -283,32 +295,34 @@ All modals extend `BaseModalView`:
 - Auto-creation templates
 
 #### Event Cleanup Pattern
+
 ```javascript
 class EditQueueModalView extends BaseModalView {
-  constructor() {
-    this.eventCleanupCallbacks = [];
-  }
-  
-  _bindEvents() {
-    const handler = () => { /* ... */ };
-    element.addEventListener('click', handler);
-    this.eventCleanupCallbacks.push(() => 
-      element.removeEventListener('click', handler)
-    );
-  }
-  
-  _cleanupEventListeners() {
-    for (const cleanup of this.eventCleanupCallbacks) {
-      cleanup();
+    constructor() {
+        this.eventCleanupCallbacks = [];
     }
-    this.eventCleanupCallbacks = [];
-  }
+
+    _bindEvents() {
+        const handler = () => {
+            /* ... */
+        };
+        element.addEventListener('click', handler);
+        this.eventCleanupCallbacks.push(() => element.removeEventListener('click', handler));
+    }
+
+    _cleanupEventListeners() {
+        for (const cleanup of this.eventCleanupCallbacks) {
+            cleanup();
+        }
+        this.eventCleanupCallbacks = [];
+    }
 }
 ```
 
 ### Queue Tree Display
 
 Features:
+
 - Hierarchical rendering with indentation
 - Sankey diagram connectors
 - Status labels and indicators
@@ -321,6 +335,7 @@ Features:
 ### Data Sources
 
 Merged from two APIs:
+
 1. `/ws/v1/cluster/scheduler` - Queue configurations
 2. `/ws/v1/cluster/nodes` - Actual cluster state
 
@@ -333,6 +348,7 @@ Merged from two APIs:
 ### Label-Specific Capacities
 
 When a partition is selected:
+
 - Capacity fields map to partition-specific properties
 - Example: `capacity` → `accessible-node-labels.gpu.capacity`
 - Automatic in edit modal
@@ -348,6 +364,7 @@ When a partition is selected:
 ### QueueValidator
 
 Single-pass validation for:
+
 - Queue name uniqueness and format
 - Capacity sum validation (percentage mode)
 - Queue state validation
@@ -356,8 +373,8 @@ Single-pass validation for:
 ### Validation Results
 
 ```javascript
-Result.success(value)           // Success with value
-Result.error(message, details)  // Error with details
+Result.success(value); // Success with value
+Result.error(message, details); // Error with details
 ```
 
 ## Development Workflow
@@ -365,11 +382,13 @@ Result.error(message, details)  // Error with details
 ### Local Development
 
 1. Enable mock mode:
+
 ```javascript
-CONFIG.USE_MOCKS = true
+CONFIG.USE_MOCKS = true;
 ```
 
 2. Start local server:
+
 ```bash
 python3 -m http.server 8080
 ```
@@ -402,7 +421,7 @@ this._emit('eventName', data);
 
 // Subscribe
 model.subscribe('eventName', (data) => {
-  // Handle event
+    // Handle event
 });
 ```
 
@@ -410,11 +429,11 @@ model.subscribe('eventName', (data) => {
 
 ```javascript
 // Full key → Simple key
-PropertyKeyMapper.toSimpleKey('yarn.scheduler.capacity.root.capacity')
+PropertyKeyMapper.toSimpleKey('yarn.scheduler.capacity.root.capacity');
 // Returns: 'capacity'
 
 // Simple key → Full key
-PropertyKeyMapper.createFullKey('root', 'capacity')
+PropertyKeyMapper.createFullKey('root', 'capacity');
 // Returns: 'yarn.scheduler.capacity.root.capacity'
 ```
 
