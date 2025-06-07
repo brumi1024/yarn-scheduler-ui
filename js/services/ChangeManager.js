@@ -1,126 +1,38 @@
 /**
- * @file ChangeManager - Handles staging, previewing, and applying configuration changes
+ * @file ChangeManager - Handles staging configuration changes (validation done elsewhere)
  */
 class ChangeManager {
-    constructor(schedulerConfigModel, validationService) {
+    constructor(schedulerConfigModel) {
         this.schedulerConfigModel = schedulerConfigModel;
-        this.validationService = validationService;
     }
 
     /**
-     * Stages a new queue for addition with validation
-     * @param {Object} formData - Form data from add queue modal
-     * @param {ViewDataFormatterService} viewDataFormatterService - For validation and formatting
-     * @param {Object} dataModels - Data models for validation
+     * Stages a new queue for addition (validation must be done before calling this)
+     * @param {Object} formData - Validated form data from add queue modal
      * @returns {Result<boolean>} Result containing success status or error
      */
-    stageAddQueue(formData, viewDataFormatterService, dataModels) {
+    stageAddQueue(formData) {
         const { parentPath, queueName, params } = formData;
-
-        // Validate queue name
-        const nameValidation = this.validationService.isValidQueueNameChars(queueName);
-        if (!nameValidation.isValid) {
-            getEventBus().emit('notification:error', nameValidation.message);
-            return Result.failure(nameValidation.message);
-        }
-
-        // Validate capacity
-        const capacityValidation = this.validationService.parseAndValidateCapacityValue(
-            params.capacity,
-            params._ui_capacityMode
-        );
-        if (capacityValidation.errors || capacityValidation.error) {
-            const errorMsg = `Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`;
-            getEventBus().emit('notification:error', errorMsg);
-            return Result.failure(errorMsg);
-        }
-        params.capacity = capacityValidation.value;
-
-        // Validate max capacity
-        const maxCapModeForValidation = viewDataFormatterService._isVectorString(params['maximum-capacity'])
-            ? CAPACITY_MODES.ABSOLUTE
-            : CAPACITY_MODES.PERCENTAGE;
-        const maxCapacityValidation = this.validationService.parseAndValidateCapacityValue(
-            params['maximum-capacity'],
-            maxCapModeForValidation,
-            true
-        );
-        if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-            const errorMsg = `Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`;
-            getEventBus().emit('notification:error', errorMsg);
-            return Result.failure(errorMsg);
-        }
-        params['maximum-capacity'] = maxCapacityValidation.value;
-
-        // Check for duplicate queue names
         const newPath = parentPath === 'root' ? `root.${queueName}` : `${parentPath}.${queueName}`;
-        const duplicateResult = this._isQueueNameDuplicate(
-            newPath,
-            parentPath,
-            queueName,
-            viewDataFormatterService,
-            dataModels
-        );
-        if (duplicateResult.isFailure()) {
-            return duplicateResult;
-        }
+
+        // Convert simple keys to full keys for staging
+        const mappedParams = PropertyKeyMapper.convertToFullKeys(params, newPath);
 
         // Stage the addition
-        this.schedulerConfigModel.stageAddQueue(newPath, params);
+        this.schedulerConfigModel.stageAddQueue(newPath, mappedParams);
         getEventBus().emit('notification:success', `Queue "${queueName}" staged for addition under "${parentPath}".`);
         return Result.success(true);
     }
 
     /**
-     * Stages queue updates with validation
+     * Stages queue updates (validation must be done before calling this)
      * @param {string} queuePath - Path of queue to update
-     * @param {Object} formData - Form data from edit modal
-     * @param {ViewDataFormatterService} viewDataFormatterService - For validation
+     * @param {Object} formData - Validated form data from edit modal
      * @param {string} selectedPartition - Currently selected partition/node label
      * @returns {Result<boolean>} Result containing success status or error
      */
-    stageUpdateQueue(queuePath, formData, viewDataFormatterService, selectedPartition = DEFAULT_PARTITION) {
+    stageUpdateQueue(queuePath, formData, selectedPartition = DEFAULT_PARTITION) {
         const { params, customProperties } = formData;
-
-        // Validate capacity if changed
-        if (Object.prototype.hasOwnProperty.call(params, 'capacity')) {
-            const modeForValidation =
-                params._ui_capacityMode ||
-                viewDataFormatterService._determineEffectiveCapacityMode(
-                    queuePath,
-                    this.schedulerConfigModel.getQueueNodeProperties(queuePath) ||
-                        new Map(Object.entries(params).map(([k, v]) => [PropertyKeyMapper.toFullKey(queuePath, k), v]))
-                );
-
-            const capacityValidation = this.validationService.parseAndValidateCapacityValue(
-                params.capacity,
-                modeForValidation
-            );
-            if (capacityValidation.errors || capacityValidation.error) {
-                const errorMsg = `Invalid Capacity: ${(capacityValidation.errors || [capacityValidation.error]).join('; ')}`;
-                getEventBus().emit('notification:error', errorMsg);
-                return Result.failure(errorMsg);
-            }
-            params.capacity = capacityValidation.value;
-        }
-
-        // Validate max capacity if changed
-        if (Object.prototype.hasOwnProperty.call(params, 'maximum-capacity')) {
-            const maxCapMode = viewDataFormatterService._isVectorString(params['maximum-capacity'])
-                ? CAPACITY_MODES.ABSOLUTE
-                : CAPACITY_MODES.PERCENTAGE;
-            const maxCapacityValidation = this.validationService.parseAndValidateCapacityValue(
-                params['maximum-capacity'],
-                maxCapMode,
-                true
-            );
-            if (maxCapacityValidation.errors || maxCapacityValidation.error) {
-                const errorMsg = `Invalid Max Capacity: ${(maxCapacityValidation.errors || [maxCapacityValidation.error]).join('; ')}`;
-                getEventBus().emit('notification:error', errorMsg);
-                return Result.failure(errorMsg);
-            }
-            params['maximum-capacity'] = maxCapacityValidation.value;
-        }
 
         const mappedParams = PropertyKeyMapper.convertToFullKeys(params, queuePath, selectedPartition);
 
@@ -137,45 +49,17 @@ class ChangeManager {
     }
 
     /**
-     * Stages a queue for deletion with validation
+     * Stages a queue for deletion (validation must be done before calling this)
      * @param {string} queuePath - Path of queue to delete
-     * @param {ViewDataFormatterService} viewDataFormatterService - For validation
-     * @param {Object} dataModels - Data models for validation
      * @returns {Result<boolean>} Result containing success status or error
      */
-    stageDeleteQueue(queuePath, viewDataFormatterService, dataModels) {
+    stageDeleteQueue(queuePath) {
         if (
             !globalThis.confirm(
                 `Are you sure you want to mark queue "${queuePath}" for deletion? \nThis will also remove any other staged changes for this queue.`
             )
         ) {
             return Result.failure('User cancelled deletion');
-        }
-
-        // Validate deletability
-        const effectiveHierarchy = viewDataFormatterService.formatQueueHierarchyForView(
-            dataModels.schedulerConfigModel,
-            dataModels.schedulerInfoModel,
-            dataModels.appStateModel,
-            true
-        );
-
-        let nodeToValidate = null;
-        if (effectiveHierarchy) {
-            nodeToValidate = this._findNodeInHierarchy(effectiveHierarchy, queuePath);
-        }
-
-        if (nodeToValidate) {
-            const deletability = this.validationService.checkDeletability(nodeToValidate);
-            if (!deletability.canDelete) {
-                getEventBus().emit('notification:warning', deletability.reason);
-                return Result.failure(deletability.reason);
-            }
-        } else if (queuePath !== 'root') {
-            getEventBus().emit(
-                'notification:warning',
-                `Could not fully validate deletability for ${queuePath}. Staging deletion.`
-            );
         }
 
         this.schedulerConfigModel.stageRemoveQueue(queuePath);
@@ -299,57 +183,5 @@ class ChangeManager {
             getEventBus().emit('notification:error', 'Error refreshing node label fields in modal.');
             return false;
         }
-    }
-
-    // Private helper methods
-
-    /**
-     * Checks if a queue name would be duplicate
-     * @private
-     * @returns {Result<boolean>} Result indicating if duplicate exists
-     */
-    _isQueueNameDuplicate(newPath, parentPath, queueName, viewDataFormatterService, dataModels) {
-        const currentHierarchyForValidation = viewDataFormatterService.formatQueueHierarchyForView(
-            dataModels.schedulerConfigModel,
-            dataModels.schedulerInfoModel,
-            dataModels.appStateModel,
-            true
-        );
-
-        let parentNodeToCheck = currentHierarchyForValidation;
-        if (parentPath !== 'root' && parentNodeToCheck) {
-            parentNodeToCheck = this._findNodeInHierarchy(currentHierarchyForValidation, parentPath);
-        }
-
-        if (
-            parentNodeToCheck &&
-            parentNodeToCheck.children &&
-            parentNodeToCheck.children[queueName] &&
-            !parentNodeToCheck.children[queueName].isDeleted
-        ) {
-            const errorMsg = `A queue named "${queueName}" effectively already exists under "${parentPath}".`;
-            getEventBus().emit('notification:error', errorMsg);
-            return Result.failure(errorMsg);
-        }
-        return Result.success(false);
-    }
-
-    /**
-     * Finds a node in the hierarchy by path
-     * @private
-     */
-    _findNodeInHierarchy(rootNode, targetPath) {
-        const findNode = (node, path) => {
-            if (!node) return null;
-            if (node.path === path) return node;
-            if (node.children) {
-                for (const childName in node.children) {
-                    const found = findNode(node.children[childName], path);
-                    if (found) return found;
-                }
-            }
-            return null;
-        };
-        return findNode(rootNode, targetPath);
     }
 }

@@ -520,6 +520,49 @@ body {
     overflow: hidden;
 }
 
+#change-preview-container {
+    padding: 16px 0;
+}
+
+.validation-errors-section {
+    padding: 16px;
+    background: #f8f9fa;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.validation-errors-section h4 {
+    margin: 0 0 12px 0;
+    color: #333;
+    font-size: 16px;
+}
+
+.validation-error-item {
+    margin-bottom: 16px;
+    padding: 12px;
+    background: #fff8f8;
+    border: 1px solid #f8d7da;
+    border-left: 4px solid #dc3545;
+    border-radius: 6px;
+}
+
+.validation-error-item:last-child {
+    margin-bottom: 0;
+}
+
+.validation-error-item .error-header {
+    font-weight: 600;
+    color: #721c24;
+    margin-bottom: 8px;
+    font-size: 14px;
+}
+
+.validation-error-item .error-message {
+    color: #721c24;
+    font-size: 13px;
+    line-height: 1.5;
+    white-space: pre-line;
+}
+
 .change-summary {
     padding: 16px;
     background: #f8f9fa;
@@ -968,6 +1011,20 @@ body {
     color: #dc3545;
     font-size: 12px;
     margin-top: 4px;
+}
+
+/* Warning indicator for preview button when validation errors exist */
+.btn.has-warnings {
+    position: relative;
+    background-color: #fff3cd;
+    border-color: #ffc107;
+    color: #856404;
+}
+
+.btn.has-warnings:hover {
+    background-color: #ffeaa7;
+    border-color: #ffb300;
+    color: #7a5f02;
 }
 
 /* Change Preview Modal Styles */

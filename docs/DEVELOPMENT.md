@@ -12,6 +12,8 @@ This document provides comprehensive guidance for developers working on the YARN
 - [API Integration](#api-integration)
 - [UI Components](#ui-components)
 - [Node Labels System](#node-labels-system)
+- [Validation Strategy](#validation-strategy)
+- [UI Event Orchestration](#ui-event-orchestration)
 - [Validation Framework](#validation-framework)
 - [Development Workflow](#development-workflow)
 - [Common Patterns](#common-patterns)
@@ -23,19 +25,19 @@ The application follows a clean architecture pattern with clear separation of co
 
 ```
 ┌─────────────────────────────────────────────┐
-│              MainController                 │ ← Lightweight coordinator
+│              MainController                 │ ← System-level coordinator
 └─────────────────────────────────────────────┘
                      │
-                     │ Coordinates
+              System Operations
                      ↓
 ┌─────────────────────────────────────────────┐
 │             Service Layer                   │
 ├─────────────────────────────────────────────┤
 │ • ConfigurationOrchestrator                 │ ← Workflow coordination
-│ • UIStateManager                            │ ← View state management
-│ • ChangeManager                             │ ← Change operations
+│ • UIStateManager                            │ ← UI event coordinator
+│ • ChangeManager                             │ ← Pure staging service
 │ • ViewDataFormatterService                  │ ← Data transformation
-│ • ValidationService                         │ ← Validation logic
+│ • QueueValidator                            │ ← Holistic validation
 │ • NodeLabelService                          │ ← Node label handling
 │ • AutoCreationService                       │ ← Auto-creation logic
 └─────────────────────────────────────────────┘
@@ -61,6 +63,10 @@ The application follows a clean architecture pattern with clear separation of co
 │ • GlobalConfigView                          │ ← Global settings
 │ • ControlsView                              │ ← UI controls
 └─────────────────────────────────────────────┘
+                     │
+              UI Events (editQueueClicked, etc.)
+                     ↓
+               UIStateManager
 ```
 
 ### Key Principles
@@ -75,7 +81,7 @@ The application follows a clean architecture pattern with clear separation of co
 
 ### QueueConfigurationManager
 
-The unified data model that replaced the previous dual-system approach:
+The unified data model for queue configuration and change management:
 
 ```javascript
 class QueueNode {
@@ -136,7 +142,7 @@ Coordinates UI components:
 
 Handles staging operations:
 
-- Queue add/update/delete with validation
+- Queue add/update/delete operations
 - Accessible labels changes
 - Custom property management
 - Partition-aware updates
@@ -353,22 +359,106 @@ When a partition is selected:
 - Example: `capacity` → `accessible-node-labels.gpu.capacity`
 - Automatic in edit modal
 
+## Validation Strategy
+
+The application implements a **two-tiered validation system** that provides excellent real-time user feedback while ensuring overall configuration integrity:
+
+### Form-Level Validation (in Modals)
+
+**Purpose**: Immediate UX feedback on syntax and format errors
+
+**Implementation**:
+
+- `AddQueueModalView._validateAndGetFormData()`
+- `EditQueueModalView._validateAndCollectChanges()`
+
+**Responsibilities**:
+
+- Field format validation (capacity syntax, queue names, etc.)
+- Real-time feedback as users type
+- Prevents submission of malformed data
+- Uses `ValidationService` for stateless checks
+
+**Example**: Validating that capacity values match the selected mode (percentage, weight, absolute).
+
+### System-Level Validation (QueueValidator)
+
+**Purpose**: Holistic checks on the effective configuration
+
+**Implementation**: `QueueValidator.validate()` with mode-specific logic
+
+**Responsibilities**:
+
+- Queue hierarchy validation
+- Capacity sum validation (mode-aware)
+- Cross-queue relationship checks
+- Legacy vs non-legacy mode enforcement
+
+**Feedback**: Provided via the batch controls bar with detailed error messages in preview window
+
+**Mode-Specific Rules**:
+
+- **Legacy Mode**:
+    - Sibling queues under the same parent must use the same capacity mode (percentage OR weight, not mixed)
+    - Absolute capacity cannot be mixed with any other mode anywhere in the entire hierarchy
+- **Non-Legacy Mode**: Mixed capacity modes allowed, percentage sums validated only when all children use percentages
+
+**Error Message Format**:
+
+- **Concise messages** in batch controls for quick identification
+- **Detailed messages** in preview window with specific queue lists and fix suggestions
+- **Visual indicators** mark affected queues in the tree view
+
+## UI Event Orchestration
+
+The application uses `UIStateManager` as the primary coordinator for UI events, with `MainController` focusing on system-level operations.
+
+### Event Flow Pattern
+
+```
+View → UIStateManager → Service/Model
+```
+
+### Edit Queue Flow Example
+
+1. `QueueTreeView` emits `editQueueClicked`
+2. `UIStateManager.handleEditQueueRequest()` processes event directly
+3. UIStateManager coordinates modal display and data preparation
+
+### UIStateManager Responsibilities
+
+- Modal lifecycle management
+- UI state coordination
+- View rendering coordination
+- Event routing for UI interactions
+
+### MainController Responsibilities
+
+- System initialization
+- High-level workflow coordination (Apply All, Discard All)
+- API communication orchestration
+- Model event handling
+
 ## Validation Framework
 
-### Three-Level Validation
+### Validation Levels
+
+The validation system operates at multiple levels:
 
 1. **Field Level**: Immediate feedback in forms
-2. **Model Level**: Structural validation before staging
-3. **Pre-Apply**: Final validation before API submission
+2. **Modal Level**: Form validation before submission
+3. **System Level**: Holistic validation before applying changes
 
 ### QueueValidator
 
-Single-pass validation for:
+Performs comprehensive validation including:
 
 - Queue name uniqueness and format
-- Capacity sum validation (percentage mode)
+- Capacity sum validation (mode-aware)
 - Queue state validation
-- Parent-child relationships
+- Hierarchy-wide capacity mode validation (legacy mode)
+- Sibling capacity mode validation (legacy mode)
+- Pending changes integration (checks `_ui_capacityMode`)
 
 ### Validation Results
 
@@ -381,19 +471,19 @@ Result.error(message, details); // Error with details
 
 ### Local Development
 
-1. Enable mock mode:
+**Enable mock mode:**
 
 ```javascript
 CONFIG.USE_MOCKS = true;
 ```
 
-2. Start local server:
+**Start local server:**
 
 ```bash
 python3 -m http.server 8080
 ```
 
-3. Access at `http://localhost:8080`
+**Access at:** `http://localhost:8080`
 
 ### Adding Features
 
@@ -410,6 +500,9 @@ python3 -m http.server 8080
 - [ ] API payload has full property names
 - [ ] Validation provides helpful errors
 - [ ] Templates include new property (if applicable)
+- [ ] Legacy mode validation catches hierarchy-wide conflicts
+- [ ] Preview window shows detailed error explanations
+- [ ] Queue tree marks validation errors visually
 
 ## Common Patterns
 

@@ -29,22 +29,52 @@ class ViewDataFormatterService {
         return typeof valueString === 'string' && valueString.startsWith('[') && valueString.endsWith(']');
     }
 
-    formatQueueHierarchyForView(schedulerConfigModel, schedulerInfoModel, appStateModel, forValidationOnly = false) {
+    formatQueueHierarchyForView(
+        schedulerConfigModel,
+        schedulerInfoModel,
+        appStateModel,
+        forValidationOnly = false,
+        validationErrors = []
+    ) {
         const configManager = schedulerConfigModel.getSchedulerTrieRoot();
         if (!configManager) return null;
 
         const selectedPartition = appStateModel.getSelectedPartition();
+
+        // Build a set of queue paths that have validation errors for quick lookup
+        const queuePathsWithErrors = new Set();
+        for (const error of validationErrors) {
+            if (error.queuePath) {
+                queuePathsWithErrors.add(error.queuePath);
+                // Also mark child queues if they're specifically mentioned in error details
+                if (error.details && error.details.queuesByMode) {
+                    for (const mode in error.details.queuesByMode) {
+                        for (const queuePath of error.details.queuesByMode[mode]) {
+                            queuePathsWithErrors.add(queuePath);
+                        }
+                    }
+                }
+            }
+        }
 
         return this._formatQueueNodeRecursive(
             configManager,
             null,
             schedulerInfoModel,
             selectedPartition,
-            forValidationOnly
+            forValidationOnly,
+            queuePathsWithErrors
         );
     }
 
-    _formatQueueNodeRecursive(queueNode, parentPath, schedulerInfoModel, selectedPartition, forValidationOnly) {
+    _formatQueueNodeRecursive(
+        queueNode,
+        parentPath,
+        schedulerInfoModel,
+        selectedPartition,
+        forValidationOnly,
+        queuePathsWithErrors = new Set()
+    ) {
         const basePath = queueNode.fullPath;
 
         if (queueNode.isDeleted()) {
@@ -88,7 +118,8 @@ class ViewDataFormatterService {
             operationType,
             queueNode, // Pass the queueNode for pending changes detection
             uiCapacityModeHint,
-            forValidationOnly
+            forValidationOnly,
+            queuePathsWithErrors
         );
 
         formattedNode.children = {};
@@ -102,7 +133,8 @@ class ViewDataFormatterService {
                     basePath,
                     schedulerInfoModel,
                     selectedPartition,
-                    forValidationOnly
+                    forValidationOnly,
+                    queuePathsWithErrors
                 );
                 if (formattedChild) {
                     formattedNode.children[childSegment] = formattedChild;
@@ -181,7 +213,8 @@ class ViewDataFormatterService {
         changeOperationType,
         queueNode, // QueueNode instead of pending changes
         explicitUiModeHint,
-        forValidationOnly = false
+        forValidationOnly = false,
+        queuePathsWithErrors = new Set()
     ) {
         const isNew = changeOperationType === OPERATION_TYPES.ADD;
         const isPendingUpdate = changeOperationType === OPERATION_TYPES.UPDATE;
@@ -261,8 +294,14 @@ class ViewDataFormatterService {
         if (forValidationOnly) return formattedNode;
 
         // --- Apply Status Class ---
-        if (isNew) formattedNode.statusClass = 'new-queue';
-        else if (isPendingUpdate) formattedNode.statusClass = 'pending-changes';
+        const hasValidationError = queuePathsWithErrors.has(queuePath);
+        if (isNew) {
+            formattedNode.statusClass = hasValidationError ? 'new-queue validation-error' : 'new-queue';
+        } else if (isPendingUpdate) {
+            formattedNode.statusClass = hasValidationError ? 'pending-changes validation-error' : 'pending-changes';
+        } else if (hasValidationError) {
+            formattedNode.statusClass = 'validation-error';
+        }
 
         // --- Integrate Live Data ---
         if (schedulerInfoModel) {

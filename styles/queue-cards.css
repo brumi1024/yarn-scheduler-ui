@@ -80,9 +80,20 @@
     background: #fffbe8;
 }
 .queue-card.validation-error {
-    /* For future use */
-    border-left-color: #e53935; /* Stronger Red */
+    border-left-color: #e53935; /* Strong Red */
     background: #fdecea;
+    position: relative;
+}
+
+/* Add validation error icon/indicator */
+.queue-card.validation-error::before {
+    content: '⚠️';
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 16px;
+    z-index: 10;
+    filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.1));
 }
 .queue-card.new-queue {
     border-left-color: #43a047; /* Green */

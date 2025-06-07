@@ -111,14 +111,77 @@ class BatchControlsView extends EventEmitter {
                 this.batchValidationEl.textContent = 'All changes valid ✓';
                 this.batchValidationEl.className = 'batch-validation valid';
                 this.applyChangesBtnEl.disabled = false;
+
+                // Remove warning indicator from preview button
+                this._removeWarningFromPreviewButton();
             } else {
-                const errorText = validationErrors.map((e) => e.message || String(e)).join('; ');
-                this.batchValidationEl.textContent = `Validation errors: ${errorText}`;
+                // Show concise error summary
+                const errorCount = validationErrors.length;
+                const errorTypes = [...new Set(validationErrors.map((e) => e.type || 'VALIDATION_ERROR'))];
+                const primaryErrorType = this._formatErrorType(errorTypes[0]);
+
+                this.batchValidationEl.textContent = `${errorCount} validation error${errorCount > 1 ? 's' : ''}: ${primaryErrorType}${errorCount > 1 ? ' +' + (errorCount - 1) + ' more' : ''}`;
                 this.batchValidationEl.className = 'batch-validation'; // Default class implies error/warning
+
+                // Add warning indicator to preview button
+                this._addWarningToPreviewButton();
                 this.applyChangesBtnEl.disabled = true;
             }
         }
         this.renderVisibility(totalChanges); // Pass totalChanges to avoid recalculating
+    }
+
+    /**
+     * Formats error type string to be more readable
+     * @param {string} errorType - Raw error type string
+     * @returns {string} Formatted error type
+     * @private
+     */
+    _formatErrorType(errorType) {
+        if (!errorType) return 'validation issue';
+
+        // Convert specific error types to readable format
+        switch (errorType) {
+            case 'MIXED_PERCENTAGE_WEIGHT_LEGACY':
+                return 'mixed capacity modes (percentage/weight)';
+            case 'ABSOLUTE_MODE_MIXING_LEGACY':
+                return 'mixed capacity modes (absolute with others)';
+            case 'CAPACITY_SUM_ERROR':
+                return 'capacity sum not 100%';
+            case 'INVALID_QUEUE_NAME':
+                return 'invalid queue name';
+            case 'INVALID_QUEUE_STATE':
+                return 'invalid queue state';
+            default:
+                // Generic fallback: convert SNAKE_CASE to readable format
+                return errorType.toLowerCase().replace(/_/g, ' ');
+        }
+    }
+
+    /**
+     * Adds warning indicator to preview button when validation errors exist
+     * @private
+     */
+    _addWarningToPreviewButton() {
+        if (this.previewChangesBtnEl && !this.previewChangesBtnEl.classList.contains('has-warnings')) {
+            this.previewChangesBtnEl.classList.add('has-warnings');
+            // Add warning emoji if not already present
+            if (!this.previewChangesBtnEl.textContent.includes('⚠️')) {
+                this.previewChangesBtnEl.textContent = '⚠️ ' + this.previewChangesBtnEl.textContent.trim();
+            }
+        }
+    }
+
+    /**
+     * Removes warning indicator from preview button when no validation errors
+     * @private
+     */
+    _removeWarningFromPreviewButton() {
+        if (this.previewChangesBtnEl && this.previewChangesBtnEl.classList.contains('has-warnings')) {
+            this.previewChangesBtnEl.classList.remove('has-warnings');
+            // Remove warning emoji
+            this.previewChangesBtnEl.textContent = this.previewChangesBtnEl.textContent.replace('⚠️ ', '');
+        }
     }
 
     /**
@@ -149,10 +212,11 @@ class BatchControlsView extends EventEmitter {
     }
 
     /**
-     * Updates the change preview with current changes.
+     * Updates the change preview with current changes and validation errors.
      * @param {Object} changes - Changes to preview (ChangeLog format)
+     * @param {Array} validationErrors - Array of validation errors to display
      */
-    updateChangePreview(changes) {
+    updateChangePreview(changes, validationErrors = []) {
         if (!this.changePreview) return;
 
         let previewChanges = [];
@@ -163,6 +227,7 @@ class BatchControlsView extends EventEmitter {
         }
 
         this.changePreview.setChanges(previewChanges);
+        this.changePreview.setValidationErrors(validationErrors);
     }
 
     /**
