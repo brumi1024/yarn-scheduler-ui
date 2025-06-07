@@ -42,7 +42,7 @@ class BulkOperations {
     selectQueue(queuePath) {
         this.selectedQueues.add(queuePath);
         this._emit('selectionChanged', {
-            selected: Array.from(this.selectedQueues),
+            selected: [...this.selectedQueues],
             count: this.selectedQueues.size,
         });
     }
@@ -54,7 +54,7 @@ class BulkOperations {
     deselectQueue(queuePath) {
         this.selectedQueues.delete(queuePath);
         this._emit('selectionChanged', {
-            selected: Array.from(this.selectedQueues),
+            selected: [...this.selectedQueues],
             count: this.selectedQueues.size,
         });
     }
@@ -80,7 +80,7 @@ class BulkOperations {
             this.selectedQueues.add(queuePath);
         }
         this._emit('selectionChanged', {
-            selected: Array.from(this.selectedQueues),
+            selected: [...this.selectedQueues],
             count: this.selectedQueues.size,
         });
     }
@@ -101,7 +101,7 @@ class BulkOperations {
      * @returns {Array} Array of selected queue paths
      */
     getSelectedQueues() {
-        return Array.from(this.selectedQueues);
+        return [...this.selectedQueues];
     }
 
     /**
@@ -185,15 +185,18 @@ class BulkOperations {
 
                 let newCapacity;
                 switch (operation) {
-                    case 'multiply':
+                    case 'multiply': {
                         newCapacity = currentCapacity * value;
                         break;
-                    case 'add':
+                    }
+                    case 'add': {
                         newCapacity = currentCapacity + value;
                         break;
-                    case 'set':
+                    }
+                    case 'set': {
                         newCapacity = value;
                         break;
+                    }
                 }
 
                 // Validate new capacity
@@ -232,7 +235,7 @@ class BulkOperations {
         }
 
         // Sort queues by depth (deepest first) to avoid parent-child conflicts
-        const sortedQueues = Array.from(this.selectedQueues).sort((a, b) => {
+        const sortedQueues = [...this.selectedQueues].sort((a, b) => {
             const depthA = a.split('.').length;
             const depthB = b.split('.').length;
             return depthB - depthA; // Deepest first
@@ -298,7 +301,7 @@ class BulkOperations {
 
             // Parse capacity value - just extract numeric part for percentage
             const numericMatch = capacityValue.match(/^(\d+(?:\.\d+)?)/);
-            return numericMatch ? parseFloat(numericMatch[1]) : null;
+            return numericMatch ? Number.parseFloat(numericMatch[1]) : null;
         } catch (error) {
             console.error(`Error getting capacity for ${queuePath}:`, error);
             return null;

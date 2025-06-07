@@ -6,7 +6,7 @@ class ErrorHandler {
         this.retryConfig = {
             maxRetries: 3,
             baseDelay: 1000,
-            maxDelay: 10000,
+            maxDelay: 10_000,
             backoffFactor: 2,
         };
     }
@@ -142,8 +142,6 @@ class ErrorHandler {
             } else {
                 console.warn('API Error:', logMessage, error.details);
             }
-        } else if (error instanceof ValidationError) {
-            console.error('Configuration Error:', logMessage, error.details);
         } else {
             console.error('Error:', logMessage, error);
         }

@@ -278,7 +278,7 @@ class ConfigurationOrchestrator {
     _determineCapacityMode(capacityValue) {
         if (capacityValue.endsWith('w')) return 'weight';
         if (capacityValue.startsWith('[') && capacityValue.endsWith(']')) return 'vector';
-        if (capacityValue.includes('%') || !isNaN(parseFloat(capacityValue))) return 'percentage';
+        if (capacityValue.includes('%') || !Number.isNaN(Number.parseFloat(capacityValue))) return 'percentage';
         return 'percentage'; // Default fallback
     }
 

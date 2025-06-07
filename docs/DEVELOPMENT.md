@@ -289,6 +289,33 @@ All modals extend `BaseModalView`:
 - Consistent lifecycle management
 - Tooltip integration
 - Memory leak prevention
+- **Modal reusability** - modals are designed to be opened multiple times without recreation
+
+#### Modal Lifecycle Management
+
+The `UIStateManager` handles modal lifecycle with a reusability pattern:
+
+```javascript
+// ✅ Correct: Hide modal without destroying base functionality
+hideModal(modalName) {
+    const modal = this.views[modalName];
+    if (modal) {
+        modal.hide();
+        // Don't call destroy() - modals need to be reusable
+    }
+}
+
+// ❌ Incorrect: Destroying modal breaks reusability
+hideModal(modalName) {
+    const modal = this.views[modalName];
+    if (modal) {
+        modal.hide();
+        modal.destroy(); // This removes base event listeners permanently
+    }
+}
+```
+
+**Key Principle**: `destroy()` should only be called when the application shuts down, not on every modal hide. This ensures that base modal functionality (close button, overlay click) remains intact for reuse.
 
 ### Key Modal Features
 
@@ -302,28 +329,44 @@ All modals extend `BaseModalView`:
 
 #### Event Cleanup Pattern
 
+Modals use selective cleanup to preserve reusability:
+
 ```javascript
 class EditQueueModalView extends BaseModalView {
     constructor() {
-        this.eventCleanupCallbacks = [];
+        super(); // BaseModalView sets up close button and overlay listeners
+        this.eventCleanupCallbacks = []; // For form-specific events only
     }
 
-    _bindEvents() {
+    _bindFormEvents() {
         const handler = () => {
             /* ... */
         };
         element.addEventListener('click', handler);
+        // Only cleanup form-specific events, not base modal events
         this.eventCleanupCallbacks.push(() => element.removeEventListener('click', handler));
     }
 
     _cleanupEventListeners() {
+        // Clean up only form-specific events
         for (const cleanup of this.eventCleanupCallbacks) {
             cleanup();
         }
         this.eventCleanupCallbacks = [];
+        // Base modal events (close button, overlay) are preserved
+    }
+
+    hide(result) {
+        this._cleanupEventListeners(); // Clean form events
+        super.hide(result); // BaseModalView handles core hiding
+        // Don't call destroy() here - breaks reusability
     }
 }
 ```
+
+**Two-Level Cleanup Strategy**:
+1. **Form-level cleanup**: Remove form-specific event listeners on modal hide
+2. **Base-level preservation**: Keep core modal functionality (close button, overlay click) intact for reuse
 
 ### Queue Tree Display
 
@@ -544,8 +587,9 @@ const parsed = CapacityValueParser.parse('50%');
 1. **Property not appearing**: Check metadata key format
 2. **Validation errors**: Check QueueValidator rules
 3. **API errors**: Verify payload format (simple vs full keys)
-4. **Modal not closing**: Check event cleanup
+4. **Modal not closing after reopen**: Ensure `UIStateManager.hideModal()` doesn't call `destroy()`
 5. **Changes not staging**: Verify ChangeManager flow
+6. **Event listeners not working**: Check if modal `destroy()` was called prematurely
 
 ### Debug Tools
 
