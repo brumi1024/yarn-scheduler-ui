@@ -6,7 +6,7 @@ class UIStateManager {
         this.appStateModel = appStateModel;
         this.views = allViews;
         this.currentEditQueuePath = null;
-        
+
         this._bindStateEvents();
     }
 
@@ -17,24 +17,28 @@ class UIStateManager {
     _bindStateEvents() {
         // Tab changes
         this.appStateModel.subscribe('currentTabChanged', (tabId) => this._handleTabChange(tabId));
-        
+
         // Partition changes - search/sort are handled by MainController
         this.appStateModel.subscribe('selectedPartitionChanged', () => this._renderQueueRelatedViews());
-        
+
         // Global config edit mode
         this.appStateModel.subscribe('globalConfigEditModeChanged', () => {
             if (this.appStateModel.getCurrentTab() === 'scheduler-config-content') {
                 this._renderGlobalConfigView();
             }
         });
-        
+
         // Loading state changes
         this.appStateModel.subscribe('loadingStateChanged', ({ isLoading }) => {
-            if (!isLoading && 
-                this.appStateModel.getCurrentTab() === 'queue-config-content' && 
-                this.views.queueTreeView && 
-                this.views.queueTreeView.getCurrentFormattedHierarchy()) {
-                this.views.queueTreeView._scheduleConnectorDraw(this.views.queueTreeView.getCurrentFormattedHierarchy());
+            if (
+                !isLoading &&
+                this.appStateModel.getCurrentTab() === 'queue-config-content' &&
+                this.views.queueTreeView &&
+                this.views.queueTreeView.getCurrentFormattedHierarchy()
+            ) {
+                this.views.queueTreeView._scheduleConnectorDraw(
+                    this.views.queueTreeView.getCurrentFormattedHierarchy()
+                );
             }
         });
     }
@@ -95,7 +99,7 @@ class UIStateManager {
      */
     showAddQueueModal(schedulerConfigModel, parentPath = 'root') {
         if (!this.views.addQueueModalView) return;
-        
+
         const parentQueues = schedulerConfigModel
             .getAllQueuePaths()
             .map((p) => ({ path: p, name: p.slice(Math.max(0, p.lastIndexOf('.') + 1)) || p }));
@@ -182,8 +186,11 @@ class UIStateManager {
             dataModels.schedulerInfoModel,
             dataModels.appStateModel
         );
-        if (editData && editData.autoCreationData && 
-            (editData.autoCreationData.v1Enabled || editData.autoCreationData.v2Enabled)) {
+        if (
+            editData &&
+            editData.autoCreationData &&
+            (editData.autoCreationData.v1Enabled || editData.autoCreationData.v2Enabled)
+        ) {
             // Use the edit modal but show only auto-creation templates
             this.views.editQueueModalView.showTemplateConfigOnly(editData);
         } else {
@@ -234,7 +241,7 @@ class UIStateManager {
     }
 
     // Private methods
-    
+
     /**
      * Handles tab changes
      * @private
@@ -277,16 +284,16 @@ class UIStateManager {
             if (this.views.queueTreeView) this.views.queueTreeView.render(null, false);
             return;
         }
-        
+
         const formattedHierarchy = viewDataFormatterService.formatQueueHierarchyForView(
             dataModels.schedulerConfigModel,
             dataModels.schedulerInfoModel,
             dataModels.appStateModel
         );
-        
+
         if (this.views.queueTreeView) {
             this.views.queueTreeView.render(formattedHierarchy, true);
-            
+
             // Re-add bulk selection checkboxes if bulk operations is visible
             if (bulkOperationsView && bulkOperationsView.isVisible) {
                 setTimeout(() => {
@@ -304,8 +311,9 @@ class UIStateManager {
     _renderGlobalConfigView(schedulerConfigModel) {
         if (this.views.globalConfigView && schedulerConfigModel) {
             const configData = schedulerConfigModel.getGlobalConfig();
-            const pendingChanges = schedulerConfigModel._queueConfigManager ? 
-                schedulerConfigModel._queueConfigManager.pendingGlobalChanges : new Map();
+            const pendingChanges = schedulerConfigModel._queueConfigManager
+                ? schedulerConfigModel._queueConfigManager.pendingGlobalChanges
+                : new Map();
             this.views.globalConfigView.render(configData, pendingChanges);
         }
     }
@@ -318,14 +326,14 @@ class UIStateManager {
         if (this.views.batchControlsView && schedulerConfigModel) {
             const changeLog = schedulerConfigModel.getChangeLog();
             const summary = changeLog.getSummary();
-            
+
             // Include global changes in modified count for UI display
             const counts = {
                 added: summary.added,
                 modified: summary.modified + summary.global,
-                deleted: summary.deleted
+                deleted: summary.deleted,
             };
-            
+
             const totalChanges = counts.added + counts.modified + counts.deleted;
             let validationErrors = [];
             if (totalChanges > 0 && viewDataFormatterService && appStateModel) {
@@ -353,7 +361,7 @@ class UIStateManager {
      */
     _addBulkSelectionToQueueCards(bulkOperationsView) {
         if (!bulkOperationsView) return;
-        
+
         const queueCards = document.querySelectorAll('.queue-card');
         for (const card of queueCards) {
             const queuePath = card.dataset.queuePath;
@@ -380,12 +388,14 @@ class UIStateManager {
     _adjustQueueLayoutForBulkBar(showingBulkBar) {
         // With the new smooth animation system, the bulk toolbar handles its own spacing
         // No need to manually adjust margins which can cause scrollbar issues
-        
+
         // Only re-render connectors after a brief delay to account for animations
         setTimeout(() => {
             if (this.views.queueTreeView && this.views.queueTreeView.getCurrentFormattedHierarchy()) {
                 this.views.queueTreeView.clearConnectors();
-                this.views.queueTreeView._scheduleConnectorDraw(this.views.queueTreeView.getCurrentFormattedHierarchy());
+                this.views.queueTreeView._scheduleConnectorDraw(
+                    this.views.queueTreeView.getCurrentFormattedHierarchy()
+                );
             }
         }, 350); // Slightly longer delay to account for animation duration
     }

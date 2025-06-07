@@ -9,7 +9,7 @@ class BatchControlsView extends EventEmitter {
         this.applyChangesBtnEl = DomUtils.getById('btn-apply-changes');
         this.previewChangesBtnEl = DomUtils.getById('btn-preview-changes');
         this.discardChangesBtnEl = DomUtils.getById('btn-discard-changes');
-        
+
         // Change preview modal elements
         this.previewModalEl = DomUtils.getById('change-preview-modal');
         this.previewContainerEl = DomUtils.getById('change-preview-container');
@@ -35,7 +35,7 @@ class BatchControlsView extends EventEmitter {
             showDiff: true,
             showSummary: true,
             collapsible: true,
-            maxChanges: 50
+            maxChanges: 50,
         });
 
         this._bindEvents();
@@ -130,7 +130,8 @@ class BatchControlsView extends EventEmitter {
         // If changeCount isn't passed, this method would ideally get it from SchedulerConfigModel.hasPendingChanges()
         // For now, this.render() passes it. Controller will call this.render().
         const currentTab = this.appStateModel.getCurrentTab();
-        const isActiveTabWithChanges = (currentTab === 'queue-config-content' || currentTab === 'scheduler-config-content');
+        const isActiveTabWithChanges =
+            currentTab === 'queue-config-content' || currentTab === 'scheduler-config-content';
         const shouldShow = changeCount > 0 && isActiveTabWithChanges;
 
         if (shouldShow) {
@@ -155,7 +156,7 @@ class BatchControlsView extends EventEmitter {
         if (!this.changePreview) return;
 
         let previewChanges = [];
-        
+
         if (changes && typeof changes.getChanges === 'function') {
             // ChangeLog format
             previewChanges = ChangePreview.fromChangeLog(changes);

@@ -37,10 +37,10 @@ class SchedulerInfoModel extends EventEmitter {
 
         // Normalize and cache the data for performance
         const startTime = performance.now();
-        this._schedulerInfo = this._useCache 
+        this._schedulerInfo = this._useCache
             ? this._dataCache.normalizeSchedulerInfo(schedulerInfoData)
             : schedulerInfoData.scheduler.schedulerInfo;
-        
+
         const processingTime = performance.now() - startTime;
         console.log(`SchedulerInfoModel: Data processing took ${processingTime.toFixed(2)}ms`);
 
@@ -93,7 +93,7 @@ class SchedulerInfoModel extends EventEmitter {
      */
     _extractNodeLabels() {
         const nodeLabels = new Set();
-        
+
         if (this._schedulerInfo) {
             const extractFromQueueRecursive = (queueInfo) => {
                 if (!queueInfo) return;
@@ -119,7 +119,7 @@ class SchedulerInfoModel extends EventEmitter {
             };
             extractFromQueueRecursive(this._schedulerInfo);
         }
-        
+
         this._nodeLabels = [...nodeLabels].sort();
     }
 
@@ -139,7 +139,7 @@ class SchedulerInfoModel extends EventEmitter {
                 // Handle partition-specific data if needed
                 if (partition !== DEFAULT_PARTITION && cachedQueue.capacities?.queueCapacitiesByPartition) {
                     const partitionData = cachedQueue.capacities.queueCapacitiesByPartition.find(
-                        p => p.partitionName === partition
+                        (p) => p.partitionName === partition
                     );
                     if (partitionData) {
                         return { ...cachedQueue, partitionSpecificData: partitionData };
@@ -232,7 +232,7 @@ class SchedulerInfoModel extends EventEmitter {
         // Estimate memory savings
         const originalSize = JSON.stringify(this._schedulerInfo).length;
         const cachedSize = this._dataCache.runtimeCache.size * 1000; // Rough estimate
-        const savingsPercent = ((originalSize - cachedSize) / originalSize * 100).toFixed(1);
+        const savingsPercent = (((originalSize - cachedSize) / originalSize) * 100).toFixed(1);
 
         return {
             enabled: true,
@@ -241,7 +241,7 @@ class SchedulerInfoModel extends EventEmitter {
             cachedSizeKB: (cachedSize / 1024).toFixed(2),
             savingsPercent,
             ttlMs: this._dataCache.CACHE_TTL,
-            resourceTypesCount: this._dataCache.resourceMetadataCache.size
+            resourceTypesCount: this._dataCache.resourceMetadataCache.size,
         };
     }
 

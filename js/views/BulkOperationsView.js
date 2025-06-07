@@ -8,7 +8,7 @@ class BulkOperationsView extends EventEmitter {
         this.bulkOperations = bulkOperations;
         this.isVisible = false;
         this.selectedCount = 0;
-        
+
         this._createUI();
         this._bindEvents();
     }
@@ -21,7 +21,7 @@ class BulkOperationsView extends EventEmitter {
         this.toolbar = document.createElement('div');
         this.toolbar.className = 'bulk-operations-toolbar';
         this.toolbar.style.display = 'none'; // Initially hidden
-        
+
         this.toolbar.innerHTML = `
             <div class="bulk-selection-info">
                 <span class="selection-count">0 queues selected</span>
@@ -61,9 +61,7 @@ class BulkOperationsView extends EventEmitter {
         if (mainContent) {
             mainContent.insertBefore(this.toolbar, mainContent.firstChild);
         }
-
     }
-
 
     /**
      * Binds event listeners for the bulk operations UI.
@@ -92,7 +90,6 @@ class BulkOperationsView extends EventEmitter {
             this._handleCapacityOperation();
         });
 
-
         // Delete operations
         this.toolbar.querySelector('#bulk-delete-queues').addEventListener('click', () => {
             this._handleDeleteOperation();
@@ -120,12 +117,12 @@ class BulkOperationsView extends EventEmitter {
     show() {
         this.isVisible = true;
         this.toolbar.style.display = 'flex';
-        
+
         // Trigger animation on next frame to ensure display property is applied first
         requestAnimationFrame(() => {
             this.toolbar.classList.add('show');
         });
-        
+
         this._emit('visibilityChanged', true);
     }
 
@@ -136,14 +133,14 @@ class BulkOperationsView extends EventEmitter {
         this.isVisible = false;
         this.toolbar.classList.remove('show');
         this.bulkOperations.clearSelection();
-        
+
         // Hide completely after animation
         setTimeout(() => {
             if (!this.isVisible) {
                 this.toolbar.style.display = 'none';
             }
         }, 300); // Match CSS transition duration
-        
+
         this._emit('visibilityChanged', false);
     }
 
@@ -165,7 +162,7 @@ class BulkOperationsView extends EventEmitter {
     _updateSelectionInfo(count) {
         this.selectedCount = count;
         const countElement = this.toolbar.querySelector('.selection-count');
-        
+
         if (count === 0) {
             countElement.textContent = 'No queues selected';
             this._disableActions();
@@ -215,16 +212,15 @@ class BulkOperationsView extends EventEmitter {
         this.bulkOperations.bulkAdjustCapacity(operation, value);
     }
 
-
     /**
      * Handles queue deletion operations.
      */
     _handleDeleteOperation() {
         const includeChildren = this.toolbar.querySelector('#bulk-delete-children').checked;
         const selectedCount = this.bulkOperations.getSelectedQueues().length;
-        
+
         const message = `Are you sure you want to delete ${selectedCount} queue${selectedCount === 1 ? '' : 's'}?${includeChildren ? ' This will also delete all child queues.' : ''}`;
-        
+
         if (confirm(message)) {
             this.bulkOperations.bulkDeleteQueues(includeChildren);
         }
@@ -238,7 +234,7 @@ class BulkOperationsView extends EventEmitter {
         // Clear form values after operation
         this.toolbar.querySelector('#bulk-capacity-value').value = '';
         this.toolbar.querySelector('#bulk-delete-children').checked = false;
-        
+
         this._emit('operationCompleted', data);
     }
 
@@ -256,7 +252,7 @@ class BulkOperationsView extends EventEmitter {
         checkbox.type = 'checkbox';
         checkbox.className = 'bulk-select-checkbox';
         checkbox.title = 'Select for bulk operations';
-        
+
         checkbox.addEventListener('change', () => {
             this.bulkOperations.toggleQueue(queuePath);
         });
@@ -281,7 +277,7 @@ class BulkOperationsView extends EventEmitter {
     _updateCheckboxStates(selectedPaths) {
         const selectedSet = new Set(selectedPaths);
         const checkboxes = document.querySelectorAll('.bulk-select-checkbox');
-        
+
         for (const checkbox of checkboxes) {
             const queueCard = checkbox.closest('.queue-card');
             if (queueCard) {

@@ -22,7 +22,7 @@ class DefaultValueProvider {
                 }
             }
         }
-        
+
         for (const category of GLOBAL_CONFIG_METADATA) {
             for (const key in category.properties) {
                 const meta = category.properties[key];
@@ -31,10 +31,10 @@ class DefaultValueProvider {
                 }
             }
         }
-        
+
         return null;
     }
-    
+
     /**
      * Gets default capacity value for a given mode
      * @param {string} mode - Capacity mode constant
@@ -43,7 +43,7 @@ class DefaultValueProvider {
     static getCapacityDefault(mode) {
         return CapacityValueParser.getDefaultValue(mode);
     }
-    
+
     /**
      * Gets default maximum capacity value
      * @param {string} mode - Capacity mode (for context)
@@ -52,7 +52,7 @@ class DefaultValueProvider {
     static getMaxCapacityDefault(mode) {
         return CapacityValueParser.getDefaultMaxValue(mode);
     }
-    
+
     /**
      * Checks if a value is using the default
      * @param {string} queuePath - Queue path
@@ -62,7 +62,7 @@ class DefaultValueProvider {
      */
     static isUsingDefault(queuePath, simpleKey, currentValue) {
         const defaultValue = this.getPropertyDefault(queuePath, simpleKey);
-        
+
         if (simpleKey === 'capacity') {
             const parsed = CapacityValueParser.parse(currentValue);
             if (parsed.isValid) {
@@ -72,10 +72,10 @@ class DefaultValueProvider {
                 return parsed.value === parsedDefault.value;
             }
         }
-        
+
         return currentValue === defaultValue || (!currentValue && defaultValue);
     }
-    
+
     /**
      * Gets all defaults for a queue path as a Map
      * @param {string} queuePath - Queue path
@@ -83,7 +83,7 @@ class DefaultValueProvider {
      */
     static getQueueDefaults(queuePath) {
         const defaults = new Map();
-        
+
         for (const category of QUEUE_CONFIG_METADATA) {
             for (const placeholderKey in category.properties) {
                 const meta = category.properties[placeholderKey];
@@ -92,8 +92,7 @@ class DefaultValueProvider {
                 }
             }
         }
-        
+
         return defaults;
     }
 }
-

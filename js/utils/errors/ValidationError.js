@@ -8,7 +8,7 @@ class ValidationError extends YarnSchedulerError {
         this.severity = details.severity || 'error';
         this.fieldPath = details.fieldPath || null;
         this.validationRule = details.validationRule || null;
-        
+
         // Support configuration error properties
         this.configPath = details.configPath || null;
         this.configKey = details.configKey || null;
@@ -33,7 +33,7 @@ class ValidationError extends YarnSchedulerError {
                 return `Queue state is invalid: ${this.message}`;
             case 'DELETE_QUEUE_WITH_RUNNING_APPS':
                 return `Cannot delete queue: ${this.message}`;
-                
+
             // Configuration format errors (merged from ConfigurationError)
             case 'INVALID_CONFIG_FORMAT':
                 return 'Configuration file format is invalid. Please check the XML structure.';
@@ -45,7 +45,7 @@ class ValidationError extends YarnSchedulerError {
                 return `Configuration conflict detected: ${this.message}`;
             case 'UNSUPPORTED_CONFIG':
                 return `Unsupported configuration option: ${this.configKey || 'unknown'}`;
-                
+
             default:
                 return `Configuration validation failed: ${this.message}`;
         }
@@ -56,19 +56,21 @@ class ValidationError extends YarnSchedulerError {
      */
     getUIErrors() {
         if (this.details.validationErrors && Array.isArray(this.details.validationErrors)) {
-            return this.details.validationErrors.map(error => ({
+            return this.details.validationErrors.map((error) => ({
                 message: error.message,
                 queuePath: error.queuePath,
                 type: error.type,
-                severity: this.severity
+                severity: this.severity,
             }));
         }
 
-        return [{
-            message: this.getUserMessage(),
-            queuePath: this.fieldPath,
-            type: this.code,
-            severity: this.severity
-        }];
+        return [
+            {
+                message: this.getUserMessage(),
+                queuePath: this.fieldPath,
+                type: this.code,
+                severity: this.severity,
+            },
+        ];
     }
 }

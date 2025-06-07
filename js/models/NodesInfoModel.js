@@ -31,12 +31,12 @@ class NodesInfoModel extends EventEmitter {
      */
     _extractNodeLabels() {
         const nodeLabels = new Set();
-        
+
         if (this._nodesInfo && this._nodesInfo.nodes && this._nodesInfo.nodes.node) {
-            const nodes = Array.isArray(this._nodesInfo.nodes.node) 
-                ? this._nodesInfo.nodes.node 
+            const nodes = Array.isArray(this._nodesInfo.nodes.node)
+                ? this._nodesInfo.nodes.node
                 : [this._nodesInfo.nodes.node];
-            
+
             for (const node of nodes) {
                 if (node.nodeLabels && Array.isArray(node.nodeLabels)) {
                     for (const label of node.nodeLabels) {
@@ -48,7 +48,7 @@ class NodesInfoModel extends EventEmitter {
                 }
             }
         }
-        
+
         this._nodeLabels = [...nodeLabels].sort();
     }
 
@@ -76,10 +76,8 @@ class NodesInfoModel extends EventEmitter {
         if (!this._nodesInfo || !this._nodesInfo.nodes || !this._nodesInfo.nodes.node) {
             return [];
         }
-        
-        return Array.isArray(this._nodesInfo.nodes.node) 
-            ? this._nodesInfo.nodes.node 
-            : [this._nodesInfo.nodes.node];
+
+        return Array.isArray(this._nodesInfo.nodes.node) ? this._nodesInfo.nodes.node : [this._nodesInfo.nodes.node];
     }
 
     /**
@@ -89,7 +87,7 @@ class NodesInfoModel extends EventEmitter {
      */
     getNodesByState(states) {
         const targetStates = Array.isArray(states) ? states : [states];
-        return this.getNodes().filter(node => targetStates.includes(node.state));
+        return this.getNodes().filter((node) => targetStates.includes(node.state));
     }
 
     /**
@@ -99,11 +97,11 @@ class NodesInfoModel extends EventEmitter {
      */
     getNodesByLabels(labels) {
         const targetLabels = Array.isArray(labels) ? labels : [labels];
-        return this.getNodes().filter(node => {
+        return this.getNodes().filter((node) => {
             if (!node.nodeLabels || !Array.isArray(node.nodeLabels)) {
                 return false;
             }
-            return targetLabels.some(label => node.nodeLabels.includes(label));
+            return targetLabels.some((label) => node.nodeLabels.includes(label));
         });
     }
 }

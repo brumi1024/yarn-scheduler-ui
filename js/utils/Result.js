@@ -186,7 +186,7 @@ class Result {
         return {
             isSuccess: this._isSuccess,
             value: this._isSuccess ? this._value : undefined,
-            error: this._isSuccess ? undefined : this._error
+            error: this._isSuccess ? undefined : this._error,
         };
     }
 

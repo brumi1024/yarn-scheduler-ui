@@ -20,7 +20,7 @@ class GlobalConfigView extends EventEmitter {
                 const hasStandardChanges = Object.keys(formData.params).length > 0;
                 const hasCustomChanges = formData.customProperties && Object.keys(formData.customProperties).length > 0;
                 const hasAnyChanges = hasStandardChanges || hasCustomChanges;
-                
+
                 if (hasAnyChanges) {
                     this._emit('saveGlobalConfigClicked', formData);
                 } else {
@@ -36,7 +36,7 @@ class GlobalConfigView extends EventEmitter {
 
         this.containerEl.addEventListener('change', (event) => {
             this._updateSaveButtonState();
-            
+
             // Check for legacy queue mode changes that affect auto-creation
             if (event.target.dataset?.propName === 'yarn.scheduler.capacity.legacy-queue-mode.enabled') {
                 this._checkLegacyModeAutoCreationImpact(event.target);
@@ -69,7 +69,7 @@ class GlobalConfigView extends EventEmitter {
                     const liveValue = globalConfigData ? globalConfigData.get(propertyName) : undefined;
                     const pendingValue = pendingChanges.get(propertyName);
                     const hasPendingChange = pendingValue !== undefined;
-                    
+
                     // For empty inputs, use empty string to show placeholder; for display, use default
                     const inputValue = liveValue === undefined ? '' : liveValue;
                     const isDefault = liveValue === undefined;
@@ -98,25 +98,25 @@ class GlobalConfigView extends EventEmitter {
 
         // Add custom properties section
         html += this._buildCustomPropertiesSectionHtml();
-        
+
         this.containerEl.innerHTML = html || '<p>No global scheduler settings are configured for display.</p>';
-        
+
         // Bind toggle switch events
         this._bindToggleSwitchEvents();
-        
+
         // Bind custom properties events
         this._bindCustomPropertiesEvents();
-        
+
         // Set initial save button state
         this._updateSaveButtonState();
     }
 
     _buildInputControl(inputId, metadata, currentValue, propertyName, originalValue = undefined) {
-        // Escape for HTML attributes  
+        // Escape for HTML attributes
         const escapedCurrentValue = DomUtils.escapeXml(String(currentValue));
         const escapedPropertyName = DomUtils.escapeXml(propertyName);
         const escapedDefaultValue = DomUtils.escapeXml(String(metadata.defaultValue || ''));
-        
+
         // Use the original value from the server, or undefined if not set
         const escapedOriginalValue = originalValue !== undefined ? DomUtils.escapeXml(String(originalValue)) : '';
         const wasConfigured = originalValue !== undefined;
@@ -125,9 +125,12 @@ class GlobalConfigView extends EventEmitter {
 
         if (metadata.type === 'boolean') {
             // For boolean inputs, handle both empty and actual values
-            const isChecked = currentValue === '' ? (metadata.defaultValue === 'true' || metadata.defaultValue === true) : String(currentValue) === 'true';
+            const isChecked =
+                currentValue === ''
+                    ? metadata.defaultValue === 'true' || metadata.defaultValue === true
+                    : String(currentValue) === 'true';
             const effectiveValue = currentValue === '' ? (isChecked ? 'true' : 'false') : String(currentValue);
-            
+
             return `<div class="toggle-container">
                         <label class="toggle-switch">
                             <input type="checkbox" id="${inputId}" class="config-value-input" ${dataAttributes} ${isChecked ? 'checked' : ''}>
@@ -143,7 +146,7 @@ class GlobalConfigView extends EventEmitter {
             if (metadata.type === 'percentage' && metadata.step === undefined) attributes += ` step="0.01"`;
             if (metadata.type === 'percentage' && metadata.min === undefined) attributes += ` min="0"`;
             if (metadata.type === 'percentage' && metadata.max === undefined) attributes += ` max="1"`;
-            
+
             // Add placeholder for empty fields
             if (metadata.placeholder) {
                 attributes += ` placeholder="${DomUtils.escapeXml(metadata.placeholder)}"`;
@@ -155,7 +158,7 @@ class GlobalConfigView extends EventEmitter {
         } else {
             // Default to text with placeholder
             let attributes = `type="text" value="${escapedCurrentValue}" ${dataAttributes}`;
-            
+
             if (metadata.placeholder) {
                 attributes += ` placeholder="${DomUtils.escapeXml(metadata.placeholder)}"`;
             } else if (metadata.defaultValue !== undefined) {
@@ -177,7 +180,7 @@ class GlobalConfigView extends EventEmitter {
                 const originalValue = inputElement.dataset.originalValue;
                 const wasConfigured = inputElement.dataset.wasConfigured === 'true';
                 const defaultValue = inputElement.dataset.defaultValue;
-                
+
                 // Handle different input types
                 let newValue;
                 if (inputElement.type === 'checkbox') {
@@ -189,9 +192,9 @@ class GlobalConfigView extends EventEmitter {
 
                 // Enhanced change detection logic
                 const shouldInclude = this._shouldIncludePropertyChange(
-                    newValue, 
-                    originalValue, 
-                    wasConfigured, 
+                    newValue,
+                    originalValue,
+                    wasConfigured,
                     defaultValue
                 );
 
@@ -200,14 +203,14 @@ class GlobalConfigView extends EventEmitter {
                 }
             }
         }
-        
+
         // Collect custom properties
         const customProperties = this._collectCustomProperties();
         if (customProperties) {
             // Custom properties use full YARN keys, not simple keys
             formData.customProperties = customProperties;
         }
-        
+
         return formData;
     }
 
@@ -225,7 +228,7 @@ class GlobalConfigView extends EventEmitter {
         if (newValue === originalValue) {
             return false;
         }
-        
+
         // Case 2: Property was never configured before (wasConfigured = false)
         if (!wasConfigured) {
             // If the new value is empty, don't send (user didn't set anything)
@@ -239,7 +242,7 @@ class GlobalConfigView extends EventEmitter {
             // Otherwise, this is a real addition - send it
             return true;
         }
-        
+
         // Case 3: Property was configured before (wasConfigured = true)
         // Any change from the original value should be sent, including empty string
         // (empty string means "clear this property and use default")
@@ -252,19 +255,19 @@ class GlobalConfigView extends EventEmitter {
      */
     _updateSaveButtonState() {
         if (!this.saveBtn) return;
-        
+
         const formData = this._collectFormData();
         const hasChanges = Object.keys(formData.params).length > 0;
-        
+
         this.saveBtn.disabled = !hasChanges;
-        
+
         // Check for custom properties changes as well
         const customProperties = this._collectCustomProperties();
         const hasCustomChanges = customProperties && Object.keys(customProperties).length > 0;
         const hasAnyChanges = hasChanges || hasCustomChanges;
-        
+
         this.saveBtn.disabled = !hasAnyChanges;
-        
+
         // Update button text to provide better feedback
         this.saveBtn.textContent = hasAnyChanges ? 'Stage Changes' : 'No Changes';
     }
@@ -275,13 +278,13 @@ class GlobalConfigView extends EventEmitter {
      */
     _bindToggleSwitchEvents() {
         const toggleSwitches = this.containerEl.querySelectorAll('.toggle-switch input[type="checkbox"]');
-        
+
         for (const toggleInput of toggleSwitches) {
             toggleInput.addEventListener('change', (event) => {
                 const isChecked = event.target.checked;
                 const toggleContainer = event.target.closest('.toggle-container');
                 const label = toggleContainer.querySelector('.toggle-label');
-                
+
                 if (label) {
                     label.textContent = isChecked ? 'true' : 'false';
                     label.classList.toggle('active', isChecked);
@@ -289,7 +292,7 @@ class GlobalConfigView extends EventEmitter {
             });
         }
     }
-    
+
     /**
      * Builds the custom properties section HTML for global scheduler settings.
      * @returns {string} Custom properties section HTML
@@ -318,7 +321,7 @@ class GlobalConfigView extends EventEmitter {
         `;
         return sectionHtml;
     }
-    
+
     /**
      * Binds events for custom properties functionality.
      * @private
@@ -327,7 +330,7 @@ class GlobalConfigView extends EventEmitter {
         const header = DomUtils.qs('#global-custom-properties-header', this.containerEl);
         const content = DomUtils.qs('#global-custom-properties-content', this.containerEl);
         const addButton = DomUtils.qs('#add-global-custom-property-btn', this.containerEl);
-        
+
         if (header && content) {
             header.addEventListener('click', () => {
                 const isCollapsed = header.classList.contains('collapsed');
@@ -340,14 +343,14 @@ class GlobalConfigView extends EventEmitter {
                 }
             });
         }
-        
+
         if (addButton) {
             addButton.addEventListener('click', () => {
                 this._addCustomPropertyRow();
             });
         }
     }
-    
+
     /**
      * Adds a new custom property row to the form.
      * @private
@@ -355,10 +358,10 @@ class GlobalConfigView extends EventEmitter {
     _addCustomPropertyRow() {
         const container = DomUtils.qs('#global-custom-properties-list', this.containerEl);
         if (!container) return;
-        
+
         const rowId = `global-custom-prop-${Date.now()}`;
         const prefix = DomUtils.qs('#global-property-prefix', this.containerEl)?.value || '';
-        
+
         const rowHtml = `
             <div class="custom-property-row" id="${rowId}">
                 <span style="flex: 0 0 auto; font-family: monospace; font-size: 12px;">${DomUtils.escapeXml(prefix)}</span>
@@ -368,9 +371,9 @@ class GlobalConfigView extends EventEmitter {
                 <button type="button" class="btn-remove" data-row-id="${rowId}">Remove</button>
             </div>
         `;
-        
+
         container.insertAdjacentHTML('beforeend', rowHtml);
-        
+
         // Bind remove button
         const removeBtn = container.querySelector(`#${rowId} .btn-remove`);
         if (removeBtn) {
@@ -383,7 +386,7 @@ class GlobalConfigView extends EventEmitter {
                 }
             });
         }
-        
+
         // Bind input events to update save button state and validate
         const inputs = container.querySelectorAll(`#${rowId} input`);
         for (const input of inputs) {
@@ -396,37 +399,39 @@ class GlobalConfigView extends EventEmitter {
             });
         }
     }
-    
+
     /**
      * Collects custom properties from the form.
      * @returns {Object|null} Custom properties object or null if none
      * @private
      */
     _collectCustomProperties() {
-        const customPropertyRows = this.containerEl.querySelectorAll('#global-custom-properties-list .custom-property-row');
+        const customPropertyRows = this.containerEl.querySelectorAll(
+            '#global-custom-properties-list .custom-property-row'
+        );
         if (customPropertyRows.length === 0) return null;
-        
+
         const prefix = DomUtils.qs('#global-property-prefix', this.containerEl)?.value || '';
         const customProperties = {};
-        
+
         for (const row of customPropertyRows) {
             const suffixInput = row.querySelector('[data-custom-property="suffix"]');
             const valueInput = row.querySelector('[data-custom-property="value"]');
-            
+
             if (suffixInput && valueInput) {
                 const suffix = suffixInput.value.trim();
                 const value = valueInput.value.trim();
-                
+
                 if (suffix && value) {
                     const fullKey = prefix + suffix;
                     customProperties[fullKey] = value;
                 }
             }
         }
-        
+
         return Object.keys(customProperties).length > 0 ? customProperties : null;
     }
-    
+
     /**
      * Checks if changing Legacy Queue Mode would impact auto-creation configurations.
      * @param {HTMLElement} toggleInput - The legacy queue mode toggle input
@@ -436,34 +441,36 @@ class GlobalConfigView extends EventEmitter {
         const newLegacyModeValue = toggleInput.checked;
         const originalValue = toggleInput.dataset.originalValue;
         const originalLegacyMode = String(originalValue).toLowerCase() === 'true';
-        
+
         if (newLegacyModeValue === originalLegacyMode) {
             // No change, remove any existing warning
             this._removeLegacyModeWarning();
             return;
         }
-        
+
         let warningMessage = '';
         let impactDescription = '';
-        
+
         if (originalLegacyMode && !newLegacyModeValue) {
             // Disabling legacy mode: all auto-creation switches to v2
             impactDescription = 'Disabling Legacy Queue Mode → All Auto-Creation switches to v2 Flexible';
-            warningMessage = 'Disabling Legacy Queue Mode will force all queues with auto queue creation to use v2 (Flexible) mode, ' +
-                            'regardless of their capacity mode. This may affect how child queues are created and their template properties.';
+            warningMessage =
+                'Disabling Legacy Queue Mode will force all queues with auto queue creation to use v2 (Flexible) mode, ' +
+                'regardless of their capacity mode. This may affect how child queues are created and their template properties.';
         } else if (!originalLegacyMode && newLegacyModeValue) {
             // Enabling legacy mode: auto-creation mode depends on capacity mode
             impactDescription = 'Enabling Legacy Queue Mode → Auto-Creation mode depends on capacity mode';
-            warningMessage = 'Enabling Legacy Queue Mode will change auto queue creation behavior: ' +
-                            'queues with Weight capacity will use v2 (Flexible) mode, while queues with Percentage/Absolute capacity will use v1 (Legacy) mode. ' +
-                            'This may affect how child queues are created and their template properties.';
+            warningMessage =
+                'Enabling Legacy Queue Mode will change auto queue creation behavior: ' +
+                'queues with Weight capacity will use v2 (Flexible) mode, while queues with Percentage/Absolute capacity will use v1 (Legacy) mode. ' +
+                'This may affect how child queues are created and their template properties.';
         }
-        
+
         if (warningMessage) {
             this._showLegacyModeAutoCreationWarning(impactDescription, warningMessage);
         }
     }
-    
+
     /**
      * Shows a warning about legacy mode impact on auto-creation.
      * @param {string} impactDescription - Description of the impact
@@ -473,7 +480,7 @@ class GlobalConfigView extends EventEmitter {
     _showLegacyModeAutoCreationWarning(impactDescription, message) {
         // Remove any existing warning
         this._removeLegacyModeWarning();
-        
+
         // Create warning element
         const warningHtml = `
             <div class="legacy-mode-auto-creation-warning" style="margin: 15px 0; padding: 12px; background-color: #fff3cd; border: 1px solid #ffeaa7; border-radius: 4px; border-left: 4px solid #f39c12;">
@@ -486,14 +493,16 @@ class GlobalConfigView extends EventEmitter {
                 </div>
             </div>
         `;
-        
+
         // Insert warning after the legacy queue mode config item
-        const legacyModeItem = this.containerEl.querySelector('[data-property-name="yarn.scheduler.capacity.legacy-queue-mode.enabled"]');
+        const legacyModeItem = this.containerEl.querySelector(
+            '[data-property-name="yarn.scheduler.capacity.legacy-queue-mode.enabled"]'
+        );
         if (legacyModeItem) {
             legacyModeItem.insertAdjacentHTML('afterend', warningHtml);
         }
     }
-    
+
     /**
      * Removes any existing legacy mode auto-creation warning.
      * @private
@@ -512,14 +521,14 @@ class GlobalConfigView extends EventEmitter {
      */
     _validateCustomPropertyRow(row) {
         if (!row) return;
-        
+
         const suffixInput = row.querySelector('[data-custom-property="suffix"]');
         const valueInput = row.querySelector('[data-custom-property="value"]');
-        
+
         if (suffixInput && valueInput) {
             const suffix = suffixInput.value.trim();
             const value = valueInput.value.trim();
-            
+
             // Show error for empty property name if value is provided
             if (!suffix && value) {
                 suffixInput.classList.add('invalid');
@@ -530,7 +539,7 @@ class GlobalConfigView extends EventEmitter {
                 suffixInput.style.borderColor = '';
                 suffixInput.title = '';
             }
-            
+
             // Show error for empty value if property name is provided
             if (suffix && !value) {
                 valueInput.classList.add('invalid');

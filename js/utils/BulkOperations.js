@@ -43,7 +43,7 @@ class BulkOperations {
         this.selectedQueues.add(queuePath);
         this._emit('selectionChanged', {
             selected: Array.from(this.selectedQueues),
-            count: this.selectedQueues.size
+            count: this.selectedQueues.size,
         });
     }
 
@@ -55,7 +55,7 @@ class BulkOperations {
         this.selectedQueues.delete(queuePath);
         this._emit('selectionChanged', {
             selected: Array.from(this.selectedQueues),
-            count: this.selectedQueues.size
+            count: this.selectedQueues.size,
         });
     }
 
@@ -81,7 +81,7 @@ class BulkOperations {
         }
         this._emit('selectionChanged', {
             selected: Array.from(this.selectedQueues),
-            count: this.selectedQueues.size
+            count: this.selectedQueues.size,
         });
     }
 
@@ -92,7 +92,7 @@ class BulkOperations {
         this.selectedQueues.clear();
         this._emit('selectionChanged', {
             selected: [],
-            count: 0
+            count: 0,
         });
     }
 
@@ -130,7 +130,7 @@ class BulkOperations {
         const results = {
             success: [],
             failed: [],
-            total: this.selectedQueues.size
+            total: this.selectedQueues.size,
         };
 
         for (const queuePath of this.selectedQueues) {
@@ -172,7 +172,7 @@ class BulkOperations {
         const results = {
             success: [],
             failed: [],
-            total: this.selectedQueues.size
+            total: this.selectedQueues.size,
         };
 
         for (const queuePath of this.selectedQueues) {
@@ -241,7 +241,7 @@ class BulkOperations {
         const results = {
             success: [],
             failed: [],
-            total: sortedQueues.length
+            total: sortedQueues.length,
         };
 
         for (const queuePath of sortedQueues) {
@@ -277,7 +277,6 @@ class BulkOperations {
         return { success: results.failed.length === 0, results };
     }
 
-
     /**
      * Gets current capacity for a queue.
      * @param {string} queuePath - Queue path
@@ -291,10 +290,10 @@ class BulkOperations {
             // Get current properties from the trie
             const nodeProperties = this.schedulerConfigModel.getQueueNodeProperties(queuePath);
             if (!nodeProperties) return null;
-            
+
             const capacityKey = PropertyKeyMapper.createFullKey(queuePath, 'capacity');
             const capacityValue = nodeProperties.get(capacityKey);
-            
+
             if (!capacityValue) return null;
 
             // Parse capacity value - just extract numeric part for percentage
@@ -314,11 +313,10 @@ class BulkOperations {
     _hasChildQueues(queuePath) {
         try {
             const allPaths = this.schedulerConfigModel.getAllQueuePaths();
-            return allPaths.some(path => path.startsWith(`${queuePath}.`) && path !== queuePath);
+            return allPaths.some((path) => path.startsWith(`${queuePath}.`) && path !== queuePath);
         } catch (error) {
             console.error(`Error checking children for ${queuePath}:`, error);
             return false;
         }
     }
-
 }

@@ -45,21 +45,27 @@ class ApiService {
                 // Handle API errors using new error system
                 if (requestOptions.method === 'PUT' && responseText && responseText.includes('<RemoteException>')) {
                     const apiError = ApiError.fromXmlResponse(responseText, endpoint, requestOptions.method);
-                    return { status: response.status, data: null, error: apiError.getUserMessage(), originalError: apiError };
+                    return {
+                        status: response.status,
+                        data: null,
+                        error: apiError.getUserMessage(),
+                        originalError: apiError,
+                    };
                 }
-                
-                const apiError = new ApiError(
-                    responseText || response.statusText || 'Request failed',
-                    'API_ERROR',
-                    {
-                        statusCode: response.status,
-                        endpoint,
-                        method: requestOptions.method,
-                        responseData: responseText
-                    }
-                );
-                
-                return { status: response.status, data: null, error: apiError.getUserMessage(), originalError: apiError };
+
+                const apiError = new ApiError(responseText || response.statusText || 'Request failed', 'API_ERROR', {
+                    statusCode: response.status,
+                    endpoint,
+                    method: requestOptions.method,
+                    responseData: responseText,
+                });
+
+                return {
+                    status: response.status,
+                    data: null,
+                    error: apiError.getUserMessage(),
+                    originalError: apiError,
+                };
             }
 
             let data;
@@ -67,21 +73,28 @@ class ApiService {
                 try {
                     data = JSON.parse(responseText);
                 } catch (parseError) {
-                    if (requestOptions.method === 'PUT' && responseText.toLowerCase().includes('successfully applied')) {
+                    if (
+                        requestOptions.method === 'PUT' &&
+                        responseText.toLowerCase().includes('successfully applied')
+                    ) {
                         data = responseText;
                     } else {
-                        const configError = new ValidationError(
-                            'Failed to parse JSON response',
-                            'PARSE_ERROR',
-                            { endpoint, responseData: responseText.slice(0, 200) }
-                        );
-                        return { status: response.status, data: responseText, error: configError.getUserMessage(), originalError: configError };
+                        const configError = new ValidationError('Failed to parse JSON response', 'PARSE_ERROR', {
+                            endpoint,
+                            responseData: responseText.slice(0, 200),
+                        });
+                        return {
+                            status: response.status,
+                            data: responseText,
+                            error: configError.getUserMessage(),
+                            originalError: configError,
+                        };
                     }
                 }
             } else {
                 data = responseText;
             }
-            
+
             return { status: response.status, data: data };
         } catch (error) {
             const enhancedError = this.errorHandler._enhanceError(error);
@@ -234,37 +247,40 @@ class ApiService {
 
         // Use retry logic for critical configuration updates
         try {
-            return await this.errorHandler.handleWithRetry(async () => {
-                const result = await this._makeRequest(
-                    CONFIG.API_ENDPOINTS.SCHEDULER_CONF,
-                    {
-                        method: 'PUT',
-                        headers: {
-                            'Content-Type': 'application/xml',
-                            Accept: 'application/xml',
+            return await this.errorHandler.handleWithRetry(
+                async () => {
+                    const result = await this._makeRequest(
+                        CONFIG.API_ENDPOINTS.SCHEDULER_CONF,
+                        {
+                            method: 'PUT',
+                            headers: {
+                                'Content-Type': 'application/xml',
+                                Accept: 'application/xml',
+                            },
+                            body: xmlBody,
                         },
-                        body: xmlBody,
-                    },
-                    false
-                );
+                        false
+                    );
 
-                // Throw enhanced error if request failed for retry logic
-                if (result.originalError) {
-                    throw result.originalError;
+                    // Throw enhanced error if request failed for retry logic
+                    if (result.originalError) {
+                        throw result.originalError;
+                    }
+
+                    return result;
+                },
+                {
+                    maxRetries: 1, // Limited retries for configuration changes
+                    baseDelay: 2000, // Longer delay for configuration operations
                 }
-
-                return result;
-            }, {
-                maxRetries: 1, // Limited retries for configuration changes
-                baseDelay: 2000 // Longer delay for configuration operations
-            });
+            );
         } catch (error) {
             // Return in legacy format for backward compatibility
-            return { 
-                status: error.statusCode || 0, 
-                data: null, 
+            return {
+                status: error.statusCode || 0,
+                data: null,
                 error: error.getUserMessage(),
-                originalError: error
+                originalError: error,
             };
         }
     }

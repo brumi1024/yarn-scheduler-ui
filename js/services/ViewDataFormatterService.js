@@ -29,36 +29,31 @@ class ViewDataFormatterService {
         return typeof valueString === 'string' && valueString.startsWith('[') && valueString.endsWith(']');
     }
 
-
     formatQueueHierarchyForView(schedulerConfigModel, schedulerInfoModel, appStateModel, forValidationOnly = false) {
         const configManager = schedulerConfigModel.getSchedulerTrieRoot();
         if (!configManager) return null;
 
         const selectedPartition = appStateModel.getSelectedPartition();
 
-        return this._formatQueueNodeRecursive(configManager, null, schedulerInfoModel, selectedPartition, forValidationOnly);
+        return this._formatQueueNodeRecursive(
+            configManager,
+            null,
+            schedulerInfoModel,
+            selectedPartition,
+            forValidationOnly
+        );
     }
-
-    // This method is no longer needed with unified QueueConfigurationManager
-    // Properties are now unified in QueueNode.getEffectiveProperties()
-
-    // This method is no longer needed with unified QueueConfigurationManager
-    // Pending additions are now handled directly in the QueueNode children
 
     _formatQueueNodeRecursive(queueNode, parentPath, schedulerInfoModel, selectedPartition, forValidationOnly) {
         const basePath = queueNode.fullPath;
 
-        // Skip deleted nodes
         if (queueNode.isDeleted()) {
             return null;
         }
 
-        // Skip non-queue nodes unless they have queue children
         if (!queueNode.isQueue && queueNode.children.size === 0) {
             return null;
         }
-
-        // Filter by selected partition - skip queues that don't have access to it
         if (selectedPartition && selectedPartition !== DEFAULT_PARTITION && selectedPartition !== '*') {
             const effectiveProperties = queueNode.getEffectiveProperties();
             if (!this._queueHasAccessToPartition(basePath, effectiveProperties, selectedPartition)) {
@@ -70,7 +65,6 @@ class ViewDataFormatterService {
         let uiCapacityModeHint = null;
         const effectiveProperties = queueNode.getEffectiveProperties();
 
-        // Extract UI capacity mode hint from properties
         for (const [fullKey, value] of effectiveProperties) {
             const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
             if (simpleKey === '_ui_capacityMode') {
@@ -78,8 +72,6 @@ class ViewDataFormatterService {
                 break;
             }
         }
-
-        // Determine operation type
         if (queueNode.isNew()) {
             operationType = OPERATION_TYPES.ADD;
         } else if (queueNode.hasPendingChanges()) {
@@ -106,7 +98,11 @@ class ViewDataFormatterService {
         for (const [childSegment, childNode] of queueNode.children) {
             if (childNode.isQueue || childNode.children.size > 0) {
                 const formattedChild = this._formatQueueNodeRecursive(
-                    childNode, basePath, schedulerInfoModel, selectedPartition, forValidationOnly
+                    childNode,
+                    basePath,
+                    schedulerInfoModel,
+                    selectedPartition,
+                    forValidationOnly
                 );
                 if (formattedChild) {
                     formattedNode.children[childSegment] = formattedChild;
@@ -155,9 +151,10 @@ class ViewDataFormatterService {
         }
 
         // Check if selected partition is in the accessible labels list
-        const accessibleLabels = accessibleLabelsString.split(',')
-            .map(label => label.trim())
-            .filter(label => label && label !== '*');
+        const accessibleLabels = accessibleLabelsString
+            .split(',')
+            .map((label) => label.trim())
+            .filter((label) => label && label !== '*');
 
         // If '*' is in the list, queue has access to all partitions
         if (accessibleLabelsString.includes('*')) {
@@ -253,7 +250,13 @@ class ViewDataFormatterService {
         }
 
         // --- Handle Node Label Specific Capacities for Display ---
-        NodeLabelService.applyPartitionSpecificDisplayCapacity(formattedNode, queuePath, effectiveProperties, selectedPartition, this);
+        NodeLabelService.applyPartitionSpecificDisplayCapacity(
+            formattedNode,
+            queuePath,
+            effectiveProperties,
+            selectedPartition,
+            this
+        );
 
         if (forValidationOnly) return formattedNode;
 
@@ -268,8 +271,8 @@ class ViewDataFormatterService {
                 formattedNode.numApplications =
                     liveQueueInfo.numApplications === undefined
                         ? liveQueueInfo.numActiveApplications === undefined
-                          ? 0
-                          : liveQueueInfo.numActiveApplications + (liveQueueInfo.numPendingApplications || 0)
+                            ? 0
+                            : liveQueueInfo.numActiveApplications + (liveQueueInfo.numPendingApplications || 0)
                         : liveQueueInfo.numApplications;
                 formattedNode.absoluteCapacity = liveQueueInfo.absoluteCapacity; // Use the raw value for sankey width
                 formattedNode.absoluteCapacityDisplay =
@@ -321,7 +324,6 @@ class ViewDataFormatterService {
         formattedNode['accessible-node-labels'] = String(effectiveProperties.get(labelsListKey) || anlDefault);
     }
 
-
     _determineEffectiveCapacityMode(queuePath, effectiveProperties) {
         return CapacityValueParser.determineMode(queuePath, effectiveProperties);
     }
@@ -362,7 +364,10 @@ class ViewDataFormatterService {
             if (mode === CAPACITY_MODES.WEIGHT) return `${number_.toFixed(1)}w`;
         }
 
-        if ((mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) && !this._isVectorString(valueString)) {
+        if (
+            (mode === CAPACITY_MODES.ABSOLUTE || mode === CAPACITY_MODES.VECTOR) &&
+            !this._isVectorString(valueString)
+        ) {
             return this._getDefaultCapacityValue(CAPACITY_MODES.ABSOLUTE);
         }
 
@@ -408,7 +413,7 @@ class ViewDataFormatterService {
     formatQueueDataForEditModal(queuePath, schedulerConfigModel, schedulerInfoModel, appStateModel) {
         const configManager = schedulerConfigModel.getTrieInstance();
         const queueNode = configManager.getQueueNode(queuePath);
-        
+
         if (!queueNode) {
             console.warn(
                 `ViewDataFormatterService: QueueNode not found for queue path "${queuePath}" in formatQueueDataForEditModal.`
@@ -419,7 +424,7 @@ class ViewDataFormatterService {
         let baseProperties = queueNode.getEffectiveProperties();
         let displayName = queueNode.segment;
         let uiCapacityModeHint = null;
-        
+
         // Extract UI capacity mode hint
         for (const [fullKey, value] of baseProperties) {
             const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
@@ -432,10 +437,10 @@ class ViewDataFormatterService {
         // Get global config to determine legacy mode
         const globalConfig = schedulerConfigModel.getGlobalConfig();
         const isLegacyMode = appStateModel.isLegacyModeEnabled(globalConfig);
-        
+
         // Check if queue has children (important for auto-creation validation)
         const hasChildren = queueNode.children && queueNode.children.size > 0;
-        
+
         const dataForModal = {
             path: queuePath,
             displayName: displayName,
@@ -459,11 +464,11 @@ class ViewDataFormatterService {
 
         // Get selected partition for context-aware property mapping
         const selectedPartition = appStateModel.getSelectedNodeLabel();
-        
+
         for (const category of QUEUE_CONFIG_METADATA) {
             for (const [placeholderKey, meta] of Object.entries(category.properties)) {
                 let fullYarnKey = placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
-                
+
                 // For capacity and maximum-capacity, use label-specific properties if a partition is selected
                 if (selectedPartition && selectedPartition !== DEFAULT_PARTITION) {
                     if (meta.key === 'capacity') {
@@ -472,17 +477,17 @@ class ViewDataFormatterService {
                         fullYarnKey = NodeLabelService.getLabelMaxCapacityKey(queuePath, selectedPartition);
                     }
                 }
-                
+
                 const value = baseProperties.get(fullYarnKey);
                 const isDefault = value === undefined;
                 // Show empty string for unconfigured properties, actual value for configured ones
                 dataForModal.properties[meta.key] = isDefault ? '' : String(value);
                 // Use DefaultValueProvider to check if using default
-                dataForModal.propertyDefaults[meta.key] = isDefault || 
-                    DefaultValueProvider.isUsingDefault(queuePath, meta.key, value);
+                dataForModal.propertyDefaults[meta.key] =
+                    isDefault || DefaultValueProvider.isUsingDefault(queuePath, meta.key, value);
             }
         }
-        
+
         // Add partition context information
         dataForModal.selectedPartition = selectedPartition;
 
@@ -533,7 +538,11 @@ class ViewDataFormatterService {
             nodeLabelInfo: [],
         };
 
-        infoData.basicInfo.push({ label: 'Name', value: targetNode.displayName }, { label: 'Path', value: targetNode.path }, { label: 'Configured State', value: targetNode.state });
+        infoData.basicInfo.push(
+            { label: 'Name', value: targetNode.displayName },
+            { label: 'Path', value: targetNode.path },
+            { label: 'Configured State', value: targetNode.state }
+        );
         if (targetNode.liveState && targetNode.liveState !== targetNode.state) {
             infoData.basicInfo.push({ label: 'Live State', value: targetNode.liveState });
         }
@@ -569,16 +578,20 @@ class ViewDataFormatterService {
             });
         }
 
-        infoData.liveUsage.push({
-            label: 'Absolute Capacity (Live)',
-            value: targetNode.absoluteCapacityDisplay || 'N/A',
-        }, {
-            label: 'Absolute Used Capacity (Live)',
-            value: targetNode.absoluteUsedCapacityDisplay || 'N/A',
-        }, {
-            label: 'Number of Applications (Live)',
-            value: targetNode.numApplications === undefined ? 'N/A' : targetNode.numApplications,
-        });
+        infoData.liveUsage.push(
+            {
+                label: 'Absolute Capacity (Live)',
+                value: targetNode.absoluteCapacityDisplay || 'N/A',
+            },
+            {
+                label: 'Absolute Used Capacity (Live)',
+                value: targetNode.absoluteUsedCapacityDisplay || 'N/A',
+            },
+            {
+                label: 'Number of Applications (Live)',
+                value: targetNode.numApplications === undefined ? 'N/A' : targetNode.numApplications,
+            }
+        );
         if (liveQueueInfo) {
             for (const [apiKey, meta] of Object.entries(SCHEDULER_INFO_METADATA)) {
                 if (
@@ -651,5 +664,4 @@ class ViewDataFormatterService {
 
         return infoData;
     }
-
 }

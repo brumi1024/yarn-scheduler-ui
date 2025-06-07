@@ -10,13 +10,13 @@ class RealTimeValidator {
             validateOnBlur: true,
             validateOnInput: true,
             showSuccessState: true,
-            ...options
+            ...options,
         };
-        
+
         this.validators = new Map();
         this.debounceTimers = new Map();
         this.validationStates = new Map();
-        
+
         this._bindEvents();
     }
 
@@ -51,17 +51,17 @@ class RealTimeValidator {
     validateField(fieldId) {
         const field = this.form.querySelector(`#${fieldId}`);
         const validator = this.validators.get(fieldId);
-        
+
         if (!field || !validator) {
             return { isValid: true, message: '' };
         }
 
         const value = this._getFieldValue(field);
         const result = validator.validate(value, field);
-        
+
         this._updateFieldState(fieldId, result);
         this.validationStates.set(fieldId, result);
-        
+
         return result;
     }
 
@@ -72,7 +72,7 @@ class RealTimeValidator {
     validateAll() {
         const results = {};
         let isValid = true;
-        
+
         for (const fieldId of this.validators.keys()) {
             const result = this.validateField(fieldId);
             results[fieldId] = result;
@@ -80,7 +80,7 @@ class RealTimeValidator {
                 isValid = false;
             }
         }
-        
+
         return { isValid, results };
     }
 
@@ -111,7 +111,7 @@ class RealTimeValidator {
         for (const timer of this.debounceTimers.values()) {
             clearTimeout(timer);
         }
-        
+
         this.validators.clear();
         this.debounceTimers.clear();
         this.validationStates.clear();
@@ -125,9 +125,13 @@ class RealTimeValidator {
         }
 
         if (this.options.validateOnBlur) {
-            this.form.addEventListener('blur', (event) => {
-                this._handleFieldBlur(event);
-            }, true);
+            this.form.addEventListener(
+                'blur',
+                (event) => {
+                    this._handleFieldBlur(event);
+                },
+                true
+            );
         }
     }
 
@@ -179,7 +183,7 @@ class RealTimeValidator {
     _updateFieldState(fieldId, result) {
         const field = this.form.querySelector(`#${fieldId}`);
         const messageElement = this.form.querySelector(`#${fieldId}-validation`);
-        
+
         if (!field) return;
 
         // Update field classes
@@ -202,11 +206,11 @@ class RealTimeValidator {
     _clearFieldState(fieldId) {
         const field = this.form.querySelector(`#${fieldId}`);
         const messageElement = this.form.querySelector(`#${fieldId}-validation`);
-        
+
         if (field) {
             field.classList.remove('valid', 'invalid');
         }
-        
+
         if (messageElement) {
             messageElement.textContent = '';
             messageElement.className = 'validation-message';
@@ -224,40 +228,42 @@ class RealTimeValidator {
                     if (!value || value.trim() === '') {
                         return { isValid: false, message: 'Queue name is required' };
                     }
-                    
+
                     const nameValidation = ValidationService.isValidQueueNameChars(value);
                     return {
                         isValid: nameValidation.isValid,
-                        message: nameValidation.message || ''
+                        message: nameValidation.message || '',
                     };
-                }
+                },
             },
-            
+
             capacity: {
                 validate: (value, field) => {
                     if (!value || value.trim() === '') {
                         return { isValid: false, message: 'Capacity is required' };
                     }
-                    
+
                     // Get capacity mode from form
                     const form = field.closest('form');
-                    const capacityModeField = form.querySelector('[name="capacityMode"], #new-capacity-mode, #edit-capacity-mode');
+                    const capacityModeField = form.querySelector(
+                        '[name="capacityMode"], #new-capacity-mode, #edit-capacity-mode'
+                    );
                     const mode = capacityModeField ? capacityModeField.value : CAPACITY_MODES.PERCENTAGE;
-                    
+
                     const result = ValidationService.parseAndValidateCapacityValue(value, mode);
                     return {
                         isValid: !result.error && !result.errors,
-                        message: result.error || (result.errors && result.errors.join(' ')) || ''
+                        message: result.error || (result.errors && result.errors.join(' ')) || '',
                     };
-                }
+                },
             },
-            
+
             maxCapacity: {
                 validate: (value) => {
                     if (!value || value.trim() === '') {
                         return { isValid: false, message: 'Maximum capacity is required' };
                     }
-                    
+
                     // Auto-detect capacity mode for maximum capacity
                     let mode = CAPACITY_MODES.PERCENTAGE;
                     if (value.endsWith('w')) {
@@ -265,14 +271,14 @@ class RealTimeValidator {
                     } else if (value.startsWith('[') && value.endsWith(']')) {
                         mode = CAPACITY_MODES.ABSOLUTE;
                     }
-                    
+
                     const result = ValidationService.parseAndValidateCapacityValue(value, mode, true);
                     return {
                         isValid: !result.error && !result.errors,
-                        message: result.error || (result.errors && result.errors.join(' ')) || ''
+                        message: result.error || (result.errors && result.errors.join(' ')) || '',
                     };
-                }
-            }
+                },
+            },
         };
     }
 
@@ -287,27 +293,27 @@ class RealTimeValidator {
                 if (!value || value.trim() === '') {
                     return { isValid: false, message: 'Queue name is required' };
                 }
-                
+
                 const nameValidation = ValidationService.isValidQueueNameChars(value);
                 if (!nameValidation.isValid) {
                     return {
                         isValid: false,
-                        message: nameValidation.message
+                        message: nameValidation.message,
                     };
                 }
-                
+
                 // Get parent path for full queue path check
                 const form = field.closest('form');
                 const parentField = form.querySelector('[name="parentQueue"], #new-parent-queue-select');
                 const parentPath = parentField ? parentField.value : 'root';
                 const fullPath = parentPath === 'root' ? `root.${value}` : `${parentPath}.${value}`;
-                
+
                 if (queueExistsCheck(fullPath)) {
                     return { isValid: false, message: 'Queue name already exists' };
                 }
-                
+
                 return { isValid: true, message: '' };
-            }
+            },
         };
     }
 }

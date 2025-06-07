@@ -30,7 +30,7 @@
 
 .toggle-slider:before {
     position: absolute;
-    content: "";
+    content: '';
     height: 18px;
     width: 18px;
     left: 2px;
@@ -103,14 +103,14 @@
         width: 40px;
         height: 22px;
     }
-    
+
     .toggle-slider:before {
         height: 16px;
         width: 16px;
         left: 2px;
         bottom: 2px;
     }
-    
+
     .toggle-switch input:checked + .toggle-slider:before {
         transform: translateX(18px);
     }

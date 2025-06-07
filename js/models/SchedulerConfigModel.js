@@ -7,7 +7,6 @@ class SchedulerConfigModel extends EventEmitter {
         this._queueConfigManager = new QueueConfigurationManager();
     }
 
-
     /**
      * Loads and parses the flat scheduler configuration properties.
      * @param {Array<Object>} propertiesArray - Array of { name: string, value: string }.
@@ -23,7 +22,6 @@ class SchedulerConfigModel extends EventEmitter {
             this._emit('configLoaded', { success: false, error: 'Error processing configuration data' });
         }
     }
-
 
     /**
      * Retrieves the effective properties of a queue node.
@@ -51,9 +49,9 @@ class SchedulerConfigModel extends EventEmitter {
     stageAddQueue(queuePath, parameters) {
         // Convert simple parameters to full YARN keys
         const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
-        
+
         this._queueConfigManager.stageAddQueue(queuePath, properties);
-        
+
         this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
@@ -69,9 +67,9 @@ class SchedulerConfigModel extends EventEmitter {
     stageUpdateQueue(queuePath, parameters) {
         // Convert simple parameters to full YARN keys
         const properties = PropertyKeyMapper.convertToFullKeys(parameters, queuePath);
-        
+
         this._queueConfigManager.stageUpdateQueue(queuePath, properties);
-        
+
         this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
@@ -81,7 +79,7 @@ class SchedulerConfigModel extends EventEmitter {
      */
     stageRemoveQueue(queuePath) {
         this._queueConfigManager.stageDeleteQueue(queuePath);
-        
+
         this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
@@ -91,7 +89,7 @@ class SchedulerConfigModel extends EventEmitter {
      */
     stageGlobalUpdate(params) {
         this._queueConfigManager.stageGlobalUpdate(params);
-        
+
         this._emit('pendingChangesUpdated', this._queueConfigManager);
     }
 
@@ -147,19 +145,16 @@ class SchedulerConfigModel extends EventEmitter {
                 this._queueValidator = new QueueValidator();
             }
 
-            return this._queueValidator.validate(
-                this,
-                effectiveHierarchy,
-                schedulerInfoModel,
-                appStateModel
-            );
+            return this._queueValidator.validate(this, effectiveHierarchy, schedulerInfoModel, appStateModel);
         } catch (error) {
             console.error('SchedulerConfigModel: Validation error:', error);
-            return [{
-                type: 'VALIDATION_SYSTEM_ERROR',
-                message: `Validation system error: ${error.message}`,
-                queuePath: null
-            }];
+            return [
+                {
+                    type: 'VALIDATION_SYSTEM_ERROR',
+                    message: `Validation system error: ${error.message}`,
+                    queuePath: null,
+                },
+            ];
         }
     }
 

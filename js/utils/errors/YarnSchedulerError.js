@@ -8,7 +8,7 @@ class YarnSchedulerError extends Error {
         this.code = code;
         this.details = details;
         this.timestamp = new Date().toISOString();
-        
+
         if (Error.captureStackTrace) {
             Error.captureStackTrace(this, this.constructor);
         }
@@ -24,7 +24,7 @@ class YarnSchedulerError extends Error {
             code: this.code,
             details: this.details,
             timestamp: this.timestamp,
-            stack: this.stack
+            stack: this.stack,
         };
     }
 

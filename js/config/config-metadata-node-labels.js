@@ -1,6 +1,6 @@
 /**
  * Metadata for node label configurations.
- * 
+ *
  * Example: To add a new node label property:
  * [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels.new-property`]: {
  *   key: 'new-property',

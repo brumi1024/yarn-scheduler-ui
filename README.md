@@ -18,34 +18,41 @@ A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler 
 ## Getting Started
 
 ### Prerequisites
+
 - Node.js (version 14 or higher)
 - npm (comes with Node.js)
 
 ### Installation
+
 1. Clone the repository:
-   ```bash
-   git clone https://github.com/brumi1024/yarn-scheduler-ui.git
-   cd yarn-scheduler-ui
-   ```
+
+    ```bash
+    git clone https://github.com/brumi1024/yarn-scheduler-ui.git
+    cd yarn-scheduler-ui
+    ```
 
 2. Install dependencies:
-   ```bash
-   npm install
-   ```
+    ```bash
+    npm install
+    ```
 
 ### Running the Application
+
 Start the development server:
+
 ```bash
 npm start
 ```
 
 This will start a local HTTP server on port 8080. Open your browser and navigate to:
+
 - http://localhost:8080
 - http://127.0.0.1:8080
 
 The application will automatically load with mock data for development and testing.
 
 ### Available Scripts
+
 - `npm start` - Start the development server
 - `npm run lint` - Run ESLint to check code quality
 - `npm run lint:fix` - Automatically fix ESLint issues

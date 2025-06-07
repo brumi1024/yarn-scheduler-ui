@@ -849,9 +849,7 @@
                             "vCores": 0
                         },
                         "mode": "percentage",
-                        "nodeLabels": [
-                            "*"
-                        ],
+                        "nodeLabels": ["*"],
                         "normalizedWeight": 0.0,
                         "numActiveApplications": 0,
                         "numApplications": 0,
@@ -1617,10 +1615,7 @@
                             "vCores": 0
                         },
                         "mode": "percentage",
-                        "nodeLabels": [
-                            "fpga",
-                            "gpu"
-                        ],
+                        "nodeLabels": ["fpga", "gpu"],
                         "normalizedWeight": 0.0,
                         "numApplications": 0,
                         "orderingPolicyInfo": "utilization",
@@ -2168,10 +2163,7 @@
                                         "vCores": 0
                                     },
                                     "mode": "percentage",
-                                    "nodeLabels": [
-                                        "fpga",
-                                        "gpu"
-                                    ],
+                                    "nodeLabels": ["fpga", "gpu"],
                                     "normalizedWeight": 0.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
@@ -3255,10 +3247,7 @@
                                         "vCores": 0
                                     },
                                     "mode": "percentage",
-                                    "nodeLabels": [
-                                        "fpga",
-                                        "gpu"
-                                    ],
+                                    "nodeLabels": ["fpga", "gpu"],
                                     "normalizedWeight": 0.0,
                                     "numApplications": 0,
                                     "orderingPolicyInfo": "utilization",
@@ -3772,10 +3761,7 @@
                                                     "vCores": 0
                                                 },
                                                 "mode": "percentage",
-                                                "nodeLabels": [
-                                                    "fpga",
-                                                    "gpu"
-                                                ],
+                                                "nodeLabels": ["fpga", "gpu"],
                                                 "normalizedWeight": 0.0,
                                                 "numApplications": 0,
                                                 "orderingPolicyInfo": "utilization",
@@ -4323,10 +4309,7 @@
                                                                 "vCores": 0
                                                             },
                                                             "mode": "percentage",
-                                                            "nodeLabels": [
-                                                                "fpga",
-                                                                "gpu"
-                                                            ],
+                                                            "nodeLabels": ["fpga", "gpu"],
                                                             "normalizedWeight": 0.0,
                                                             "numActiveApplications": 0,
                                                             "numApplications": 0,
@@ -5506,9 +5489,7 @@
                             "vCores": 0
                         },
                         "mode": "percentage",
-                        "nodeLabels": [
-                            "*"
-                        ],
+                        "nodeLabels": ["*"],
                         "normalizedWeight": 0.0,
                         "numApplications": 0,
                         "orderingPolicyInfo": "utilization",
@@ -5798,9 +5779,7 @@
                                         "vCores": 0
                                     },
                                     "mode": "percentage",
-                                    "nodeLabels": [
-                                        "*"
-                                    ],
+                                    "nodeLabels": ["*"],
                                     "normalizedWeight": 0.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
@@ -6461,9 +6440,7 @@
                                         "vCores": 0
                                     },
                                     "mode": "percentage",
-                                    "nodeLabels": [
-                                        "gpu"
-                                    ],
+                                    "nodeLabels": ["gpu"],
                                     "normalizedWeight": 0.0,
                                     "numActiveApplications": 0,
                                     "numApplications": 0,
@@ -7248,9 +7225,7 @@
                             "vCores": 0
                         },
                         "mode": "percentage",
-                        "nodeLabels": [
-                            "*"
-                        ],
+                        "nodeLabels": ["*"],
                         "normalizedWeight": 0.0,
                         "numApplications": 0,
                         "orderingPolicyInfo": "utilization",
@@ -7517,9 +7492,7 @@
                                         "vCores": 0
                                     },
                                     "mode": "percentage",
-                                    "nodeLabels": [
-                                        "*"
-                                    ],
+                                    "nodeLabels": ["*"],
                                     "normalizedWeight": 0.0,
                                     "numApplications": 0,
                                     "orderingPolicyInfo": "utilization",

@@ -30,16 +30,13 @@ class SchedulerDataCache {
         }
 
         this.lastFetchTime = Date.now();
-        
+
         // Extract unique resource metadata definitions
         const resourceTypes = this._extractResourceTypes(rawData);
         this.resourceMetadataCache = resourceTypes;
 
         // Normalize queue hierarchy with references
-        const normalizedRoot = this._normalizeQueue(
-            rawData.scheduler.schedulerInfo,
-            resourceTypes
-        );
+        const normalizedRoot = this._normalizeQueue(rawData.scheduler.schedulerInfo, resourceTypes);
 
         // Build path cache for O(1) queue lookups
         this._buildPathCache(normalizedRoot);
@@ -81,7 +78,7 @@ class SchedulerDataCache {
                     seenPatterns.add(pattern);
                     types.set(pattern, {
                         id: pattern,
-                        template: node.resourcesUsed.resourceInformations.resourceInformation
+                        template: node.resourcesUsed.resourceInformations.resourceInformation,
                     });
                 }
             }
@@ -97,7 +94,7 @@ class SchedulerDataCache {
                             seenPatterns.add(pattern);
                             types.set(pattern, {
                                 id: pattern,
-                                template: partition.resourcesUsed.resourceInformations.resourceInformation
+                                template: partition.resourcesUsed.resourceInformations.resourceInformation,
                             });
                         }
                     }
@@ -119,7 +116,7 @@ class SchedulerDataCache {
     _createResourcePattern(resourceInfo) {
         // Create a unique pattern identifier for resource metadata
         return resourceInfo
-            .map(r => `${r.name}:${r.resourceType}:${r.units}`)
+            .map((r) => `${r.name}:${r.resourceType}:${r.units}`)
             .sort()
             .join('|');
     }
@@ -141,24 +138,22 @@ class SchedulerDataCache {
             normalizedWeight: queueData.normalizedWeight,
             numApplications: queueData.numApplications,
             maxParallelApps: queueData.maxParallelApps,
-            
+
             // Replace resource information with references
             resourcesUsed: this._normalizeResourceUsage(queueData.resourcesUsed, resourceTypes),
-            
+
             // Normalize capacities by partition
             capacities: this._normalizeCapacities(queueData.capacities, resourceTypes),
-            
+
             // Keep other properties
             nodeLabels: queueData.nodeLabels,
-            queueCapacityVectorInfo: queueData.queueCapacityVectorInfo
+            queueCapacityVectorInfo: queueData.queueCapacityVectorInfo,
         };
 
         // Recursively normalize child queues
         if (queueData.queues?.queue) {
             normalized.queues = {
-                queue: queueData.queues.queue.map(child => 
-                    this._normalizeQueue(child, resourceTypes)
-                )
+                queue: queueData.queues.queue.map((child) => this._normalizeQueue(child, resourceTypes)),
             };
         }
 
@@ -170,20 +165,18 @@ class SchedulerDataCache {
             return resourceUsage;
         }
 
-        const pattern = this._createResourcePattern(
-            resourceUsage.resourceInformations.resourceInformation
-        );
-        
+        const pattern = this._createResourcePattern(resourceUsage.resourceInformations.resourceInformation);
+
         return {
             memory: resourceUsage.memory,
             vCores: resourceUsage.vCores,
             // Store reference instead of full structure
             resourceInfoRef: pattern,
             // Keep actual values
-            values: resourceUsage.resourceInformations.resourceInformation.map(r => ({
+            values: resourceUsage.resourceInformations.resourceInformation.map((r) => ({
                 name: r.name,
-                value: r.value
-            }))
+                value: r.value,
+            })),
         };
     }
 
@@ -193,7 +186,7 @@ class SchedulerDataCache {
         }
 
         return {
-            queueCapacitiesByPartition: capacities.queueCapacitiesByPartition.map(partition => ({
+            queueCapacitiesByPartition: capacities.queueCapacitiesByPartition.map((partition) => ({
                 ...partition,
                 // Normalize resource fields
                 resourcesUsed: this._normalizeResourceUsage(partition.resourcesUsed, resourceTypes),
@@ -201,8 +194,8 @@ class SchedulerDataCache {
                 pending: this._normalizeResourceUsage(partition.pending, resourceTypes),
                 amUsed: this._normalizeResourceUsage(partition.amUsed, resourceTypes),
                 amLimit: this._normalizeResourceUsage(partition.amLimit, resourceTypes),
-                userAmLimit: this._normalizeResourceUsage(partition.userAmLimit, resourceTypes)
-            }))
+                userAmLimit: this._normalizeResourceUsage(partition.userAmLimit, resourceTypes),
+            })),
         };
     }
 
@@ -210,12 +203,11 @@ class SchedulerDataCache {
         if (node.queuePath) {
             cache.set(node.queuePath, node);
         }
-        
+
         if (node.queues?.queue) {
             for (const child of node.queues.queue) {
                 this._buildPathCache(child, cache);
             }
         }
     }
-
 }

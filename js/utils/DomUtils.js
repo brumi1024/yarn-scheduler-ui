@@ -110,6 +110,6 @@ const DomUtils = {
             .replaceAll('<', '<')
             .replaceAll('>', '>')
             .replaceAll('"', '"')
-            .replaceAll('\'', "'");
+            .replaceAll("'", "'");
     },
 };

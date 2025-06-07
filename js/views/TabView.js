@@ -30,14 +30,14 @@ class TabView extends EventEmitter {
             });
         }
         this.diagnosticButton.addEventListener('click', () => {
-            this._emit('diagnostic')
-        })
+            this._emit('diagnostic');
+        });
     }
 
     _bindHamburgerMenu() {
         const hamburgerButton = document.getElementById('hamburger-button');
         const hamburgerMenu = document.getElementById('hamburger-menu');
-        
+
         if (!hamburgerButton || !hamburgerMenu) return;
 
         // Toggle hamburger menu on button click

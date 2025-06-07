@@ -18,13 +18,15 @@ class EventBus {
         if (!this.events.has(eventType)) {
             this.events.set(eventType, new Set());
         }
-        
+
         this.events.get(eventType).add(listener);
-        
+
         if (this.debugMode) {
-            console.debug(`EventBus: Subscribed to '${eventType}', total listeners: ${this.events.get(eventType).size}`);
+            console.debug(
+                `EventBus: Subscribed to '${eventType}', total listeners: ${this.events.get(eventType).size}`
+            );
         }
-        
+
         // Return unsubscribe function
         return () => this.off(eventType, listener);
     }
@@ -41,7 +43,7 @@ class EventBus {
             if (listeners.size === 0) {
                 this.events.delete(eventType);
             }
-            
+
             if (this.debugMode) {
                 console.debug(`EventBus: Unsubscribed from '${eventType}', remaining listeners: ${listeners.size}`);
             }
@@ -55,11 +57,11 @@ class EventBus {
      */
     emit(eventType, data = null) {
         const listeners = this.events.get(eventType);
-        
+
         if (this.debugMode) {
             console.debug(`EventBus: Emitting '${eventType}' to ${listeners?.size || 0} listeners`, data);
         }
-        
+
         if (listeners) {
             for (const listener of listeners) {
                 try {
@@ -82,7 +84,7 @@ class EventBus {
             listener(data);
             this.off(eventType, onceListener);
         };
-        
+
         return this.on(eventType, onceListener);
     }
 
@@ -92,7 +94,7 @@ class EventBus {
      */
     removeAllListeners(eventType) {
         this.events.delete(eventType);
-        
+
         if (this.debugMode) {
             console.debug(`EventBus: Removed all listeners for '${eventType}'`);
         }
@@ -103,7 +105,7 @@ class EventBus {
      */
     clear() {
         this.events.clear();
-        
+
         if (this.debugMode) {
             console.debug('EventBus: Cleared all listeners');
         }
@@ -118,7 +120,7 @@ class EventBus {
         if (eventType) {
             return this.events.get(eventType)?.size || 0;
         }
-        
+
         const counts = {};
         for (const [type, listeners] of this.events) {
             counts[type] = listeners.size;
@@ -140,9 +142,8 @@ const eventBus = new EventBus();
 
 // Export both class and instance for use in other modules
 window.GlobalEventBus = eventBus;
-window.EventBus = eventBus;  // Keep for compatibility
+window.EventBus = eventBus; // Keep for compatibility
 window.EventBusClass = EventBus;
 
 // Helper function to get the EventBus instance safely
 window.getEventBus = () => window.GlobalEventBus || window.EventBus;
-

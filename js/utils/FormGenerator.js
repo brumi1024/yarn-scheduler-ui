@@ -12,19 +12,19 @@ class FormGenerator {
     static generateForm(fields, options = {}) {
         const formId = options.formId || 'generated-form';
         const submitOnEnter = options.submitOnEnter !== false;
-        
+
         let html = `<form id="${formId}"${submitOnEnter ? '' : ' onsubmit="return false;"'}>`;
-        
+
         for (const field of fields) {
             html += this._generateField(field);
         }
-        
+
         html += '</form>';
-        
+
         if (options.actions) {
             html += this._generateActions(options.actions);
         }
-        
+
         return html;
     }
 
@@ -47,11 +47,11 @@ class FormGenerator {
             help = '',
             validation = true,
             attributes = {},
-            cssClass = 'form-group'
+            cssClass = 'form-group',
         } = field;
 
         let html = `<div class="${cssClass}">`;
-        
+
         // Label
         if (label) {
             const labelText = required ? `${label} *` : label;
@@ -67,7 +67,7 @@ class FormGenerator {
             required,
             readonly,
             options,
-            attributes
+            attributes,
         });
 
         // Help text
@@ -92,11 +92,11 @@ class FormGenerator {
      */
     static _generateInput(type, config) {
         const { id, name, value, placeholder, required, readonly, options, attributes } = config;
-        
+
         let attrs = `id="${id}" name="${name}"`;
         if (required) attrs += ' required';
         if (readonly) attrs += ' readonly';
-        
+
         // Add custom attributes
         for (const [key, val] of Object.entries(attributes)) {
             attrs += ` ${key}="${DomUtils.escapeXml(val)}"`;
@@ -145,24 +145,18 @@ class FormGenerator {
      */
     static _generateActions(actions) {
         let html = '<div class="modal-actions">';
-        
+
         for (const action of actions) {
-            const {
-                id,
-                text,
-                type = 'button',
-                cssClass = 'btn btn-secondary',
-                attributes = {}
-            } = action;
-            
+            const { id, text, type = 'button', cssClass = 'btn btn-secondary', attributes = {} } = action;
+
             let attrs = `id="${id}" type="${type}"`;
             for (const [key, val] of Object.entries(attributes)) {
                 attrs += ` ${key}="${DomUtils.escapeXml(val)}"`;
             }
-            
+
             html += `<button class="${cssClass}" ${attrs}>${DomUtils.escapeXml(text)}</button>`;
         }
-        
+
         html += '</div>';
         return html;
     }
@@ -186,8 +180,8 @@ class FormGenerator {
             attributes: {
                 'data-simple-key': simpleKey,
                 'data-full-key': fullYarnKey,
-                'data-original-value': currentValue
-            }
+                'data-original-value': currentValue,
+            },
         };
 
         // Set input type based on metadata
@@ -198,7 +192,7 @@ class FormGenerator {
             field.type = 'select';
             field.options = [
                 { value: 'true', label: 'true' },
-                { value: 'false', label: 'false' }
+                { value: 'false', label: 'false' },
             ];
         } else if (meta.type === 'number' || meta.type === 'percentage') {
             field.type = 'number';
@@ -210,8 +204,12 @@ class FormGenerator {
         }
 
         // Special handling for capacity fields
-        if (simpleKey === 'capacity' || simpleKey === 'maximum-capacity' || 
-            simpleKey.endsWith('.capacity') || simpleKey.endsWith('.maximum-capacity')) {
+        if (
+            simpleKey === 'capacity' ||
+            simpleKey === 'maximum-capacity' ||
+            simpleKey.endsWith('.capacity') ||
+            simpleKey.endsWith('.maximum-capacity')
+        ) {
             field.type = 'text'; // Always text for capacity values
         }
 
@@ -229,20 +227,20 @@ class FormGenerator {
             cancelId = 'cancel-btn',
             submitText = 'Submit',
             submitId = 'submit-btn',
-            submitClass = 'btn btn-primary'
+            submitClass = 'btn btn-primary',
         } = options;
 
         return [
             {
                 id: cancelId,
                 text: cancelText,
-                cssClass: 'btn btn-secondary'
+                cssClass: 'btn btn-secondary',
             },
             {
                 id: submitId,
                 text: submitText,
-                cssClass: submitClass
-            }
+                cssClass: submitClass,
+            },
         ];
     }
 
@@ -256,20 +254,20 @@ class FormGenerator {
         const { includeOriginal = false, validateChanges = true } = options;
         const data = {};
         const changes = {};
-        
+
         for (const input of form.querySelectorAll('.form-input')) {
             const name = input.name || input.dataset.simpleKey;
             if (!name) continue;
-            
+
             let value = input.value;
             if (input.type === 'checkbox') {
                 value = input.checked;
             } else if (input.type === 'number') {
                 value = value === '' ? '' : Number(value);
             }
-            
+
             data[name] = value;
-            
+
             if (validateChanges && includeOriginal) {
                 const originalValue = input.dataset.originalValue;
                 if (originalValue !== undefined && String(value) !== String(originalValue)) {
@@ -277,7 +275,7 @@ class FormGenerator {
                 }
             }
         }
-        
+
         return includeOriginal ? { data, changes } : data;
     }
 }

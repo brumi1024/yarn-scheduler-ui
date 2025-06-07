@@ -11,8 +11,7 @@ class NodeLabelService {
      */
     static getAvailableNodeLabels(schedulerInfo, nodesInfo = null) {
         const allLabels = new Set();
-        
-        // Get labels from scheduler info (queue configurations)
+
         if (schedulerInfo && schedulerInfo.nodeLabels) {
             for (const label of schedulerInfo.nodeLabels) {
                 if (label && label !== '*' && label !== DEFAULT_PARTITION) {
@@ -20,8 +19,7 @@ class NodeLabelService {
                 }
             }
         }
-        
-        // Get labels from cluster nodes (actual node state)
+
         if (nodesInfo && nodesInfo.getNodeLabels) {
             for (const label of nodesInfo.getNodeLabels()) {
                 if (label && label !== '*' && label !== DEFAULT_PARTITION) {
@@ -29,9 +27,8 @@ class NodeLabelService {
                 }
             }
         }
-        
+
         // TODO: Simple merge logic - YARN validates, no complex UI validation needed
-        // This merges labels from both scheduler configs and actual cluster nodes
         return [...allLabels].sort();
     }
 
@@ -44,16 +41,16 @@ class NodeLabelService {
         if (!labelsString || labelsString === '*') {
             return [];
         }
-        
-        // Handle space as "no labels" indicator
+
         if (labelsString.trim() === ' ') {
             return [];
         }
-        
-        return labelsString.split(',')
-            .map(label => label.trim())
-            .filter(label => label && label !== '*')
-            .map(label => ({ name: label, enabled: true }));
+
+        return labelsString
+            .split(',')
+            .map((label) => label.trim())
+            .filter((label) => label && label !== '*')
+            .map((label) => ({ name: label, enabled: true }));
     }
 
     /**
@@ -64,26 +61,20 @@ class NodeLabelService {
      * @returns {string} Updated comma-separated labels string
      */
     static updateAccessibleLabels(currentChips, toggledLabel, isEnabled) {
-        const updatedChips = currentChips.map(chip => 
-            chip.name === toggledLabel 
-                ? { ...chip, enabled: isEnabled }
-                : chip
+        const updatedChips = currentChips.map((chip) =>
+            chip.name === toggledLabel ? { ...chip, enabled: isEnabled } : chip
         );
-        
-        // If label doesn't exist, add it
-        if (!currentChips.find(chip => chip.name === toggledLabel)) {
+
+        if (!currentChips.find((chip) => chip.name === toggledLabel)) {
             updatedChips.push({ name: toggledLabel, enabled: isEnabled });
         }
-        
-        const enabledLabels = updatedChips
-            .filter(chip => chip.enabled)
-            .map(chip => chip.name);
-        
-        // Return space if no labels (explicit "no labels")
+
+        const enabledLabels = updatedChips.filter((chip) => chip.enabled).map((chip) => chip.name);
+
         if (enabledLabels.length === 0) {
             return ' ';
         }
-        
+
         return enabledLabels.join(',');
     }
 
@@ -152,7 +143,7 @@ class NodeLabelService {
     static populateNodeLabelData(dataForModal, queuePath, baseProperties) {
         const anlKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
         const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
-        
+
         dataForModal.nodeLabelData.accessibleNodeLabelsString = String(baseProperties.get(anlKey) || anlDefault);
 
         for (const [key, value] of baseProperties.entries()) {
@@ -173,7 +164,7 @@ class NodeLabelService {
     static getAccessibleNodeLabels(queuePath, properties) {
         const anlKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
         const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
-        
+
         return String(properties.get(anlKey) || anlDefault);
     }
 
@@ -185,7 +176,13 @@ class NodeLabelService {
      * @param {string} selectedPartition - Selected partition
      * @param {ViewDataFormatterService} viewDataFormatterService - Service for formatting display values
      */
-    static applyPartitionSpecificDisplayCapacity(formattedNode, queuePath, effectiveProperties, selectedPartition, viewDataFormatterService) {
+    static applyPartitionSpecificDisplayCapacity(
+        formattedNode,
+        queuePath,
+        effectiveProperties,
+        selectedPartition,
+        viewDataFormatterService
+    ) {
         if (selectedPartition && selectedPartition !== DEFAULT_PARTITION && selectedPartition !== '*') {
             const baseKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
             const labelCapacityKey = `${baseKey}.${selectedPartition}.capacity`;
@@ -212,7 +209,6 @@ class NodeLabelService {
         }
     }
 
-
     /**
      * Populates node label info for info modal display
      * @param {Object} infoData - Info modal data object
@@ -223,7 +219,7 @@ class NodeLabelService {
             label: 'Accessible Node Labels (Effective)',
             value: targetNode['accessible-node-labels'],
         });
-        
+
         const baseKey = NodeLabelService.getAccessibleNodeLabelsKey(targetNode.path);
         const labelPrefix = `${baseKey}.`;
         for (const [key, value] of targetNode.effectiveProperties.entries()) {

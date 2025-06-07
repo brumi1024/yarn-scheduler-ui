@@ -38,8 +38,6 @@ class QueueTreeView extends EventEmitter {
         return this._currentFormattedHierarchy;
     }
 
-
-
     /**
      * Renders the entire queue tree.
      * @param {Object | null} formattedHierarchyRoot - The root of the formatted queue hierarchy.
@@ -52,7 +50,6 @@ class QueueTreeView extends EventEmitter {
             console.warn('QueueTreeView.render: Core containers not found.');
             return;
         }
-
 
         DomUtils.empty(this.treeContainerEl);
         DomUtils.empty(this.levelHeadersContainerEl);
@@ -69,10 +66,6 @@ class QueueTreeView extends EventEmitter {
         // Render using traditional method
         this._renderTraditional(formattedHierarchyRoot, drawConnectors);
     }
-
-
-
-
 
     /**
      * Traditional rendering method for smaller datasets.
@@ -91,13 +84,13 @@ class QueueTreeView extends EventEmitter {
             this.treeContainerEl.innerHTML =
                 "<p style='text-align:center; padding:20px;'>No queues configured beyond root.</p>";
             this._renderLevelHeaders(0); // Header for root
-            
+
             // Create column containers for empty root case
             const columnContainers = [];
             const colDiv = DomUtils.createElement('div', 'queue-column');
             this.treeContainerEl.append(colDiv);
             columnContainers.push(colDiv);
-            
+
             // Still need to render the root card itself if it exists
             const cardElement = QueueCardView.createCardElement(formattedHierarchyRoot, '', (eventName, queuePath) => {
                 this._emit(eventName, queuePath);
@@ -223,7 +216,6 @@ class QueueTreeView extends EventEmitter {
         const startX = parentRect.right - svgRect.left;
         const endX = childRect.left - svgRect.left;
 
-
         if (startX >= endX - 10) {
             // Ensure there's at least 10px space for the link
             return;
@@ -266,7 +258,7 @@ class QueueTreeView extends EventEmitter {
     destroy() {
         this.queueElements.clear();
         this.clearConnectors();
-        
+
         if (this._connectorDrawTimeoutId) {
             clearTimeout(this._connectorDrawTimeoutId);
             this._connectorDrawTimeoutId = null;
@@ -283,7 +275,7 @@ class QueueTreeView extends EventEmitter {
         if (element) {
             element.scrollIntoView({
                 behavior: options.smooth ? 'smooth' : 'auto',
-                block: options.center ? 'center' : 'nearest'
+                block: options.center ? 'center' : 'nearest',
             });
         }
     }

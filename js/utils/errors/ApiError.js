@@ -13,10 +13,12 @@ class ApiError extends YarnSchedulerError {
     isRetryable() {
         if (this.statusCode) {
             // Retry on server errors (5xx) and some client errors
-            return this.statusCode >= 500 || 
-                   this.statusCode === 408 || // Request Timeout
-                   this.statusCode === 429 || // Too Many Requests
-                   this.statusCode === 0;     // Network error
+            return (
+                this.statusCode >= 500 ||
+                this.statusCode === 408 || // Request Timeout
+                this.statusCode === 429 || // Too Many Requests
+                this.statusCode === 0
+            ); // Network error
         }
         return false;
     }
@@ -64,18 +66,18 @@ class ApiError extends YarnSchedulerError {
         try {
             const parser = new DOMParser();
             const xmlDocument = parser.parseFromString(xmlText, 'application/xml');
-            
+
             const exceptionNode = xmlDocument.querySelector('RemoteException > exception');
             const messageNode = xmlDocument.querySelector('RemoteException > message');
             const javaClassNode = xmlDocument.querySelector('RemoteException > javaClassName');
-            
+
             let message = 'Unknown API error';
             let code = 'API_ERROR';
-            
+
             if (messageNode && messageNode.textContent) {
                 message = messageNode.textContent.trim();
             }
-            
+
             if (exceptionNode && exceptionNode.textContent) {
                 const exceptionType = exceptionNode.textContent.trim();
                 if (exceptionType.includes('YarnException')) {
@@ -93,7 +95,7 @@ class ApiError extends YarnSchedulerError {
                 statusCode: 400,
                 responseData: xmlText,
                 javaClassName: javaClassNode?.textContent?.trim(),
-                userFriendlyMessage: ApiError._getYarnErrorUserMessage(message, code)
+                userFriendlyMessage: ApiError._getYarnErrorUserMessage(message, code),
             });
         } catch (error) {
             return new ApiError('Failed to parse API error response', 'PARSE_ERROR', {
@@ -101,7 +103,7 @@ class ApiError extends YarnSchedulerError {
                 method,
                 statusCode: 400,
                 responseData: xmlText,
-                parseError: error.message
+                parseError: error.message,
             });
         }
     }

@@ -24,9 +24,9 @@
             <div class="hamburger-container">
                 <button class="hamburger" id="hamburger-button" aria-label="Toggle navigation">
                     <svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true">
-                        <circle cx="5" cy="12" r="2"/>
-                        <circle cx="12" cy="12" r="2"/>
-                        <circle cx="19" cy="12" r="2"/>
+                        <circle cx="5" cy="12" r="2" />
+                        <circle cx="12" cy="12" r="2" />
+                        <circle cx="19" cy="12" r="2" />
                     </svg>
                 </button>
 
@@ -195,13 +195,13 @@
         <script src="js/utils/ChangePreview.js"></script>
         <script src="js/utils/BulkOperations.js"></script>
         <script src="js/utils/TooltipHelper.js"></script>
-        
+
         <!-- Error Handling Framework -->
         <script src="js/utils/errors/YarnSchedulerError.js"></script>
         <script src="js/utils/errors/ValidationError.js"></script>
         <script src="js/utils/errors/ApiError.js"></script>
         <script src="js/utils/errors/ErrorHandler.js"></script>
-        
+
         <!-- Validation Framework -->
         <script src="js/utils/validators/QueueValidator.js"></script>
 
@@ -240,8 +240,8 @@
         <script src="js/controllers/MainController.js"></script>
 
         <script>
-          /*global document, app:true, MainController*/
-          document.addEventListener('DOMContentLoaded', () => {
+            /*global document, app:true, MainController*/
+            document.addEventListener('DOMContentLoaded', () => {
                 app = new MainController();
                 app.init();
             });

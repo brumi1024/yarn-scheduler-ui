@@ -32,9 +32,9 @@ class AddQueueModalView extends BaseModalView {
         const defaultMaxCapacity = this.viewDataFormatterService._getDefaultMaxCapacityValue(CAPACITY_MODES.PERCENTAGE);
 
         // Prepare parent queue options
-        let parentOptions = (parentQueues || []).map(parent => ({
+        let parentOptions = (parentQueues || []).map((parent) => ({
             value: parent.path,
-            label: parent.path
+            label: parent.path,
         }));
 
         if (parentOptions.length === 0 && preselectedParentPath === 'root') {
@@ -50,7 +50,7 @@ class AddQueueModalView extends BaseModalView {
                 label: 'Parent Queue',
                 value: preselectedParentPath,
                 options: parentOptions,
-                required: true
+                required: true,
             },
             {
                 type: 'text',
@@ -59,7 +59,7 @@ class AddQueueModalView extends BaseModalView {
                 label: 'New Queue Name',
                 placeholder: 'Enter queue name (e.g., my_queue)',
                 help: 'Letters, numbers, underscores, hyphens, periods allowed.',
-                required: true
+                required: true,
             },
             {
                 type: 'select',
@@ -70,8 +70,8 @@ class AddQueueModalView extends BaseModalView {
                 options: [
                     { value: CAPACITY_MODES.PERCENTAGE, label: 'Percentage (%)' },
                     { value: CAPACITY_MODES.WEIGHT, label: 'Weight (w)' },
-                    { value: CAPACITY_MODES.ABSOLUTE, label: 'Absolute Resources' }
-                ]
+                    { value: CAPACITY_MODES.ABSOLUTE, label: 'Absolute Resources' },
+                ],
             },
             {
                 type: 'text',
@@ -79,7 +79,7 @@ class AddQueueModalView extends BaseModalView {
                 name: 'capacity',
                 label: 'Capacity',
                 value: defaultPercentageCapacity,
-                help: 'e.g., 10% or 10.0%'
+                help: 'e.g., 10% or 10.0%',
             },
             {
                 type: 'text',
@@ -87,7 +87,7 @@ class AddQueueModalView extends BaseModalView {
                 name: 'maxCapacity',
                 label: 'Maximum Capacity',
                 value: defaultMaxCapacity,
-                help: 'e.g., "100%" or "[memory=2048,vcores=2]"'
+                help: 'e.g., "100%" or "[memory=2048,vcores=2]"',
             },
             {
                 type: 'select',
@@ -97,22 +97,22 @@ class AddQueueModalView extends BaseModalView {
                 value: 'RUNNING',
                 options: [
                     { value: 'RUNNING', label: 'RUNNING' },
-                    { value: 'STOPPED', label: 'STOPPED' }
-                ]
-            }
+                    { value: 'STOPPED', label: 'STOPPED' },
+                ],
+            },
         ];
 
         const actions = FormGenerator.createStandardActions({
             cancelId: 'cancel-add-queue-btn',
             submitId: 'submit-add-queue-btn',
             submitText: 'Add Queue',
-            submitClass: 'btn btn-success'
+            submitClass: 'btn btn-success',
         });
 
         return FormGenerator.generateForm(fields, {
             formId: 'add-queue-form',
             submitOnEnter: false,
-            actions
+            actions,
         });
     }
 
@@ -275,12 +275,12 @@ class AddQueueModalView extends BaseModalView {
             debounceDelay: 300,
             validateOnBlur: true,
             validateOnInput: true,
-            showSuccessState: true
+            showSuccessState: true,
         });
 
         // Add validators for each field
         const validators = RealTimeValidator.createQueueValidators();
-        
+
         // Add unique queue name validator
         validators.queueName = RealTimeValidator.createUniqueQueueNameValidator((queuePath) => {
             // Check if queue already exists via controller
@@ -290,7 +290,7 @@ class AddQueueModalView extends BaseModalView {
         this.realTimeValidator.addValidators({
             'new-queue-name': validators.queueName,
             'new-queue-capacity': validators.capacity,
-            'new-queue-max-capacity': validators.maxCapacity
+            'new-queue-max-capacity': validators.maxCapacity,
         });
     }
 

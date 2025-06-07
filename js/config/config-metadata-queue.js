@@ -91,7 +91,7 @@ const QUEUE_CONFIG_METADATA = [
                 type: 'boolean',
                 defaultValue: 'false',
                 availableInTemplate: false, // Not available in templates
-            }
+            },
         },
     },
 ];

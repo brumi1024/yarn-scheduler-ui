@@ -26,7 +26,7 @@ class AppStateModel extends EventEmitter {
     getSelectedPartition() {
         return this._selectedPartition;
     }
-    
+
     /**
      * Gets the currently selected node label (alias for partition)
      * @returns {string} Currently selected node label
@@ -127,9 +127,9 @@ class AppStateModel extends EventEmitter {
         if (!globalConfig || !globalConfig.has) {
             return true; // Default to legacy mode if no config
         }
-        
+
         const legacyModeValue = globalConfig.get('yarn.scheduler.capacity.legacy-queue-mode.enabled');
-        
+
         // Default to true if not set, only false if explicitly set to 'false'
         return legacyModeValue !== 'false';
     }
