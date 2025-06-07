@@ -38,12 +38,23 @@ class QueueValidator {
         // Categorize all queues by their capacity mode
         for (const queue of allQueues) {
             const mode = this._getEffectiveCapacityMode(queue);
-            if (mode === CAPACITY_MODES.PERCENTAGE) {
+            switch (mode) {
+            case CAPACITY_MODES.PERCENTAGE: {
                 queuesByMode.percentage.push(queue.path);
-            } else if (mode === CAPACITY_MODES.WEIGHT) {
+            
+            break;
+            }
+            case CAPACITY_MODES.WEIGHT: {
                 queuesByMode.weight.push(queue.path);
-            } else if (mode === CAPACITY_MODES.ABSOLUTE) {
+            
+            break;
+            }
+            case CAPACITY_MODES.ABSOLUTE: {
                 queuesByMode.absolute.push(queue.path);
+            
+            break;
+            }
+            // No default
             }
         }
 
@@ -54,7 +65,7 @@ class QueueValidator {
         // Check for absolute mode mixing with other modes anywhere in hierarchy
         if (hasAbsolute && (hasPercentage || hasWeight)) {
             // Concise message for batch controls
-            let message = `Mixed capacity modes in hierarchy (absolute + ${hasPercentage ? 'percentage' : 'weight'})`;
+            const message = `Mixed capacity modes in hierarchy (absolute + ${hasPercentage ? 'percentage' : 'weight'})`;
 
             // Detailed message for preview changes window
             let detailedMessage = `❌ Absolute mode cannot be mixed with other modes anywhere in the hierarchy:\n\n`;
@@ -111,7 +122,7 @@ class QueueValidator {
         }
     }
 
-    _validateNode(node, errors, queueNames, parentPath = '', isLegacyMode = true) {
+    _validateNode(node, errors, queueNames, _parentPath, isLegacyMode = true) {
         if (!node) return;
 
         const fullPath = node.path || 'root';
@@ -181,7 +192,7 @@ class QueueValidator {
                         };
 
                         // Concise message for batch controls
-                        let message = `Mixed capacity modes under "${fullPath}" (percentage + weight)`;
+                        const message = `Mixed capacity modes under "${fullPath}" (percentage + weight)`;
 
                         // Detailed message for preview changes window
                         let detailedMessage = `❌ Mixed percentage and weight modes detected under "${fullPath}":\n\n`;
@@ -259,11 +270,13 @@ class QueueValidator {
     }
 
     _calculateCapacitySum(children) {
-        return children.reduce((sum, child) => {
+        let sum = 0;
+        for (const child of children) {
             const capacity = this._getCapacityValue(child);
-            if (!capacity || capacity.endsWith('w') || capacity.startsWith('[')) return sum;
-            return sum + (Number.parseFloat(capacity) || 0);
-        }, 0);
+            if (!capacity || capacity.endsWith('w') || capacity.startsWith('[')) continue;
+            sum += Number.parseFloat(capacity) || 0;
+        }
+        return sum;
     }
 
     _validatePercentageCapacitySum(percentageChildren, fullPath, errors) {

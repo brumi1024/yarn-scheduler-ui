@@ -57,16 +57,18 @@ class BaseModalView extends EventEmitter {
      * Hides the modal.
      * @param {Object} [reason = { Canceled: true }] - An object indicating why the modal was hidden
      */
-    hide(reason = { Canceled: true }) {
+    hide(reason) {
+        const defaultReason = { Canceled: true };
+        const actualReason = reason || defaultReason;
         if (!this.modalEl) return;
 
         // Clean up any tooltips in the modal
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.cleanupTooltipsInContainer(this.modalEl);
         }
 
         this.modalEl.classList.remove('show');
-        this._emit('modalHidden', { modalId: this.modalId, reason });
+        this._emit('modalHidden', { modalId: this.modalId, reason: actualReason });
     }
 
     /**
@@ -75,7 +77,7 @@ class BaseModalView extends EventEmitter {
      * @param {Object} [data] - Data needed to render the modal's content.
      * @protected
      */
-    _renderContent(data) {
+    _renderContent() {
         // Example: if (this.formContainer) DomUtils.empty(this.formContainer);
         //          this.formContainer.innerHTML = this._buildHtml(data);
         //          this._bindFormEvents(); // if form has interactive elements
@@ -88,7 +90,7 @@ class BaseModalView extends EventEmitter {
      * @returns {string}
      * @protected
      */
-    _buildHtml(data) {
+    _buildHtml() {
         return '<p>Modal content not implemented.</p>';
     }
 

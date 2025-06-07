@@ -1007,10 +1007,12 @@ body {
     margin-top: 4px;
 }
 
-.validation-message.error {
+.validation-message.error,
+.validation-message.text-danger {
     color: #dc3545;
     font-size: 12px;
     margin-top: 4px;
+    line-height: 1.4;
 }
 
 /* Warning indicator for preview button when validation errors exist */

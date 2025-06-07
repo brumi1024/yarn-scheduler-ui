@@ -97,14 +97,15 @@ class BatchControlsView extends EventEmitter {
      * @param {Object} pendingCounts - { added: number, modified: number, deleted: number }
      * @param {Array<Object>} validationErrors - Array of error objects (e.g., { message: string })
      */
-    render(pendingCounts = { added: 0, modified: 0, deleted: 0 }, validationErrors = []) {
-        const totalChanges = pendingCounts.added + pendingCounts.modified + pendingCounts.deleted;
+    render(pendingCounts, validationErrors = []) {
+        const counts = pendingCounts || { added: 0, modified: 0, deleted: 0 };
+        const totalChanges = counts.added + counts.modified + counts.deleted;
 
         if (totalChanges > 0) {
             const infoTextParts = [];
-            if (pendingCounts.added > 0) infoTextParts.push(`${pendingCounts.added} added`);
-            if (pendingCounts.modified > 0) infoTextParts.push(`${pendingCounts.modified} modified`);
-            if (pendingCounts.deleted > 0) infoTextParts.push(`${pendingCounts.deleted} deleted`);
+            if (counts.added > 0) infoTextParts.push(`${counts.added} added`);
+            if (counts.modified > 0) infoTextParts.push(`${counts.modified} modified`);
+            if (counts.deleted > 0) infoTextParts.push(`${counts.deleted} deleted`);
             this.batchInfoEl.textContent = infoTextParts.length > 0 ? infoTextParts.join(', ') : 'No changes staged';
 
             if (validationErrors.length === 0) {
@@ -142,19 +143,25 @@ class BatchControlsView extends EventEmitter {
 
         // Convert specific error types to readable format
         switch (errorType) {
-            case 'MIXED_PERCENTAGE_WEIGHT_LEGACY':
+            case 'MIXED_PERCENTAGE_WEIGHT_LEGACY': {
                 return 'mixed capacity modes (percentage/weight)';
-            case 'ABSOLUTE_MODE_MIXING_LEGACY':
+            }
+            case 'ABSOLUTE_MODE_MIXING_LEGACY': {
                 return 'mixed capacity modes (absolute with others)';
-            case 'CAPACITY_SUM_ERROR':
+            }
+            case 'CAPACITY_SUM_ERROR': {
                 return 'capacity sum not 100%';
-            case 'INVALID_QUEUE_NAME':
+            }
+            case 'INVALID_QUEUE_NAME': {
                 return 'invalid queue name';
-            case 'INVALID_QUEUE_STATE':
+            }
+            case 'INVALID_QUEUE_STATE': {
                 return 'invalid queue state';
-            default:
+            }
+            default: {
                 // Generic fallback: convert SNAKE_CASE to readable format
-                return errorType.toLowerCase().replace(/_/g, ' ');
+                return errorType.toLowerCase().replaceAll('_', ' ');
+            }
         }
     }
 

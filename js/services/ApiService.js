@@ -72,7 +72,7 @@ class ApiService {
             if (isJsonExpected) {
                 try {
                     data = JSON.parse(responseText);
-                } catch (parseError) {
+                } catch {
                     if (
                         requestOptions.method === 'PUT' &&
                         responseText.toLowerCase().includes('successfully applied')
@@ -199,27 +199,26 @@ class ApiService {
         }
 
         for (const item of addQueues) {
-            xmlParts.push(`  <add-queue>`);
-            xmlParts.push(`    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`);
+            const addParts = [`  <add-queue>`, `    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`];
             if (item.params && Object.keys(item.params).length > 0) {
-                xmlParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
+                addParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
             }
-            xmlParts.push(`  </add-queue>`);
+            addParts.push(`  </add-queue>`);
+            xmlParts.push(...addParts);
         }
 
         for (const item of updateQueues) {
-            xmlParts.push(`  <update-queue>`);
-            xmlParts.push(`    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`);
+            const updateParts = [`  <update-queue>`, `    <queue-name>${DomUtils.escapeXml(item.queueName)}</queue-name>`];
             if (item.params && Object.keys(item.params).length > 0) {
-                xmlParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
+                updateParts.push(`    <params>\n${buildParametersXML(item.params)}\n    </params>`);
             }
-            xmlParts.push(`  </update-queue>`);
+            updateParts.push(`  </update-queue>`);
+            xmlParts.push(...updateParts);
         }
 
         if (Object.keys(globalUpdates).length > 0) {
             // Global updates params are expected to be { 'full.yarn.key': 'value' }
-            xmlParts.push(`  <global-updates>`);
-            xmlParts.push(buildParametersXML(globalUpdates), `  </global-updates>`);
+            xmlParts.push(`  <global-updates>`, buildParametersXML(globalUpdates), `  </global-updates>`);
         }
 
         xmlParts.push('</sched-conf>');

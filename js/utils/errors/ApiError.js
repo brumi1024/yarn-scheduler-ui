@@ -29,33 +29,45 @@ class ApiError extends YarnSchedulerError {
         }
 
         switch (this.statusCode) {
-            case 400:
+            case 400: {
                 return `Invalid request: ${this.message}`;
-            case 401:
+            }
+            case 401: {
                 return 'Authentication required. Please check your credentials.';
-            case 403:
+            }
+            case 403: {
                 return 'Permission denied. You do not have access to perform this operation.';
-            case 404:
+            }
+            case 404: {
                 return 'The requested resource was not found.';
-            case 408:
+            }
+            case 408: {
                 return 'Request timed out. Please try again.';
-            case 429:
+            }
+            case 429: {
                 return 'Too many requests. Please wait a moment before trying again.';
-            case 500:
+            }
+            case 500: {
                 return 'Server error occurred. Please try again later.';
-            case 502:
+            }
+            case 502: {
                 return 'Bad gateway. The server is temporarily unavailable.';
-            case 503:
+            }
+            case 503: {
                 return 'Service unavailable. Please try again later.';
-            case 504:
+            }
+            case 504: {
                 return 'Gateway timeout. The server took too long to respond.';
-            case 0:
+            }
+            case 0: {
                 return 'Network error. Please check your connection and try again.';
-            default:
+            }
+            default: {
                 if (this.statusCode >= 500) {
                     return 'Server error occurred. Please try again later.';
                 }
                 return `Request failed: ${this.message}`;
+            }
         }
     }
 
@@ -108,7 +120,7 @@ class ApiError extends YarnSchedulerError {
         }
     }
 
-    static _getYarnErrorUserMessage(message, code) {
+    static _getYarnErrorUserMessage(message) {
         if (message.toLowerCase().includes('capacity')) {
             return 'Queue capacity configuration is invalid. Please check that child queue capacities sum to 100%.';
         }

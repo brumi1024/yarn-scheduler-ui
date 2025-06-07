@@ -2,14 +2,14 @@
  * Centralized service for providing default values for YARN scheduler properties.
  * Single source of truth for all default values, using metadata as the primary source.
  */
-class DefaultValueProvider {
+const DefaultValueProvider = {
     /**
      * Gets the default value for a property from metadata
      * @param {string} queuePath - Queue path (for queue properties)
      * @param {string} simpleKey - Simple property key
      * @returns {string|null} Default value or null if not found
      */
-    static getPropertyDefault(queuePath, simpleKey) {
+    getPropertyDefault(queuePath, simpleKey) {
         if (queuePath) {
             const fullKey = PropertyKeyMapper.toFullKey(queuePath, simpleKey);
             if (fullKey) {
@@ -33,25 +33,25 @@ class DefaultValueProvider {
         }
 
         return null;
-    }
+    },
 
     /**
      * Gets default capacity value for a given mode
      * @param {string} mode - Capacity mode constant
      * @returns {string} Default capacity value
      */
-    static getCapacityDefault(mode) {
+    getCapacityDefault(mode) {
         return CapacityValueParser.getDefaultValue(mode);
-    }
+    },
 
     /**
      * Gets default maximum capacity value
      * @param {string} mode - Capacity mode (for context)
      * @returns {string} Default max capacity value
      */
-    static getMaxCapacityDefault(mode) {
+    getMaxCapacityDefault(mode) {
         return CapacityValueParser.getDefaultMaxValue(mode);
-    }
+    },
 
     /**
      * Checks if a value is using the default
@@ -60,7 +60,7 @@ class DefaultValueProvider {
      * @param {string} currentValue - Current value to check
      * @returns {boolean} True if using default value
      */
-    static isUsingDefault(queuePath, simpleKey, currentValue) {
+    isUsingDefault(queuePath, simpleKey, currentValue) {
         const defaultValue = this.getPropertyDefault(queuePath, simpleKey);
 
         if (simpleKey === 'capacity') {
@@ -74,14 +74,13 @@ class DefaultValueProvider {
         }
 
         return currentValue === defaultValue || (!currentValue && defaultValue);
-    }
+    },
 
     /**
      * Gets all defaults for a queue path as a Map
-     * @param {string} queuePath - Queue path
      * @returns {Map<string, string>} Map of simple key to default value
      */
-    static getQueueDefaults(queuePath) {
+    getQueueDefaults() {
         const defaults = new Map();
 
         for (const category of QUEUE_CONFIG_METADATA) {
@@ -94,5 +93,5 @@ class DefaultValueProvider {
         }
 
         return defaults;
-    }
-}
+    },
+};

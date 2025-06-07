@@ -2,14 +2,14 @@
  * Simplified form generation utility for modal views.
  * Reduces boilerplate and provides consistent form structure.
  */
-class FormGenerator {
+const FormGenerator = {
     /**
      * Generates form HTML from field configuration.
      * @param {Array} fields - Array of field configuration objects
      * @param {Object} options - Additional form options
      * @returns {string} Generated HTML string
      */
-    static generateForm(fields, options = {}) {
+    generateForm(fields, options = {}) {
         const formId = options.formId || 'generated-form';
         const submitOnEnter = options.submitOnEnter !== false;
 
@@ -26,14 +26,14 @@ class FormGenerator {
         }
 
         return html;
-    }
+    },
 
     /**
      * Generates a single form field.
      * @param {Object} field - Field configuration
      * @returns {string} Field HTML
      */
-    static _generateField(field) {
+    _generateField(field) {
         const {
             type = 'text',
             id,
@@ -82,7 +82,7 @@ class FormGenerator {
 
         html += '</div>';
         return html;
-    }
+    },
 
     /**
      * Generates input element based on type.
@@ -90,7 +90,7 @@ class FormGenerator {
      * @param {Object} config - Input configuration
      * @returns {string} Input HTML
      */
-    static _generateInput(type, config) {
+    _generateInput(type, config) {
         const { id, name, value, placeholder, required, readonly, options, attributes } = config;
 
         let attrs = `id="${id}" name="${name}"`;
@@ -103,7 +103,7 @@ class FormGenerator {
         }
 
         switch (type) {
-            case 'select':
+            case 'select': {
                 let selectHtml = `<select class="form-input" ${attrs}>`;
                 for (const option of options) {
                     const optValue = option.value || option;
@@ -113,15 +113,18 @@ class FormGenerator {
                 }
                 selectHtml += '</select>';
                 return selectHtml;
+            }
 
-            case 'textarea':
+            case 'textarea': {
                 return `<textarea class="form-input" ${attrs} placeholder="${DomUtils.escapeXml(placeholder)}">${DomUtils.escapeXml(value)}</textarea>`;
+            }
 
-            case 'checkbox':
+            case 'checkbox': {
                 const checked = value ? ' checked' : '';
                 return `<input type="checkbox" class="form-input" ${attrs}${checked}>`;
+            }
 
-            case 'radio':
+            case 'radio': {
                 let radioHtml = '';
                 for (const option of options) {
                     const optValue = option.value || option;
@@ -132,18 +135,20 @@ class FormGenerator {
                     </label>`;
                 }
                 return radioHtml;
+            }
 
-            default:
+            default: {
                 return `<input type="${type}" class="form-input" ${attrs} value="${DomUtils.escapeXml(value)}" placeholder="${DomUtils.escapeXml(placeholder)}">`;
+            }
         }
-    }
+    },
 
     /**
      * Generates action buttons.
      * @param {Array} actions - Array of action button configurations
      * @returns {string} Actions HTML
      */
-    static _generateActions(actions) {
+    _generateActions(actions) {
         let html = '<div class="modal-actions">';
 
         for (const action of actions) {
@@ -159,7 +164,7 @@ class FormGenerator {
 
         html += '</div>';
         return html;
-    }
+    },
 
     /**
      * Creates a field configuration for queue properties.
@@ -169,7 +174,7 @@ class FormGenerator {
      * @param {string} fullYarnKey - Full YARN property key
      * @returns {Object} Field configuration
      */
-    static createQueuePropertyField(simpleKey, meta, currentValue, fullYarnKey) {
+    createQueuePropertyField(simpleKey, meta, currentValue, fullYarnKey) {
         const field = {
             id: `edit-queue-${simpleKey.replaceAll(/[^\w-]/g, '-')}`,
             name: simpleKey,
@@ -185,22 +190,34 @@ class FormGenerator {
         };
 
         // Set input type based on metadata
-        if (meta.type === 'enum') {
+        switch (meta.type) {
+        case 'enum': {
             field.type = 'select';
             field.options = meta.options || [];
-        } else if (meta.type === 'boolean') {
+        
+        break;
+        }
+        case 'boolean': {
             field.type = 'select';
             field.options = [
                 { value: 'true', label: 'true' },
                 { value: 'false', label: 'false' },
             ];
-        } else if (meta.type === 'number' || meta.type === 'percentage') {
+        
+        break;
+        }
+        case 'number': 
+        case 'percentage': {
             field.type = 'number';
             if (meta.min !== undefined) field.attributes.min = meta.min;
             if (meta.max !== undefined) field.attributes.max = meta.max;
             if (meta.step !== undefined) field.attributes.step = meta.step;
-        } else {
+        
+        break;
+        }
+        default: {
             field.type = 'text';
+        }
         }
 
         // Special handling for capacity fields
@@ -214,14 +231,14 @@ class FormGenerator {
         }
 
         return field;
-    }
+    },
 
     /**
      * Creates standard form actions for modals.
      * @param {Object} options - Action options
      * @returns {Array} Array of action configurations
      */
-    static createStandardActions(options = {}) {
+    createStandardActions(options = {}) {
         const {
             cancelText = 'Cancel',
             cancelId = 'cancel-btn',
@@ -242,7 +259,7 @@ class FormGenerator {
                 cssClass: submitClass,
             },
         ];
-    }
+    },
 
     /**
      * Extracts form data from generated form.
@@ -250,7 +267,7 @@ class FormGenerator {
      * @param {Object} options - Extraction options
      * @returns {Object} Form data
      */
-    static extractFormData(form, options = {}) {
+    extractFormData(form, options = {}) {
         const { includeOriginal = false, validateChanges = true } = options;
         const data = {};
         const changes = {};
@@ -277,5 +294,5 @@ class FormGenerator {
         }
 
         return includeOriginal ? { data, changes } : data;
-    }
-}
+    },
+};

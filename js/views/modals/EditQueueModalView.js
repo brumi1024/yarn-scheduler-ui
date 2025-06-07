@@ -46,9 +46,9 @@ class EditQueueModalView extends BaseModalView {
             <button class="btn btn-secondary" id="cancel-edit-queue-btn">Cancel</button>
             <button class="btn btn-primary" id="submit-edit-queue-btn">Stage Changes</button>
         `;
-        modalContent.appendChild(modalActions);
+        modalContent.append(modalActions);
 
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
 
@@ -312,7 +312,7 @@ class EditQueueModalView extends BaseModalView {
         // Hidden input to store the actual value
         const anlMeta =
             NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
-        const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+        const _anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
 
         html += `<input type="hidden" 
                         class="form-input" 
@@ -346,7 +346,7 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
-        const { enabled, hasChildren, v1Enabled, v2Enabled } = autoCreationData;
+        const { hasChildren, v1Enabled, v2Enabled } = autoCreationData;
         const cannotEnableLegacy = isLegacyMode && hasChildren;
 
         // Determine which auto-creation mode should be used
@@ -413,14 +413,14 @@ class EditQueueModalView extends BaseModalView {
             `;
 
             // Show v2 non-template properties (excluding the main toggle)
-            for (const [propKey, propData] of Object.entries(nonTemplateProperties)) {
+            for (const [_propKey, propData] of Object.entries(nonTemplateProperties)) {
                 if (propData.meta.v2Property && propData.meta.key !== 'auto-queue-creation-v2.enabled') {
                     templateHtml += this._buildPropertyInputHtml(
                         propData.meta.key,
                         `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${propData.meta.key}`,
                         propData.meta,
                         propData.value,
-                        `auto-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                        `auto-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                         propData.isDefault
                     );
                 }
@@ -435,14 +435,14 @@ class EditQueueModalView extends BaseModalView {
                 <p class="form-help" style="margin-bottom: 15px;">These properties will be applied to automatically created child queues:</p>
             `;
 
-            for (const [propKey, propData] of Object.entries(v1TemplateProperties)) {
+            for (const [_propKey, propData] of Object.entries(v1TemplateProperties)) {
                 const fullKey = `leaf-queue-template.${propData.meta.key}`;
                 templateHtml += this._buildPropertyInputHtml(
                     fullKey,
                     `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
                     propData.meta,
                     propData.value,
-                    `v1-template-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    `v1-template-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                     propData.isDefault
                 );
             }
@@ -505,14 +505,14 @@ class EditQueueModalView extends BaseModalView {
         `;
 
         if (scopeProps && Object.keys(scopeProps).length > 0) {
-            for (const [propKey, propData] of Object.entries(scopeProps)) {
-                const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
+            for (const [_propKey, propData] of Object.entries(scopeProps)) {
+                const fullKey = `auto-queue-creation-v2.${scopeKey.replaceAll(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
                 contentHtml += this._buildPropertyInputHtml(
                     fullKey,
                     `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
                     propData.meta,
                     propData.value,
-                    `v2-${scopeKey}-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    `v2-${scopeKey}-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                     propData.isDefault
                 );
             }
@@ -564,15 +564,16 @@ class EditQueueModalView extends BaseModalView {
         const dataAttributes = `data-original-value="${DomUtils.escapeXml(currentValue)}" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}" data-full-key="${DomUtils.escapeXml(fullYarnPropertyName)}"`;
 
         let html = `<div class="form-group property-edit-item" data-simple-key="${DomUtils.escapeXml(simpleOrPartialKey)}">
-                        <div class="property-details-column">
-                            <div class="property-display-name">
-                                <span>${DomUtils.escapeXml(meta.displayName)}</span>
-                                <span class="info-icon" title="${DomUtils.escapeXml(meta.description || '')}">ⓘ</span>
-                                ${isDefault ? '<span class="default-indicator" title="This field is using the default value">Default</span>' : ''}
+                        <div class="property-row">
+                            <div class="property-details-column">
+                                <div class="property-display-name">
+                                    <span>${DomUtils.escapeXml(meta.displayName)}</span>
+                                    <span class="info-icon" title="${DomUtils.escapeXml(meta.description || '')}">ⓘ</span>
+                                    ${isDefault ? '<span class="default-indicator" title="This field is using the default value">Default</span>' : ''}
+                                </div>
+                                <div class="property-yarn-name">${DomUtils.escapeXml(fullYarnPropertyName)}</div>
                             </div>
-                            <div class="property-yarn-name">${DomUtils.escapeXml(fullYarnPropertyName)}</div>
-                        </div>
-                        <div class="property-value-column">`;
+                            <div class="property-value-column">`;
 
         // Generate the appropriate input based on metadata
         if (meta.type === 'enum') {
@@ -613,7 +614,8 @@ class EditQueueModalView extends BaseModalView {
             html += `<input class="form-input" id="${inputId}" ${attributes}>`;
         }
 
-        html += `        </div>
+        html += `            </div>
+                        </div>
                     </div>`;
         return html;
     }
@@ -629,6 +631,7 @@ class EditQueueModalView extends BaseModalView {
         this._bindCustomPropertiesEvents(form);
         this._bindAutoCreationEvents(form);
         this._bindNodeLabelTabEvents(form);
+        this._bindValidationClearingEvents(form);
     }
 
     /**
@@ -754,9 +757,13 @@ class EditQueueModalView extends BaseModalView {
      * @private
      */
     _validateAndCollectChanges(form, originalCapacityMode) {
-        // Clear any existing validation messages
+        // Clear any existing validation messages and error styling
         const validationElements = form.querySelectorAll('.validation-message');
         validationElements.forEach((el) => (el.textContent = ''));
+        
+        // Remove error styling from all inputs
+        const allInputs = form.querySelectorAll('.form-input');
+        allInputs.forEach((input) => input.classList.remove('invalid'));
 
         let isValid = true;
         const validationErrors = [];
@@ -806,7 +813,7 @@ class EditQueueModalView extends BaseModalView {
         }
 
         // Validate any other changed fields that need validation
-        const changedInputs = Array.from(form.querySelectorAll('.form-input')).filter(
+        const changedInputs = [...form.querySelectorAll('.form-input')].filter(
             (input) => input.value !== input.dataset.originalValue && input.dataset.simpleKey
         );
 
@@ -817,21 +824,19 @@ class EditQueueModalView extends BaseModalView {
             const value = input.value.trim();
 
             // Validate based on field type and metadata
-            if (simpleKey && value) {
-                // Add specific validation rules for other fields if needed
+            if (simpleKey && value && // Add specific validation rules for other fields if needed
                 // For now, just check for basic format issues
-                if (simpleKey.includes('capacity') && value) {
+                simpleKey.includes('capacity') && value) {
                     // Additional capacity field validation could go here
                 }
-            }
         }
 
         // Note: Legacy mode capacity conflicts are now only validated at the system level
         // This allows users to stage changes one-by-one and see validation errors in batch controls
 
         if (!isValid) {
-            // Show notification with summary of errors
-            this.controller.notificationView.showError(`Validation failed: ${validationErrors.join(', ')}`);
+            // Don't show global notification for field-level validation errors
+            // The errors are already shown below each field
             return null;
         }
 
@@ -846,16 +851,19 @@ class EditQueueModalView extends BaseModalView {
      * @private
      */
     _showValidationError(input, message) {
-        // Find or create validation message element
-        const inputContainer = input.closest('.property-edit-item') || input.closest('.form-group');
-        if (inputContainer) {
-            let validationEl = inputContainer.querySelector('.validation-message');
+        // Make the input field red
+        input.classList.add('invalid');
+        
+        // Find the property-value-column that contains the input
+        const valueColumn = input.closest('.property-value-column');
+        if (valueColumn) {
+            let validationEl = valueColumn.querySelector('.validation-message');
             if (!validationEl) {
                 validationEl = document.createElement('div');
-                validationEl.className = 'validation-message text-danger';
-                validationEl.style.fontSize = '0.875em';
-                validationEl.style.marginTop = '4px';
-                inputContainer.appendChild(validationEl);
+                validationEl.className = 'validation-message';
+                
+                // Insert the validation message at the end of the property-value-column
+                valueColumn.append(validationEl);
             }
             validationEl.textContent = message;
         }
@@ -1227,11 +1235,7 @@ class EditQueueModalView extends BaseModalView {
         // Update tab content
         const tabPanes = form.querySelectorAll('.node-label-tab-pane');
         for (const pane of tabPanes) {
-            if (pane.dataset.labelTabContent === targetLabel) {
-                pane.style.display = 'block';
-            } else {
-                pane.style.display = 'none';
-            }
+            pane.style.display = pane.dataset.labelTabContent === targetLabel ? 'block' : 'none';
         }
     }
 
@@ -1280,11 +1284,7 @@ class EditQueueModalView extends BaseModalView {
         // Update tab content
         const tabPanes = form.querySelectorAll('.template-tab-pane');
         for (const pane of tabPanes) {
-            if (pane.dataset.tabContent === targetTab) {
-                pane.style.display = 'block';
-            } else {
-                pane.style.display = 'none';
-            }
+            pane.style.display = pane.dataset.tabContent === targetTab ? 'block' : 'none';
         }
     }
 
@@ -1560,7 +1560,7 @@ class EditQueueModalView extends BaseModalView {
             <button class="btn btn-secondary" id="cancel-template-config-btn">Cancel</button>
             <button class="btn btn-primary" id="submit-template-config-btn">Stage Changes</button>
         `;
-        modalContent.appendChild(modalActions);
+        modalContent.append(modalActions);
 
         // Bind events for template-only mode
         this._bindTemplateOnlyEvents();
@@ -1576,7 +1576,7 @@ class EditQueueModalView extends BaseModalView {
         this._renderContent = originalRenderContent;
 
         // Upgrade tooltips
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
     }
@@ -1680,5 +1680,39 @@ class EditQueueModalView extends BaseModalView {
         }
 
         return stagedChanges;
+    }
+
+    /**
+     * Binds events to clear validation errors when users start typing
+     * @param {HTMLElement} form - The form element
+     * @private
+     */
+    _bindValidationClearingEvents(form) {
+        // Bind input events to all form inputs to clear validation errors on typing
+        const inputs = form.querySelectorAll('.form-input');
+        for (const input of inputs) {
+            const clearErrorHandler = () => {
+                // Remove error styling from this input
+                input.classList.remove('invalid');
+                
+                // Clear validation message for this input
+                const valueColumn = input.closest('.property-value-column');
+                if (valueColumn) {
+                    const validationEl = valueColumn.querySelector('.validation-message');
+                    if (validationEl) {
+                        validationEl.textContent = '';
+                    }
+                }
+            };
+
+            input.addEventListener('input', clearErrorHandler);
+            input.addEventListener('change', clearErrorHandler);
+            
+            // Store cleanup callback
+            this.eventCleanupCallbacks.push(() => {
+                input.removeEventListener('input', clearErrorHandler);
+                input.removeEventListener('change', clearErrorHandler);
+            });
+        }
     }
 }

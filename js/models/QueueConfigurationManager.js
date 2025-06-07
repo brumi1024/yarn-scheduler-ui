@@ -464,12 +464,23 @@ class QueueConfigurationManager {
      * Recursively collects change counts from nodes
      */
     _collectNodeChanges(node, summary) {
-        if (node.pendingOperation === 'add') {
+        switch (node.pendingOperation) {
+        case 'add': {
             summary.added++;
-        } else if (node.pendingOperation === 'update') {
+        
+        break;
+        }
+        case 'update': {
             summary.modified++;
-        } else if (node.pendingOperation === 'delete') {
+        
+        break;
+        }
+        case 'delete': {
             summary.deleted++;
+        
+        break;
+        }
+        // No default
         }
 
         for (const child of node.children.values()) {
@@ -505,7 +516,8 @@ class QueueConfigurationManager {
      * Recursively collects queue changes for API payload
      */
     _collectQueueChanges(node, payload) {
-        if (node.pendingOperation === 'add') {
+        switch (node.pendingOperation) {
+        case 'add': {
             const params = {};
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
@@ -517,7 +529,10 @@ class QueueConfigurationManager {
                 queueName: node.fullPath,
                 params: params,
             });
-        } else if (node.pendingOperation === 'update') {
+        
+        break;
+        }
+        case 'update': {
             const params = {};
             for (const [fullKey, value] of node.pendingProperties) {
                 const simpleKey = PropertyKeyMapper.toSimpleKey(fullKey);
@@ -529,8 +544,15 @@ class QueueConfigurationManager {
                 queueName: node.fullPath,
                 params: params,
             });
-        } else if (node.pendingOperation === 'delete') {
+        
+        break;
+        }
+        case 'delete': {
             payload.removeQueues.push(node.fullPath);
+        
+        break;
+        }
+        // No default
         }
 
         for (const child of node.children.values()) {
@@ -549,16 +571,14 @@ class QueueConfigurationManager {
             return String(value);
         }
 
-        if (
+        if ((
             simpleKey === 'capacity' ||
             simpleKey === 'maximum-capacity' ||
             simpleKey.endsWith('.capacity') ||
             simpleKey.endsWith('.maximum-capacity')
-        ) {
-            if (value.endsWith('%') && !value.startsWith('[')) {
+        ) && value.endsWith('%') && !value.startsWith('[')) {
                 return value.slice(0, -1);
             }
-        }
 
         return value;
     }

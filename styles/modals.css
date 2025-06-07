@@ -120,12 +120,32 @@
 
 .property-edit-item {
     display: flex;
-    justify-content: space-between;
-    align-items: flex-start; /* Align to top instead of center to prevent overflow */
+    flex-direction: column; /* Stack elements vertically to accommodate validation messages */
     margin-bottom: 12px; /* Space between property items */
     padding: 8px 0; /* Padding within the item */
     min-height: 40px; /* Ensure minimum height */
     /* border-bottom: 1px solid #f0f0f0; /* Optional: separator between items */
+}
+
+.property-edit-item .property-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start; /* Align to top instead of center to prevent overflow */
+    width: 100%;
+}
+
+/* Validation message styling for modal forms - matches form-help styling */
+.property-edit-item .validation-message {
+    color: #dc3545;
+    font-size: 0.75rem;
+    margin-top: 5px;
+    line-height: 1.4;
+    display: block;
+    align-self: flex-end; /* Align to the same side as the input */
+    width: 100%; /* Match the input width */
+    max-width: 300px; /* Match the input max-width */
+    min-width: 120px; /* Match the input min-width */
+    text-align: left; /* Align text to the left */
 }
 /* .property-edit-item:last-child {
   border-bottom: none;
@@ -208,7 +228,8 @@
 .property-value-column {
     flex: 0 0 45%; /* Adjust flex-basis for right column width */
     display: flex;
-    justify-content: flex-end; /* Align input to the right of this column */
+    flex-direction: column; /* Stack children vertically */
+    align-items: flex-end; /* Align input to the right of this column */
     min-width: 0; /* Allow content to shrink */
 }
 

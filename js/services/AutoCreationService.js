@@ -2,41 +2,41 @@
  * Service for handling auto queue creation configuration and validation.
  * Supports both v1 (legacy) and v2 (flexible) auto-creation modes.
  */
-class AutoCreationService {
+const AutoCreationService = {
     /**
      * Gets the v1 auto-creation property key for a queue using metadata
      * @param {string} queuePath - Queue path
      * @returns {string} Full property key
      */
-    static getV1EnabledKey(queuePath) {
+    getV1EnabledKey(queuePath) {
         for (const [placeholderKey, meta] of Object.entries(AUTO_CREATION_CONFIG_METADATA)) {
             if (meta.semanticRole === 'v1-enabled-key') {
                 return placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
             }
         }
         throw new Error('v1-enabled-key not found in AUTO_CREATION_CONFIG_METADATA');
-    }
+    },
 
     /**
      * Gets the v2 auto-creation property key for a queue using metadata
      * @param {string} queuePath - Queue path
      * @returns {string} Full property key
      */
-    static getV2EnabledKey(queuePath) {
+    getV2EnabledKey(queuePath) {
         for (const [placeholderKey, meta] of Object.entries(AUTO_CREATION_CONFIG_METADATA)) {
             if (meta.semanticRole === 'v2-enabled-key') {
                 return placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
             }
         }
         throw new Error('v2-enabled-key not found in AUTO_CREATION_CONFIG_METADATA');
-    }
+    },
     /**
      * Populates auto-creation data for modal display
      * @param {Object} dataForModal - Modal data object to populate
      * @param {string} queuePath - Queue path
      * @param {Map} baseProperties - Queue properties map
      */
-    static populateAutoCreationData(dataForModal, queuePath, baseProperties) {
+    populateAutoCreationData(dataForModal, queuePath, baseProperties) {
         // Check if auto-creation is enabled (check both v1 and v2) using metadata-driven keys
         const v1AutoCreateKey = AutoCreationService.getV1EnabledKey(queuePath);
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
@@ -72,7 +72,7 @@ class AutoCreationService {
             leafTemplate: {},
         };
         for (const category of QUEUE_CONFIG_METADATA) {
-            for (const [placeholderKey, meta] of Object.entries(category.properties)) {
+            for (const [_placeholderKey, meta] of Object.entries(category.properties)) {
                 if (meta.availableInTemplate) {
                     const v1FullKey = `yarn.scheduler.capacity.${queuePath}.leaf-queue-template.${meta.key}`;
                     const v1Value = baseProperties.get(v1FullKey);
@@ -91,7 +91,7 @@ class AutoCreationService {
                         const v2IsDefault = v2Value === undefined;
 
                         const scopeKey = scope.includes('-')
-                            ? scope.replace(/-([a-z])/g, (match, letter) => letter.toUpperCase())
+                            ? scope.replaceAll(/-([a-z])/g, (match, letter) => letter.toUpperCase())
                             : scope;
 
                         if (!dataForModal.autoCreationData.v2TemplateProperties[scopeKey]) {
@@ -107,7 +107,7 @@ class AutoCreationService {
                 }
             }
         }
-    }
+    },
 
     /**
      * Checks if auto-creation is enabled for a queue
@@ -115,7 +115,7 @@ class AutoCreationService {
      * @param {Map} properties - Queue properties
      * @returns {Object} Object with enabled, v1Enabled, v2Enabled flags
      */
-    static getAutoCreationStatus(queuePath, properties) {
+    getAutoCreationStatus(queuePath, properties) {
         const v1AutoCreateKey = AutoCreationService.getV1EnabledKey(queuePath);
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
         const v1AutoCreateValue = properties.get(v1AutoCreateKey);
@@ -129,7 +129,7 @@ class AutoCreationService {
             v1Enabled: v1Enabled,
             v2Enabled: v2Enabled,
         };
-    }
+    },
 
     /**
      * Generates UI labels for auto-creation status
@@ -137,7 +137,7 @@ class AutoCreationService {
      * @param {Map} effectiveProperties - Queue properties
      * @returns {Array} Array of label objects for UI display
      */
-    static generateAutoCreationLabels(queuePath, effectiveProperties) {
+    generateAutoCreationLabels(queuePath, effectiveProperties) {
         const labels = [];
         const v1AutoCreateKey = AutoCreationService.getV1EnabledKey(queuePath);
         const v2AutoCreateKey = AutoCreationService.getV2EnabledKey(queuePath);
@@ -163,5 +163,5 @@ class AutoCreationService {
         }
 
         return labels;
-    }
-}
+    },
+};

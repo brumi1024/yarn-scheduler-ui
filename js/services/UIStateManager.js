@@ -116,16 +116,15 @@ class UIStateManager {
     }
 
     /**
-     * Hides a modal and calls destroy to clean up event listeners
+     * Hides a modal but does not destroy it (to allow reuse)
      * @param {string} modalName - Name of the modal in views
      */
     hideModal(modalName) {
         const modal = this.views[modalName];
         if (modal) {
             modal.hide();
-            if (modal.destroy) {
-                modal.destroy();
-            }
+            // Don't call destroy() - modals need to be reusable
+            // destroy() is only called when the app is shutting down
         }
     }
 
@@ -321,7 +320,7 @@ class UIStateManager {
                         const controller =
                             this.views.queueTreeView.controller ||
                             this.views.editQueueModalView?.controller ||
-                            window.mainController; // Fallback to global
+                            globalThis.mainController; // Fallback to global
 
                         if (controller && controller.viewDataFormatterService && controller.appStateModel) {
                             validationErrors = schedulerConfigModel.performStatefulValidation(
@@ -502,7 +501,7 @@ class UIStateManager {
      * Adjusts queue layout for bulk operations bar
      * @private
      */
-    _adjustQueueLayoutForBulkBar(showingBulkBar) {
+    _adjustQueueLayoutForBulkBar() {
         // With the new smooth animation system, the bulk toolbar handles its own spacing
         // No need to manually adjust margins which can cause scrollbar issues
 
