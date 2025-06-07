@@ -14,6 +14,7 @@ class ChangePreview {
         };
 
         this.changes = [];
+        this.validationErrors = [];
         this.rendered = false;
     }
 
@@ -23,6 +24,17 @@ class ChangePreview {
      */
     setChanges(changes) {
         this.changes = changes || [];
+        if (this.rendered) {
+            this.render();
+        }
+    }
+
+    /**
+     * Sets the validation errors to display.
+     * @param {Array} validationErrors - Array of validation error objects
+     */
+    setValidationErrors(validationErrors) {
+        this.validationErrors = validationErrors || [];
         if (this.rendered) {
             this.render();
         }
@@ -69,19 +81,26 @@ class ChangePreview {
         DomUtils.empty(this.container);
         this.rendered = true;
 
-        if (this.changes.length === 0) {
+        if (this.changes.length === 0 && this.validationErrors.length === 0) {
             this.container.innerHTML = '<p class="no-changes">No changes to preview</p>';
             return;
         }
 
         let html = '<div class="change-preview">';
 
-        if (this.options.showSummary) {
-            html += this._generateSummary();
+        // Show validation errors first if any exist
+        if (this.validationErrors.length > 0) {
+            html += this._generateValidationErrorsSection();
         }
 
-        if (this.options.showDiff) {
-            html += this._generateDiff();
+        if (this.changes.length > 0) {
+            if (this.options.showSummary) {
+                html += this._generateSummary();
+            }
+
+            if (this.options.showDiff) {
+                html += this._generateDiff();
+            }
         }
 
         html += '</div>';
@@ -122,6 +141,41 @@ class ChangePreview {
             html += Array.from(summary.queueChanges)
                 .map((queue) => `<code>${DomUtils.escapeXml(queue)}</code>`)
                 .join(', ');
+            html += '</div>';
+        }
+
+        html += '</div>';
+        return html;
+    }
+
+    /**
+     * Generates the validation errors section HTML.
+     * @returns {string} HTML for validation errors section
+     * @private
+     */
+    _generateValidationErrorsSection() {
+        if (this.validationErrors.length === 0) return '';
+
+        let html = '<div class="validation-errors-section">';
+        html += '<h4>⚠️ Validation Errors</h4>';
+
+        for (const error of this.validationErrors) {
+            html += '<div class="validation-error-item">';
+
+            // Error type and queue
+            html += `<div class="error-header">`;
+            html += `${error.type ? error.type.replace(/_/g, ' ') : 'Validation Error'}`;
+            if (error.queuePath) {
+                html += ` (${DomUtils.escapeXml(error.queuePath)})`;
+            }
+            html += '</div>';
+
+            // Detailed message (use detailedMessage if available, fallback to message)
+            const messageToShow = error.detailedMessage || error.message || 'No details available';
+            html += `<div class="error-message">`;
+            html += DomUtils.escapeXml(messageToShow);
+            html += '</div>';
+
             html += '</div>';
         }
 

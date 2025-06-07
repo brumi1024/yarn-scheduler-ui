@@ -39,7 +39,7 @@ class MainController {
             infoQueueModalView: this.infoQueueModalView,
         });
 
-        this.changeManager = new ChangeManager(this.schedulerConfigModel, ValidationService);
+        this.changeManager = new ChangeManager(this.schedulerConfigModel);
 
         this.diagnosticService = new DiagnosticService(
             this.appStateModel,
@@ -85,19 +85,27 @@ class MainController {
             this.controlsView.subscribe('partitionSelected', (partition) =>
                 this.appStateModel.setSelectedPartition(partition)
             );
-            this.controlsView.subscribe('addQueueClicked', () => this.handleOpenAddQueueModal());
+            this.controlsView.subscribe('addQueueClicked', () =>
+                this.uiStateManager.handleOpenAddQueueModal(this.schedulerConfigModel)
+            );
             this.controlsView.subscribe('searchTermChanged', (term) => this.appStateModel.setCurrentSearchTerm(term));
             this.controlsView.subscribe('sortCriteriaChanged', (criteria) =>
                 this.appStateModel.setCurrentSortCriteria(criteria)
             );
-            this.controlsView.subscribe('refreshDataClicked', () => this.handleRefreshData());
-            this.controlsView.subscribe('bulkOperationsClicked', () => this.handleBulkOperationsToggle());
+            this.controlsView.subscribe('refreshDataClicked', () =>
+                this.uiStateManager.handleRefreshData(() => this.handleRefreshData())
+            );
+            this.controlsView.subscribe('bulkOperationsClicked', () =>
+                this.uiStateManager.handleBulkOperationsToggle(this.bulkOperationsView)
+            );
         }
 
         if (this.batchControlsView) {
             this.batchControlsView.subscribe('applyAllClicked', () => this.handleApplyAllChanges());
             this.batchControlsView.subscribe('discardAllClicked', () => this.handleDiscardAllChanges());
-            this.batchControlsView.subscribe('previewChangesClicked', () => this.handlePreviewChanges());
+            this.batchControlsView.subscribe('previewChangesClicked', () =>
+                this.uiStateManager.handlePreviewChanges(this.schedulerConfigModel)
+            );
         }
 
         if (this.globalConfigView) {
@@ -112,13 +120,47 @@ class MainController {
         }
 
         if (this.queueTreeView) {
-            this.queueTreeView.subscribe('editQueueClicked', (queuePath) => this.handleOpenEditQueueModal(queuePath));
-            this.queueTreeView.subscribe('infoQueueClicked', (queuePath) => this.handleOpenInfoQueueModal(queuePath));
+            this.queueTreeView.subscribe('editQueueClicked', (queuePath) =>
+                this.uiStateManager.handleEditQueueRequest(
+                    queuePath,
+                    {
+                        schedulerConfigModel: this.schedulerConfigModel,
+                        schedulerInfoModel: this.schedulerInfoModel,
+                        appStateModel: this.appStateModel,
+                        nodesInfoModel: this.nodesInfoModel,
+                    },
+                    this.viewDataFormatterService,
+                    this.notificationView
+                )
+            );
+            this.queueTreeView.subscribe('infoQueueClicked', (queuePath) =>
+                this.uiStateManager.handleInfoQueueRequest(
+                    queuePath,
+                    {
+                        schedulerConfigModel: this.schedulerConfigModel,
+                        schedulerInfoModel: this.schedulerInfoModel,
+                        appStateModel: this.appStateModel,
+                        nodesInfoModel: this.nodesInfoModel,
+                    },
+                    this.viewDataFormatterService,
+                    this.notificationView
+                )
+            );
             this.queueTreeView.subscribe('templateConfigClicked', (queuePath) =>
-                this.handleOpenTemplateConfigModal(queuePath)
+                this.uiStateManager.handleTemplateConfigRequest(
+                    queuePath,
+                    {
+                        schedulerConfigModel: this.schedulerConfigModel,
+                        schedulerInfoModel: this.schedulerInfoModel,
+                        appStateModel: this.appStateModel,
+                        nodesInfoModel: this.nodesInfoModel,
+                    },
+                    this.viewDataFormatterService,
+                    this.notificationView
+                )
             );
             this.queueTreeView.subscribe('addChildQueueClicked', (parentPath) =>
-                this.handleOpenAddQueueModal(parentPath)
+                this.uiStateManager.handleOpenAddQueueModal(this.schedulerConfigModel, parentPath)
             );
             this.queueTreeView.subscribe('deleteQueueClicked', (queuePath) => this.handleDeleteQueue(queuePath));
             this.queueTreeView.subscribe('undoDeleteQueueClicked', (queuePath) =>
@@ -136,7 +178,7 @@ class MainController {
             this.handleAccessibleLabelsListChangeInEditModal(eventData)
         );
         this.editQueueModalView.subscribe('modalHidden', (reason) => {
-            if (reason.modalId === 'edit-modal') this.currentEditQueuePath = null;
+            if (reason.modalId === 'edit-modal') this.uiStateManager.clearEditQueuePath();
         });
 
         this.infoQueueModalView.subscribe('modalHidden', () => {});
@@ -302,16 +344,8 @@ class MainController {
         );
     }
 
-    handleOpenAddQueueModal(parentPath = 'root') {
-        this.uiStateManager.showAddQueueModal(this.schedulerConfigModel, parentPath);
-    }
-
     handleAddNewQueue(formData) {
-        const result = this.changeManager.stageAddQueue(formData, this.viewDataFormatterService, {
-            schedulerConfigModel: this.schedulerConfigModel,
-            schedulerInfoModel: this.schedulerInfoModel,
-            appStateModel: this.appStateModel,
-        });
+        const result = this.changeManager.stageAddQueue(formData);
         if (result.isSuccess()) {
             this.uiStateManager.hideModal('addQueueModalView');
         }
@@ -346,53 +380,18 @@ class MainController {
 
     handleStageQueueChanges(queuePath, formData) {
         const selectedPartition = this.appStateModel.getSelectedNodeLabel();
-        const result = this.changeManager.stageUpdateQueue(
-            queuePath,
-            formData,
-            this.viewDataFormatterService,
-            selectedPartition
-        );
+        const result = this.changeManager.stageUpdateQueue(queuePath, formData, selectedPartition);
         if (result.isSuccess()) {
             this.uiStateManager.hideModal('editQueueModalView');
         }
     }
 
     handleDeleteQueue(queuePath) {
-        const result = this.changeManager.stageDeleteQueue(queuePath, this.viewDataFormatterService, {
-            schedulerConfigModel: this.schedulerConfigModel,
-            schedulerInfoModel: this.schedulerInfoModel,
-            appStateModel: this.appStateModel,
-        });
+        this.changeManager.stageDeleteQueue(queuePath);
     }
 
     handleUndoDeleteQueue(queuePath) {
-        const result = this.changeManager.undoDeleteQueue(queuePath);
-    }
-
-    handleOpenInfoQueueModal(queuePath) {
-        this.uiStateManager.showInfoQueueModal(
-            queuePath,
-            {
-                schedulerConfigModel: this.schedulerConfigModel,
-                schedulerInfoModel: this.schedulerInfoModel,
-                appStateModel: this.appStateModel,
-            },
-            this.viewDataFormatterService,
-            this.notificationView
-        );
-    }
-
-    handleOpenTemplateConfigModal(queuePath) {
-        this.uiStateManager.showTemplateConfigModal(
-            queuePath,
-            {
-                schedulerConfigModel: this.schedulerConfigModel,
-                schedulerInfoModel: this.schedulerInfoModel,
-                appStateModel: this.appStateModel,
-            },
-            this.viewDataFormatterService,
-            this.notificationView
-        );
+        this.changeManager.undoDeleteQueue(queuePath);
     }
 
     handleCancelGlobalConfigEdit() {
@@ -433,15 +432,6 @@ class MainController {
     }
 
     /**
-     * Handles toggling the bulk operations view.
-     */
-    handleBulkOperationsToggle() {
-        if (this.bulkOperationsView) {
-            this.bulkOperationsView.toggle();
-        }
-    }
-
-    /**
      * Handles select all queues request from bulk operations.
      */
     handleSelectAllQueues() {
@@ -459,12 +449,5 @@ class MainController {
      */
     handleBulkOperationsVisibilityChange(isVisible) {
         this.uiStateManager.handleBulkOperationsVisibilityChange(isVisible, this.bulkOperationsView);
-    }
-
-    /**
-     * Handles showing the change preview modal.
-     */
-    handlePreviewChanges() {
-        this.uiStateManager.showChangePreview(this.schedulerConfigModel);
     }
 }

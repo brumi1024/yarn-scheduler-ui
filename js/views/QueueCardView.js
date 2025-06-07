@@ -107,7 +107,13 @@ const QueueCardView = {
             'data-queue-path': formattedQueue.path,
             'data-level': formattedQueue.level,
         });
-        if (formattedQueue.statusClass) card.classList.add(formattedQueue.statusClass);
+        if (formattedQueue.statusClass) {
+            // Handle multiple classes separated by spaces
+            const classes = formattedQueue.statusClass.split(' ').filter((cls) => cls.trim());
+            for (const cls of classes) {
+                card.classList.add(cls.trim());
+            }
+        }
 
         const titleBar = DomUtils.createElement('div', 'queue-header');
         const nameElement = DomUtils.createElement('span', 'queue-name');

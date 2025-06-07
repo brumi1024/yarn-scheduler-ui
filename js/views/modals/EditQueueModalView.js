@@ -724,13 +724,13 @@ class EditQueueModalView extends BaseModalView {
         const submitButton = DomUtils.qs('#submit-edit-queue-btn', this.modalEl);
         if (submitButton) {
             const submitHandler = () => {
-                const collectedData = this._collectFormData(form, originalEffectiveCapacityMode);
-                if (Object.keys(collectedData.params).length > 0) {
-                    this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: collectedData });
-                } else {
+                const validatedData = this._validateAndCollectChanges(form, originalEffectiveCapacityMode);
+                if (validatedData && Object.keys(validatedData.params).length > 0) {
+                    this._emit('submitEditQueue', { queuePath: this.currentQueuePath, formData: validatedData });
+                } else if (validatedData && Object.keys(validatedData.params).length === 0) {
                     this.controller.notificationView.showInfo('No changes detected to stage.');
-                    // Keep modal open - don't close when no changes
                 }
+                // If validatedData is null, validation errors are already shown
             };
             submitButton.addEventListener('click', submitHandler);
             this.eventCleanupCallbacks.push(() => {
@@ -743,6 +743,121 @@ class EditQueueModalView extends BaseModalView {
             const cancelHandler = () => this.hide({ Canceled: true });
             cancelButton.addEventListener('click', cancelHandler);
             this.eventCleanupCallbacks.push(() => cancelButton.removeEventListener('click', cancelHandler));
+        }
+    }
+
+    /**
+     * Validates form data and collects changes if valid
+     * @param {HTMLFormElement} form - The form element
+     * @param {string} originalCapacityMode - The original capacity mode
+     * @returns {Object|null} Collected form data if valid, null if validation fails
+     * @private
+     */
+    _validateAndCollectChanges(form, originalCapacityMode) {
+        // Clear any existing validation messages
+        const validationElements = form.querySelectorAll('.validation-message');
+        validationElements.forEach((el) => (el.textContent = ''));
+
+        let isValid = true;
+        const validationErrors = [];
+
+        // Validate capacity-related fields that have changed
+        const capacityInput = form.querySelector('[data-simple-key="capacity"] .form-input');
+        const maxCapacityInput = form.querySelector('[data-simple-key="maximum-capacity"] .form-input');
+        const capacityModeSelect = DomUtils.qs('#edit-capacity-mode', form);
+
+        if (capacityInput && capacityInput.value !== capacityInput.dataset.originalValue) {
+            const capacityMode = capacityModeSelect ? capacityModeSelect.value : originalCapacityMode;
+            const capacityValidation = ValidationService.parseAndValidateCapacityValue(
+                capacityInput.value.trim(),
+                capacityMode
+            );
+
+            if (capacityValidation.errors || capacityValidation.error) {
+                const errorMsg = (capacityValidation.errors || [capacityValidation.error]).join(' ');
+                this._showValidationError(capacityInput, errorMsg);
+                validationErrors.push(`Capacity: ${errorMsg}`);
+                isValid = false;
+            }
+        }
+
+        if (maxCapacityInput && maxCapacityInput.value !== maxCapacityInput.dataset.originalValue) {
+            // Determine max capacity mode based on value format
+            let maxCapMode = CAPACITY_MODES.PERCENTAGE;
+            const maxCapValue = maxCapacityInput.value.trim();
+            if (this.viewDataFormatterService._isVectorString(maxCapValue)) {
+                maxCapMode = CAPACITY_MODES.ABSOLUTE;
+            } else if (maxCapValue.endsWith('w')) {
+                maxCapMode = CAPACITY_MODES.WEIGHT;
+            }
+
+            const maxCapacityValidation = ValidationService.parseAndValidateCapacityValue(
+                maxCapValue,
+                maxCapMode,
+                true // Allow empty
+            );
+
+            if (maxCapacityValidation.errors || maxCapacityValidation.error) {
+                const errorMsg = (maxCapacityValidation.errors || [maxCapacityValidation.error]).join(' ');
+                this._showValidationError(maxCapacityInput, errorMsg);
+                validationErrors.push(`Maximum Capacity: ${errorMsg}`);
+                isValid = false;
+            }
+        }
+
+        // Validate any other changed fields that need validation
+        const changedInputs = Array.from(form.querySelectorAll('.form-input')).filter(
+            (input) => input.value !== input.dataset.originalValue && input.dataset.simpleKey
+        );
+
+        for (const input of changedInputs) {
+            if (input === capacityInput || input === maxCapacityInput) continue; // Already validated
+
+            const simpleKey = input.dataset.simpleKey;
+            const value = input.value.trim();
+
+            // Validate based on field type and metadata
+            if (simpleKey && value) {
+                // Add specific validation rules for other fields if needed
+                // For now, just check for basic format issues
+                if (simpleKey.includes('capacity') && value) {
+                    // Additional capacity field validation could go here
+                }
+            }
+        }
+
+        // Note: Legacy mode capacity conflicts are now only validated at the system level
+        // This allows users to stage changes one-by-one and see validation errors in batch controls
+
+        if (!isValid) {
+            // Show notification with summary of errors
+            this.controller.notificationView.showError(`Validation failed: ${validationErrors.join(', ')}`);
+            return null;
+        }
+
+        // If validation passes, collect the form data
+        return this._collectFormData(form, originalCapacityMode);
+    }
+
+    /**
+     * Shows validation error for a specific input
+     * @param {HTMLInputElement} input - The input element
+     * @param {string} message - Error message
+     * @private
+     */
+    _showValidationError(input, message) {
+        // Find or create validation message element
+        const inputContainer = input.closest('.property-edit-item') || input.closest('.form-group');
+        if (inputContainer) {
+            let validationEl = inputContainer.querySelector('.validation-message');
+            if (!validationEl) {
+                validationEl = document.createElement('div');
+                validationEl.className = 'validation-message text-danger';
+                validationEl.style.fontSize = '0.875em';
+                validationEl.style.marginTop = '4px';
+                inputContainer.appendChild(validationEl);
+            }
+            validationEl.textContent = message;
         }
     }
 

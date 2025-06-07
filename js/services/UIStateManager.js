@@ -205,6 +205,78 @@ class UIStateManager {
         this.currentEditQueuePath = null;
     }
 
+    // UI Event Coordination Methods (Phase 2.1)
+
+    /**
+     * Handles request to open add queue modal
+     * @param {SchedulerConfigModel} schedulerConfigModel - For getting available queues
+     * @param {string} parentPath - Preselected parent path
+     */
+    handleOpenAddQueueModal(schedulerConfigModel, parentPath = 'root') {
+        this.showAddQueueModal(schedulerConfigModel, parentPath);
+    }
+
+    /**
+     * Handles request to edit a queue
+     * @param {string} queuePath - Queue to edit
+     * @param {Object} dataModels - Data models for modal
+     * @param {ViewDataFormatterService} viewDataFormatterService - For formatting data
+     * @param {NotificationView} notificationView - For error notifications
+     */
+    handleEditQueueRequest(queuePath, dataModels, viewDataFormatterService, notificationView) {
+        this.showEditQueueModal(queuePath, dataModels, viewDataFormatterService, notificationView);
+    }
+
+    /**
+     * Handles request to show queue info
+     * @param {string} queuePath - Queue to show info for
+     * @param {Object} dataModels - Data models for modal
+     * @param {ViewDataFormatterService} viewDataFormatterService - For formatting data
+     * @param {NotificationView} notificationView - For error notifications
+     */
+    handleInfoQueueRequest(queuePath, dataModels, viewDataFormatterService, notificationView) {
+        this.showInfoQueueModal(queuePath, dataModels, viewDataFormatterService, notificationView);
+    }
+
+    /**
+     * Handles request to show template configuration
+     * @param {string} queuePath - Queue to show template config for
+     * @param {Object} dataModels - Data models for modal
+     * @param {ViewDataFormatterService} viewDataFormatterService - For formatting data
+     * @param {NotificationView} notificationView - For error notifications
+     */
+    handleTemplateConfigRequest(queuePath, dataModels, viewDataFormatterService, notificationView) {
+        this.showTemplateConfigModal(queuePath, dataModels, viewDataFormatterService, notificationView);
+    }
+
+    /**
+     * Handles bulk operations toggle request
+     * @param {BulkOperationsView} bulkOperationsView - Bulk operations view
+     */
+    handleBulkOperationsToggle(bulkOperationsView) {
+        if (bulkOperationsView) {
+            bulkOperationsView.toggle();
+        }
+    }
+
+    /**
+     * Handles refresh data request
+     * @param {Function} refreshCallback - Callback to refresh data
+     */
+    handleRefreshData(refreshCallback) {
+        if (refreshCallback) {
+            refreshCallback();
+        }
+    }
+
+    /**
+     * Handles preview changes request
+     * @param {SchedulerConfigModel} schedulerConfigModel - For getting changes
+     */
+    handlePreviewChanges(schedulerConfigModel) {
+        this.showChangePreview(schedulerConfigModel);
+    }
+
     /**
      * Gets the current edit queue path
      * @returns {string|null}
@@ -235,7 +307,35 @@ class UIStateManager {
     showChangePreview(schedulerConfigModel) {
         if (this.views.batchControlsView) {
             const changeLog = schedulerConfigModel.getChangeLog();
-            this.views.batchControlsView.updateChangePreview(changeLog);
+
+            // Get validation errors to show in preview
+            let validationErrors = [];
+            if (schedulerConfigModel && this.views.queueTreeView) {
+                const summary = changeLog.getSummary();
+                const totalChanges = summary.added + summary.modified + summary.deleted + summary.global;
+
+                if (totalChanges > 0) {
+                    // Find the ViewDataFormatterService and AppStateModel from the controller
+                    // This is a bit indirect, but needed for validation
+                    try {
+                        const controller =
+                            this.views.queueTreeView.controller ||
+                            this.views.editQueueModalView?.controller ||
+                            window.mainController; // Fallback to global
+
+                        if (controller && controller.viewDataFormatterService && controller.appStateModel) {
+                            validationErrors = schedulerConfigModel.performStatefulValidation(
+                                controller.viewDataFormatterService,
+                                controller.appStateModel
+                            );
+                        }
+                    } catch (error) {
+                        console.warn('Could not get validation errors for preview:', error);
+                    }
+                }
+            }
+
+            this.views.batchControlsView.updateChangePreview(changeLog, validationErrors);
             this.views.batchControlsView.showPreviewModal();
         }
     }
@@ -285,10 +385,27 @@ class UIStateManager {
             return;
         }
 
+        // Get validation errors to mark affected queues in the tree
+        let validationErrors = [];
+        if (dataModels.schedulerConfigModel && viewDataFormatterService && dataModels.appStateModel) {
+            const changeLog = dataModels.schedulerConfigModel.getChangeLog();
+            const summary = changeLog.getSummary();
+            const totalChanges = summary.added + summary.modified + summary.deleted + summary.global;
+
+            if (totalChanges > 0) {
+                validationErrors = dataModels.schedulerConfigModel.performStatefulValidation(
+                    viewDataFormatterService,
+                    dataModels.appStateModel
+                );
+            }
+        }
+
         const formattedHierarchy = viewDataFormatterService.formatQueueHierarchyForView(
             dataModels.schedulerConfigModel,
             dataModels.schedulerInfoModel,
-            dataModels.appStateModel
+            dataModels.appStateModel,
+            false, // forValidationOnly
+            validationErrors
         );
 
         if (this.views.queueTreeView) {
