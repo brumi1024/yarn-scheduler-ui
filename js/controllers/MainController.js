@@ -315,8 +315,9 @@ class MainController {
                 this.renderGlobalConfigView();
                 break;
             }
-            default:
+            default: {
                 break;
+            }
         }
     }
 
@@ -407,7 +408,7 @@ class MainController {
         this.appStateModel.setLoading(true, 'Validating changes...');
         await new Promise((resolve) => setTimeout(resolve, 50));
 
-        const success = await this.configurationOrchestrator.applyPendingChanges(
+        await this.configurationOrchestrator.applyPendingChanges(
             this.viewDataFormatterService,
             this.appStateModel
         );

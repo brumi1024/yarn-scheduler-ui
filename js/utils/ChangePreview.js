@@ -138,7 +138,7 @@ class ChangePreview {
         if (summary.queueChanges.size > 0) {
             html += '<div class="affected-queues">';
             html += '<strong>Affected Queues:</strong> ';
-            html += Array.from(summary.queueChanges)
+            html += [...summary.queueChanges]
                 .map((queue) => `<code>${DomUtils.escapeXml(queue)}</code>`)
                 .join(', ');
             html += '</div>';
@@ -164,7 +164,7 @@ class ChangePreview {
 
             // Error type and queue
             html += `<div class="error-header">`;
-            html += `${error.type ? error.type.replace(/_/g, ' ') : 'Validation Error'}`;
+            html += `${error.type ? error.type.replaceAll('_', ' ') : 'Validation Error'}`;
             if (error.queuePath) {
                 html += ` (${DomUtils.escapeXml(error.queuePath)})`;
             }
@@ -207,7 +207,7 @@ class ChangePreview {
             html += `<h5 class="change-section-header collapsible-header">`;
             html += `<span class="toggle-icon">▼</span>`;
             html += `🌐 Global Scheduler Configuration`;
-            html += `<span class="change-count">(${groupedChanges.global.length} change${groupedChanges.global.length !== 1 ? 's' : ''})</span>`;
+            html += `<span class="change-count">(${groupedChanges.global.length} change${groupedChanges.global.length === 1 ? '' : 's'})</span>`;
             html += `</h5>`;
 
             html += `<div class="global-change-content collapsible-content">`;
@@ -247,7 +247,7 @@ class ChangePreview {
                 html += `<h6 class="queue-section-header collapsible-header" data-queue="${DomUtils.escapeXml(queuePath)}">`;
                 html += `<span class="toggle-icon">▼</span>`;
                 html += `<span class="queue-name"><code>${DomUtils.escapeXml(queuePath)}</code></span>`;
-                html += `<span class="change-count">(${queueChanges.length} change${queueChanges.length !== 1 ? 's' : ''})</span>`;
+                html += `<span class="change-count">(${queueChanges.length} change${queueChanges.length === 1 ? '' : 's'})</span>`;
                 html += `</h6>`;
 
                 html += `<div class="queue-change-content collapsible-content">`;
@@ -352,15 +352,18 @@ class ChangePreview {
 
         for (const change of this.changes) {
             switch (change.operation) {
-                case OPERATION_TYPES.ADD:
+                case OPERATION_TYPES.ADD: {
                     summary.additions++;
                     break;
-                case OPERATION_TYPES.UPDATE:
+                }
+                case OPERATION_TYPES.UPDATE: {
                     summary.modifications++;
                     break;
-                case OPERATION_TYPES.DELETE:
+                }
+                case OPERATION_TYPES.DELETE: {
                     summary.deletions++;
                     break;
+                }
             }
 
             if (change.queuePath) {
@@ -430,7 +433,7 @@ class ChangePreview {
         }
 
         // Remove the prefix: yarn.scheduler.capacity.root.TEST_C.TEST_AAA.test -> TEST_C.TEST_AAA.test
-        const withoutPrefix = propertyKey.substring('yarn.scheduler.capacity.root.'.length);
+        const withoutPrefix = propertyKey.slice('yarn.scheduler.capacity.root.'.length);
         const parts = withoutPrefix.split('.');
 
         if (parts.length === 0) {
@@ -459,16 +462,16 @@ class ChangePreview {
     _getQueueHierarchy() {
         try {
             // Try to access global app instance and scheduler configuration
-            if (typeof window !== 'undefined' && window.app && window.app.schedulerConfigModel) {
-                const config = window.app.schedulerConfigModel.getSchedulerConfig();
+            if (globalThis.window !== undefined && globalThis.app && globalThis.app.schedulerConfigModel) {
+                const config = globalThis.app.schedulerConfigModel.getSchedulerConfig();
                 if (config && config.scheduler && config.scheduler['schedulerInfo']) {
                     return config.scheduler['schedulerInfo'];
                 }
             }
 
             // Alternative access through global CONFIG if available
-            if (typeof window !== 'undefined' && window.schedulerConfig) {
-                return window.schedulerConfig;
+            if (globalThis.window !== undefined && globalThis.schedulerConfig) {
+                return globalThis.schedulerConfig;
             }
 
             return null;
@@ -529,8 +532,7 @@ class ChangePreview {
         let currentQueue = queueData;
 
         // Navigate through the hierarchy following the path
-        for (let i = 0; i < pathParts.length; i++) {
-            const queueName = pathParts[i];
+        for (const [i, queueName] of pathParts.entries()) {
 
             if (i === 0 && queueName === 'root') {
                 // Start at root, continue to next part
@@ -658,14 +660,18 @@ class ChangePreview {
      */
     _getTypeDisplayName(type) {
         switch (type) {
-            case OPERATION_TYPES.ADD:
+            case OPERATION_TYPES.ADD: {
                 return 'Additions';
-            case OPERATION_TYPES.UPDATE:
+            }
+            case OPERATION_TYPES.UPDATE: {
                 return 'Modifications';
-            case OPERATION_TYPES.DELETE:
+            }
+            case OPERATION_TYPES.DELETE: {
                 return 'Deletions';
-            default:
+            }
+            default: {
                 return 'Other Changes';
+            }
         }
     }
 
@@ -676,14 +682,18 @@ class ChangePreview {
      */
     _getOperationIcon(operation) {
         switch (operation) {
-            case OPERATION_TYPES.ADD:
+            case OPERATION_TYPES.ADD: {
                 return '+';
-            case OPERATION_TYPES.UPDATE:
+            }
+            case OPERATION_TYPES.UPDATE: {
                 return '~';
-            case OPERATION_TYPES.DELETE:
+            }
+            case OPERATION_TYPES.DELETE: {
                 return '-';
-            default:
+            }
+            default: {
                 return '•';
+            }
         }
     }
 

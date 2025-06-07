@@ -111,14 +111,14 @@ class GlobalConfigView extends EventEmitter {
         this._updateSaveButtonState();
     }
 
-    _buildInputControl(inputId, metadata, currentValue, propertyName, originalValue = undefined) {
+    _buildInputControl(inputId, metadata, currentValue, propertyName, originalValue) {
         // Escape for HTML attributes
         const escapedCurrentValue = DomUtils.escapeXml(String(currentValue));
         const escapedPropertyName = DomUtils.escapeXml(propertyName);
         const escapedDefaultValue = DomUtils.escapeXml(String(metadata.defaultValue || ''));
 
         // Use the original value from the server, or undefined if not set
-        const escapedOriginalValue = originalValue !== undefined ? DomUtils.escapeXml(String(originalValue)) : '';
+        const escapedOriginalValue = originalValue === undefined ? '' : DomUtils.escapeXml(String(originalValue));
         const wasConfigured = originalValue !== undefined;
 
         const dataAttributes = `data-original-value="${escapedOriginalValue}" data-prop-name="${escapedPropertyName}" data-was-configured="${wasConfigured}" data-default-value="${escapedDefaultValue}"`;

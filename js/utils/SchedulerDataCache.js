@@ -8,7 +8,7 @@ class SchedulerDataCache {
         this.resourceMetadataCache = new Map();
         this.queuePathCache = new Map();
         this.lastFetchTime = 0;
-        this.CACHE_TTL = 30000; // 30 seconds
+        this.CACHE_TTL = 30_000; // 30 seconds
     }
 
     /**

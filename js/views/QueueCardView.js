@@ -202,14 +202,14 @@ const QueueCardView = {
                 const labelElement = DomUtils.createElement('span', label.cssClass, null, label.text);
 
                 // Apply unified tooltip if content exists
-                if (label.tooltip && window.TooltipHelper) {
+                if (label.tooltip && globalThis.TooltipHelper) {
                     TooltipHelper.attachTooltip(labelElement, label.tooltip, {
                         position: 'top',
                         delay: 500,
                     });
                 }
 
-                labelArea.appendChild(labelElement);
+                labelArea.append(labelElement);
             }
         } else {
             labelArea.style.minHeight = '24px'; // Keep space consistent

@@ -132,6 +132,7 @@ export default [
                 },
             ],
             'unicorn/no-array-for-each': 'off', // Allow forEach for better readability in some cases
+            'unicorn/no-object-as-default-parameter': 'off', // Allow object defaults for cleaner APIs
             'unicorn/filename-case': [
                 'error',
                 {

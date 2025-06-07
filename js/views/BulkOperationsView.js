@@ -199,7 +199,7 @@ class BulkOperationsView extends EventEmitter {
         const value = Number(this.toolbar.querySelector('#bulk-capacity-value').value);
         const operation = this.toolbar.querySelector('#bulk-capacity-operation').value;
 
-        if (isNaN(value) || value < 0) {
+        if (Number.isNaN(value) || value < 0) {
             alert('Please enter a valid capacity value');
             return;
         }
@@ -265,7 +265,7 @@ class BulkOperationsView extends EventEmitter {
         if (header) {
             const checkboxContainer = document.createElement('div');
             checkboxContainer.className = 'bulk-select-container';
-            checkboxContainer.appendChild(checkbox);
+            checkboxContainer.append(checkbox);
             header.insertBefore(checkboxContainer, header.firstChild);
         }
     }

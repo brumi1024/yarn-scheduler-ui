@@ -35,8 +35,8 @@ class TabView extends EventEmitter {
     }
 
     _bindHamburgerMenu() {
-        const hamburgerButton = document.getElementById('hamburger-button');
-        const hamburgerMenu = document.getElementById('hamburger-menu');
+        const hamburgerButton = document.querySelector('#hamburger-button');
+        const hamburgerMenu = document.querySelector('#hamburger-menu');
 
         if (!hamburgerButton || !hamburgerMenu) return;
 

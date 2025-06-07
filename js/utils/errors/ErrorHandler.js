@@ -6,7 +6,7 @@ class ErrorHandler {
         this.retryConfig = {
             maxRetries: 3,
             baseDelay: 1000,
-            maxDelay: 10000,
+            maxDelay: 10_000,
             backoffFactor: 2,
         };
     }

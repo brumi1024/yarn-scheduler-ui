@@ -321,7 +321,7 @@ class UIStateManager {
                         const controller =
                             this.views.queueTreeView.controller ||
                             this.views.editQueueModalView?.controller ||
-                            window.mainController; // Fallback to global
+                            globalThis.mainController; // Fallback to global
 
                         if (controller && controller.viewDataFormatterService && controller.appStateModel) {
                             validationErrors = schedulerConfigModel.performStatefulValidation(
@@ -502,7 +502,7 @@ class UIStateManager {
      * Adjusts queue layout for bulk operations bar
      * @private
      */
-    _adjustQueueLayoutForBulkBar(showingBulkBar) {
+    _adjustQueueLayoutForBulkBar(_showingBulkBar) {
         // With the new smooth animation system, the bulk toolbar handles its own spacing
         // No need to manually adjust margins which can cause scrollbar issues
 

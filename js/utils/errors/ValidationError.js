@@ -23,31 +23,42 @@ class ValidationError extends YarnSchedulerError {
 
         switch (this.code) {
             // Queue validation errors
-            case 'CAPACITY_SUM_ERROR':
+            case 'CAPACITY_SUM_ERROR': {
                 return `Queue capacity configuration is invalid: ${this.message}`;
-            case 'INVALID_QUEUE_NAME':
+            }
+            case 'INVALID_QUEUE_NAME': {
                 return `Queue name is invalid: ${this.message}`;
-            case 'INVALID_NODE_LABEL':
+            }
+            case 'INVALID_NODE_LABEL': {
                 return `Node label configuration is invalid: ${this.message}`;
-            case 'INVALID_QUEUE_STATE':
+            }
+            case 'INVALID_QUEUE_STATE': {
                 return `Queue state is invalid: ${this.message}`;
-            case 'DELETE_QUEUE_WITH_RUNNING_APPS':
+            }
+            case 'DELETE_QUEUE_WITH_RUNNING_APPS': {
                 return `Cannot delete queue: ${this.message}`;
+            }
 
             // Configuration format errors (merged from ConfigurationError)
-            case 'INVALID_CONFIG_FORMAT':
+            case 'INVALID_CONFIG_FORMAT': {
                 return 'Configuration file format is invalid. Please check the XML structure.';
-            case 'MISSING_REQUIRED_CONFIG':
+            }
+            case 'MISSING_REQUIRED_CONFIG': {
                 return `Required configuration is missing: ${this.configKey || 'unknown'}`;
-            case 'INVALID_CONFIG_VALUE':
+            }
+            case 'INVALID_CONFIG_VALUE': {
                 return `Invalid configuration value for ${this.configKey || 'property'}: ${this.message}`;
-            case 'CONFLICTING_CONFIG':
+            }
+            case 'CONFLICTING_CONFIG': {
                 return `Configuration conflict detected: ${this.message}`;
-            case 'UNSUPPORTED_CONFIG':
+            }
+            case 'UNSUPPORTED_CONFIG': {
                 return `Unsupported configuration option: ${this.configKey || 'unknown'}`;
+            }
 
-            default:
+            default: {
                 return `Configuration validation failed: ${this.message}`;
+            }
         }
     }
 

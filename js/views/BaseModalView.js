@@ -61,7 +61,7 @@ class BaseModalView extends EventEmitter {
         if (!this.modalEl) return;
 
         // Clean up any tooltips in the modal
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.cleanupTooltipsInContainer(this.modalEl);
         }
 
@@ -75,7 +75,7 @@ class BaseModalView extends EventEmitter {
      * @param {Object} [data] - Data needed to render the modal's content.
      * @protected
      */
-    _renderContent(data) {
+    _renderContent() {
         // Example: if (this.formContainer) DomUtils.empty(this.formContainer);
         //          this.formContainer.innerHTML = this._buildHtml(data);
         //          this._bindFormEvents(); // if form has interactive elements
@@ -88,7 +88,7 @@ class BaseModalView extends EventEmitter {
      * @returns {string}
      * @protected
      */
-    _buildHtml(data) {
+    _buildHtml() {
         return '<p>Modal content not implemented.</p>';
     }
 

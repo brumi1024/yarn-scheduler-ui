@@ -2,14 +2,14 @@
  * Service for handling node label configuration and partition-specific properties.
  * Manages accessible node labels and label-specific capacity configurations.
  */
-class NodeLabelService {
+const NodeLabelService = {
     /**
      * Gets available node labels merged from both scheduler info and cluster nodes
      * @param {SchedulerInfoModel} schedulerInfo - Scheduler info model
      * @param {NodesInfoModel} [nodesInfo] - Cluster nodes info model (optional)
      * @returns {Array<string>} Array of available node labels
      */
-    static getAvailableNodeLabels(schedulerInfo, nodesInfo = null) {
+    getAvailableNodeLabels(schedulerInfo, nodesInfo = null) {
         const allLabels = new Set();
 
         if (schedulerInfo && schedulerInfo.nodeLabels) {
@@ -30,14 +30,14 @@ class NodeLabelService {
 
         // TODO: Simple merge logic - YARN validates, no complex UI validation needed
         return [...allLabels].sort();
-    }
+    },
 
     /**
      * Formats comma-separated labels string into array of label objects for UI
      * @param {string} labelsString - Comma-separated labels (e.g., "gpu,ssd")
      * @returns {Array<{name: string, enabled: boolean}>} Array of label objects
      */
-    static formatLabelsForChips(labelsString) {
+    formatLabelsForChips(labelsString) {
         if (!labelsString || labelsString === '*') {
             return [];
         }
@@ -51,7 +51,7 @@ class NodeLabelService {
             .map((label) => label.trim())
             .filter((label) => label && label !== '*')
             .map((label) => ({ name: label, enabled: true }));
-    }
+    },
 
     /**
      * Updates accessible labels based on chip toggle
@@ -60,12 +60,12 @@ class NodeLabelService {
      * @param {boolean} isEnabled - New enabled state
      * @returns {string} Updated comma-separated labels string
      */
-    static updateAccessibleLabels(currentChips, toggledLabel, isEnabled) {
+    updateAccessibleLabels(currentChips, toggledLabel, isEnabled) {
         const updatedChips = currentChips.map((chip) =>
             chip.name === toggledLabel ? { ...chip, enabled: isEnabled } : chip
         );
 
-        if (!currentChips.find((chip) => chip.name === toggledLabel)) {
+        if (!currentChips.some((chip) => chip.name === toggledLabel)) {
             updatedChips.push({ name: toggledLabel, enabled: isEnabled });
         }
 
@@ -76,7 +76,7 @@ class NodeLabelService {
         }
 
         return enabledLabels.join(',');
-    }
+    },
 
     /**
      * Gets the capacity property key for a specific label
@@ -84,10 +84,10 @@ class NodeLabelService {
      * @param {string} label - Node label
      * @returns {string} Full property key for label capacity
      */
-    static getLabelCapacityKey(queuePath, label) {
+    getLabelCapacityKey(queuePath, label) {
         const baseKey = this.getAccessibleNodeLabelsKey(queuePath);
         return `${baseKey}.${label}.capacity`;
-    }
+    },
 
     /**
      * Gets the maximum capacity property key for a specific label
@@ -95,52 +95,52 @@ class NodeLabelService {
      * @param {string} label - Node label
      * @returns {string} Full property key for label maximum capacity
      */
-    static getLabelMaxCapacityKey(queuePath, label) {
+    getLabelMaxCapacityKey(queuePath, label) {
         const baseKey = this.getAccessibleNodeLabelsKey(queuePath);
         return `${baseKey}.${label}.maximum-capacity`;
-    }
+    },
 
     /**
      * Checks if a queue is root (which has access to all labels)
      * @param {string} queuePath - Queue path
      * @returns {boolean} True if root queue
      */
-    static isRootQueue(queuePath) {
+    isRootQueue(queuePath) {
         return queuePath === 'root';
-    }
+    },
     /**
      * Gets the accessible node labels property key for a queue using metadata
      * @param {string} queuePath - Queue path
      * @returns {string} Full property key
      */
-    static getAccessibleNodeLabelsKey(queuePath) {
+    getAccessibleNodeLabelsKey(queuePath) {
         for (const [placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA)) {
             if (meta.semanticRole === 'accessible-node-labels-key') {
                 return placeholderKey.replace(Q_PATH_PLACEHOLDER, queuePath);
             }
         }
         throw new Error('accessible-node-labels-key not found in NODE_LABEL_CONFIG_METADATA');
-    }
+    },
 
     /**
      * Gets the default value for accessible node labels from metadata
      * @returns {string} Default value
      */
-    static getAccessibleNodeLabelsDefault() {
-        for (const [placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA)) {
+    getAccessibleNodeLabelsDefault() {
+        for (const [_placeholderKey, meta] of Object.entries(NODE_LABEL_CONFIG_METADATA)) {
             if (meta.semanticRole === 'accessible-node-labels-key') {
                 return meta.defaultValue || '*';
             }
         }
         return '*';
-    }
+    },
     /**
      * Populates node label data for modal display
      * @param {Object} dataForModal - Modal data object to populate
      * @param {string} queuePath - Queue path
      * @param {Map} baseProperties - Queue properties map
      */
-    static populateNodeLabelData(dataForModal, queuePath, baseProperties) {
+    populateNodeLabelData(dataForModal, queuePath, baseProperties) {
         const anlKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
         const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
 
@@ -153,7 +153,7 @@ class NodeLabelService {
                 dataForModal.nodeLabelData.labelSpecificParams[simpleSubKey] = String(value);
             }
         }
-    }
+    },
 
     /**
      * Gets accessible node labels string for a queue
@@ -161,12 +161,12 @@ class NodeLabelService {
      * @param {Map} properties - Queue properties
      * @returns {string} Accessible node labels string
      */
-    static getAccessibleNodeLabels(queuePath, properties) {
+    getAccessibleNodeLabels(queuePath, properties) {
         const anlKey = NodeLabelService.getAccessibleNodeLabelsKey(queuePath);
         const anlDefault = NodeLabelService.getAccessibleNodeLabelsDefault();
 
         return String(properties.get(anlKey) || anlDefault);
-    }
+    },
 
     /**
      * Applies partition-specific display capacity for formatted queue nodes
@@ -176,7 +176,7 @@ class NodeLabelService {
      * @param {string} selectedPartition - Selected partition
      * @param {ViewDataFormatterService} viewDataFormatterService - Service for formatting display values
      */
-    static applyPartitionSpecificDisplayCapacity(
+    applyPartitionSpecificDisplayCapacity(
         formattedNode,
         queuePath,
         effectiveProperties,
@@ -207,14 +207,14 @@ class NodeLabelService {
                 formattedNode.maxCapacityDetailsForLabel = [];
             }
         }
-    }
+    },
 
     /**
      * Populates node label info for info modal display
      * @param {Object} infoData - Info modal data object
      * @param {Object} targetNode - Target queue node
      */
-    static populateNodeLabelInfo(infoData, targetNode) {
+    populateNodeLabelInfo(infoData, targetNode) {
         infoData.nodeLabelInfo.push({
             label: 'Accessible Node Labels (Effective)',
             value: targetNode['accessible-node-labels'],
@@ -228,5 +228,5 @@ class NodeLabelService {
                 infoData.nodeLabelInfo.push({ label: `Effective Label '${subKey}'`, value: String(value) });
             }
         }
-    }
-}
+    },
+};

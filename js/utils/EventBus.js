@@ -141,9 +141,9 @@ class EventBus {
 const eventBus = new EventBus();
 
 // Export both class and instance for use in other modules
-window.GlobalEventBus = eventBus;
-window.EventBus = eventBus; // Keep for compatibility
-window.EventBusClass = EventBus;
+globalThis.GlobalEventBus = eventBus;
+globalThis.EventBus = eventBus; // Keep for compatibility
+globalThis.EventBusClass = EventBus;
 
 // Helper function to get the EventBus instance safely
-window.getEventBus = () => window.GlobalEventBus || window.EventBus;
+globalThis.getEventBus = () => globalThis.GlobalEventBus || globalThis.EventBus;
