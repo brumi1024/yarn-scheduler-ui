@@ -142,19 +142,25 @@ class BatchControlsView extends EventEmitter {
 
         // Convert specific error types to readable format
         switch (errorType) {
-            case 'MIXED_PERCENTAGE_WEIGHT_LEGACY':
+            case 'MIXED_PERCENTAGE_WEIGHT_LEGACY': {
                 return 'mixed capacity modes (percentage/weight)';
-            case 'ABSOLUTE_MODE_MIXING_LEGACY':
+            }
+            case 'ABSOLUTE_MODE_MIXING_LEGACY': {
                 return 'mixed capacity modes (absolute with others)';
-            case 'CAPACITY_SUM_ERROR':
+            }
+            case 'CAPACITY_SUM_ERROR': {
                 return 'capacity sum not 100%';
-            case 'INVALID_QUEUE_NAME':
+            }
+            case 'INVALID_QUEUE_NAME': {
                 return 'invalid queue name';
-            case 'INVALID_QUEUE_STATE':
+            }
+            case 'INVALID_QUEUE_STATE': {
                 return 'invalid queue state';
-            default:
+            }
+            default: {
                 // Generic fallback: convert SNAKE_CASE to readable format
-                return errorType.toLowerCase().replace(/_/g, ' ');
+                return errorType.toLowerCase().replaceAll('_', ' ');
+            }
         }
     }
 

@@ -5,9 +5,9 @@
  * viewport edges and control bar collisions. Replaces the inconsistent
  * implementations between queue cards and form modals.
  */
-class TooltipHelper {
-    static managedElements = new WeakMap();
-    static boundHandlers = new WeakMap();
+const TooltipHelper = {
+    managedElements : new WeakMap(),
+    boundHandlers : new WeakMap(),
     /**
      * Creates and attaches a tooltip to the given element.
      * @param {HTMLElement} element - The element to attach tooltip to
@@ -18,7 +18,7 @@ class TooltipHelper {
      * @param {number} options.maxWidth - Maximum tooltip width in pixels (default: 220)
      * @param {boolean} options.allowHtml - Allow HTML content (default: false)
      */
-    static attachTooltip(element, content, options = {}) {
+    attachTooltip(element, content, options = {}) {
         if (!element || !content) return;
 
         const config = {
@@ -60,13 +60,13 @@ class TooltipHelper {
 
         // Mark element as having tooltip
         element.classList.add('has-tooltip');
-    }
+    },
 
     /**
      * Removes tooltip from the given element.
      * @param {HTMLElement} element - The element to remove tooltip from
      */
-    static removeTooltip(element) {
+    removeTooltip(element) {
         if (!element || !element._tooltipData) return;
 
         // Clear any pending timeout
@@ -91,26 +91,26 @@ class TooltipHelper {
         delete element._tooltipData;
         element.classList.remove('has-tooltip');
         TooltipHelper.managedElements.delete(element);
-    }
+    },
 
     /**
      * Removes all tooltips from elements within a container
      * @param {HTMLElement} container - The container element
      */
-    static cleanupTooltipsInContainer(container) {
+    cleanupTooltipsInContainer(container) {
         if (!container) return;
 
         const tooltipElements = container.querySelectorAll('.has-tooltip');
         for (const element of tooltipElements) {
             TooltipHelper.removeTooltip(element);
         }
-    }
+    },
 
     /**
      * Upgrades modal info icons to use unified tooltip system.
      * @param {HTMLElement} modalElement - The modal container element
      */
-    static upgradeModalTooltips(modalElement) {
+    upgradeModalTooltips(modalElement) {
         const infoIcons = modalElement.querySelectorAll('.info-icon[title]');
 
         for (const icon of infoIcons) {
@@ -127,10 +127,10 @@ class TooltipHelper {
                 });
             }
         }
-    }
+    },
 
     // Private event handlers
-    static _handleMouseEnter(element, event) {
+    _handleMouseEnter(element, event) {
         const data = element._tooltipData;
         if (!data) return;
 
@@ -143,27 +143,27 @@ class TooltipHelper {
         data.timeoutId = setTimeout(() => {
             TooltipHelper._showTooltip(element);
         }, data.config.delay);
-    }
+    },
 
-    static _handleMouseLeave(element, event) {
+    _handleMouseLeave(element, event) {
         TooltipHelper._hideTooltip(element);
-    }
+    },
 
-    static _handleFocus(element, event) {
+    _handleFocus(element, event) {
         // Show immediately on focus for accessibility
         TooltipHelper._showTooltip(element);
-    }
+    },
 
-    static _handleBlur(element, event) {
+    _handleBlur(element, event) {
         TooltipHelper._hideTooltip(element);
-    }
+    },
 
     /**
      * Shows the tooltip for the given element with smart positioning.
      * @param {HTMLElement} element - The element to show tooltip for
      * @private
      */
-    static _showTooltip(element) {
+    _showTooltip(element) {
         const data = element._tooltipData;
         if (!data || data.isVisible) return;
 
@@ -179,7 +179,7 @@ class TooltipHelper {
         }
 
         // Add to DOM temporarily to measure
-        document.body.appendChild(tooltip);
+        document.body.append(tooltip);
 
         // Calculate smart position
         const position = TooltipHelper._calculatePosition(element, tooltip, data.config.position);
@@ -187,22 +187,19 @@ class TooltipHelper {
         // Apply position
         tooltip.style.left = `${position.left}px`;
         tooltip.style.top = `${position.top}px`;
-        tooltip.classList.add(`tooltip-${position.placement}`);
-
-        // Show with animation
-        tooltip.classList.add('tooltip-visible');
+        tooltip.classList.add(`tooltip-${position.placement}`, 'tooltip-visible');
 
         // Store reference and mark as visible
         element._tooltipElement = tooltip;
         data.isVisible = true;
-    }
+    },
 
     /**
      * Hides the tooltip for the given element.
      * @param {HTMLElement} element - The element to hide tooltip for
      * @private
      */
-    static _hideTooltip(element) {
+    _hideTooltip(element) {
         const data = element._tooltipData;
         if (!data) return;
 
@@ -219,7 +216,7 @@ class TooltipHelper {
         }
 
         data.isVisible = false;
-    }
+    },
 
     /**
      * Calculates the optimal position for a tooltip with smart positioning.
@@ -230,7 +227,7 @@ class TooltipHelper {
      * @returns {Object} Position object with left, top, and placement
      * @private
      */
-    static _calculatePosition(element, tooltip, preferredPosition) {
+    _calculatePosition(element, tooltip, preferredPosition) {
         const elementRect = element.getBoundingClientRect();
         const tooltipRect = tooltip.getBoundingClientRect();
         const viewportWidth = window.innerWidth;
@@ -331,8 +328,8 @@ class TooltipHelper {
         }
 
         return position;
-    }
-}
+    },
+};
 
 // Export for use in other modules
-window.TooltipHelper = TooltipHelper;
+globalThis.TooltipHelper = TooltipHelper;

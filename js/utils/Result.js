@@ -275,5 +275,5 @@ class ValidationResult {
 }
 
 // Export for use in other modules
-window.Result = Result;
-window.ValidationResult = ValidationResult;
+globalThis.Result = Result;
+globalThis.ValidationResult = ValidationResult;

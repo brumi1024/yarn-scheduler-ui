@@ -72,7 +72,7 @@ class ApiService {
             if (isJsonExpected) {
                 try {
                     data = JSON.parse(responseText);
-                } catch (parseError) {
+                } catch {
                     if (
                         requestOptions.method === 'PUT' &&
                         responseText.toLowerCase().includes('successfully applied')

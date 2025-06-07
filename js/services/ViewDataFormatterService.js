@@ -460,8 +460,8 @@ class ViewDataFormatterService {
             return null;
         }
 
-        let baseProperties = queueNode.getEffectiveProperties();
-        let displayName = queueNode.segment;
+        const baseProperties = queueNode.getEffectiveProperties();
+        const displayName = queueNode.segment;
         let uiCapacityModeHint = null;
 
         // Extract UI capacity mode hint

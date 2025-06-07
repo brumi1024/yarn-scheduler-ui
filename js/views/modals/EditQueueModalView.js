@@ -46,9 +46,9 @@ class EditQueueModalView extends BaseModalView {
             <button class="btn btn-secondary" id="cancel-edit-queue-btn">Cancel</button>
             <button class="btn btn-primary" id="submit-edit-queue-btn">Stage Changes</button>
         `;
-        modalContent.appendChild(modalActions);
+        modalContent.append(modalActions);
 
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
 
@@ -312,7 +312,7 @@ class EditQueueModalView extends BaseModalView {
         // Hidden input to store the actual value
         const anlMeta =
             NODE_LABEL_CONFIG_METADATA[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.accessible-node-labels`];
-        const anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+        const _anlFullKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
 
         html += `<input type="hidden" 
                         class="form-input" 
@@ -346,7 +346,7 @@ class EditQueueModalView extends BaseModalView {
     }
 
     _buildAutoCreationToggleHtml(autoCreationData, isLegacyMode, queuePath, effectiveCapacityMode) {
-        const { enabled, hasChildren, v1Enabled, v2Enabled } = autoCreationData;
+        const { enabled: _enabled, hasChildren, v1Enabled, v2Enabled } = autoCreationData;
         const cannotEnableLegacy = isLegacyMode && hasChildren;
 
         // Determine which auto-creation mode should be used
@@ -413,14 +413,14 @@ class EditQueueModalView extends BaseModalView {
             `;
 
             // Show v2 non-template properties (excluding the main toggle)
-            for (const [propKey, propData] of Object.entries(nonTemplateProperties)) {
+            for (const [_propKey, propData] of Object.entries(nonTemplateProperties)) {
                 if (propData.meta.v2Property && propData.meta.key !== 'auto-queue-creation-v2.enabled') {
                     templateHtml += this._buildPropertyInputHtml(
                         propData.meta.key,
                         `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${propData.meta.key}`,
                         propData.meta,
                         propData.value,
-                        `auto-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                        `auto-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                         propData.isDefault
                     );
                 }
@@ -435,14 +435,14 @@ class EditQueueModalView extends BaseModalView {
                 <p class="form-help" style="margin-bottom: 15px;">These properties will be applied to automatically created child queues:</p>
             `;
 
-            for (const [propKey, propData] of Object.entries(v1TemplateProperties)) {
+            for (const [_propKey, propData] of Object.entries(v1TemplateProperties)) {
                 const fullKey = `leaf-queue-template.${propData.meta.key}`;
                 templateHtml += this._buildPropertyInputHtml(
                     fullKey,
                     `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
                     propData.meta,
                     propData.value,
-                    `v1-template-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    `v1-template-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                     propData.isDefault
                 );
             }
@@ -505,14 +505,14 @@ class EditQueueModalView extends BaseModalView {
         `;
 
         if (scopeProps && Object.keys(scopeProps).length > 0) {
-            for (const [propKey, propData] of Object.entries(scopeProps)) {
-                const fullKey = `auto-queue-creation-v2.${scopeKey.replace(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
+            for (const [_propKey, propData] of Object.entries(scopeProps)) {
+                const fullKey = `auto-queue-creation-v2.${scopeKey.replaceAll(/([A-Z])/g, '-$1').toLowerCase()}.${propData.meta.key}`;
                 contentHtml += this._buildPropertyInputHtml(
                     fullKey,
                     `yarn.scheduler.capacity.${DomUtils.escapeXml(queuePath)}.${fullKey}`,
                     propData.meta,
                     propData.value,
-                    `v2-${scopeKey}-${propData.meta.key.replace(/[^a-zA-Z0-9]/g, '-')}`,
+                    `v2-${scopeKey}-${propData.meta.key.replaceAll(/[^a-zA-Z0-9]/g, '-')}`,
                     propData.isDefault
                 );
             }
@@ -806,7 +806,7 @@ class EditQueueModalView extends BaseModalView {
         }
 
         // Validate any other changed fields that need validation
-        const changedInputs = Array.from(form.querySelectorAll('.form-input')).filter(
+        const changedInputs = [...form.querySelectorAll('.form-input')].filter(
             (input) => input.value !== input.dataset.originalValue && input.dataset.simpleKey
         );
 
@@ -817,13 +817,11 @@ class EditQueueModalView extends BaseModalView {
             const value = input.value.trim();
 
             // Validate based on field type and metadata
-            if (simpleKey && value) {
-                // Add specific validation rules for other fields if needed
+            if (simpleKey && value && // Add specific validation rules for other fields if needed
                 // For now, just check for basic format issues
-                if (simpleKey.includes('capacity') && value) {
+                simpleKey.includes('capacity') && value) {
                     // Additional capacity field validation could go here
                 }
-            }
         }
 
         // Note: Legacy mode capacity conflicts are now only validated at the system level
@@ -855,7 +853,7 @@ class EditQueueModalView extends BaseModalView {
                 validationEl.className = 'validation-message text-danger';
                 validationEl.style.fontSize = '0.875em';
                 validationEl.style.marginTop = '4px';
-                inputContainer.appendChild(validationEl);
+                inputContainer.append(validationEl);
             }
             validationEl.textContent = message;
         }
@@ -1227,11 +1225,7 @@ class EditQueueModalView extends BaseModalView {
         // Update tab content
         const tabPanes = form.querySelectorAll('.node-label-tab-pane');
         for (const pane of tabPanes) {
-            if (pane.dataset.labelTabContent === targetLabel) {
-                pane.style.display = 'block';
-            } else {
-                pane.style.display = 'none';
-            }
+            pane.style.display = pane.dataset.labelTabContent === targetLabel ? 'block' : 'none';
         }
     }
 
@@ -1280,11 +1274,7 @@ class EditQueueModalView extends BaseModalView {
         // Update tab content
         const tabPanes = form.querySelectorAll('.template-tab-pane');
         for (const pane of tabPanes) {
-            if (pane.dataset.tabContent === targetTab) {
-                pane.style.display = 'block';
-            } else {
-                pane.style.display = 'none';
-            }
+            pane.style.display = pane.dataset.tabContent === targetTab ? 'block' : 'none';
         }
     }
 
@@ -1560,7 +1550,7 @@ class EditQueueModalView extends BaseModalView {
             <button class="btn btn-secondary" id="cancel-template-config-btn">Cancel</button>
             <button class="btn btn-primary" id="submit-template-config-btn">Stage Changes</button>
         `;
-        modalContent.appendChild(modalActions);
+        modalContent.append(modalActions);
 
         // Bind events for template-only mode
         this._bindTemplateOnlyEvents();
@@ -1576,7 +1566,7 @@ class EditQueueModalView extends BaseModalView {
         this._renderContent = originalRenderContent;
 
         // Upgrade tooltips
-        if (window.TooltipHelper) {
+        if (globalThis.TooltipHelper) {
             TooltipHelper.upgradeModalTooltips(this.formContainer);
         }
     }
