@@ -2,20 +2,23 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '../theme';
+import { StoreProvider } from '../store/StoreProvider';
 import MainLayout from './MainLayout';
 
-// Helper to render with theme
-const renderWithTheme = (component: React.ReactElement) => {
+// Helper to render with theme and store
+const renderWithProviders = (component: React.ReactElement) => {
   return render(
-    <ThemeProvider theme={theme}>
-      {component}
-    </ThemeProvider>
+    <StoreProvider>
+      <ThemeProvider theme={theme}>
+        {component}
+      </ThemeProvider>
+    </StoreProvider>
   );
 };
 
 describe('MainLayout', () => {
   it('renders the main app structure', () => {
-    renderWithTheme(<MainLayout />);
+    renderWithProviders(<MainLayout />);
     
     expect(screen.getByText('YARN Capacity Scheduler')).toBeInTheDocument();
     expect(screen.getByText('Queue Editor')).toBeInTheDocument();
@@ -23,7 +26,7 @@ describe('MainLayout', () => {
   });
 
   it('switches between tabs correctly', () => {
-    renderWithTheme(<MainLayout />);
+    renderWithProviders(<MainLayout />);
     
     // Initially shows Queue Editor
     expect(screen.getByText(/Interactive queue tree visualization and editing/)).toBeInTheDocument();
@@ -42,7 +45,7 @@ describe('MainLayout', () => {
   });
 
   it('shows correct queue count in status bar', () => {
-    renderWithTheme(<MainLayout />);
+    renderWithProviders(<MainLayout />);
     
     expect(screen.getByText('0 Queues')).toBeInTheDocument();
   });

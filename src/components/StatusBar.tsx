@@ -1,35 +1,15 @@
 import { Box, Typography, Chip, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { useScheduler, useHealthCheck } from '../hooks/useApi';
+import { useSelector } from '../store/useSelector';
+import { selectAllQueues } from '../store/selectors';
 
-interface QueueWithChildren {
-  queues?: {
-    queue: QueueWithChildren[];
-  };
-}
-
-function countQueues(queues: QueueWithChildren[]): number {
-  if (!queues) {
-    return 0;
-  }
-  
-  let count = queues.length;
-  for (const queue of queues) {
-    if (queue.queues?.queue) {
-      count += countQueues(queue.queues.queue);
-    }
-  }
-  return count;
-}
 
 export default function StatusBar() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const { data: schedulerData } = useScheduler();
-  const { status: healthStatus } = useHealthCheck();
+  const allQueues = useSelector(selectAllQueues);
   
-  const totalQueues = schedulerData 
-    ? countQueues(schedulerData.scheduler.schedulerInfo.queues?.queue || [])
-    : 0;
+  const totalQueues = allQueues.length;
+  const healthStatus = 'ok'; // Simplified for now - will be enhanced later
 
   useEffect(() => {
     const interval = setInterval(() => {
