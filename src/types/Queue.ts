@@ -92,3 +92,58 @@ export interface SchedulerResponse {
     schedulerInfo: SchedulerInfo;
   };
 }
+
+// Configuration types for parser
+export interface Configuration {
+  [key: string]: string;
+}
+
+export interface CapacityValue {
+  mode: 'percentage' | 'weight' | 'absolute';
+  value: string;
+  numericValue?: number;
+  resources?: Record<string, string>;
+}
+
+// Parsed queue structure (different from API response Queue)
+export interface ParsedQueue {
+  name: string;
+  path: string;
+  parent?: string;
+  children: ParsedQueue[];
+  isLeaf: boolean;
+  
+  // Capacity information
+  capacity: CapacityValue;
+  maxCapacity: CapacityValue;
+  
+  // Basic properties
+  state: 'RUNNING' | 'STOPPED';
+  
+  // Resource limits
+  maxApplications: number;
+  maxAMResourcePercent?: number;
+  
+  // User limits
+  minimumUserLimitPercent: number;
+  userLimitFactor: number;
+  
+  // Application settings
+  maxParallelApps: number;
+  priority: number;
+  
+  // Access control
+  submitACL: string;
+  adminACL: string;
+  
+  // Node labels
+  accessibleNodeLabels: string[];
+  defaultNodeLabelExpression?: string;
+  
+  // Preemption
+  preemptionDisabled: boolean;
+  intraQueuePreemptionDisabled: boolean;
+  
+  // Raw properties for extensibility
+  properties: Record<string, string>;
+}
