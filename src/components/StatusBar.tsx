@@ -1,9 +1,35 @@
 import { Box, Typography, Chip, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
+import { useScheduler, useHealthCheck } from '../hooks/useApi';
+
+interface QueueWithChildren {
+  queues?: {
+    queue: QueueWithChildren[];
+  };
+}
+
+function countQueues(queues: QueueWithChildren[]): number {
+  if (!queues) {
+    return 0;
+  }
+  
+  let count = queues.length;
+  for (const queue of queues) {
+    if (queue.queues?.queue) {
+      count += countQueues(queue.queues.queue);
+    }
+  }
+  return count;
+}
 
 export default function StatusBar() {
   const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-  const [totalQueues] = useState<number>(0); // Will be connected to store later
+  const { data: schedulerData } = useScheduler();
+  const { status: healthStatus } = useHealthCheck();
+  
+  const totalQueues = schedulerData 
+    ? countQueues(schedulerData.scheduler.schedulerInfo.queues?.queue || [])
+    : 0;
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -41,6 +67,13 @@ export default function StatusBar() {
         variant="outlined"
         size="small"
         color={totalQueues > 0 ? 'primary' : 'default'}
+      />
+      
+      <Chip
+        label={healthStatus === 'ok' ? 'Healthy' : healthStatus === 'error' ? 'Error' : 'Checking'}
+        variant="outlined"
+        size="small"
+        color={healthStatus === 'ok' ? 'success' : healthStatus === 'error' ? 'error' : 'default'}
       />
       
       <Divider orientation="vertical" flexItem />

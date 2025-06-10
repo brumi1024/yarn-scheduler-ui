@@ -40,6 +40,14 @@ export default tseslint.config(
       ],
     },
   },
+
+  // Mock files - allow console statements
+  {
+    files: ['**/mocks/**/*.{ts,tsx,js}'],
+    rules: {
+      'no-console': 'off',
+    },
+  },
   
   // Legacy JavaScript files
   {

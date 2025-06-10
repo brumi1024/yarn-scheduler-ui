@@ -1,4 +1,4 @@
-import { Resource } from './Queue';
+import type { Resource } from './Queue';
 
 export interface NodeLabel {
   name: string;

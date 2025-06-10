@@ -1,0 +1,212 @@
+import type { SchedulerResponse } from '../../types/Configuration';
+
+export const mockSchedulerData: SchedulerResponse = {
+  scheduler: {
+    schedulerInfo: {
+      type: 'capacityScheduler',
+      capacity: 100,
+      usedCapacity: 25.5,
+      maxCapacity: 100,
+      queueName: 'root',
+      queues: {
+        queue: [
+          {
+            queueName: 'default',
+            capacity: 30,
+            usedCapacity: 10.5,
+            maxCapacity: 30,
+            absoluteCapacity: 30,
+            absoluteUsedCapacity: 10.5,
+            absoluteMaxCapacity: 30,
+            state: 'RUNNING',
+            numApplications: 5,
+            resourcesUsed: {
+              memory: 2048,
+              vCores: 4
+            },
+            userLimit: 100,
+            userLimitFactor: 1,
+            maxApplications: 10000,
+            maxApplicationsPerUser: 10000,
+            nodeLabels: [],
+            accessibleNodeLabels: ['*'],
+            preemptionDisabled: false,
+            intraQueuePreemptionDisabled: false,
+            priority: 0,
+            orderingPolicy: 'fifo'
+          },
+          {
+            queueName: 'production',
+            capacity: 50,
+            usedCapacity: 15,
+            maxCapacity: 80,
+            absoluteCapacity: 50,
+            absoluteUsedCapacity: 15,
+            absoluteMaxCapacity: 80,
+            state: 'RUNNING',
+            numApplications: 12,
+            resourcesUsed: {
+              memory: 8192,
+              vCores: 16
+            },
+            userLimit: 100,
+            userLimitFactor: 1,
+            maxApplications: 10000,
+            maxApplicationsPerUser: 1000,
+            nodeLabels: [],
+            accessibleNodeLabels: ['*'],
+            preemptionDisabled: false,
+            intraQueuePreemptionDisabled: false,
+            priority: 1,
+            orderingPolicy: 'fair',
+            queues: {
+              queue: [
+                {
+                  queueName: 'prod01',
+                  capacity: 60,
+                  usedCapacity: 20,
+                  maxCapacity: 100,
+                  absoluteCapacity: 30,
+                  absoluteUsedCapacity: 10,
+                  absoluteMaxCapacity: 50,
+                  state: 'RUNNING',
+                  numApplications: 8,
+                  resourcesUsed: {
+                    memory: 4096,
+                    vCores: 8
+                  },
+                  userLimit: 100,
+                  userLimitFactor: 1,
+                  maxApplications: 5000,
+                  maxApplicationsPerUser: 500,
+                  nodeLabels: [],
+                  accessibleNodeLabels: ['*'],
+                  preemptionDisabled: false,
+                  intraQueuePreemptionDisabled: false,
+                  priority: 0,
+                  orderingPolicy: 'fifo'
+                },
+                {
+                  queueName: 'prod02',
+                  capacity: 40,
+                  usedCapacity: 10,
+                  maxCapacity: 100,
+                  absoluteCapacity: 20,
+                  absoluteUsedCapacity: 5,
+                  absoluteMaxCapacity: 50,
+                  state: 'RUNNING',
+                  numApplications: 4,
+                  resourcesUsed: {
+                    memory: 4096,
+                    vCores: 8
+                  },
+                  userLimit: 100,
+                  userLimitFactor: 1,
+                  maxApplications: 5000,
+                  maxApplicationsPerUser: 500,
+                  nodeLabels: [],
+                  accessibleNodeLabels: ['gpu'],
+                  preemptionDisabled: false,
+                  intraQueuePreemptionDisabled: false,
+                  priority: 0,
+                  orderingPolicy: 'fifo'
+                }
+              ]
+            }
+          },
+          {
+            queueName: 'development',
+            capacity: 20,
+            usedCapacity: 0,
+            maxCapacity: 40,
+            absoluteCapacity: 20,
+            absoluteUsedCapacity: 0,
+            absoluteMaxCapacity: 40,
+            state: 'RUNNING',
+            numApplications: 0,
+            resourcesUsed: {
+              memory: 0,
+              vCores: 0
+            },
+            userLimit: 100,
+            userLimitFactor: 1,
+            maxApplications: 1000,
+            maxApplicationsPerUser: 100,
+            nodeLabels: [],
+            accessibleNodeLabels: ['*'],
+            preemptionDisabled: false,
+            intraQueuePreemptionDisabled: false,
+            priority: 0,
+            orderingPolicy: 'fair',
+            autoCreateChildQueueEnabled: true,
+            queues: {
+              queue: [
+                {
+                  queueName: 'team1',
+                  capacity: 70,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 14,
+                  absoluteUsedCapacity: 0,
+                  absoluteMaxCapacity: 20,
+                  state: 'RUNNING',
+                  numApplications: 0,
+                  resourcesUsed: {
+                    memory: 0,
+                    vCores: 0
+                  },
+                  userLimit: 100,
+                  userLimitFactor: 1,
+                  maxApplications: 500,
+                  maxApplicationsPerUser: 50,
+                  nodeLabels: [],
+                  accessibleNodeLabels: ['gpu'],
+                  preemptionDisabled: false,
+                  intraQueuePreemptionDisabled: false,
+                  priority: 0,
+                  orderingPolicy: 'fifo'
+                },
+                {
+                  queueName: 'team2',
+                  capacity: 30,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 6,
+                  absoluteUsedCapacity: 0,
+                  absoluteMaxCapacity: 20,
+                  state: 'RUNNING',
+                  numApplications: 0,
+                  resourcesUsed: {
+                    memory: 0,
+                    vCores: 0
+                  },
+                  userLimit: 100,
+                  userLimitFactor: 1,
+                  maxApplications: 500,
+                  maxApplicationsPerUser: 50,
+                  nodeLabels: [],
+                  accessibleNodeLabels: ['*'],
+                  preemptionDisabled: false,
+                  intraQueuePreemptionDisabled: false,
+                  priority: 0,
+                  orderingPolicy: 'fifo'
+                }
+              ]
+            }
+          }
+        ]
+      },
+      health: {
+        lastrun: Date.now(),
+        operationsInfo: {
+          operation: []
+        },
+        lastRunDetails: [
+          { operation: 'allocate', count: 150 },
+          { operation: 'release', count: 25 },
+          { operation: 'preempt', count: 2 }
+        ]
+      }
+    }
+  }
+};
