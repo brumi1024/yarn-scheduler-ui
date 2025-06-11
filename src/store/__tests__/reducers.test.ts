@@ -60,7 +60,8 @@ describe('Reducers', () => {
       
       expect(state.loading.scheduler).toBe(false);
       expect(state.scheduler).toEqual(mockData);
-      expect(state.lastUpdated).toBeInstanceOf(Date);
+      expect(typeof state.lastUpdated.scheduler).toBe('number');
+      expect(state.lastUpdated.scheduler).toBeGreaterThan(0);
     });
 
     it('should handle LOAD_SCHEDULER_ERROR', () => {

@@ -96,7 +96,8 @@ function flattenQueues(queues: any[], parentPath = ''): any[] {
 }
 
 function getQueuePath(queue: any, parentPath = ''): string {
-  return parentPath ? `${parentPath}.${queue.queueName}` : queue.queueName;
+  // Use the path property if it exists (from flattenQueues), otherwise fallback to queueName
+  return queue.path || (parentPath ? `${parentPath}.${queue.queueName}` : queue.queueName);
 }
 
 // Memoized selectors (basic memoization)

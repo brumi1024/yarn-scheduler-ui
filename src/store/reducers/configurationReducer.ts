@@ -35,6 +35,7 @@ export function configurationReducer(
       case 'LOAD_SCHEDULER_SUCCESS':
         draft.loading.scheduler = false;
         draft.scheduler = action.payload;
+        if (!draft.lastUpdated) draft.lastUpdated = {};
         draft.lastUpdated.scheduler = Date.now();
         break;
 
@@ -51,6 +52,7 @@ export function configurationReducer(
       case 'LOAD_CONFIGURATION_SUCCESS':
         draft.loading.configuration = false;
         draft.configuration = action.payload;
+        if (!draft.lastUpdated) draft.lastUpdated = {};
         draft.lastUpdated.configuration = Date.now();
         break;
 
@@ -67,6 +69,7 @@ export function configurationReducer(
       case 'LOAD_NODE_LABELS_SUCCESS':
         draft.loading.nodeLabels = false;
         draft.nodeLabels = action.payload;
+        if (!draft.lastUpdated) draft.lastUpdated = {};
         draft.lastUpdated.nodeLabels = Date.now();
         break;
 
@@ -83,6 +86,7 @@ export function configurationReducer(
       case 'LOAD_NODES_SUCCESS':
         draft.loading.nodes = false;
         draft.nodes = action.payload;
+        if (!draft.lastUpdated) draft.lastUpdated = {};
         draft.lastUpdated.nodes = Date.now();
         break;
 
