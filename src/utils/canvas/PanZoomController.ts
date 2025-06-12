@@ -51,7 +51,7 @@ export class PanZoomController {
   private lastPointerPos: { x: number; y: number } | null = null;
   private activePointers: Map<number, { x: number; y: number }> = new Map();
   private lastTouchDistance: number = 0;
-  private lastTouchCenter: { x: number; y: number } = { x: 0, y: 0 };
+  // private lastTouchCenter: { x: number; y: number } = { x: 0, y: 0 };
   
   // Event listeners
   private listeners: ((event: PanZoomEvent) => void)[] = [];
@@ -379,10 +379,10 @@ export class PanZoomController {
         touch2.clientY - touch1.clientY
       );
       
-      this.lastTouchCenter = {
-        x: (touch1.clientX + touch2.clientX) / 2,
-        y: (touch1.clientY + touch2.clientY) / 2
-      };
+      // this.lastTouchCenter = {
+      //   x: (touch1.clientX + touch2.clientX) / 2,
+      //   y: (touch1.clientY + touch2.clientY) / 2
+      // };
     }
   }
 
@@ -413,7 +413,7 @@ export class PanZoomController {
       }
       
       this.lastTouchDistance = distance;
-      this.lastTouchCenter = center;
+      // this.lastTouchCenter = center;
     } else if (e.touches.length === 1) {
       // Single finger panning
       const touch = e.touches[0];

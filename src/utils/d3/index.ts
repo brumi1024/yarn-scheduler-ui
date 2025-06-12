@@ -7,7 +7,8 @@ export type {
   LayoutNode,
   FlowPath,
   LayoutOptions,
-  LayoutData
+  LayoutData,
+  LayoutQueue
 } from './D3TreeLayout';
 
 export type {

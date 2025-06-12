@@ -5,12 +5,14 @@ export { LevelOfDetail, DetailLevel } from './LevelOfDetail';
 export { DirtyRectangleTracker } from './DirtyRectangleTracker';
 export { PerformanceMonitor } from './PerformanceMonitor';
 export { PanZoomController } from './PanZoomController';
+export { QueueSelectionController } from './QueueSelectionController';
 
 export type {
   RenderOptions,
   RenderTheme,
   RenderLayer,
-  QueueCardStyle
+  QueueCardStyle,
+  Transform
 } from './CanvasRenderer';
 
 export type {
@@ -43,3 +45,9 @@ export type {
   ViewportBounds,
   PanZoomEvent
 } from './PanZoomController';
+
+export type {
+  SelectionEvent,
+  HoverEvent,
+  QueueSelectionConfig
+} from './QueueSelectionController';

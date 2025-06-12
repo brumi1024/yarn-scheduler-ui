@@ -128,7 +128,7 @@ export class LevelOfDetail {
     const detail = this.getRenderDetail();
     
     // Always show details for selected or important nodes
-    if (node.data.isSelected || node.data.isImportant) {
+    if ((node.data as any).isSelected || (node.data as any).isImportant) {
       return true;
     }
 

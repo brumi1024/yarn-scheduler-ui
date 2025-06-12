@@ -132,6 +132,7 @@ export class DirtyRectangleTracker {
   /**
    * Expand rectangle by padding
    */
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   private expandRectangle(rect: Rectangle, padding: number): Rectangle {
     return {
       x: rect.x - padding,

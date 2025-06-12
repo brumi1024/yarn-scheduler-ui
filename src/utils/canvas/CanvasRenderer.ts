@@ -71,6 +71,12 @@ const DEFAULT_THEME: RenderTheme = {
   }
 };
 
+export interface Transform {
+  x: number;
+  y: number;
+  scale: number;
+}
+
 export class CanvasRenderer {
   private canvas: HTMLCanvasElement;
   private ctx: CanvasRenderingContext2D;
@@ -80,6 +86,9 @@ export class CanvasRenderer {
   private animationFrameId: number | null = null;
   private hoveredNode: LayoutNode | null = null;
   private selectedNodes: Set<string> = new Set();
+  private nodes: LayoutNode[] = [];
+  private flows: FlowPath[] = [];
+  private currentTransform: Transform = { x: 0, y: 0, scale: 1 };
 
   constructor(options: RenderOptions) {
     this.canvas = options.canvas;
@@ -107,7 +116,8 @@ export class CanvasRenderer {
     this.canvas.width = width * this.devicePixelRatio;
     this.canvas.height = height * this.devicePixelRatio;
 
-    // Scale canvas to match device pixel ratio
+    // Reset transform and scale canvas to match device pixel ratio
+    this.ctx.setTransform(1, 0, 0, 1, 0, 0); // Reset transform matrix
     this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio);
 
     // Ensure canvas CSS size matches
@@ -155,13 +165,22 @@ export class CanvasRenderer {
   /**
    * Render the entire scene
    */
-  render(nodes: LayoutNode[], flows: FlowPath[]): void {
+  render(nodes: LayoutNode[], flows: FlowPath[], transform?: Transform): void {
     // Store data for rendering
     this.nodes = nodes;
     this.flows = flows;
+    if (transform) {
+      this.currentTransform = transform;
+    }
 
-    // Clear canvas
-    this.ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    // Clear canvas - use logical dimensions since context is already scaled
+    const rect = this.canvas.getBoundingClientRect();
+    this.ctx.clearRect(0, 0, rect.width, rect.height);
+
+    // Apply transform
+    this.ctx.save();
+    this.ctx.translate(this.currentTransform.x, this.currentTransform.y);
+    this.ctx.scale(this.currentTransform.scale, this.currentTransform.scale);
 
     // Render each layer
     this.layers.forEach(layer => {
@@ -172,14 +191,17 @@ export class CanvasRenderer {
         this.ctx.restore();
       }
     });
+
+    // Restore transform
+    this.ctx.restore();
   }
 
   /**
    * Render using requestAnimationFrame
    */
-  startRenderLoop(nodes: LayoutNode[], flows: FlowPath[]): void {
+  startRenderLoop(nodes: LayoutNode[], flows: FlowPath[], transform?: Transform): void {
     const renderFrame = () => {
-      this.render(nodes, flows);
+      this.render(nodes, flows, transform);
       this.animationFrameId = requestAnimationFrame(renderFrame);
     };
     renderFrame();
@@ -199,8 +221,19 @@ export class CanvasRenderer {
    * Render background
    */
   private renderBackground(ctx: CanvasRenderingContext2D): void {
+    // Save current state
+    ctx.save();
+    
+    // Reset any transforms to fill the entire canvas
+    ctx.setTransform(this.devicePixelRatio, 0, 0, this.devicePixelRatio, 0, 0);
+    
+    // Fill entire logical canvas area
+    const rect = this.canvas.getBoundingClientRect();
     ctx.fillStyle = this.theme.background;
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    ctx.fillRect(0, 0, rect.width, rect.height);
+    
+    // Restore state
+    ctx.restore();
   }
 
   /**
@@ -304,7 +337,7 @@ export class CanvasRenderer {
    * Draw state badges (capacity mode, running state, etc.)
    */
   private drawStateBadges(ctx: CanvasRenderingContext2D, node: LayoutNode): void {
-    const { x, y, width, data } = node;
+    const { x, y, data } = node;
     let badgeX = x + 20;
     const badgeY = y + 90;
 
@@ -558,8 +591,4 @@ export class CanvasRenderer {
     this.stopRenderLoop();
     this.layers.clear();
   }
-
-  // Store nodes and flows for rendering
-  private nodes: LayoutNode[] = [];
-  private flows: FlowPath[] = [];
 }

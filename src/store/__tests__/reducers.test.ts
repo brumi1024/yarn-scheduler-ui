@@ -30,7 +30,7 @@ describe('Reducers', () => {
         nodeLabels: null,
         nodes: null,
       },
-      lastUpdated: null,
+      lastUpdated: {},
     };
 
     it('should handle LOAD_SCHEDULER_START', () => {
@@ -45,7 +45,7 @@ describe('Reducers', () => {
       const mockData = {
         scheduler: {
           schedulerInfo: {
-            type: 'capacityScheduler',
+            type: 'capacityScheduler' as const,
             capacity: 100,
             usedCapacity: 50,
             maxCapacity: 100,
@@ -79,14 +79,14 @@ describe('Reducers', () => {
       changes: [],
       conflicts: [],
       applying: false,
-      lastApplied: null,
+      lastApplied: undefined,
     };
 
     it('should handle STAGE_CHANGE', () => {
       const change = {
         id: 'test-change',
         timestamp: new Date(),
-        type: 'update' as const,
+        type: 'update-queue' as const,
         queueName: 'test',
         property: 'capacity',
         oldValue: '50',
@@ -107,7 +107,7 @@ describe('Reducers', () => {
         changes: [{
           id: 'test-change',
           timestamp: new Date(),
-          type: 'update',
+          type: 'update-queue',
           queueName: 'test',
           property: 'capacity',
           oldValue: '50',
@@ -132,19 +132,19 @@ describe('Reducers', () => {
 
   describe('uiReducer', () => {
     const initialState: UIState = {
-      selectedQueuePath: null,
+      selectedQueuePath: undefined,
       expandedQueues: new Set(),
       viewSettings: {
-        showCapacityLabels: true,
-        showResourceLabels: true,
-        compactView: false,
-        autoRefresh: true,
-        refreshInterval: 30000,
+        showCapacityBars: true,
+        showUsageMetrics: true,
+        layout: 'tree',
+        zoomLevel: 1,
+        panPosition: { x: 0, y: 0 },
       },
       notifications: [],
       modals: {
-        propertyEditor: { open: false },
-        confirmDialog: { open: false },
+        propertyEditor: { open: false, mode: 'edit' },
+        confirmDialog: { open: false, title: '', message: '', onConfirm: () => {} },
       },
     };
 
@@ -192,8 +192,8 @@ describe('Reducers', () => {
 
     it('should handle ADD_LOG_ENTRY', () => {
       const logEntry = {
-        type: 'user_action',
-        level: 'info',
+        type: 'user_action' as const,
+        level: 'info' as const,
         message: 'Queue selected',
         details: { queuePath: 'test.queue' },
       };
@@ -231,14 +231,14 @@ describe('Reducers', () => {
           {
             id: '1',
             timestamp: Date.now() - 2000,
-            type: 'system',
+            type: 'system_event',
             level: 'info',
             message: 'Old log 1',
           },
           {
             id: '2',
             timestamp: Date.now() - 1000,
-            type: 'system',
+            type: 'system_event',
             level: 'info',
             message: 'Old log 2',
           },
@@ -246,8 +246,8 @@ describe('Reducers', () => {
       };
       
       const newLogEntry = {
-        type: 'user_action',
-        level: 'info',
+        type: 'user_action' as const,
+        level: 'info' as const,
         message: 'New log entry',
       };
       

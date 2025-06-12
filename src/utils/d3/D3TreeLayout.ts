@@ -1,7 +1,14 @@
 import * as d3 from 'd3';
 import type { Queue } from '../../types/Queue';
 
-export interface TreeNode extends d3.HierarchyNode<Queue> {
+// Extended Queue type for layout purposes
+export interface LayoutQueue extends Queue {
+  id: string;
+  queuePath?: string;
+  children?: LayoutQueue[];
+}
+
+export interface TreeNode extends d3.HierarchyNode<LayoutQueue> {
   x: number;
   y: number;
   collapsed?: boolean;
@@ -13,7 +20,7 @@ export interface LayoutNode {
   y: number;
   width: number;
   height: number;
-  data: Queue;
+  data: LayoutQueue;
   parent?: LayoutNode;
   children?: LayoutNode[];
 }
@@ -64,20 +71,20 @@ export class D3TreeLayout {
   /**
    * Compute layout for the queue hierarchy
    */
-  computeLayout(root: Queue): LayoutData {
+  computeLayout(root: LayoutQueue): LayoutData {
     // Create D3 hierarchy
-    const hierarchy = d3.hierarchy<Queue>(root, d => 
+    const hierarchy = d3.hierarchy<LayoutQueue>(root, d => 
       this.collapsedNodes.has(d.id) ? [] : d.children
     );
 
     // Create tree layout
     const treeLayout = this.options.orientation === 'horizontal'
-      ? d3.tree<Queue>()
+      ? d3.tree<LayoutQueue>()
           .nodeSize([
             this.options.nodeHeight + this.options.verticalSpacing,
             this.options.nodeWidth + this.options.horizontalSpacing
           ])
-      : d3.tree<Queue>()
+      : d3.tree<LayoutQueue>()
           .nodeSize([
             this.options.nodeWidth + this.options.horizontalSpacing,
             this.options.nodeHeight + this.options.verticalSpacing

@@ -3,10 +3,10 @@ import type { Middleware } from '../types';
 const STORAGE_KEY = 'yarn-scheduler-ui-state';
 
 // UI state properties to persist
-const PERSISTENT_UI_KEYS = [
-  'viewSettings',
-  'expandedQueues',
-] as const;
+// const PERSISTENT_UI_KEYS = [
+//   'viewSettings',
+//   'expandedQueues',
+// ] as const;
 
 export const persistenceMiddleware: Middleware = (store) => (next) => (action) => {
   const result = next(action);

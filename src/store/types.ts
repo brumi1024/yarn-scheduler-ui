@@ -1,6 +1,9 @@
 import type { SchedulerResponse, ConfigurationResponse, ChangeSet } from '../types/Configuration';
 import type { NodeLabelsResponse, NodesResponse } from '../types/NodeLabel';
 
+// Re-export types used by actions
+export type { ChangeSet } from '../types/Configuration';
+
 // UI State
 export interface UIState {
   selectedQueuePath?: string;
@@ -178,7 +181,7 @@ export type Middleware<S = RootState> = (
   store: Store<S>
 ) => (next: Dispatch) => (action: Action) => Action;
 
-export type Dispatch = (action: Action) => void;
+export type Dispatch = (action: Action) => Action;
 
 export interface Store<S = RootState> {
   getState: () => S;

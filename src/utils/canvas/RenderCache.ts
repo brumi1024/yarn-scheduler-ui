@@ -75,12 +75,12 @@ export class RenderCache {
   private computeNodeHash(node: LayoutNode): string {
     // Create a hash based on node properties that affect rendering
     const props = [
-      node.data.name,
+      (node.data as any).name || node.data.queueName,
       node.data.state,
       node.data.capacity,
-      node.data.capacityMode,
-      node.data.hasPendingChanges,
-      node.data.hasValidationError,
+      (node.data as any).capacityMode || 'percentage',
+      (node.data as any).hasPendingChanges || false,
+      (node.data as any).hasValidationError || false,
       node.width,
       node.height
     ];

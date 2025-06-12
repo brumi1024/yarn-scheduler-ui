@@ -1,7 +1,8 @@
 import type { 
   ConfigurationAction, 
   StagedChangesAction, 
-  UIAction, 
+  UIAction,
+  UIState,
   ActivityAction,
   ChangeSet,
   ConflictInfo,
@@ -143,7 +144,7 @@ export const uiActions = {
     payload: queuePaths
   }),
   
-  updateViewSettings: (settings: Partial<UIAction['payload']>): UIAction => ({
+  updateViewSettings: (settings: Partial<UIState['viewSettings']>): UIAction => ({
     type: 'UPDATE_VIEW_SETTINGS',
     payload: settings
   }),

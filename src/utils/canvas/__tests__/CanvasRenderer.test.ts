@@ -1,11 +1,10 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { CanvasRenderer } from '../CanvasRenderer';
-import type { LayoutNode, FlowPath } from '../../d3/D3TreeLayout';
-import type { Queue } from '../../../types/Queue';
+import type { LayoutNode, FlowPath, LayoutQueue } from '../../d3/D3TreeLayout';
 
 // Mock Path2D
 class MockPath2D {
-  constructor(path?: string) {}
+  constructor(_path?: string) {}
 }
 vi.stubGlobal('Path2D', MockPath2D);
 
@@ -38,6 +37,7 @@ class MockCanvasRenderingContext2D {
   fillText = vi.fn();
   measureText = vi.fn(() => ({ width: 50 }));
   scale = vi.fn();
+  translate = vi.fn();
   setLineDash = vi.fn();
 }
 
@@ -386,7 +386,8 @@ describe('CanvasRenderer', () => {
 });
 
 function createMockNodes(): LayoutNode[] {
-  const mockQueue = (_id: string, name: string): Queue => ({
+  const mockQueue = (id: string, name: string): LayoutQueue => ({
+    id,
     queueName: name,
     capacity: 50,
     usedCapacity: 25,

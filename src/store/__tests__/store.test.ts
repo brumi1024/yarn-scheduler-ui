@@ -26,16 +26,16 @@ describe('Store', () => {
           selectedQueuePath: 'test.queue',
           expandedQueues: new Set(['test']),
           viewSettings: {
-            showCapacityLabels: false,
-            showResourceLabels: true,
-            compactView: true,
-            autoRefresh: false,
-            refreshInterval: 30000,
+            showCapacityBars: false,
+            showUsageMetrics: true,
+            layout: 'tree',
+            zoomLevel: 1,
+            panPosition: { x: 0, y: 0 },
           },
           notifications: [],
           modals: {
-            propertyEditor: { open: false },
-            confirmDialog: { open: false },
+            propertyEditor: { open: false, mode: 'edit' },
+            confirmDialog: { open: false, title: '', message: '', onConfirm: () => {} },
           },
         },
       });
@@ -43,7 +43,7 @@ describe('Store', () => {
       const state = customStore.getState();
       expect(state.ui.selectedQueuePath).toBe('test.queue');
       expect(state.ui.expandedQueues.has('test')).toBe(true);
-      expect(state.ui.viewSettings.compactView).toBe(true);
+      expect(state.ui.viewSettings.showCapacityBars).toBe(false);
     });
   });
 
@@ -52,7 +52,7 @@ describe('Store', () => {
       const mockSchedulerData = {
         scheduler: {
           schedulerInfo: {
-            type: 'capacityScheduler',
+            type: 'capacityScheduler' as const,
             capacity: 100,
             usedCapacity: 50,
             maxCapacity: 100,
@@ -76,7 +76,7 @@ describe('Store', () => {
       const change = {
         id: 'test-change',
         timestamp: new Date(),
-        type: 'update' as const,
+        type: 'update-queue' as const,
         queueName: 'test',
         property: 'capacity',
         oldValue: '50',
@@ -102,8 +102,8 @@ describe('Store', () => {
 
     it('should dispatch activity actions', () => {
       const logEntry = {
-        type: 'user_action',
-        level: 'info',
+        type: 'user_action' as const,
+        level: 'info' as const,
         message: 'Queue selected',
         details: { queuePath: 'test.queue' },
       };
