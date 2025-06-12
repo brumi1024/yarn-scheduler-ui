@@ -105,7 +105,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         display: 'flex',
         flexDirection: 'column',
         overflow: 'hidden',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)'
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)',
+        pointerEvents: open ? 'auto' : 'none' // Allow clicks to pass through when closed
       }}
     >
       {/* Header */}

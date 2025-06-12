@@ -174,14 +174,14 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
     if (!selectionController) return;
 
     const handleSelection = (event: SelectionEvent) => {
-      setSelectedQueue(event.nodeId || null);
-      
-      // Find the queue data for the selected node
-      if (event.nodeId && event.node?.data) {
+      // Only open info panel on select events, not deselect
+      if (event.type === 'select' && event.nodeId && event.node?.data) {
+        setSelectedQueue(event.nodeId);
         // The data is already merged with runtime data
         setSelectedQueueData(event.node.data as Queue);
         setInfoPanelOpen(true);
-      } else {
+      } else if (event.type === 'deselect' || !event.nodeId) {
+        setSelectedQueue(null);
         setSelectedQueueData(null);
         setInfoPanelOpen(false);
       }
@@ -320,6 +320,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
         });
       }
       
+      
       // Calculate flow paths
       const flowPaths = sankeyCalculator.calculateFlows(layoutData.nodes);
       
@@ -435,13 +436,18 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
     setSelectedQueueData(null);
     setSelectedQueue(null);
     
+    // Clear selection in the selection controller
+    if (selectionController) {
+      selectionController.clearSelection();
+    }
+    
     // Update visual state
     if (renderer) {
       renderer.setSelectedNodes(new Set());
       const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
       renderer.render(nodes, flows, state);
     }
-  }, [renderer, nodes, flows, panZoomController]);
+  }, [renderer, nodes, flows, panZoomController, selectionController]);
 
   // Handle queue edit
   const handleQueueEdit = useCallback(() => {
@@ -596,21 +602,6 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
         </Box>
       )}
 
-      {/* Invisible backdrop when info panel is open to prevent canvas clicks */}
-      {infoPanelOpen && (
-        <Box
-          sx={{
-            position: 'absolute',
-            top: 0,
-            left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 1299, // Just below the info panel
-            backgroundColor: 'transparent',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        />
-      )}
 
       {/* Queue Info Panel */}
       <QueueInfoPanel

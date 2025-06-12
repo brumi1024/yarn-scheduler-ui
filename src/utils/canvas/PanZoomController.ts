@@ -52,6 +52,7 @@ export class PanZoomController {
   private activePointers: Map<number, { x: number; y: number }> = new Map();
   private lastTouchDistance: number = 0;
   // private lastTouchCenter: { x: number; y: number } = { x: 0, y: 0 };
+  private dragEndTime: number = 0;
   
   // Event listeners
   private listeners: ((event: PanZoomEvent) => void)[] = [];
@@ -78,6 +79,14 @@ export class PanZoomController {
    */
   getState(): PanZoomState {
     return { ...this.state };
+  }
+
+  /**
+   * Check if currently dragging
+   */
+  isDraggingActive(): boolean {
+    // Consider dragging active if currently dragging or just finished (within 100ms)
+    return this.isDragging || (Date.now() - this.dragEndTime < 100);
   }
 
   /**
@@ -304,7 +313,7 @@ export class PanZoomController {
    * Handle pointer down
    */
   private handlePointerDown(clientX: number, clientY: number, pointerId: number): void {
-    this.isDragging = true;
+    // Don't set isDragging to true yet - wait for actual movement
     this.lastPointerPos = { x: clientX, y: clientY };
     this.activePointers.set(pointerId, { x: clientX, y: clientY });
     
@@ -320,15 +329,26 @@ export class PanZoomController {
    * Handle pointer move
    */
   private handlePointerMove(clientX: number, clientY: number, pointerId: number): void {
-    if (!this.isDragging || !this.lastPointerPos) return;
+    // Must have at least one active pointer
+    if (this.activePointers.size === 0) return;
+    
+    if (!this.lastPointerPos) return;
+    
+    // Check if we've moved enough to consider it a drag (threshold of 3 pixels)
+    const deltaX = clientX - this.lastPointerPos.x;
+    const deltaY = clientY - this.lastPointerPos.y;
+    const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
+    
+    if (!this.isDragging && distance > 3) {
+      this.isDragging = true;
+    }
+    
+    if (!this.isDragging) return;
     
     this.activePointers.set(pointerId, { x: clientX, y: clientY });
     
     // Single pointer panning
     if (this.activePointers.size === 1) {
-      const deltaX = clientX - this.lastPointerPos.x;
-      const deltaY = clientY - this.lastPointerPos.y;
-      
       this.panBy(deltaX, deltaY);
     }
     
@@ -342,6 +362,10 @@ export class PanZoomController {
     this.activePointers.delete(pointerId);
     
     if (this.activePointers.size === 0) {
+      // Only set dragEndTime if we were actually dragging
+      if (this.isDragging) {
+        this.dragEndTime = Date.now();
+      }
       this.isDragging = false;
       this.lastPointerPos = null;
     }

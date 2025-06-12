@@ -240,8 +240,9 @@ export class QueueSelectionController {
    */
   private handleClick(e: MouseEvent): void {
     // Don't handle clicks if we were just dragging (pan/zoom)
-    // Note: dragging detection would need to be implemented in PanZoomController
-    
+    if (this.panZoomController.isDraggingActive()) {
+      return;
+    }
     
     const worldPos = this.panZoomController.screenToWorld(e.clientX, e.clientY);
     const hitNode = this.hitTest(worldPos.x, worldPos.y);
