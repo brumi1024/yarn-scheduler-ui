@@ -76,22 +76,22 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 
   const getPositionStyles = () => {
     const baseStyles = {
-      position: 'fixed' as const,
+      position: 'absolute' as const,
       zIndex: 1000,
       margin: theme.spacing(2)
     };
 
     switch (position) {
       case 'top-right':
-        return { ...baseStyles, top: 0, right: 0 };
+        return { ...baseStyles, top: theme.spacing(2), right: theme.spacing(2) };
       case 'top-left':
-        return { ...baseStyles, top: 0, left: 0 };
+        return { ...baseStyles, top: theme.spacing(2), left: theme.spacing(2) };
       case 'bottom-right':
-        return { ...baseStyles, bottom: 0, right: 0 };
+        return { ...baseStyles, bottom: theme.spacing(2), right: theme.spacing(2) };
       case 'bottom-left':
-        return { ...baseStyles, bottom: 0, left: 0 };
+        return { ...baseStyles, bottom: theme.spacing(2), left: theme.spacing(2) };
       default:
-        return { ...baseStyles, top: 0, right: 0 };
+        return { ...baseStyles, top: theme.spacing(2), right: theme.spacing(2) };
     }
   };
 
@@ -101,14 +101,15 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
 
   return (
     <Paper
-      elevation={3}
+      elevation={6}
       sx={{
         ...getPositionStyles(),
         display: 'flex',
         flexDirection: 'column',
         bgcolor: 'background.paper',
         borderRadius: 2,
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)'
       }}
     >
       <Box sx={{ p: 1 }}>

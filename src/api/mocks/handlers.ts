@@ -1,16 +1,17 @@
 import { http, HttpResponse } from 'msw';
-import { mockSchedulerData } from './mockData';
-import { mockConfigurationData } from './mockConfigData';
-import { mockNodeLabelsData, mockNodesData } from './mockNodeData';
 
 export const handlers = [
-  // Scheduler endpoints
-  http.get('/ws/v1/cluster/scheduler', () => {
-    return HttpResponse.json(mockSchedulerData);
+  // Scheduler endpoints - use actual mock files
+  http.get('/ws/v1/cluster/scheduler', async () => {
+    const response = await fetch('/mock/ws/v1/cluster/scheduler.json');
+    const data = await response.json();
+    return HttpResponse.json(data);
   }),
 
-  http.get('/ws/v1/cluster/scheduler-conf', () => {
-    return HttpResponse.json(mockConfigurationData);
+  http.get('/ws/v1/cluster/scheduler-conf', async () => {
+    const response = await fetch('/mock/ws/v1/cluster/scheduler-conf.json');
+    const data = await response.json();
+    return HttpResponse.json(data);
   }),
 
   http.put('/ws/v1/cluster/scheduler-conf', async ({ request }) => {
@@ -26,13 +27,23 @@ export const handlers = [
   }),
 
   // Node endpoints
-  http.get('/ws/v1/cluster/nodes', () => {
-    return HttpResponse.json(mockNodesData);
+  http.get('/ws/v1/cluster/nodes', async () => {
+    const response = await fetch('/mock/ws/v1/cluster/nodes.json');
+    const data = await response.json();
+    return HttpResponse.json(data);
   }),
 
   // Node labels endpoints
-  http.get('/ws/v1/cluster/get-node-labels', () => {
-    return HttpResponse.json(mockNodeLabelsData);
+  http.get('/ws/v1/cluster/get-node-labels', async () => {
+    // For now, return a simple mock for node labels
+    return HttpResponse.json({
+      nodeLabels: {
+        nodeLabel: [
+          { name: 'gpu', numActiveNMs: 2, numInactiveNMs: 0, resourceType: 'EXCLUSIVE' },
+          { name: 'fpga', numActiveNMs: 1, numInactiveNMs: 0, resourceType: 'EXCLUSIVE' }
+        ]
+      }
+    });
   }),
 
   http.get('/ws/v1/cluster/nodes/get-node-to-labels', () => {

@@ -87,6 +87,8 @@ export class CanvasRenderer {
   private hoveredNode: LayoutNode | null = null;
   private selectedNodes: Set<string> = new Set();
   private nodes: LayoutNode[] = [];
+  private hoverAnimations: Map<string, { currentScale: number; targetScale: number; startTime: number }> = new Map();
+  private readonly HOVER_ANIMATION_DURATION = 800; // milliseconds
   private flows: FlowPath[] = [];
   private currentTransform: Transform = { x: 0, y: 0, scale: 1 };
 
@@ -194,6 +196,15 @@ export class CanvasRenderer {
 
     // Restore transform
     this.ctx.restore();
+
+    // Continue animation loop if animations are active
+    if (this.hasActiveAnimations()) {
+      requestAnimationFrame(() => {
+        if (this.nodes && this.flows) {
+          this.render(this.nodes, this.flows, this.currentTransform);
+        }
+      });
+    }
   }
 
   /**
@@ -278,8 +289,29 @@ export class CanvasRenderer {
     const isSelected = this.selectedNodes.has(node.id);
     const isHovered = this.hoveredNode?.id === node.id;
 
+    // Calculate animated hover scale effect
+    const hoverScale = this.getAnimatedScale(node.id);
+    const scaledWidth = width * hoverScale;
+    const scaledHeight = height * hoverScale;
+    const scaledX = x - (scaledWidth - width) / 2;
+    const scaledY = y - (scaledHeight - height) / 2;
+
     // Get card style
     const style = this.getCardStyle(data, isSelected, isHovered);
+
+    // Draw shadow first (behind the card)
+    ctx.save();
+    ctx.shadowColor = style.shadowColor;
+    ctx.shadowBlur = isSelected ? 8 : isHovered ? 6 : 4;
+    ctx.shadowOffsetX = isSelected ? 0 : 1;
+    ctx.shadowOffsetY = isSelected ? 4 : isHovered ? 3 : 2;
+    ctx.globalAlpha = isSelected ? 0.3 : isHovered ? 0.25 : 0.15;
+    
+    // Draw shadow shape
+    ctx.fillStyle = '#000000';
+    this.drawRoundedRect(ctx, scaledX, scaledY, scaledWidth, scaledHeight, 12);
+    ctx.fill();
+    ctx.restore();
 
     // Draw card background
     ctx.fillStyle = style.backgroundColor;
@@ -287,50 +319,86 @@ export class CanvasRenderer {
     ctx.lineWidth = 1;
 
     // Draw rounded rectangle
-    this.drawRoundedRect(ctx, x, y, width, height, 12);
+    this.drawRoundedRect(ctx, scaledX, scaledY, scaledWidth, scaledHeight, 12);
     ctx.fill();
     ctx.stroke();
 
-    // Draw left border (4px)
-    ctx.fillStyle = style.borderColor;
-    ctx.fillRect(x, y, 4, height);
 
-    // Draw shadow
-    if (!isSelected && !isHovered) {
-      ctx.save();
-      ctx.shadowColor = style.shadowColor;
-      ctx.shadowBlur = 4;
-      ctx.shadowOffsetX = 0;
-      ctx.shadowOffsetY = 2;
-      this.drawRoundedRect(ctx, x, y, width, height, 12);
-      ctx.restore();
-    }
-
-    // Draw queue name
+    // === HEADER SECTION ===
+    // Draw queue name with prominent styling and background highlight
+    const headerHeight = 40;
+    
+    // Subtle header background
+    ctx.fillStyle = '#f8fafc';
+    this.drawRoundedRect(ctx, scaledX + 1, scaledY + 1, scaledWidth - 2, headerHeight, 12);
+    ctx.fill();
+    
+    // Queue name - prominent but not oversized
     ctx.fillStyle = style.textColor;
-    ctx.font = '14px sans-serif';
+    ctx.font = 'bold 16px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     
-    const nameText = this.truncateText(ctx, data.queueName, width - 100);
-    ctx.fillText(nameText, x + 20, y + 25);
+    const nameText = this.truncateText(ctx, data.queueName, scaledWidth - 32);
+    ctx.fillText(nameText, scaledX + 16, scaledY + headerHeight / 2);
 
-    // Draw divider line
-    ctx.strokeStyle = '#e0e0e0';
+    // === BADGES SECTION ===
+    // Draw badges below the queue name
+    this.drawStateBadges(ctx, { ...node, x: scaledX, y: scaledY + headerHeight + 8, width: scaledWidth, height: scaledHeight });
+
+    // === CAPACITY SECTION ===
+    const capacitySectionY = scaledY + headerHeight + 48;
+    
+    // Section divider
+    ctx.strokeStyle = '#e5e7eb';
     ctx.lineWidth = 1;
     ctx.beginPath();
-    ctx.moveTo(x + 10, y + 45);
-    ctx.lineTo(x + width - 10, y + 45);
+    ctx.moveTo(scaledX + 16, capacitySectionY - 8);
+    ctx.lineTo(scaledX + scaledWidth - 16, capacitySectionY - 8);
     ctx.stroke();
+    
+    // Capacity bar
+    this.drawCapacityBar(ctx, data, scaledX + 16, capacitySectionY, scaledWidth - 32);
 
-    // Draw capacity info
-    ctx.font = '12px sans-serif';
-    ctx.fillStyle = '#666666';
-    const capacityText = this.getCapacityText(data);
-    ctx.fillText(capacityText, x + 20, y + 70);
+    // Capacity information with better spacing
+    const capacityInfo = this.getDetailedCapacityInfo(data);
+    
+    // Emphasize current allocated capacity
+    ctx.font = 'bold 14px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#374151';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText(capacityInfo.allocated, scaledX + 16, capacitySectionY + 20);
+    
+    // Show used capacity in smaller, secondary text
+    ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#6b7280';
+    ctx.textAlign = 'left';
+    ctx.fillText(capacityInfo.used, scaledX + 16, capacitySectionY + 37);
+    
+    // Emphasize max capacity
+    ctx.font = 'bold 12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.fillStyle = '#4b5563';
+    ctx.textAlign = 'left';
+    ctx.fillText(capacityInfo.max, scaledX + 16, capacitySectionY + 52);
 
-    // Draw state badges
-    this.drawStateBadges(ctx, node);
+    // === RESOURCES SECTION ===
+    if (data.resourcesUsed && (data.resourcesUsed.memory > 0 || data.resourcesUsed.vCores > 0)) {
+      const resourcesSectionY = capacitySectionY + 75;
+      
+      // Section divider
+      ctx.strokeStyle = '#e5e7eb';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(scaledX + 16, resourcesSectionY - 8);
+      ctx.lineTo(scaledX + scaledWidth - 16, resourcesSectionY - 8);
+      ctx.stroke();
+      
+      const resourceText = this.getResourceUsageText(data);
+      ctx.font = '12px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+      ctx.fillStyle = '#6b7280';
+      ctx.fillText(resourceText, scaledX + 16, resourcesSectionY);
+    }
   }
 
   /**
@@ -338,29 +406,120 @@ export class CanvasRenderer {
    */
   private drawStateBadges(ctx: CanvasRenderingContext2D, node: LayoutNode): void {
     const { x, y, data } = node;
-    let badgeX = x + 20;
-    const badgeY = y + 90;
+    
+    // Position badges in horizontal flow from left to right
+    let currentX = x + 16; // Start from left edge with margin
+    const badgeY = y;
+    
+    // Capacity mode badge (leftmost)
+    const modeText = this.getCapacityMode(data);
+    if (modeText) {
+      const modeDisplay = modeText.toUpperCase();
+      this.drawEnhancedBadge(ctx, modeDisplay, currentX, badgeY, '#3b82f6', '#dbeafe');
+      const modeBadge = this.measureBadge(ctx, modeDisplay);
+      currentX += modeBadge.width + 8; // spacing
+    }
+
+    // State badge 
+    const stateText = data.state === 'RUNNING' ? 'RUNNING' : 'STOPPED';
+    const stateColor = data.state === 'RUNNING' ? '#10b981' : '#ef4444';
+    const stateBgColor = data.state === 'RUNNING' ? '#d1fae5' : '#fee2e2';
+    this.drawEnhancedBadge(ctx, stateText, currentX, badgeY, stateColor, stateBgColor);
+    const stateBadge = this.measureBadge(ctx, stateText);
+    currentX += stateBadge.width + 8; // spacing
+
+    // Auto-creation badge if enabled
+    if (data.autoCreateChildQueueEnabled) {
+      this.drawEnhancedBadge(ctx, 'AUTO', currentX, badgeY, '#f59e0b', '#fef3c7');
+      const autoBadge = this.measureBadge(ctx, 'AUTO');
+      currentX += autoBadge.width + 8; // spacing for potential future badges
+    }
+
+    // Additional badges can be added here in the future
+    // Examples: PREEMPTION, ELASTIC, MANAGED, etc.
+  }
+
+  /**
+   * Calculate total space needed for badges
+   */
+  private calculateBadgeSpace(ctx: CanvasRenderingContext2D, data: Queue): number {
+    let totalWidth = 0;
+    let badgeCount = 0;
 
     // Capacity mode badge
     const modeText = this.getCapacityMode(data);
     if (modeText) {
-      const badgeWidth = this.drawBadge(ctx, modeText, badgeX, badgeY, '#2196f3');
-      badgeX += badgeWidth + 8;
+      const modeBadge = this.measureBadge(ctx, modeText.toUpperCase());
+      totalWidth += modeBadge.width;
+      badgeCount++;
     }
 
-    // State badge
-    const stateColor = data.state === 'RUNNING' ? '#4caf50' : '#f44336';
-    const stateWidth = this.drawBadge(ctx, data.state.toLowerCase(), badgeX, badgeY, stateColor);
-    badgeX += stateWidth + 8;
+    // State badge (always present)
+    const stateText = data.state === 'RUNNING' ? 'RUNNING' : 'STOPPED';
+    const stateBadge = this.measureBadge(ctx, stateText);
+    totalWidth += stateBadge.width;
+    badgeCount++;
 
     // Auto-creation badge if enabled
     if (data.autoCreateChildQueueEnabled) {
-      this.drawBadge(ctx, 'auto', badgeX, badgeY, '#ff9800');
+      const autoBadge = this.measureBadge(ctx, 'AUTO');
+      totalWidth += autoBadge.width;
+      badgeCount++;
     }
+
+    // Add spacing between badges (8px between each badge)
+    const spacing = Math.max(0, (badgeCount - 1) * 8);
+    
+    return totalWidth + spacing;
   }
 
   /**
-   * Draw a badge
+   * Measure badge dimensions
+   */
+  private measureBadge(ctx: CanvasRenderingContext2D, text: string): { width: number; height: number } {
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    const metrics = ctx.measureText(text);
+    return {
+      width: metrics.width + 16,
+      height: 20
+    };
+  }
+
+  /**
+   * Draw enhanced badge with background and text color
+   */
+  private drawEnhancedBadge(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, textColor: string, backgroundColor: string): void {
+    const dimensions = this.measureBadge(ctx, text);
+    
+    // Draw badge shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.1)';
+    ctx.shadowBlur = 2;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 1;
+    
+    // Draw background
+    ctx.fillStyle = backgroundColor;
+    this.drawRoundedRect(ctx, x, y, dimensions.width, dimensions.height, 6);
+    ctx.fill();
+    ctx.restore();
+
+    // Draw border
+    ctx.strokeStyle = textColor + '20'; // 20% opacity
+    ctx.lineWidth = 1;
+    this.drawRoundedRect(ctx, x, y, dimensions.width, dimensions.height, 6);
+    ctx.stroke();
+
+    // Draw text
+    ctx.fillStyle = textColor;
+    ctx.font = 'bold 10px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x + dimensions.width / 2, y + dimensions.height / 2);
+  }
+
+  /**
+   * Draw a badge (legacy method - kept for compatibility)
    */
   private drawBadge(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string): number {
     ctx.font = '11px sans-serif';
@@ -368,7 +527,18 @@ export class CanvasRenderer {
     const width = metrics.width + 12;
     const height = 20;
 
-    // Draw badge background
+    // Draw badge shadow
+    ctx.save();
+    ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
+    ctx.shadowBlur = 2;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 1;
+    ctx.fillStyle = color;
+    this.drawRoundedRect(ctx, x, y, width, height, 10);
+    ctx.fill();
+    ctx.restore();
+
+    // Draw badge background (without shadow)
     ctx.fillStyle = color;
     this.drawRoundedRect(ctx, x, y, width, height, 10);
     ctx.fill();
@@ -397,21 +567,7 @@ export class CanvasRenderer {
       }
     });
 
-    // Draw hover overlay
-    if (this.hoveredNode) {
-      ctx.strokeStyle = '#2196f3';
-      ctx.lineWidth = 2;
-      ctx.setLineDash([5, 5]);
-      this.drawRoundedRect(ctx, 
-        this.hoveredNode.x - 2, 
-        this.hoveredNode.y - 2, 
-        this.hoveredNode.width + 4, 
-        this.hoveredNode.height + 4, 
-        14
-      );
-      ctx.stroke();
-      ctx.setLineDash([]);
-    }
+    // Hover effect is now handled by card scaling in drawQueueCard
   }
 
   /**
@@ -435,6 +591,43 @@ export class CanvasRenderer {
     ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
     ctx.lineTo(x, y + radius);
     ctx.quadraticCurveTo(x, y, x + radius, y);
+    ctx.closePath();
+  }
+
+  /**
+   * Draw rounded left border
+   */
+  private drawRoundedLeftBorder(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    borderWidth: number,
+    height: number,
+    radius: number
+  ): void {
+    ctx.beginPath();
+    
+    // Start at top-left corner
+    ctx.moveTo(x + radius, y);
+    
+    // Top edge of border
+    ctx.lineTo(x + borderWidth, y);
+    
+    // Right edge of border (straight line down)
+    ctx.lineTo(x + borderWidth, y + height);
+    
+    // Bottom edge of border
+    ctx.lineTo(x + radius, y + height);
+    
+    // Bottom-left corner (rounded)
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+    
+    // Left edge (straight line up)
+    ctx.lineTo(x, y + radius);
+    
+    // Top-left corner (rounded)
+    ctx.quadraticCurveTo(x, y, x + radius, y);
+    
     ctx.closePath();
   }
 
@@ -484,7 +677,135 @@ export class CanvasRenderer {
   }
 
   /**
-   * Get capacity display text
+   * Draw capacity bar visualization
+   */
+  private drawCapacityBar(ctx: CanvasRenderingContext2D, queue: Queue, x: number, y: number, width: number): void {
+    const barHeight = 6;
+    const barRadius = 3;
+    
+    // Determine capacity type and values
+    const capacityMode = this.getCapacityMode(queue);
+    const usedCapacity = queue.usedCapacity || 0;
+    const totalCapacity = queue.capacity || 0;
+    const maxCapacity = queue.maxCapacity || 100;
+    
+    
+    
+    // Background bar (total available capacity relative to parent)
+    ctx.fillStyle = '#f0f0f0';
+    this.drawRoundedRect(ctx, x, y, width, barHeight, barRadius);
+    ctx.fill();
+    
+    // Max capacity bar (shows the maximum this queue can grow to)
+    if (maxCapacity > totalCapacity) {
+      const maxWidth = (maxCapacity / 100) * width;
+      ctx.fillStyle = '#e8f4ff';
+      this.drawRoundedRect(ctx, x, y, Math.min(maxWidth, width), barHeight, barRadius);
+      ctx.fill();
+    }
+    
+    // Current capacity bar (allocated capacity)
+    if (totalCapacity > 0) {
+      const currentWidth = (totalCapacity / 100) * width;
+      ctx.fillStyle = capacityMode === 'weight' ? '#dbeafe' : '#bfdbfe';
+      this.drawRoundedRect(ctx, x, y, Math.min(currentWidth, width), barHeight, barRadius);
+      ctx.fill();
+    }
+    
+    // Used capacity bar (actually used portion)
+    if (usedCapacity > 0 && totalCapacity > 0) {
+      // usedCapacity in scheduler data is a percentage, but we need to show it relative to the allocated capacity
+      // So if total capacity is 30% and used is 42.5%, we show 42.5% of the 30% allocated portion
+      const usedWidth = (usedCapacity / 100) * (totalCapacity / 100) * width;
+      const color = this.getUsageColor(usedCapacity, totalCapacity);
+      ctx.fillStyle = color;
+      this.drawRoundedRect(ctx, x, y, Math.min(usedWidth, width), barHeight, barRadius);
+      ctx.fill();
+    }
+  }
+
+  /**
+   * Get detailed capacity information
+   */
+  private getDetailedCapacityInfo(queue: Queue): { allocated: string; used: string; max: string } {
+    const capacityMode = this.getCapacityMode(queue);
+    const usedCapacity = queue.usedCapacity || 0;
+    const totalCapacity = queue.capacity || 0;
+    const maxCapacity = queue.maxCapacity || 100;
+    
+    let allocated: string;
+    let used: string;
+    let max: string;
+    
+    if (capacityMode === 'weight') {
+      allocated = `Capacity: ${totalCapacity} weight`;
+      used = `${usedCapacity.toFixed(1)}% in use`;
+      max = `Max Capacity: ${maxCapacity} weight`;
+    } else if (capacityMode === 'absolute') {
+      allocated = `Capacity: ${totalCapacity} resources`;
+      used = `${usedCapacity.toFixed(1)}% in use`;
+      max = `Max Capacity: ${maxCapacity} resources`;
+    } else {
+      allocated = `Capacity: ${totalCapacity}%`;
+      used = `${usedCapacity.toFixed(1)}% in use`;
+      max = `Max Capacity: ${maxCapacity}%`;
+    }
+    
+    return { allocated, used, max };
+  }
+
+  /**
+   * Get resource usage text
+   */
+  private getResourceUsageText(queue: Queue): string {
+    const resources = queue.resourcesUsed;
+    if (!resources) return '';
+    
+    const parts: string[] = [];
+    
+    if (resources.memory > 0) {
+      const memory = this.formatBytes(resources.memory * 1024 * 1024);
+      parts.push(`Memory: ${memory}`);
+    }
+    
+    if (resources.vCores > 0) {
+      parts.push(`vCores: ${resources.vCores}`);
+    }
+    
+    if (queue.numApplications > 0) {
+      parts.push(`Apps: ${queue.numApplications}`);
+    }
+    
+    return parts.join(' • ');
+  }
+
+  /**
+   * Get usage color based on percentage
+   */
+  private getUsageColor(used: number, total: number): string {
+    if (total === 0) return '#94a3b8';
+    
+    const percentage = (used / total) * 100;
+    
+    if (percentage >= 90) return '#ef4444'; // Red
+    if (percentage >= 75) return '#f97316'; // Orange  
+    if (percentage >= 50) return '#eab308'; // Yellow
+    return '#22c55e'; // Green
+  }
+
+  /**
+   * Format bytes to human readable string
+   */
+  private formatBytes(bytes: number): string {
+    if (bytes === 0) return '0 B';
+    const k = 1024;
+    const sizes = ['B', 'KB', 'MB', 'GB', 'TB'];
+    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
+  }
+
+  /**
+   * Get capacity display text (legacy - kept for compatibility)
    */
   private getCapacityText(queue: Queue): string {
     return `Capacity: ${queue.capacity || 0}% (${queue.usedCapacity || 0}% used)`;
@@ -519,7 +840,19 @@ export class CanvasRenderer {
    * Set hovered node
    */
   setHoveredNode(node: LayoutNode | null): void {
+    const previousHovered = this.hoveredNode;
     this.hoveredNode = node;
+    
+    // Handle hover animations
+    if (previousHovered && previousHovered.id !== node?.id) {
+      // Start fade out animation for previously hovered node
+      this.startHoverAnimation(previousHovered.id, 1.0);
+    }
+    
+    if (node && node.id !== previousHovered?.id) {
+      // Start fade in animation for newly hovered node
+      this.startHoverAnimation(node.id, 1.05);
+    }
   }
 
   /**
@@ -527,6 +860,56 @@ export class CanvasRenderer {
    */
   setSelectedNodes(nodeIds: Set<string>): void {
     this.selectedNodes = nodeIds;
+  }
+
+  /**
+   * Start hover animation for a node
+   */
+  private startHoverAnimation(nodeId: string, targetScale: number): void {
+    const currentAnimation = this.hoverAnimations.get(nodeId);
+    const currentScale = currentAnimation?.currentScale || 1.0;
+    
+    this.hoverAnimations.set(nodeId, {
+      currentScale,
+      targetScale,
+      startTime: performance.now()
+    });
+  }
+
+  /**
+   * Update hover animations and return current scale for a node
+   */
+  private getAnimatedScale(nodeId: string): number {
+    const animation = this.hoverAnimations.get(nodeId);
+    if (!animation) return 1.0;
+
+    const now = performance.now();
+    const elapsed = now - animation.startTime;
+    const progress = Math.min(elapsed / this.HOVER_ANIMATION_DURATION, 1);
+    
+    // Smooth easing function (ease-out)
+    const easedProgress = 1 - Math.pow(1 - progress, 3);
+    
+    const currentScale = animation.currentScale + (animation.targetScale - animation.currentScale) * easedProgress;
+    
+    // Update current scale for next frame
+    animation.currentScale = currentScale;
+    
+    // Remove animation when complete
+    if (progress >= 1) {
+      if (animation.targetScale === 1.0) {
+        this.hoverAnimations.delete(nodeId);
+      }
+    }
+    
+    return currentScale;
+  }
+
+  /**
+   * Check if any hover animations are currently running
+   */
+  private hasActiveAnimations(): boolean {
+    return this.hoverAnimations.size > 0;
   }
 
   /**
@@ -590,5 +973,6 @@ export class CanvasRenderer {
   destroy(): void {
     this.stopRenderLoop();
     this.layers.clear();
+    this.hoverAnimations.clear();
   }
 }

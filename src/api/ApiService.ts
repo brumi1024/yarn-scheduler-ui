@@ -68,17 +68,6 @@ export class ApiService {
 
   // Scheduler endpoints
   async getScheduler(): Promise<SchedulerResponse> {
-    // For development testing, use mock data
-    if (import.meta.env.DEV) {
-      try {
-        const response = await fetch('/scheduler.json');
-        if (response.ok) {
-          return await response.json();
-        }
-      } catch {
-        // Fall through to API call
-      }
-    }
     return this.request<SchedulerResponse>('/scheduler');
   }
 

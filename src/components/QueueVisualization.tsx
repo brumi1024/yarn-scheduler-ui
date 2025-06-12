@@ -4,7 +4,8 @@ import { D3TreeLayout, SankeyFlowCalculator, type LayoutNode, type FlowPath, typ
 import { CanvasRenderer, PanZoomController, QueueSelectionController, type SelectionEvent, type HoverEvent } from '../utils/canvas';
 import { ZoomControls } from './ZoomControls';
 import { QueueInfoPanel } from './QueueInfoPanel';
-import { useScheduler } from '../hooks/useApi';
+import { useConfiguration, useScheduler } from '../hooks/useApi';
+import { ConfigParser } from '../utils/ConfigParser';
 import type { Queue } from '../types/Queue';
 
 export interface QueueVisualizationProps {
@@ -41,15 +42,19 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
   const [selectedQueueData, setSelectedQueueData] = useState<Queue | null>(null);
   const [infoPanelOpen, setInfoPanelOpen] = useState(false);
   
-  // Get queue data from API
-  const { data: schedulerData, loading: apiLoading, error: apiError } = useScheduler();
+  // Get configuration data for tree building and scheduler data for metrics
+  const { data: configData, loading: configLoading, error: configError } = useConfiguration();
+  const { data: schedulerData, loading: schedulerLoading, error: schedulerError } = useScheduler();
+  
+  const apiLoading = configLoading || schedulerLoading;
+  const apiError = configError || schedulerError;
 
   // Sync API loading state with component loading state
   useEffect(() => {
-    if (apiLoading && !schedulerData) {
+    if (apiLoading && !configData) {
       setIsLoading(true);
     }
-  }, [apiLoading, schedulerData]);
+  }, [apiLoading, configData]);
 
   // Initialize visualization components
   useEffect(() => {
@@ -83,7 +88,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       // Initialize layout components
       const layout = new D3TreeLayout({
         nodeWidth: 280,
-        nodeHeight: 120,
+        nodeHeight: 180,
         horizontalSpacing: 100,
         verticalSpacing: 80,
         orientation: 'horizontal'
@@ -124,6 +129,46 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
     };
   }, [renderer, panZoomController]);
 
+  // Find queue in scheduler data for runtime metrics
+  const findQueueInSchedulerData = useCallback((queuePath: string, schedulerData: unknown): any | null => {
+    if (!schedulerData || typeof schedulerData !== 'object') return null;
+    
+    const data = schedulerData as { scheduler?: { schedulerInfo?: any } };
+    if (!data.scheduler?.schedulerInfo) return null;
+
+    
+    const findInQueue = (queue: any): any | null => {
+      // Try multiple matching strategies for flexible queue path matching
+      if (queue.queuePath === queuePath) {
+        return queue;
+      }
+      
+      if (queue.queues?.queue) {
+        for (const child of queue.queues.queue) {
+          const found = findInQueue(child);
+          if (found) return found;
+        }
+      }
+      
+      return null;
+    };
+
+    return findInQueue(data.scheduler.schedulerInfo);
+  }, []);
+
+  // Merge configuration and runtime data
+  const mergeQueueData = useCallback((layoutQueue: LayoutQueue, runtimeQueue: any): LayoutQueue => {
+    return {
+      ...layoutQueue,
+      usedCapacity: runtimeQueue?.usedCapacity || 0,
+      absoluteCapacity: runtimeQueue?.absoluteCapacity || layoutQueue.absoluteCapacity,
+      absoluteUsedCapacity: runtimeQueue?.absoluteUsedCapacity || 0,
+      absoluteMaxCapacity: runtimeQueue?.absoluteMaxCapacity || layoutQueue.absoluteMaxCapacity,
+      numApplications: runtimeQueue?.numApplications || 0,
+      resourcesUsed: runtimeQueue?.resourcesUsed || { memory: 0, vCores: 0 }
+    };
+  }, []);
+
   // Setup selection event handlers
   useEffect(() => {
     if (!selectionController) return;
@@ -133,6 +178,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       
       // Find the queue data for the selected node
       if (event.nodeId && event.node?.data) {
+        // The data is already merged with runtime data
         setSelectedQueueData(event.node.data as Queue);
         setInfoPanelOpen(true);
       } else {
@@ -168,7 +214,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       selectionController.removeSelectionListener(handleSelection);
       selectionController.removeHoverListener(handleHover);
     };
-  }, [selectionController, renderer, nodes, flows, panZoomController]);
+  }, [selectionController, renderer, nodes, flows, panZoomController, schedulerData, findQueueInSchedulerData, mergeQueueData]);
 
   // Update selection controller with new nodes
   useEffect(() => {
@@ -195,48 +241,57 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
     };
   }, []);
 
-  // Convert scheduler data to queue tree (stable function - no dependencies)
-  const buildQueueTree = useCallback((schedulerData: unknown): LayoutQueue | null => {
-    if (!schedulerData || typeof schedulerData !== 'object') return null;
+  // Convert configuration data to queue tree (stable function - no dependencies)
+  const buildQueueTree = useCallback((configData: unknown): LayoutQueue | null => {
+    if (!configData || typeof configData !== 'object') return null;
     
-    const data = schedulerData as { scheduler?: { schedulerInfo?: unknown } };
-    if (!data.scheduler?.schedulerInfo) return null;
+    const data = configData as { property?: Array<{ name: string; value: string }> };
+    if (!data.property) return null;
 
-    const schedulerInfo = data.scheduler.schedulerInfo;
+    // Convert property array to configuration object for ConfigParser
+    const configuration: Record<string, string> = {};
+    data.property.forEach(prop => {
+      configuration[prop.name] = prop.value;
+    });
+
+    // Parse the configuration using ConfigParser
+    const parseResult = ConfigParser.parse(configuration);
     
-    const convertQueue = (apiQueue: unknown): LayoutQueue => {
-      const queue = apiQueue as Record<string, unknown>;
-      const queueName = (queue.queueName as string) || 'root';
-      const queuePath = (queue.queuePath as string) || 'root';
+    if (parseResult.errors.length > 0) {
+      // eslint-disable-next-line no-console
+      console.error('Configuration parsing errors:', parseResult.errors);
+      return null;
+    }
 
-      const queueList = queue.queues as { queue?: unknown[] };
-      const children = queueList?.queue 
-        ? queueList.queue.map((child: unknown) => convertQueue(child))
-        : undefined;
+    if (parseResult.queues.length === 0) {
+      return null;
+    }
 
+    // Convert ParsedQueue to LayoutQueue
+    const convertParsedQueue = (parsedQueue: any): LayoutQueue => {
       return {
-        id: queuePath,
-        queueName,
-        queuePath,
-        capacity: (queue.capacity as number) || 0,
-        usedCapacity: (queue.usedCapacity as number) || 0,
-        maxCapacity: (queue.maxCapacity as number) || 100,
-        absoluteCapacity: (queue.absoluteCapacity as number) || 0,
-        absoluteUsedCapacity: (queue.absoluteUsedCapacity as number) || 0,
-        absoluteMaxCapacity: (queue.absoluteMaxCapacity as number) || 100,
-        state: (queue.state as 'RUNNING' | 'STOPPED') || 'RUNNING',
-        numApplications: (queue.numApplications as number) || 0,
-        resourcesUsed: (queue.resourcesUsed as { memory: number; vCores: number }) || { memory: 0, vCores: 0 },
-        children
+        id: parsedQueue.path,
+        queueName: parsedQueue.name,
+        queuePath: parsedQueue.path,
+        capacity: parsedQueue.capacity.numericValue || 0,
+        usedCapacity: 0, // Will be filled from scheduler data later
+        maxCapacity: parsedQueue.maxCapacity.numericValue || 100,
+        absoluteCapacity: 0, // Calculate based on parent
+        absoluteUsedCapacity: 0,
+        absoluteMaxCapacity: 100,
+        state: parsedQueue.state,
+        numApplications: 0, // Will be filled from scheduler data later
+        resourcesUsed: { memory: 0, vCores: 0 }, // Will be filled from scheduler data later
+        children: parsedQueue.children?.map(convertParsedQueue) || []
       };
     };
-    
-    return convertQueue(schedulerInfo);
+
+    return convertParsedQueue(parseResult.queues[0]);
   }, []);
 
   // Update visualization when data changes
   useEffect(() => {
-    if (!schedulerData || !treeLayout || !sankeyCalculator || !renderer) {
+    if (!configData || !treeLayout || !sankeyCalculator || !renderer) {
       return;
     }
 
@@ -244,8 +299,8 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       setIsLoading(true);
       setError(null);
 
-      // Build queue tree from API data
-      const rootQueue = buildQueueTree(schedulerData);
+      // Build queue tree from configuration data
+      const rootQueue = buildQueueTree(configData);
       if (!rootQueue) {
         setError('No queue data available');
         setIsLoading(false);
@@ -254,6 +309,16 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
 
       // Calculate tree layout
       const layoutData = treeLayout.computeLayout(rootQueue);
+      
+      // MERGE SCHEDULER DATA INTO NODES
+      if (schedulerData) {
+        layoutData.nodes.forEach(node => {
+          const runtimeData = findQueueInSchedulerData(node.id, schedulerData);
+          if (runtimeData) {
+            node.data = mergeQueueData(node.data, runtimeData);
+          }
+        });
+      }
       
       // Calculate flow paths
       const flowPaths = sankeyCalculator.calculateFlows(layoutData.nodes);
@@ -280,16 +345,12 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       setError('Failed to render queue visualization');
       setIsLoading(false);
     }
-  }, [schedulerData, treeLayout, sankeyCalculator, renderer]);
+  }, [configData, schedulerData, treeLayout, sankeyCalculator, renderer, buildQueueTree, findQueueInSchedulerData, mergeQueueData]);
 
   // Handle canvas resize and setup
   useEffect(() => {
     const setupCanvasSize = () => {
       if (canvasRef.current && containerRef.current) {
-        const container = containerRef.current;
-        const rect = container.getBoundingClientRect();
-        const canvas = canvasRef.current;
-        
         // Trigger renderer resize if available (this will handle canvas sizing)
         if (renderer) {
           renderer.resize();

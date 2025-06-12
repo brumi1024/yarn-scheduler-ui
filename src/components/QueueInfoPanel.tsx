@@ -93,40 +93,42 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
   return (
     <Paper
-      elevation={8}
+      elevation={0}
       sx={{
         position: 'fixed',
-        top: 0,
+        top: '112px', // Position below AppBar (64px) + TabNavigation (48px)
         right: open ? 0 : '-400px',
         width: 400,
-        height: '100vh',
+        height: 'calc(100vh - 112px)',
         transition: 'right 0.3s ease-in-out',
         zIndex: 1300,
         display: 'flex',
         flexDirection: 'column',
-        overflow: 'hidden'
+        overflow: 'hidden',
+        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)'
       }}
     >
       {/* Header */}
       <Box
         sx={{
           p: 2,
-          bgcolor: 'primary.main',
-          color: 'primary.contrastText',
+          bgcolor: 'background.paper',
+          borderBottom: 1,
+          borderColor: 'divider',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'space-between'
         }}
       >
         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-          <InfoIcon />
-          <Typography variant="h6" component="h2">
+          <InfoIcon color="action" />
+          <Typography variant="h6" component="h2" color="text.primary">
             Queue Details
           </Typography>
         </Box>
         <IconButton
           onClick={onClose}
-          sx={{ color: 'primary.contrastText' }}
+          sx={{ color: 'text.secondary' }}
         >
           <CloseIcon />
         </IconButton>
@@ -135,7 +137,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
       {/* Content */}
       <Box sx={{ flex: 1, overflow: 'auto', p: 2 }}>
         {/* Basic Info */}
-        <Card sx={{ mb: 2 }}>
+        <Card sx={{ 
+          mb: 2, 
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06)' 
+        }}>
           <CardContent>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 2 }}>
               <Typography variant="h6" component="h3">
@@ -170,7 +175,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         </Card>
 
         {/* Capacity Metrics */}
-        <Card sx={{ mb: 2 }}>
+        <Card sx={{ 
+          mb: 2, 
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06)' 
+        }}>
           <CardContent>
             <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
               Capacity Metrics
@@ -236,7 +244,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         </Card>
 
         {/* Resource Usage */}
-        <Card sx={{ mb: 2 }}>
+        <Card sx={{ 
+          mb: 2, 
+          boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06)' 
+        }}>
           <CardContent>
             <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
               Resource Usage
@@ -267,7 +278,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         {(() => {
           const childQueues = (queue as any).children || queue.queues?.queue;
           return childQueues && childQueues.length > 0 && (
-            <Card sx={{ mb: 2 }}>
+            <Card sx={{ 
+              mb: 2, 
+              boxShadow: '0 2px 8px rgba(0, 0, 0, 0.1), 0 1px 3px rgba(0, 0, 0, 0.06)' 
+            }}>
               <CardContent>
                 <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
                   Child Queues ({childQueues.length})
