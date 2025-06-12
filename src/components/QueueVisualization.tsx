@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import { Box, Alert, CircularProgress } from '@mui/material';
-import { D3TreeLayout, SankeyFlowCalculator, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
+import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
 import { CanvasRenderer, PanZoomController, QueueSelectionController, type SelectionEvent, type HoverEvent } from '../utils/canvas';
 import { ZoomControls } from './ZoomControls';
 import { QueueInfoPanel } from './QueueInfoPanel';
@@ -30,7 +30,6 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
   const [panZoomController, setPanZoomController] = useState<PanZoomController | null>(null);
   const [selectionController, setSelectionController] = useState<QueueSelectionController | null>(null);
   const [treeLayout, setTreeLayout] = useState<D3TreeLayout | null>(null);
-  const [sankeyCalculator, setSankeyCalculator] = useState<SankeyFlowCalculator | null>(null);
   
   // Layout data
   const [nodes, setNodes] = useState<LayoutNode[]>([]);
@@ -95,12 +94,6 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       });
       setTreeLayout(layout);
 
-      const sankey = new SankeyFlowCalculator({
-        minWidth: 2,
-        maxWidth: 50,
-        curvature: 0.6
-      });
-      setSankeyCalculator(sankey);
 
       return () => {
         selection.destroy();
@@ -298,7 +291,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
 
   // Update visualization when data changes
   useEffect(() => {
-    if (!configData || !treeLayout || !sankeyCalculator || !renderer) {
+    if (!configData || !treeLayout || !renderer) {
       return;
     }
 
@@ -328,8 +321,8 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       }
       
       
-      // Calculate flow paths
-      const flowPaths = sankeyCalculator.calculateFlows(layoutData.nodes);
+      // Use flows from tree layout (includes our new Sankey logic)
+      const flowPaths = layoutData.flows;
       
       // Update state and refs
       setNodes(layoutData.nodes);
@@ -353,7 +346,7 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       setError('Failed to render queue visualization');
       setIsLoading(false);
     }
-  }, [configData, schedulerData, treeLayout, sankeyCalculator, renderer, buildQueueTree, findQueueInSchedulerData, mergeQueueData]);
+  }, [configData, schedulerData, treeLayout, renderer, buildQueueTree, findQueueInSchedulerData, mergeQueueData]);
 
   // Handle canvas resize and setup
   useEffect(() => {

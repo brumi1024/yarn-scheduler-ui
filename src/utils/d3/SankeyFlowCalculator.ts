@@ -1,4 +1,3 @@
-// import { sankey, sankeyLinkHorizontal } from 'd3-sankey';
 import type { LayoutNode, FlowPath } from './D3TreeLayout';
 
 export interface SankeyNode {

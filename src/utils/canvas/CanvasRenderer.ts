@@ -53,8 +53,8 @@ const DEFAULT_THEME: RenderTheme = {
     border: '#e0e0e0',
     shadow: 'rgba(0, 0, 0, 0.1)',
     text: '#333333',
-    selectedBackground: '#e3f2fd',
-    hoverBackground: '#f5f5f5'
+    selectedBackground: '#f0f8ff',
+    hoverBackground: '#f8f9fa'
   },
   flow: {
     running: '#64b5f6',
@@ -289,23 +289,39 @@ export class CanvasRenderer {
     const isSelected = this.selectedNodes.has(node.id);
     const isHovered = this.hoveredNode?.id === node.id;
 
-    // Calculate animated hover scale effect
-    const hoverScale = this.getAnimatedScale(node.id);
-    const scaledWidth = width * hoverScale;
-    const scaledHeight = height * hoverScale;
+    // Very subtle scale increase for hover effect (minimal distortion)
+    const scale = isHovered ? 1.02 : 1.0; // Only 2% increase
+    const scaledWidth = width * scale;
+    const scaledHeight = height * scale;
     const scaledX = x - (scaledWidth - width) / 2;
     const scaledY = y - (scaledHeight - height) / 2;
 
     // Get card style
     const style = this.getCardStyle(data, isSelected, isHovered);
 
-    // Draw shadow first (behind the card)
+    // Draw shadow first (behind the card) - enhanced for hover elevation
     ctx.save();
     ctx.shadowColor = style.shadowColor;
-    ctx.shadowBlur = isSelected ? 8 : isHovered ? 6 : 4;
-    ctx.shadowOffsetX = isSelected ? 0 : 1;
-    ctx.shadowOffsetY = isSelected ? 4 : isHovered ? 3 : 2;
-    ctx.globalAlpha = isSelected ? 0.3 : isHovered ? 0.25 : 0.15;
+    
+    if (isSelected) {
+      // Selected: very deep shadow with large blur
+      ctx.shadowBlur = 30;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 15;
+      ctx.globalAlpha = 0.5;
+    } else if (isHovered) {
+      // Hovered: dramatic elevation effect - card clearly brought to foreground
+      ctx.shadowBlur = 24;
+      ctx.shadowOffsetX = 0;
+      ctx.shadowOffsetY = 12;
+      ctx.globalAlpha = 0.4;
+    } else {
+      // Normal: subtle shadow
+      ctx.shadowBlur = 4;
+      ctx.shadowOffsetX = 1;
+      ctx.shadowOffsetY = 2;
+      ctx.globalAlpha = 0.15;
+    }
     
     // Draw shadow shape
     ctx.fillStyle = '#000000';
@@ -322,6 +338,15 @@ export class CanvasRenderer {
     this.drawRoundedRect(ctx, scaledX, scaledY, scaledWidth, scaledHeight, 12);
     ctx.fill();
     ctx.stroke();
+
+    // Add bright overlay for hovered cards to enhance "closer to screen" effect
+    if (isHovered) {
+      ctx.save();
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+      this.drawRoundedRect(ctx, scaledX, scaledY, scaledWidth, scaledHeight, 12);
+      ctx.fill();
+      ctx.restore();
+    }
 
 
     // === HEADER SECTION ===
@@ -556,18 +581,52 @@ export class CanvasRenderer {
    * Render overlay (selection, hover effects)
    */
   private renderOverlay(ctx: CanvasRenderingContext2D): void {
-    // Draw selection overlays
+    // Draw modern selection overlays
     this.selectedNodes.forEach(nodeId => {
       const node = this.nodes?.find(n => n.id === nodeId);
       if (node) {
-        ctx.strokeStyle = '#1976d2';
-        ctx.lineWidth = 2;
-        this.drawRoundedRect(ctx, node.x - 2, node.y - 2, node.width + 4, node.height + 4, 14);
-        ctx.stroke();
+        this.drawModernSelectionOverlay(ctx, node);
       }
     });
 
     // Hover effect is now handled by card scaling in drawQueueCard
+  }
+
+  /**
+   * Draw modern selection overlay with gradient and glow
+   */
+  private drawModernSelectionOverlay(ctx: CanvasRenderingContext2D, node: LayoutNode): void {
+    const padding = 3;
+    const x = node.x - padding;
+    const y = node.y - padding;
+    const width = node.width + (padding * 2);
+    const height = node.height + (padding * 2);
+    const radius = 16;
+
+    // Create pulsing animation
+    const time = Date.now() / 1000;
+    const pulseIntensity = 0.3 + 0.2 * Math.sin(time * 2);
+
+    // Draw outer glow
+    ctx.save();
+    ctx.shadowColor = `rgba(25, 118, 210, ${pulseIntensity})`;
+    ctx.shadowBlur = 12;
+    ctx.shadowOffsetX = 0;
+    ctx.shadowOffsetY = 0;
+    
+    ctx.strokeStyle = `rgba(25, 118, 210, ${0.8 + pulseIntensity * 0.2})`;
+    ctx.lineWidth = 3;
+    this.drawRoundedRect(ctx, x, y, width, height, radius);
+    ctx.stroke();
+    ctx.restore();
+
+    // Draw inner highlight
+    ctx.save();
+    ctx.strokeStyle = `rgba(255, 255, 255, ${0.6 + pulseIntensity * 0.4})`;
+    ctx.lineWidth = 1;
+    this.drawRoundedRect(ctx, x + 1, y + 1, width - 2, height - 2, radius - 1);
+    ctx.stroke();
+    ctx.restore();
   }
 
   /**

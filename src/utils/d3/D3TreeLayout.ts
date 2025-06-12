@@ -32,6 +32,10 @@ export interface FlowPath {
   path: string;
   width: number;
   capacity: number;
+  sourceStartY: number;
+  sourceEndY: number;
+  targetStartY: number;
+  targetEndY: number;
 }
 
 export interface LayoutOptions {
@@ -171,49 +175,133 @@ export class D3TreeLayout {
   private computeFlowPaths(nodes: LayoutNode[]): FlowPath[] {
     const flows: FlowPath[] = [];
 
+    // Group nodes by parent to calculate proportional widths
+    const nodesByParent = new Map<string, LayoutNode[]>();
     nodes.forEach(node => {
       if (node.parent) {
-        const source = node.parent;
-        const target = node;
-        
-        // Calculate flow width based on capacity
-        const capacity = node.data.absoluteCapacity || 0;
-        const width = 8 + (capacity / 100) * 52;
+        const parentId = node.parent.id;
+        if (!nodesByParent.has(parentId)) {
+          nodesByParent.set(parentId, []);
+        }
+        nodesByParent.get(parentId)!.push(node);
+      }
+    });
 
-        // Calculate path
-        const path = this.calculateBezierPath(source, target);
+    // Create Sankey-style flows for each parent-children group
+    nodesByParent.forEach((children, parentId) => {
+      const parent = nodes.find(n => n.id === parentId);
+      if (!parent) return;
+
+      // TODO: Temporary hardcoded values for testing - replace with real capacity data
+      const getTestCapacity = (queueName: string): number => {
+        const testCapacities: { [key: string]: number } = {
+          'prod01': 30,
+          'prod02': 70,
+          'team1': 40,
+          'team2': 60,
+          'prodteam01': 100,
+          'prodteam001': 100
+        };
+        return testCapacities[queueName] || 50;
+      };
+
+      // Calculate total capacity of all children using test values
+      const totalChildCapacity = children.reduce((sum, child) => {
+        const childCapacity = getTestCapacity(child.data.queueName);
+        return sum + childCapacity;
+      }, 0);
+
+      // Calculate proportional segments for each child, starting from top-right corner
+      let currentY = 0;
+      children.forEach((child, index) => {
+        const childCapacity = getTestCapacity(child.data.queueName);
+        const proportion = totalChildCapacity > 0 ? childCapacity / totalChildCapacity : 1 / children.length;
+        const segmentHeight = parent.height * proportion;
+
+        // Source segment (parent's right side, starting from top-right)
+        const sourceStartY = parent.y + currentY;
+        const sourceEndY = sourceStartY + segmentHeight;
+
+
+        // Target segment (child's left side - full height)
+        const targetStartY = child.y;
+        const targetEndY = child.y + child.height;
+
+        // Create Sankey path
+        const path = this.calculateSankeyPath(
+          parent, child, 
+          sourceStartY, sourceEndY,
+          targetStartY, targetEndY
+        );
 
         flows.push({
-          id: `${source.id}-${target.id}`,
-          source,
-          target,
+          id: `${parent.id}-${child.id}`,
+          source: parent,
+          target: child,
           path,
-          width,
-          capacity
+          width: segmentHeight,
+          capacity: childCapacity,
+          sourceStartY,
+          sourceEndY,
+          targetStartY,
+          targetEndY
         });
-      }
+
+        currentY += segmentHeight;
+      });
     });
 
     return flows;
   }
 
   /**
-   * Calculate cubic Bezier path between two nodes
+   * Calculate Sankey-style path with proper thickness
    */
-  private calculateBezierPath(source: LayoutNode, target: LayoutNode): string {
+  private calculateSankeyPath(
+    source: LayoutNode, 
+    target: LayoutNode,
+    sourceStartY: number,
+    sourceEndY: number,
+    targetStartY: number,
+    targetEndY: number
+  ): string {
+    const borderRadius = 12; // Match the card border radius
+    
+    // Adjust connection points to account for rounded corners
     const sourceX = source.x + source.width;
-    const sourceY = source.y + source.height / 2;
     const targetX = target.x;
-    const targetY = target.y + target.height / 2;
-
-    // Control points for cubic Bezier curve
-    const controlPointOffset = Math.abs(sourceX - targetX) * 0.5;
-    const cp1x = sourceX + controlPointOffset;
-    const cp1y = sourceY;
-    const cp2x = targetX - controlPointOffset;
-    const cp2y = targetY;
-
-    return `M ${sourceX} ${sourceY} C ${cp1x} ${cp1y}, ${cp2x} ${cp2y}, ${targetX} ${targetY}`;
+    
+    // Clamp source Y coordinates to avoid sharp corners
+    const sourceTop = Math.max(sourceStartY, source.y + borderRadius);
+    const sourceBottom = Math.min(sourceEndY, source.y + source.height - borderRadius);
+    
+    // Clamp target Y coordinates to avoid sharp corners  
+    const targetTop = Math.max(targetStartY, target.y + borderRadius);
+    const targetBottom = Math.min(targetEndY, target.y + target.height - borderRadius);
+    
+    // Control point distance for smooth curves
+    const controlDistance = Math.abs(targetX - sourceX) * 0.4;
+    
+    // Create a path that represents the flow band
+    const path = [
+      // Start at top of source segment (avoiding rounded corner)
+      `M ${sourceX} ${sourceTop}`,
+      
+      // Curve to top of target segment (avoiding rounded corner)
+      `C ${sourceX + controlDistance} ${sourceTop}, ${targetX - controlDistance} ${targetTop}, ${targetX} ${targetTop}`,
+      
+      // Line down the left side of target (within safe zone)
+      `L ${targetX} ${targetBottom}`,
+      
+      // Curve back to bottom of source segment (avoiding rounded corner)
+      `C ${targetX - controlDistance} ${targetBottom}, ${sourceX + controlDistance} ${sourceBottom}, ${sourceX} ${sourceBottom}`,
+      
+      // Close path by going up the right side of source (within safe zone)
+      `L ${sourceX} ${sourceTop}`,
+      `Z`
+    ];
+    
+    return path.join(' ');
   }
 
   /**
