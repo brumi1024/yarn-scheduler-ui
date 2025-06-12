@@ -91,6 +91,36 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     return 'primary';
   };
 
+  // Get live capacity data from partitions for info panel
+  const getLiveCapacityData = (queue: Queue) => {
+    const defaultPartition = queue.capacities?.queueCapacitiesByPartition?.find(
+      p => !p.partitionName || p.partitionName === ""
+    );
+    
+    if (defaultPartition) {
+      return {
+        capacity: defaultPartition.capacity || 0,
+        usedCapacity: defaultPartition.usedCapacity || 0,
+        maxCapacity: defaultPartition.maxCapacity || 100,
+        absoluteCapacity: defaultPartition.absoluteCapacity || 0,
+        absoluteUsedCapacity: defaultPartition.absoluteUsedCapacity || 0,
+        absoluteMaxCapacity: defaultPartition.absoluteMaxCapacity || 100
+      };
+    }
+    
+    // Fallback to merged queue fields
+    return {
+      capacity: queue.capacity || 0,
+      usedCapacity: queue.usedCapacity || 0,
+      maxCapacity: queue.maxCapacity || 100,
+      absoluteCapacity: queue.absoluteCapacity || 0,
+      absoluteUsedCapacity: queue.absoluteUsedCapacity || 0,
+      absoluteMaxCapacity: queue.absoluteMaxCapacity || 100
+    };
+  };
+
+  const liveCapacityData = getLiveCapacityData(queue);
+
 
   return (
     <Paper
@@ -193,13 +223,13 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                   Capacity
                 </Typography>
                 <Typography variant="body2">
-                  {queue.capacity}% (max: {queue.maxCapacity}%)
+                  {liveCapacityData.capacity}% (max: {liveCapacityData.maxCapacity}%)
                 </Typography>
               </Box>
               <LinearProgress
                 variant="determinate"
-                value={getCapacityPercentage(queue.capacity, queue.maxCapacity)}
-                color={getUsageColor(getCapacityPercentage(queue.capacity, queue.maxCapacity))}
+                value={getCapacityPercentage(liveCapacityData.capacity, liveCapacityData.maxCapacity)}
+                color={getUsageColor(getCapacityPercentage(liveCapacityData.capacity, liveCapacityData.maxCapacity))}
                 sx={{ height: 8, borderRadius: 4 }}
               />
             </Box>
@@ -211,34 +241,43 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                   Used Capacity
                 </Typography>
                 <Typography variant="body2">
-                  {queue.usedCapacity}% of {queue.capacity}%
+                  {liveCapacityData.usedCapacity}% of {liveCapacityData.capacity}%
                 </Typography>
               </Box>
               <LinearProgress
                 variant="determinate"
-                value={getCapacityPercentage(queue.usedCapacity, queue.capacity)}
-                color={getUsageColor(getCapacityPercentage(queue.usedCapacity, queue.capacity))}
+                value={getCapacityPercentage(liveCapacityData.usedCapacity, liveCapacityData.capacity)}
+                color={getUsageColor(getCapacityPercentage(liveCapacityData.usedCapacity, liveCapacityData.capacity))}
                 sx={{ height: 8, borderRadius: 4 }}
               />
             </Box>
 
-            {/* Absolute Values */}
+            {/* Absolute Values (Cluster-wide) */}
             <Divider sx={{ my: 2 }} />
+            <Typography variant="subtitle2" sx={{ mb: 1, fontWeight: 'medium' }}>
+              Cluster-wide Capacity
+            </Typography>
             <Grid container spacing={2}>
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
                   Absolute Capacity
                 </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  % of total cluster
+                </Typography>
                 <Typography variant="body1">
-                  {queue.absoluteCapacity}%
+                  {liveCapacityData.absoluteCapacity}%
                 </Typography>
               </Grid>
               <Grid item xs={6}>
                 <Typography variant="body2" color="text.secondary">
-                  Abs. Used Capacity
+                  Absolute Used
+                </Typography>
+                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                  % of total cluster
                 </Typography>
                 <Typography variant="body1">
-                  {queue.absoluteUsedCapacity}%
+                  {liveCapacityData.absoluteUsedCapacity}%
                 </Typography>
               </Grid>
             </Grid>

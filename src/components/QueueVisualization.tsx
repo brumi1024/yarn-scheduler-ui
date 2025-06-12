@@ -158,12 +158,18 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
 
   // Merge configuration and runtime data
   const mergeQueueData = useCallback((layoutQueue: LayoutQueue, runtimeQueue: any): LayoutQueue => {
+    // Extract default partition data to populate the simple Queue interface fields
+    const defaultPartition = runtimeQueue?.capacities?.queueCapacitiesByPartition?.find(
+      (partition: any) => !partition.partitionName || partition.partitionName === ""
+    );
+    
     return {
       ...layoutQueue,
-      usedCapacity: runtimeQueue?.usedCapacity || 0,
-      absoluteCapacity: runtimeQueue?.absoluteCapacity || layoutQueue.absoluteCapacity,
-      absoluteUsedCapacity: runtimeQueue?.absoluteUsedCapacity || 0,
-      absoluteMaxCapacity: runtimeQueue?.absoluteMaxCapacity || layoutQueue.absoluteMaxCapacity,
+      // Populate Queue interface fields from partition data (since that's where the real data is)
+      usedCapacity: defaultPartition?.usedCapacity || 0,
+      absoluteCapacity: defaultPartition?.absoluteCapacity || layoutQueue.absoluteCapacity,
+      absoluteUsedCapacity: defaultPartition?.absoluteUsedCapacity || 0,
+      absoluteMaxCapacity: defaultPartition?.absoluteMaxCapacity || layoutQueue.absoluteMaxCapacity,
       numApplications: runtimeQueue?.numApplications || 0,
       resourcesUsed: runtimeQueue?.resourcesUsed || { memory: 0, vCores: 0 },
       capacities: runtimeQueue?.capacities || undefined
