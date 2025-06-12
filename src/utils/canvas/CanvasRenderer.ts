@@ -676,6 +676,7 @@ export class CanvasRenderer {
     return this.theme.flow.default;
   }
 
+
   /**
    * Draw capacity bar visualization
    */
@@ -725,7 +726,7 @@ export class CanvasRenderer {
   }
 
   /**
-   * Get detailed capacity information
+   * Get detailed capacity information from partition data
    */
   private getDetailedCapacityInfo(queue: Queue): { allocated: string; used: string; max: string } {
     const capacityMode = this.getCapacityMode(queue);

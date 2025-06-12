@@ -91,6 +91,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     return 'primary';
   };
 
+
   return (
     <Paper
       elevation={0}

@@ -165,7 +165,8 @@ export const QueueVisualization: React.FC<QueueVisualizationProps> = ({
       absoluteUsedCapacity: runtimeQueue?.absoluteUsedCapacity || 0,
       absoluteMaxCapacity: runtimeQueue?.absoluteMaxCapacity || layoutQueue.absoluteMaxCapacity,
       numApplications: runtimeQueue?.numApplications || 0,
-      resourcesUsed: runtimeQueue?.resourcesUsed || { memory: 0, vCores: 0 }
+      resourcesUsed: runtimeQueue?.resourcesUsed || { memory: 0, vCores: 0 },
+      capacities: runtimeQueue?.capacities || undefined
     };
   }, []);
 
