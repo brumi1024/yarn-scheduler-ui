@@ -16,10 +16,7 @@ export interface ProcessedQueueData {
     error: string | null;
 }
 
-export function useQueueDataProcessor(
-    configData: unknown,
-    schedulerData: unknown
-): ProcessedQueueData {
+export function useQueueDataProcessor(configData: unknown, schedulerData: unknown): ProcessedQueueData {
     // Initialize D3 tree layout
     const treeLayout = useMemo(() => {
         return new D3TreeLayout({

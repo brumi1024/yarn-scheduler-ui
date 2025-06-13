@@ -6,10 +6,16 @@
  * could conflict with property names (e.g., a queue named "capacity").
  */
 
+import { entries, filter, map, compact, split, trim, isEmpty } from 'lodash';
 import type { ParsedQueue, Configuration } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
 import { CapacityModeDetector } from './CapacityModeDetector';
-import { parseIntProperty, parseNumericProperty, parseBooleanProperty, parseStringArray } from './CapacityValidation';
+import {
+    parseIntProperty,
+    parseNumericProperty,
+    parseBooleanProperty,
+    parseStringArray,
+} from '../schemas/propertySchemas';
 
 export interface ParsedProperty {
     key: string;
@@ -86,7 +92,7 @@ export class ConfigParser {
             foundNewQueues = false;
 
             // Find all .queues properties to discover child queues
-            for (const [key, value] of Object.entries(config)) {
+            for (const [key, value] of entries(config)) {
                 if (!key.startsWith(this.CAPACITY_PREFIX)) {
                     continue;
                 }
@@ -101,10 +107,12 @@ export class ConfigParser {
                     // Check if this parent path is already known to be a valid queue
                     if (queuePaths.has(parentPath)) {
                         // Parse the child queue names
-                        const childNames = value
-                            .split(',')
-                            .map((s: string) => s.trim())
-                            .filter((s: string) => s.length > 0);
+                        const childNames = compact(
+                            map(split(value, ','), (s) => {
+                                const trimmed = trim(s);
+                                return isEmpty(trimmed) ? null : trimmed;
+                            })
+                        );
 
                         // Add each child queue path
                         for (const childName of childNames) {
@@ -126,19 +134,16 @@ export class ConfigParser {
      * Phase 2: Parse all configuration properties with knowledge of valid queue paths
      */
     private static parseProperties(config: Configuration, validQueuePaths: Set<string>): ParsedProperty[] {
-        const properties: ParsedProperty[] = [];
+        return compact(
+            map(entries(config), ([key, value]) => {
+                if (!key.startsWith(this.CAPACITY_PREFIX)) {
+                    return null;
+                }
 
-        for (const [key, value] of Object.entries(config)) {
-            if (!key.startsWith(this.CAPACITY_PREFIX)) {
-                continue;
-            }
-
-            const suffix = key.substring(this.CAPACITY_PREFIX.length);
-            const parsed = this.classifyProperty(key, value, suffix, validQueuePaths);
-            properties.push(parsed);
-        }
-
-        return properties;
+                const suffix = key.substring(this.CAPACITY_PREFIX.length);
+                return this.classifyProperty(key, value, suffix, validQueuePaths);
+            })
+        );
     }
 
     /**
@@ -232,7 +237,7 @@ export class ConfigParser {
      */
     private static buildQueueHierarchy(properties: ParsedProperty[], result: ParseResult): void {
         // Collect all queue-specific properties
-        const queueProperties = properties.filter((p) => !p.isGlobal);
+        const queueProperties = filter(properties, (p) => !p.isGlobal);
         const queuePropertyMap = new Map<string, Map<string, string>>();
         const allQueuePaths = new Set<string>();
 
@@ -460,5 +465,4 @@ export class ConfigParser {
             this.validateLegacyModeConstraints(child, result);
         }
     }
-
 }

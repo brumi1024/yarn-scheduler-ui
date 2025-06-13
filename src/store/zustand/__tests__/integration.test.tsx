@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { 
-    useUIStore, 
-    useConfigurationStore, 
-    useStagedChangesStore, 
+import {
+    useUIStore,
+    useConfigurationStore,
+    useStagedChangesStore,
     useActivityStore,
     useSelectedQueue,
-    useAllQueues
+    useAllQueues,
 } from '../index';
 import { useScheduler, useConfiguration } from '../../../hooks/useApiWithZustand';
 import type { ChangeSet } from '../../../types/Configuration';
@@ -41,10 +41,10 @@ const mockSchedulerData = {
                                     state: 'RUNNING',
                                     numApplications: 2,
                                     resourcesUsed: { memory: 512, vCores: 2 },
-                                    queues: null
-                                }
-                            ]
-                        }
+                                    queues: null,
+                                },
+                            ],
+                        },
                     },
                     {
                         queueName: 'development',
@@ -54,20 +54,20 @@ const mockSchedulerData = {
                         state: 'RUNNING',
                         numApplications: 3,
                         resourcesUsed: { memory: 512, vCores: 2 },
-                        queues: null
-                    }
-                ]
-            }
-        }
-    }
+                        queues: null,
+                    },
+                ],
+            },
+        },
+    },
 };
 
 const mockConfigurationData = {
     property: [
         { name: 'yarn.scheduler.capacity.root.queues', value: 'production,development' },
         { name: 'yarn.scheduler.capacity.root.production.capacity', value: '60' },
-        { name: 'yarn.scheduler.capacity.root.development.capacity', value: '40' }
-    ]
+        { name: 'yarn.scheduler.capacity.root.development.capacity', value: '40' },
+    ],
 };
 
 // Mock server
@@ -95,7 +95,7 @@ const resetAllStores = () => {
         notifications: [],
         modals: {},
     });
-    
+
     useConfigurationStore.setState({
         scheduler: null,
         configuration: null,
@@ -115,14 +115,14 @@ const resetAllStores = () => {
         },
         lastUpdated: {},
     });
-    
+
     useStagedChangesStore.setState({
         changes: [],
         applying: false,
         lastApplied: undefined,
         conflicts: [],
     });
-    
+
     useActivityStore.setState({
         logs: [],
         apiCalls: [],
@@ -146,22 +146,22 @@ describe('Store Integration Tests', () => {
         it('should select queue and retrieve correct data from scheduler', async () => {
             // First load scheduler data
             const { result: schedulerHook } = renderHook(() => useScheduler());
-            
+
             await waitFor(() => {
                 expect(schedulerHook.current.loading).toBe(false);
             });
 
             // Now test queue selection integration
             const { result: selectedQueueHook } = renderHook(() => useSelectedQueue());
-            
+
             // Initially no queue selected
             expect(selectedQueueHook.current).toBeNull();
-            
+
             // Select a queue
             act(() => {
                 useUIStore.getState().selectQueue('root.production');
             });
-            
+
             // Should return the correct queue data
             expect(selectedQueueHook.current).toBeDefined();
             expect(selectedQueueHook.current?.queueName).toBe('production');
@@ -177,12 +177,12 @@ describe('Store Integration Tests', () => {
             });
 
             const { result: selectedQueueHook } = renderHook(() => useSelectedQueue());
-            
+
             // Select nested queue
             act(() => {
                 useUIStore.getState().selectQueue('root.production.prod-team1');
             });
-            
+
             expect(selectedQueueHook.current).toBeDefined();
             expect(selectedQueueHook.current?.queueName).toBe('prod-team1');
             expect(selectedQueueHook.current?.queuePath).toBe('root.production.prod-team1');
@@ -197,11 +197,11 @@ describe('Store Integration Tests', () => {
             });
 
             const { result: allQueuesHook } = renderHook(() => useAllQueues());
-            
+
             const allQueues = allQueuesHook.current;
             expect(allQueues).toHaveLength(3); // production, prod-team1, development
-            
-            const paths = allQueues.map(q => q.path);
+
+            const paths = allQueues.map((q) => q.path);
             expect(paths).toContain('root.production');
             expect(paths).toContain('root.production.prod-team1');
             expect(paths).toContain('root.development');
@@ -228,7 +228,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '60%',
                 newValue: '70%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             const change2: ChangeSet = {
@@ -238,7 +238,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '40%',
                 newValue: '30%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             act(() => {
@@ -251,7 +251,7 @@ describe('Store Integration Tests', () => {
             const stagedStore = useStagedChangesStore.getState();
             const selectedQueuePath = useUIStore.getState().selectedQueuePath;
             const changesForSelectedQueue = stagedStore.getChangesByQueue(selectedQueuePath!);
-            
+
             expect(changesForSelectedQueue).toHaveLength(1);
             expect(changesForSelectedQueue[0].id).toBe('change-1');
             expect(stagedStore.hasUnsavedChanges()).toBe(true);
@@ -272,7 +272,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '60%',
                 newValue: '70%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             const change2: ChangeSet = {
@@ -282,7 +282,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '40%',
                 newValue: '30%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             act(() => {
@@ -330,17 +330,15 @@ describe('Store Integration Tests', () => {
                     type: 'user_action',
                     level: 'info',
                     message: 'Queue selected',
-                    details: { queuePath: 'root.production' }
+                    details: { queuePath: 'root.production' },
                 });
-                
+
                 useUIStore.getState().selectQueue('root.production');
             });
 
             const activityStore = useActivityStore.getState();
-            const queueSelectionLog = activityStore.logs.find(
-                log => log.message === 'Queue selected'
-            );
-            
+            const queueSelectionLog = activityStore.logs.find((log) => log.message === 'Queue selected');
+
             expect(queueSelectionLog).toBeDefined();
             expect(queueSelectionLog?.details?.queuePath).toBe('root.production');
             expect(queueSelectionLog?.type).toBe('user_action');
@@ -350,7 +348,7 @@ describe('Store Integration Tests', () => {
             // This will automatically log API calls
             const { result: schedulerHook } = renderHook(() => useScheduler());
             const { result: configHook } = renderHook(() => useConfiguration());
-            
+
             await waitFor(() => {
                 expect(schedulerHook.current.loading).toBe(false);
                 expect(configHook.current.loading).toBe(false);
@@ -365,37 +363,33 @@ describe('Store Integration Tests', () => {
                     oldValue: '60%',
                     newValue: '70%',
                     timestamp: Date.now(),
-                    type: 'update'
+                    type: 'update',
                 };
-                
+
                 useStagedChangesStore.getState().stageChange(change);
-                
+
                 useActivityStore.getState().addLogEntry({
                     type: 'user_action',
                     level: 'info',
                     message: 'Capacity changed',
-                    details: { 
+                    details: {
                         queuePath: 'root.production',
                         property: 'capacity',
                         oldValue: '60%',
-                        newValue: '70%'
-                    }
+                        newValue: '70%',
+                    },
                 });
             });
 
             const activityStore = useActivityStore.getState();
-            
+
             // Should have API call logs
             expect(activityStore.apiCalls.length).toBeGreaterThan(0);
-            const schedulerApiCall = activityStore.apiCalls.find(
-                call => call.url === '/ws/v1/cluster/scheduler'
-            );
+            const schedulerApiCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler');
             expect(schedulerApiCall).toBeDefined();
-            
+
             // Should have user action log
-            const capacityChangeLog = activityStore.logs.find(
-                log => log.message === 'Capacity changed'
-            );
+            const capacityChangeLog = activityStore.logs.find((log) => log.message === 'Capacity changed');
             expect(capacityChangeLog).toBeDefined();
             expect(capacityChangeLog?.details?.newValue).toBe('70%');
         });
@@ -428,7 +422,7 @@ describe('Store Integration Tests', () => {
 
             const finalUiStore = useUIStore.getState();
             expect(finalUiStore.selectedQueuePath).toBe('root.production');
-            
+
             // Should still be able to get queue data
             const { result: selectedQueueHook } = renderHook(() => useSelectedQueue());
             expect(selectedQueueHook.current?.queueName).toBe('production');
@@ -448,7 +442,7 @@ describe('Store Integration Tests', () => {
                 uiStore.addNotification({
                     type: 'success',
                     message: 'Queue capacity updated successfully',
-                    details: { queuePath: 'root.production' }
+                    details: { queuePath: 'root.production' },
                 });
             });
 
@@ -486,7 +480,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '60%',
                 newValue: '70%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             act(() => {
@@ -499,10 +493,10 @@ describe('Store Integration Tests', () => {
                     type: 'user_action',
                     level: 'info',
                     message: 'Queue property modified',
-                    details: { 
+                    details: {
                         queuePath: 'root.production',
-                        property: 'capacity'
-                    }
+                        property: 'capacity',
+                    },
                 });
             });
 
@@ -528,20 +522,18 @@ describe('Store Integration Tests', () => {
 
             // Check activity logging
             expect(activityStore.logs.length).toBeGreaterThan(0);
-            const modificationLog = activityStore.logs.find(
-                log => log.message === 'Queue property modified'
-            );
+            const modificationLog = activityStore.logs.find((log) => log.message === 'Queue property modified');
             expect(modificationLog).toBeDefined();
 
             // 7. Apply changes (simulate)
             act(() => {
                 stagedStore.applyChangesStart();
                 stagedStore.applyChangesSuccess();
-                
+
                 uiStore.closePropertyEditor();
                 uiStore.addNotification({
                     type: 'success',
-                    message: 'Changes applied successfully'
+                    message: 'Changes applied successfully',
                 });
             });
 
@@ -562,7 +554,7 @@ describe('Store Integration Tests', () => {
             );
 
             const { result: schedulerHook } = renderHook(() => useScheduler());
-            
+
             await waitFor(() => {
                 expect(schedulerHook.current.loading).toBe(false);
             });
@@ -590,7 +582,7 @@ describe('Store Integration Tests', () => {
                 oldValue: '60%',
                 newValue: '70%',
                 timestamp: Date.now(),
-                type: 'update'
+                type: 'update',
             };
 
             act(() => {

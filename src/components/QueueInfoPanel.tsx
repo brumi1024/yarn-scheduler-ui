@@ -176,10 +176,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         );
     };
 
+
     if (!queue || !open) {
         return null;
     }
-
 
     const handleDelete = () => {
         if (onDelete) {
@@ -312,8 +312,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                     size="small"
                                     onClick={() => setActiveTab(0)}
                                     startIcon={<OverviewIcon fontSize="small" />}
-                                    sx={{ 
-                                        flex: 1, 
+                                    sx={{
+                                        flex: 1,
                                         minWidth: 0,
                                         fontSize: '0.75rem',
                                         py: 0.75,
@@ -322,8 +322,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         color: activeTab === 0 ? 'primary.main' : 'text.secondary',
                                         '&:hover': {
                                             bgcolor: 'action.hover',
-                                            border: 'none'
-                                        }
+                                            border: 'none',
+                                        },
                                     }}
                                 >
                                     Overview
@@ -335,8 +335,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                     size="small"
                                     onClick={() => setActiveTab(1)}
                                     startIcon={<StatisticsIcon fontSize="small" />}
-                                    sx={{ 
-                                        flex: 1, 
+                                    sx={{
+                                        flex: 1,
                                         minWidth: 0,
                                         fontSize: '0.75rem',
                                         py: 0.75,
@@ -345,8 +345,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         color: activeTab === 1 ? 'primary.main' : 'text.secondary',
                                         '&:hover': {
                                             bgcolor: 'action.hover',
-                                            border: 'none'
-                                        }
+                                            border: 'none',
+                                        },
                                     }}
                                 >
                                     Stats
@@ -358,8 +358,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                     size="small"
                                     onClick={() => setActiveTab(2)}
                                     startIcon={<SettingsIcon fontSize="small" />}
-                                    sx={{ 
-                                        flex: 1, 
+                                    sx={{
+                                        flex: 1,
                                         minWidth: 0,
                                         fontSize: '0.75rem',
                                         py: 0.75,
@@ -368,8 +368,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         color: activeTab === 2 ? 'primary.main' : 'text.secondary',
                                         '&:hover': {
                                             bgcolor: 'action.hover',
-                                            border: 'none'
-                                        }
+                                            border: 'none',
+                                        },
                                     }}
                                 >
                                     Settings
@@ -596,7 +596,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                                         '&:hover': {
                                                             bgcolor: 'action.hover',
                                                             transform: 'translateX(2px)',
-                                                        }
+                                                        },
                                                     }}
                                                 >
                                                     <Box>
@@ -640,17 +640,23 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         variant="outlined"
                                         size="small"
                                         onClick={handleToggleState}
-                                        startIcon={queue.state === 'RUNNING' ? <StopIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+                                        startIcon={
+                                            queue.state === 'RUNNING' ? (
+                                                <StopIcon fontSize="small" />
+                                            ) : (
+                                                <PlayIcon fontSize="small" />
+                                            )
+                                        }
                                         color="primary"
                                         fullWidth
-                                        sx={{ 
+                                        sx={{
                                             py: 0.75,
-                                            fontSize: '0.75rem'
+                                            fontSize: '0.75rem',
                                         }}
                                     >
                                         {queue.state === 'RUNNING' ? 'Stop Queue' : 'Start Queue'}
                                     </Button>
-                                    
+
                                     <Button
                                         variant="outlined"
                                         size="small"
@@ -658,9 +664,9 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         startIcon={<DeleteIcon fontSize="small" />}
                                         color="error"
                                         fullWidth
-                                        sx={{ 
+                                        sx={{
                                             py: 0.75,
-                                            fontSize: '0.75rem'
+                                            fontSize: '0.75rem',
                                         }}
                                     >
                                         Delete Queue

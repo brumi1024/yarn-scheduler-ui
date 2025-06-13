@@ -38,11 +38,7 @@ export const StyledIconButton: React.FC<StyledIconButtonProps> = ({
     ...props
 }) => {
     const button = (
-        <BaseIconButton
-            variant={variant}
-            disabled={disabled}
-            {...props}
-        >
+        <BaseIconButton variant={variant} disabled={disabled} {...props}>
             {children}
         </BaseIconButton>
     );
@@ -50,9 +46,7 @@ export const StyledIconButton: React.FC<StyledIconButtonProps> = ({
     if (tooltip) {
         return (
             <Tooltip title={tooltip} placement={tooltipPlacement}>
-                <span>
-                    {button}
-                </span>
+                <span>{button}</span>
             </Tooltip>
         );
     }

@@ -234,21 +234,28 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
         }, [panZoomController, nodes, calculateCenterRootPosition]);
 
         // Update visual selection
-        const updateSelection = useCallback((selectedNodes: Set<string>) => {
-            if (renderer) {
-                renderer.setSelectedNodes(selectedNodes);
-                const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
-                renderer.render(nodes, flows, state);
-            }
-        }, [renderer, panZoomController, nodes, flows]);
+        const updateSelection = useCallback(
+            (selectedNodes: Set<string>) => {
+                if (renderer) {
+                    renderer.setSelectedNodes(selectedNodes);
+                    const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
+                    renderer.render(nodes, flows, state);
+                }
+            },
+            [renderer, panZoomController, nodes, flows]
+        );
 
         // Expose methods through ref
-        useImperativeHandle(ref, () => ({
-            panZoomController,
-            zoomToFit,
-            centerOnRoot,
-            updateSelection,
-        }), [panZoomController, zoomToFit, centerOnRoot, updateSelection]);
+        useImperativeHandle(
+            ref,
+            () => ({
+                panZoomController,
+                zoomToFit,
+                centerOnRoot,
+                updateSelection,
+            }),
+            [panZoomController, zoomToFit, centerOnRoot, updateSelection]
+        );
 
         return (
             <Box

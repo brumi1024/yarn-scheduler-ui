@@ -6,9 +6,7 @@ import MainLayout from './MainLayout';
 
 // Helper to render with theme
 const renderWithProviders = (component: React.ReactElement) => {
-    return render(
-        <ThemeProvider theme={theme}>{component}</ThemeProvider>
-    );
+    return render(<ThemeProvider theme={theme}>{component}</ThemeProvider>);
 };
 
 describe('MainLayout', () => {

@@ -1,4 +1,5 @@
 import React from 'react';
+import { useController, type Control } from 'react-hook-form';
 import {
     TextField,
     FormControl,
@@ -11,22 +12,44 @@ import {
     Box,
     Typography,
     Tooltip,
-    InputAdornment,
+    FormHelperText,
 } from '@mui/material';
 import { Help as HelpIcon } from '@mui/icons-material';
 import type { ConfigProperty } from '../config';
 import { CapacityEditor } from './CapacityEditor';
 import { isCapacityProperty } from '../schemas/propertySchemas';
 
-interface PropertyFormFieldProps {
+interface PropertyFormFieldHookFormProps {
     property: ConfigProperty;
-    value: any;
-    error?: string;
-    onChange: (value: any) => void;
+    control: Control<any>;
+    name: string;
     siblings?: Array<{ name: string; capacity: string }>;
+    onCustomChange?: (value: any) => void;
 }
 
-export function PropertyFormField({ property, value, error, onChange, siblings }: PropertyFormFieldProps) {
+export function PropertyFormFieldHookForm({ 
+    property, 
+    control, 
+    name, 
+    siblings,
+    onCustomChange 
+}: PropertyFormFieldHookFormProps) {
+    const {
+        field: { onChange, value, ref },
+        fieldState: { error },
+    } = useController({
+        name,
+        control,
+        defaultValue: property.defaultValue || '',
+    });
+
+    const handleChange = (newValue: any) => {
+        onChange(newValue);
+        if (onCustomChange) {
+            onCustomChange(newValue);
+        }
+    };
+
     const renderField = () => {
         // Special handling for capacity properties (including template capacity)
         if (isCapacityProperty(property.key)) {
@@ -34,8 +57,8 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                 <CapacityEditor
                     label={property.displayName}
                     value={value || ''}
-                    onChange={onChange}
-                    error={error}
+                    onChange={handleChange}
+                    error={error?.message}
                     siblings={siblings}
                 />
             );
@@ -48,7 +71,8 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         control={
                             <Switch
                                 checked={value === true || value === 'true'}
-                                onChange={(e) => onChange(e.target.checked)}
+                                onChange={(e) => handleChange(e.target.checked)}
+                                inputRef={ref}
                             />
                         }
                         label={property.displayName}
@@ -61,8 +85,9 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         <InputLabel>{property.displayName}</InputLabel>
                         <Select
                             value={value || ''}
-                            onChange={(e) => onChange(e.target.value)}
+                            onChange={(e) => handleChange(e.target.value)}
                             label={property.displayName}
+                            inputRef={ref}
                         >
                             {property.options?.map((option) => (
                                 <MenuItem key={option} value={option}>
@@ -70,6 +95,7 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                                 </MenuItem>
                             ))}
                         </Select>
+                        {error && <FormHelperText>{error.message}</FormHelperText>}
                     </FormControl>
                 );
 
@@ -83,20 +109,21 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         onChange={(e) => {
                             const inputValue = e.target.value;
                             if (inputValue === '') {
-                                onChange('');
+                                handleChange('');
                             } else {
                                 const parsed = parseFloat(inputValue);
                                 if (!isNaN(parsed)) {
-                                    onChange(parsed);
+                                    handleChange(parsed);
                                 }
                             }
                         }}
                         error={!!error}
-                        helperText={error}
+                        helperText={error?.message}
                         placeholder={property.placeholder}
                         inputProps={{
                             step: property.step || '1',
                         }}
+                        inputRef={ref}
                     />
                 );
 
@@ -113,7 +140,7 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                             value={percentValue}
                             onChange={(_, newValue) => {
                                 const numValue = newValue as number;
-                                onChange(numValue / 100);
+                                handleChange(numValue / 100);
                             }}
                             min={0}
                             max={100}
@@ -124,10 +151,11 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                                 { value: 100, label: '100%' },
                             ]}
                             sx={{ mt: 1 }}
+                            ref={ref}
                         />
                         {error && (
                             <Typography color="error" variant="caption">
-                                {error}
+                                {error.message}
                             </Typography>
                         )}
                     </Box>
@@ -140,12 +168,13 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         fullWidth
                         label={property.displayName}
                         value={value || ''}
-                        onChange={(e) => onChange(e.target.value)}
+                        onChange={(e) => handleChange(e.target.value)}
                         error={!!error}
-                        helperText={error}
+                        helperText={error?.message}
                         placeholder={property.placeholder}
                         multiline={property.key.includes('description') || property.key.includes('policy')}
                         rows={property.key.includes('description') || property.key.includes('policy') ? 3 : 1}
+                        inputRef={ref}
                     />
                 );
         }

@@ -143,7 +143,7 @@ export class QueueSelectionController {
      * Remove selection event listener
      */
     removeSelectionListener(listener: (event: SelectionEvent) => void): void {
-        this.selectionListeners = this.selectionListeners.filter(l => l !== listener);
+        this.selectionListeners = this.selectionListeners.filter((l) => l !== listener);
     }
 
     /**
@@ -157,7 +157,7 @@ export class QueueSelectionController {
      * Remove hover event listener
      */
     removeHoverListener(listener: (event: HoverEvent) => void): void {
-        this.hoverListeners = this.hoverListeners.filter(l => l !== listener);
+        this.hoverListeners = this.hoverListeners.filter((l) => l !== listener);
     }
 
     /**
@@ -182,13 +182,17 @@ export class QueueSelectionController {
         const onMouseMove = (e: MouseEvent) => this.handleMouseMove(e);
         const onMouseLeave = () => this.handleMouseLeave();
 
-        this.canvas.addEventListener('click', onClick);
+        // Use D3ZoomController for click events instead of direct DOM events
+        // This is necessary because D3 zoom behavior intercepts click events
+        this.panZoomController.addClickListener(onClick);
+        
+        // Still use DOM events for mouse move and leave (these aren't interfered with by D3 zoom)
         this.canvas.addEventListener('mousemove', onMouseMove);
         this.canvas.addEventListener('mouseleave', onMouseLeave);
 
         // Store cleanup functions
         this.eventListeners = [
-            () => this.canvas.removeEventListener('click', onClick),
+            () => this.panZoomController.removeClickListener(onClick),
             () => this.canvas.removeEventListener('mousemove', onMouseMove),
             () => this.canvas.removeEventListener('mouseleave', onMouseLeave),
         ];
@@ -233,11 +237,7 @@ export class QueueSelectionController {
      * Handle click on canvas
      */
     private handleClick(e: MouseEvent): void {
-        // Don't handle clicks if we were just dragging (pan/zoom)
-        if (this.panZoomController.isDraggingActive()) {
-            return;
-        }
-
+        // No need to check isDraggingActive() here since D3ZoomController already filters out drag events
         const worldPos = this.panZoomController.screenToWorld(e.clientX, e.clientY);
         const hitNode = this.hitTest(worldPos.x, worldPos.y);
 
@@ -328,7 +328,13 @@ export class QueueSelectionController {
             },
         };
 
-        this.selectionListeners.forEach((listener) => listener(event));
+        this.selectionListeners.forEach((listener) => {
+            try {
+                listener(event);
+            } catch {
+                // Silently ignore listener errors
+            }
+        });
     }
 
     /**

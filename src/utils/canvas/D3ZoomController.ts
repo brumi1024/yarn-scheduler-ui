@@ -44,22 +44,30 @@ export class D3ZoomController {
     private zoomBehavior: ZoomBehavior<HTMLCanvasElement, unknown>;
     private state: PanZoomState = { x: 0, y: 0, scale: 1 };
     private bounds: ViewportBounds = { x: 0, y: 0, width: 0, height: 0 };
-    
+
     // Event listeners
     private listeners: ((event: PanZoomEvent) => void)[] = [];
+    private clickListeners: ((event: MouseEvent) => void)[] = [];
     private keydownListener: ((e: KeyboardEvent) => void) | null = null;
+    private canvasClickListener: ((event: MouseEvent) => void) | null = null;
     private isDragging: boolean = false;
     private dragEndTime: number = 0;
+    private lastZoomState: PanZoomState = { x: 0, y: 0, scale: 1 };
+    private hasActuallyMoved: boolean = false;
 
     constructor(canvas: HTMLCanvasElement, config: Partial<PanZoomConfig> = {}) {
         this.canvas = canvas;
         this.config = { ...DEFAULT_CONFIG, ...config };
         this.selection = select(canvas);
-        
+
         // Create D3 zoom behavior
         this.zoomBehavior = zoom<HTMLCanvasElement, unknown>()
             .scaleExtent([this.config.minScale, this.config.maxScale])
             .wheelDelta((event) => -event.deltaY * this.config.wheelSensitivity)
+            .filter((event) => {
+                // Allow all events except right-clicks
+                return event.button !== 2;
+            })
             .on('start', () => this.handleZoomStart())
             .on('zoom', (event) => this.handleZoom(event))
             .on('end', () => this.handleZoomEnd());
@@ -79,7 +87,7 @@ export class D3ZoomController {
      * Check if currently dragging
      */
     isDraggingActive(): boolean {
-        return this.isDragging || Date.now() - this.dragEndTime < 100;
+        return this.isDragging || Date.now() - this.dragEndTime < 50;
     }
 
     /**
@@ -102,16 +110,10 @@ export class D3ZoomController {
                     : this.state.scale,
         };
 
-        const transform = zoomIdentity
-            .translate(targetState.x, targetState.y)
-            .scale(targetState.scale);
+        const transform = zoomIdentity.translate(targetState.x, targetState.y).scale(targetState.scale);
 
         if (animate) {
-            this.selection
-                .transition()
-                .duration(300)
-                .ease(easeCubicInOut)
-                .call(this.zoomBehavior.transform, transform);
+            this.selection.transition().duration(300).ease(easeCubicInOut).call(this.zoomBehavior.transform, transform);
         } else {
             this.selection.call(this.zoomBehavior.transform, transform);
         }
@@ -209,6 +211,23 @@ export class D3ZoomController {
     }
 
     /**
+     * Add click event listener
+     */
+    addClickListener(listener: (event: MouseEvent) => void): void {
+        this.clickListeners.push(listener);
+    }
+
+    /**
+     * Remove click event listener
+     */
+    removeClickListener(listener: (event: MouseEvent) => void): void {
+        const index = this.clickListeners.indexOf(listener);
+        if (index !== -1) {
+            this.clickListeners.splice(index, 1);
+        }
+    }
+
+    /**
      * Convert screen coordinates to world coordinates
      */
     screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
@@ -240,7 +259,15 @@ export class D3ZoomController {
     destroy(): void {
         this.selection.on('.zoom', null);
         this.removeKeyboardListeners();
+        
+        // Remove canvas click listener
+        if (this.canvasClickListener) {
+            this.canvas.removeEventListener('click', this.canvasClickListener);
+            this.canvasClickListener = null;
+        }
+        
         this.listeners = [];
+        this.clickListeners = [];
     }
 
     /**
@@ -254,6 +281,27 @@ export class D3ZoomController {
         this.selection.on('contextmenu', (event) => {
             event.preventDefault();
         });
+
+        // Add click handler using addEventListener on the raw canvas element
+        // This bypasses D3's event handling which can interfere with clicks
+        this.canvasClickListener = (event) => {
+            // Check if this was a click vs a drag
+            const timeSinceDragEnd = Date.now() - this.dragEndTime;
+            // Allow clicks if we're not dragging and either haven't moved significantly or enough time has passed
+            const isQuickClick = !this.isDragging && (!this.hasActuallyMoved || timeSinceDragEnd > 50);
+            
+            if (isQuickClick) {
+                this.clickListeners.forEach(listener => {
+                    try {
+                        listener(event);
+                    } catch {
+                        // Silently ignore listener errors
+                    }
+                });
+            }
+        };
+        
+        this.canvas.addEventListener('click', this.canvasClickListener);
 
         // Setup keyboard listeners if enabled
         if (this.config.enableKeyboard) {
@@ -284,6 +332,8 @@ export class D3ZoomController {
      */
     private handleZoomStart(): void {
         this.isDragging = true;
+        this.hasActuallyMoved = false;
+        this.lastZoomState = { ...this.state };
     }
 
     /**
@@ -292,12 +342,23 @@ export class D3ZoomController {
     private handleZoom(event: { transform: { x: number; y: number; k: number } }): void {
         const { transform } = event;
         const oldState = { ...this.state };
-        
+
         this.state = {
             x: transform.x,
             y: transform.y,
             scale: transform.k,
         };
+
+        // Check if we've actually moved significantly from the start
+        const movementThreshold = 5; // pixels
+        const scaleThreshold = 0.01; // scale difference
+        const deltaX = Math.abs(this.state.x - this.lastZoomState.x);
+        const deltaY = Math.abs(this.state.y - this.lastZoomState.y);
+        const deltaScale = Math.abs(this.state.scale - this.lastZoomState.scale);
+        
+        if (deltaX > movementThreshold || deltaY > movementThreshold || deltaScale > scaleThreshold) {
+            this.hasActuallyMoved = true;
+        }
 
         this.updateBounds();
 

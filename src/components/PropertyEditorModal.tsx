@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Dialog,
     DialogTitle,
@@ -16,8 +18,9 @@ import { Close as CloseIcon } from '@mui/icons-material';
 import type { Queue } from '../types/Queue';
 import type { ConfigGroup } from '../config';
 import { ConfigService } from '../config';
-import { PropertyFormField } from './PropertyFormField';
-import { AutoQueueCreationSection } from './AutoQueueCreationSection';
+import { PropertyFormFieldHookForm } from './PropertyFormFieldHookForm';
+import { AutoQueueCreationSectionHookForm } from './AutoQueueCreationSectionHookForm';
+import { createFormSchema } from '../schemas/propertySchemas';
 
 interface PropertyEditorModalProps {
     open: boolean;
@@ -42,12 +45,22 @@ function TabPanel({ children, value, index }: TabPanelProps) {
 
 export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEditorModalProps) {
     const [tabValue, setTabValue] = useState(0);
-    const [formData, setFormData] = useState<Record<string, any>>({});
-    const [errors, setErrors] = useState<Record<string, string>>({});
     const [hasChanges, setHasChanges] = useState(false);
 
     const configService = ConfigService.getInstance();
     const propertyGroups = configService.getQueuePropertyGroups();
+    
+    // Create combined properties object for schema generation
+    const allProperties = propertyGroups.reduce((acc, group) => ({ ...acc, ...group.properties }), {});
+    const validationSchema = createFormSchema(allProperties);
+    
+    const form = useForm({
+        resolver: zodResolver(validationSchema),
+        defaultValues: {},
+        mode: 'onChange',
+    });
+
+    const { handleSubmit, reset, watch, formState: { errors, isDirty } } = form;
 
     useEffect(() => {
         if (queue && open) {
@@ -75,54 +88,26 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                 });
             }
 
-            setFormData(initialData);
-            setErrors({});
+            reset(initialData);
             setHasChanges(false);
             setTabValue(0);
         }
-    }, [queue, open]);
+    }, [queue, open, reset]);
 
-    const handleFieldChange = (propertyKey: string, value: any) => {
-        const newFormData = { ...formData, [propertyKey]: value };
-        setFormData(newFormData);
-        setHasChanges(true);
-
-        // Validate the field
-        const validation = configService.validateProperty(propertyKey, value);
-        const newErrors = { ...errors };
-
-        if (validation.valid) {
-            delete newErrors[propertyKey];
-        } else {
-            newErrors[propertyKey] = validation.error || 'Invalid value';
-        }
-
-        setErrors(newErrors);
-    };
-
-    const handleSave = () => {
-        if (!queue?.queueName) return;
-
-        // Final validation
-        const finalErrors: Record<string, string> = {};
-
-        Object.entries(formData).forEach(([key, value]) => {
-            const validation = configService.validateProperty(key, value);
-            if (!validation.valid) {
-                finalErrors[key] = validation.error || 'Invalid value';
-            }
+    // Watch for form changes
+    useEffect(() => {
+        const subscription = watch(() => {
+            setHasChanges(isDirty);
         });
+        return () => subscription.unsubscribe();
+    }, [watch, isDirty]);
 
-        if (Object.keys(finalErrors).length > 0) {
-            setErrors(finalErrors);
-            return;
-        }
+    const onSubmit = (data: Record<string, any>) => {
+        if (!queue?.queueName) return;
 
         // For now, just pass the form data as changes
         // In a real implementation, this would map to YARN configuration keys
-        const changes: Record<string, any> = { ...formData };
-
-        onSave(queue.queueName, changes);
+        onSave(queue.queueName, data);
         onClose();
     };
 
@@ -148,12 +133,9 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         // Special handling for Auto-Queue Creation group
         if (group.groupName === 'Auto-Queue Creation') {
             return (
-                <AutoQueueCreationSection
+                <AutoQueueCreationSectionHookForm
                     key={group.groupName}
                     properties={group.properties}
-                    formData={formData}
-                    errors={errors}
-                    onChange={handleFieldChange}
                     siblings={siblings}
                 />
             );
@@ -166,12 +148,11 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                 </Typography>
 
                 {Object.entries(group.properties).map(([, property]) => (
-                    <PropertyFormField
+                    <PropertyFormFieldHookForm
                         key={property.key}
                         property={property}
-                        value={formData[property.key]}
-                        error={errors[property.key]}
-                        onChange={(value) => handleFieldChange(property.key, value)}
+                        control={form.control}
+                        name={property.key}
                         siblings={siblings}
                     />
                 ))}
@@ -184,15 +165,16 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
     const hasErrors = Object.keys(errors).length > 0;
 
     return (
-        <Dialog
-            open={open}
-            onClose={handleClose}
-            maxWidth="md"
-            fullWidth
-            PaperProps={{
-                sx: { height: '80vh' },
-            }}
-        >
+        <FormProvider {...form}>
+            <Dialog
+                open={open}
+                onClose={handleClose}
+                maxWidth="md"
+                fullWidth
+                PaperProps={{
+                    sx: { height: '80vh' },
+                }}
+            >
             <DialogTitle>
                 <Box display="flex" justifyContent="space-between" alignItems="center">
                     <Typography variant="h6">Edit Queue Properties: {queue.queueName}</Typography>
@@ -227,12 +209,24 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                 ))}
             </DialogContent>
 
-            <DialogActions>
-                <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleSave} variant="contained" disabled={hasErrors || !hasChanges}>
-                    Save Changes
-                </Button>
-            </DialogActions>
-        </Dialog>
+                <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
+                    {hasErrors && (
+                        <Alert severity="error" sx={{ flex: 1, mr: 2 }}>
+                            Please fix the validation errors before saving.
+                        </Alert>
+                    )}
+                    <Button onClick={handleClose} color="inherit">
+                        Cancel
+                    </Button>
+                    <Button 
+                        onClick={handleSubmit(onSubmit)} 
+                        variant="contained" 
+                        disabled={hasErrors || !hasChanges}
+                    >
+                        Save Changes
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </FormProvider>
     );
 }

@@ -2,13 +2,13 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { renderHook, act, waitFor } from '@testing-library/react';
 import { setupServer } from 'msw/node';
 import { http, HttpResponse } from 'msw';
-import { 
-    useScheduler, 
-    useConfiguration, 
-    useNodeLabels, 
-    useNodes, 
+import {
+    useScheduler,
+    useConfiguration,
+    useNodeLabels,
+    useNodes,
     useHealthCheck,
-    useApiMutation 
+    useApiMutation,
 } from '../useApiWithZustand';
 import { useConfigurationStore, useActivityStore } from '../../store/zustand';
 
@@ -20,34 +20,26 @@ const mockSchedulerData = {
             queueName: 'root',
             capacity: 100,
             queues: {
-                queue: [
-                    { queueName: 'default', queuePath: 'root.default', capacity: 60 }
-                ]
-            }
-        }
-    }
+                queue: [{ queueName: 'default', queuePath: 'root.default', capacity: 60 }],
+            },
+        },
+    },
 };
 
 const mockConfigurationData = {
-    property: [
-        { name: 'yarn.scheduler.capacity.root.queues', value: 'default,production' }
-    ]
+    property: [{ name: 'yarn.scheduler.capacity.root.queues', value: 'default,production' }],
 };
 
 const mockNodeLabelsData = {
     nodeLabelsInfo: {
-        nodeLabelInfo: [
-            { name: 'gpu', numActiveNMs: 2, numInactiveNMs: 0 }
-        ]
-    }
+        nodeLabelInfo: [{ name: 'gpu', numActiveNMs: 2, numInactiveNMs: 0 }],
+    },
 };
 
 const mockNodesData = {
     nodes: {
-        node: [
-            { id: 'node1:8041', state: 'RUNNING', nodeLabels: ['gpu'] }
-        ]
-    }
+        node: [{ id: 'node1:8041', state: 'RUNNING', nodeLabels: ['gpu'] }],
+    },
 };
 
 // Mock server setup
@@ -90,7 +82,7 @@ const resetStores = () => {
         },
         lastUpdated: {},
     });
-    
+
     useActivityStore.setState({
         logs: [],
         apiCalls: [],
@@ -231,9 +223,7 @@ describe('useApiWithZustand hooks', () => {
 
             await waitFor(() => {
                 const activityStore = useActivityStore.getState();
-                const configCall = activityStore.apiCalls.find(
-                    call => call.url === '/ws/v1/cluster/scheduler-conf'
-                );
+                const configCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler-conf');
                 expect(configCall).toBeDefined();
                 expect(configCall?.method).toBe('GET');
             });
@@ -333,9 +323,7 @@ describe('useApiWithZustand hooks', () => {
             // Should log error to activity store
             await waitFor(() => {
                 const activityStore = useActivityStore.getState();
-                const errorLog = activityStore.logs.find(
-                    log => log.message === 'Health check error'
-                );
+                const errorLog = activityStore.logs.find((log) => log.message === 'Health check error');
                 expect(errorLog).toBeDefined();
                 expect(errorLog?.level).toBe('error');
             });
@@ -367,7 +355,7 @@ describe('useApiWithZustand hooks', () => {
             const { result } = renderHook(() => useApiMutation());
 
             let mutationResult: any;
-            
+
             await act(async () => {
                 mutationResult = await result.current.mutate(
                     mockMutationFn,
@@ -375,7 +363,7 @@ describe('useApiWithZustand hooks', () => {
                     {
                         description: 'Test mutation',
                         method: 'POST',
-                        url: '/test-endpoint'
+                        url: '/test-endpoint',
                     }
                 );
             });
@@ -387,15 +375,11 @@ describe('useApiWithZustand hooks', () => {
 
             // Check activity logging
             const activityStore = useActivityStore.getState();
-            const successLog = activityStore.logs.find(
-                log => log.message === 'Test mutation'
-            );
+            const successLog = activityStore.logs.find((log) => log.message === 'Test mutation');
             expect(successLog).toBeDefined();
             expect(successLog?.type).toBe('user_action');
-            
-            const apiCall = activityStore.apiCalls.find(
-                call => call.url === '/test-endpoint'
-            );
+
+            const apiCall = activityStore.apiCalls.find((call) => call.url === '/test-endpoint');
             expect(apiCall).toBeDefined();
             expect(apiCall?.method).toBe('POST');
         });
@@ -406,14 +390,10 @@ describe('useApiWithZustand hooks', () => {
             const { result } = renderHook(() => useApiMutation());
 
             let thrownError: any;
-            
+
             await act(async () => {
                 try {
-                    await result.current.mutate(
-                        mockMutationFn,
-                        { param: 'test' },
-                        { description: 'Test mutation' }
-                    );
+                    await result.current.mutate(mockMutationFn, { param: 'test' }, { description: 'Test mutation' });
                 } catch (error) {
                     thrownError = error;
                 }
@@ -425,19 +405,20 @@ describe('useApiWithZustand hooks', () => {
 
             // Check error logging
             const activityStore = useActivityStore.getState();
-            const errorLog = activityStore.logs.find(
-                log => log.message === 'Failed: Test mutation'
-            );
+            const errorLog = activityStore.logs.find((log) => log.message === 'Failed: Test mutation');
             expect(errorLog).toBeDefined();
             expect(errorLog?.level).toBe('error');
         });
 
         it('should set loading state during mutation', async () => {
             let resolveMutation: (value: any) => void;
-            const mockMutationFn = vi.fn().mockImplementation(() => 
-                new Promise(resolve => { resolveMutation = resolve; })
+            const mockMutationFn = vi.fn().mockImplementation(
+                () =>
+                    new Promise((resolve) => {
+                        resolveMutation = resolve;
+                    })
             );
-            
+
             const { result } = renderHook(() => useApiMutation());
 
             act(() => {

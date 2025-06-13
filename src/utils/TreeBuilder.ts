@@ -4,6 +4,7 @@
  * Provides utilities for tree operations, searching, filtering, and metrics calculation.
  */
 
+import { filter, some, entries, split, slice, join } from 'lodash';
 import type { ParsedQueue } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
 import { CapacityModeDetector } from './CapacityModeDetector';
@@ -80,7 +81,7 @@ export class TreeBuilder {
         metrics.modeDistribution[queue.capacity.mode as keyof typeof metrics.modeDistribution]++;
 
         // Recursively process children
-        queue.children.forEach(child => this.traverseAndCalculateMetrics(child, depth + 1, metrics));
+        queue.children.forEach((child) => this.traverseAndCalculateMetrics(child, depth + 1, metrics));
     }
 
     /**
@@ -89,8 +90,8 @@ export class TreeBuilder {
     static searchQueues(rootQueue: ParsedQueue, options: SearchOptions): ParsedQueue[] {
         const searchTerm = options.caseSensitive ? options.searchTerm : options.searchTerm.toLowerCase();
         const allQueues = this.flattenTree(rootQueue);
-        
-        return allQueues.filter(queue => {
+
+        return filter(allQueues, (queue) => {
             const queueName = options.caseSensitive ? queue.name : queue.name.toLowerCase();
             const queuePath = options.caseSensitive ? queue.path : queue.path.toLowerCase();
 
@@ -101,7 +102,7 @@ export class TreeBuilder {
 
             // Check properties if requested
             if (options.includeProperties && queue.properties) {
-                return Object.entries(queue.properties).some(([key, value]) => {
+                return some(entries(queue.properties), ([key, value]) => {
                     const searchKey = options.caseSensitive ? key : key.toLowerCase();
                     const searchValue = options.caseSensitive ? value : value.toLowerCase();
                     return searchKey.includes(searchTerm) || searchValue.includes(searchTerm);
@@ -117,8 +118,8 @@ export class TreeBuilder {
      */
     static filterQueues(rootQueue: ParsedQueue, options: FilterOptions): ParsedQueue[] {
         const allQueues = this.flattenTree(rootQueue);
-        
-        return allQueues.filter(queue => {
+
+        return filter(allQueues, (queue) => {
             // Check state filter
             if (options.state && queue.state !== options.state) {
                 return false;
@@ -176,14 +177,14 @@ export class TreeBuilder {
      * Get all ancestor paths for a queue
      */
     static getAncestorPaths(queuePath: string): string[] {
+        const parts = split(queuePath, '.');
         const paths: string[] = [];
-        const parts = queuePath.split('.');
 
         for (let i = 1; i <= parts.length; i++) {
-            paths.push(parts.slice(0, i).join('.'));
+            paths.push(join(slice(parts, 0, i), '.'));
         }
 
-        return paths.slice(0, -1); // Exclude the queue itself
+        return slice(paths, 0, -1); // Exclude the queue itself
     }
 
     /**
@@ -204,7 +205,7 @@ export class TreeBuilder {
      * Get all leaf queues in the tree
      */
     static getLeafQueues(rootQueue: ParsedQueue): ParsedQueue[] {
-        return this.flattenTree(rootQueue).filter(queue => queue.children.length === 0);
+        return filter(this.flattenTree(rootQueue), (queue) => queue.children.length === 0);
     }
 
     /**
@@ -238,7 +239,7 @@ export class TreeBuilder {
         }
 
         // Validate parent-child relationships
-        queue.children.forEach(child => {
+        queue.children.forEach((child) => {
             if (child.parent !== queue.path) {
                 errors.push(
                     `Child queue '${child.path}' has incorrect parent reference: expected '${queue.path}', got '${child.parent}'`
@@ -313,7 +314,7 @@ export class TreeBuilder {
      * Convert queue tree to flat list for table views
      */
     static flattenTree(rootQueue: ParsedQueue): ParsedQueue[] {
-        return [rootQueue, ...rootQueue.children.flatMap(child => this.flattenTree(child))];
+        return [rootQueue, ...rootQueue.children.flatMap((child) => this.flattenTree(child))];
     }
 
     /**
@@ -346,6 +347,6 @@ export class TreeBuilder {
         const parentPath = parts.slice(0, -1).join('.');
         const parent = this.findQueueByPath(rootQueue, parentPath);
 
-        return parent?.children.filter(child => child.path !== targetPath) ?? [];
+        return parent?.children.filter((child) => child.path !== targetPath) ?? [];
     }
 }

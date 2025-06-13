@@ -18,7 +18,7 @@ describe('CapacityEditor', () => {
     describe('Basic Rendering', () => {
         it('renders with default props', () => {
             render(<CapacityEditor {...defaultProps} />);
-            
+
             expect(screen.getByText('Test Queue Capacity')).toBeInTheDocument();
             expect(screen.getByText('Percentage (%)')).toBeInTheDocument();
             expect(screen.getByDisplayValue('10')).toBeInTheDocument();
@@ -27,7 +27,7 @@ describe('CapacityEditor', () => {
 
         it('displays error when provided', () => {
             render(<CapacityEditor {...defaultProps} error="Invalid capacity value" />);
-            
+
             expect(screen.getByText('Invalid capacity value')).toBeInTheDocument();
             expect(screen.getByRole('alert')).toHaveClass('MuiAlert-colorError');
         });
@@ -41,7 +41,7 @@ describe('CapacityEditor', () => {
 
             // Open select dropdown
             await user.click(screen.getByRole('combobox'));
-            
+
             // Select weight mode - use getByRole to be more specific
             await user.click(screen.getByRole('option', { name: 'Weight (w)' }));
 
@@ -67,7 +67,7 @@ describe('CapacityEditor', () => {
     describe('Percentage Mode', () => {
         it('parses percentage values correctly', () => {
             render(<CapacityEditor {...defaultProps} value="25.5%" />);
-            
+
             expect(screen.getByDisplayValue('25.5')).toBeInTheDocument();
             expect(screen.getByText('25.5%')).toBeInTheDocument();
         });
@@ -77,7 +77,7 @@ describe('CapacityEditor', () => {
             render(<CapacityEditor {...defaultProps} onChange={onChange} />);
 
             const input = screen.getByDisplayValue('10');
-            
+
             // Directly set the value and trigger change event
             fireEvent.change(input, { target: { value: '25' } });
 
@@ -99,7 +99,7 @@ describe('CapacityEditor', () => {
     describe('Weight Mode', () => {
         it('parses weight values correctly', () => {
             render(<CapacityEditor {...defaultProps} value="2.5w" />);
-            
+
             expect(screen.getByDisplayValue('2.5')).toBeInTheDocument();
             expect(screen.getByText('2.5w')).toBeInTheDocument();
         });
@@ -118,7 +118,7 @@ describe('CapacityEditor', () => {
     describe('Absolute Mode', () => {
         it('parses absolute values correctly', () => {
             render(<CapacityEditor {...defaultProps} value="[memory=2048,vcores=4]" />);
-            
+
             expect(screen.getByDisplayValue('2048')).toBeInTheDocument();
             expect(screen.getByDisplayValue('4')).toBeInTheDocument();
             expect(screen.getByText('[memory=2048,vcores=4]')).toBeInTheDocument();
@@ -154,7 +154,7 @@ describe('CapacityEditor', () => {
 
         it('displays sibling usage information', () => {
             render(<CapacityEditor {...defaultProps} siblings={siblings} />);
-            
+
             expect(screen.getByText('Sibling Queue Usage')).toBeInTheDocument();
             expect(screen.getByText('Total Used: 70.0%')).toBeInTheDocument();
             expect(screen.getByText('queue1: 30.0%')).toBeInTheDocument();
@@ -169,7 +169,7 @@ describe('CapacityEditor', () => {
             ];
 
             render(<CapacityEditor {...defaultProps} siblings={overallocatedSiblings} />);
-            
+
             expect(screen.getByText(/Total allocation exceeds 100%/)).toBeInTheDocument();
             expect(screen.getByText('Total Used: 110.0%')).toBeInTheDocument();
         });
@@ -182,7 +182,7 @@ describe('CapacityEditor', () => {
             ];
 
             render(<CapacityEditor {...defaultProps} siblings={mixedSiblings} />);
-            
+
             expect(screen.getByText('queue1: 30.0%')).toBeInTheDocument();
             expect(screen.getByText('queue2: 0.0%')).toBeInTheDocument(); // Weight doesn't contribute to percentage total
             expect(screen.getByText('queue3: 0.0%')).toBeInTheDocument(); // Absolute doesn't contribute to percentage total
@@ -190,7 +190,7 @@ describe('CapacityEditor', () => {
 
         it('does not show sibling usage when no siblings provided', () => {
             render(<CapacityEditor {...defaultProps} siblings={[]} />);
-            
+
             expect(screen.queryByText('Sibling Queue Usage')).not.toBeInTheDocument();
         });
     });
@@ -198,14 +198,14 @@ describe('CapacityEditor', () => {
     describe('Value Parsing Edge Cases', () => {
         it('handles malformed percentage values', () => {
             render(<CapacityEditor {...defaultProps} value="invalid%" />);
-            
+
             // Should fallback to default 10%
             expect(screen.getByDisplayValue('10')).toBeInTheDocument();
         });
 
         it('handles malformed weight values', () => {
             render(<CapacityEditor {...defaultProps} value="invalidw" />);
-            
+
             // Should fallback to default weight mode
             expect(screen.getByText('Weight (w)')).toBeInTheDocument();
             expect(screen.getByDisplayValue('1')).toBeInTheDocument();
@@ -213,7 +213,7 @@ describe('CapacityEditor', () => {
 
         it('handles malformed absolute values', () => {
             render(<CapacityEditor {...defaultProps} value="[invalid]" />);
-            
+
             // Should fallback to defaults for absolute mode
             expect(screen.getByText('Absolute Resources')).toBeInTheDocument();
             expect(screen.getByDisplayValue('1024')).toBeInTheDocument();
@@ -222,7 +222,7 @@ describe('CapacityEditor', () => {
 
         it('handles completely invalid input', () => {
             render(<CapacityEditor {...defaultProps} value="completely invalid" />);
-            
+
             // Should fallback to percentage mode with 10%
             expect(screen.getByText('Percentage (%)')).toBeInTheDocument();
             expect(screen.getByDisplayValue('10')).toBeInTheDocument();
@@ -230,7 +230,7 @@ describe('CapacityEditor', () => {
 
         it('handles empty input', () => {
             render(<CapacityEditor {...defaultProps} value="" />);
-            
+
             expect(screen.getByDisplayValue('10')).toBeInTheDocument();
         });
     });
@@ -238,11 +238,11 @@ describe('CapacityEditor', () => {
     describe('Component Updates', () => {
         it('updates when value prop changes', async () => {
             const { rerender } = render(<CapacityEditor {...defaultProps} value="20%" />);
-            
+
             expect(screen.getByDisplayValue('20')).toBeInTheDocument();
 
             rerender(<CapacityEditor {...defaultProps} value="30%" />);
-            
+
             await waitFor(() => {
                 expect(screen.getByDisplayValue('30')).toBeInTheDocument();
             });
@@ -250,11 +250,11 @@ describe('CapacityEditor', () => {
 
         it('maintains mode when switching between values of same type', async () => {
             const { rerender } = render(<CapacityEditor {...defaultProps} value="2w" />);
-            
+
             expect(screen.getByText('Weight (w)')).toBeInTheDocument();
 
             rerender(<CapacityEditor {...defaultProps} value="5w" />);
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Weight (w)')).toBeInTheDocument();
                 expect(screen.getByDisplayValue('5')).toBeInTheDocument();

@@ -16,9 +16,9 @@ export const commonTestSetup = {
             vi.clearAllMocks();
         });
     },
-    
+
     mockOnChange: () => vi.fn(),
-    
+
     user: () => userEvent.setup(),
 };
 
@@ -27,21 +27,14 @@ interface TestWrapperProps {
     children: React.ReactNode;
 }
 
-export const TestWrapper: React.FC<TestWrapperProps> = ({ 
-    children
-}) => {
+export const TestWrapper: React.FC<TestWrapperProps> = ({ children }) => {
     return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 };
 
 // Custom render function with default wrappers
-export const renderWithTheme = (
-    ui: React.ReactElement,
-    options?: Omit<RenderOptions, 'wrapper'>
-): RenderResult => {
+export const renderWithTheme = (ui: React.ReactElement, options?: Omit<RenderOptions, 'wrapper'>): RenderResult => {
     return render(ui, {
-        wrapper: ({ children }) => (
-            <TestWrapper>{children}</TestWrapper>
-        ),
+        wrapper: ({ children }) => <TestWrapper>{children}</TestWrapper>,
         ...options,
     });
 };
@@ -56,7 +49,7 @@ export const testPropFactories = {
         defaultValue: 'test-default',
         ...overrides,
     }),
-    
+
     booleanProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
         key: 'test-boolean',
         displayName: 'Test Boolean',
@@ -65,7 +58,7 @@ export const testPropFactories = {
         defaultValue: false,
         ...overrides,
     }),
-    
+
     enumProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
         key: 'test-enum',
         displayName: 'Test Enum',
@@ -75,7 +68,7 @@ export const testPropFactories = {
         defaultValue: 'option1',
         ...overrides,
     }),
-    
+
     numberProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
         key: 'test-number',
         displayName: 'Test Number',
@@ -85,7 +78,7 @@ export const testPropFactories = {
         step: '1',
         ...overrides,
     }),
-    
+
     percentageProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
         key: 'test-percentage',
         displayName: 'Test Percentage',
@@ -94,7 +87,7 @@ export const testPropFactories = {
         defaultValue: '0.1',
         ...overrides,
     }),
-    
+
     capacityProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
         key: 'capacity',
         displayName: 'Capacity',
@@ -110,21 +103,17 @@ export const testScenarios = {
     /**
      * Standard component rendering test
      */
-    componentRenders: (
-        componentName: string,
-        renderComponent: () => React.ReactElement,
-        expectedText?: string
-    ) => {
+    componentRenders: (componentName: string, renderComponent: () => React.ReactElement, expectedText?: string) => {
         return it(`renders ${componentName} correctly`, () => {
             const { container } = renderWithTheme(renderComponent());
             expect(container).toBeInTheDocument();
-            
+
             if (expectedText) {
                 expect(container).toHaveTextContent(expectedText);
             }
         });
     },
-    
+
     /**
      * Event handler test pattern
      */
@@ -140,7 +129,7 @@ export const testScenarios = {
             expect(mockHandler).toHaveBeenCalledTimes(expectedCalls);
         });
     },
-    
+
     /**
      * Disabled state test pattern
      */
@@ -155,7 +144,7 @@ export const testScenarios = {
             expect(element).toBeDisabled();
         });
     },
-    
+
     /**
      * Error display test pattern
      */
@@ -165,9 +154,7 @@ export const testScenarios = {
         errorMessage: string = 'Test error message'
     ) => {
         return it(`${componentName} displays error correctly`, () => {
-            const { getByText } = renderWithTheme(
-                renderComponentWithError(errorMessage)
-            );
+            const { getByText } = renderWithTheme(renderComponentWithError(errorMessage));
             expect(getByText(errorMessage)).toBeInTheDocument();
         });
     },
@@ -179,11 +166,7 @@ export const mockFactories = {
         CapacityEditor: ({ label, value, onChange, error, siblings }: any) => (
             <div data-testid="capacity-editor">
                 <label>{label}</label>
-                <input
-                    value={value || ''}
-                    onChange={(e) => onChange(e.target.value)}
-                    data-testid="capacity-input"
-                />
+                <input value={value || ''} onChange={(e) => onChange(e.target.value)} data-testid="capacity-input" />
                 {error && <span data-testid="capacity-error">{error}</span>}
                 {siblings && <div data-testid="siblings-info">Siblings: {siblings.length}</div>}
             </div>
@@ -196,19 +179,19 @@ export const commonAssertions = {
     hasTextContent: (element: HTMLElement, text: string) => {
         expect(element).toHaveTextContent(text);
     },
-    
+
     isDisabled: (element: HTMLElement) => {
         expect(element).toBeDisabled();
     },
-    
+
     isVisible: (element: HTMLElement) => {
         expect(element).toBeVisible();
     },
-    
+
     hasClass: (element: HTMLElement, className: string) => {
         expect(element).toHaveClass(className);
     },
-    
+
     hasAttribute: (element: HTMLElement, attribute: string, value?: string) => {
         if (value !== undefined) {
             expect(element).toHaveAttribute(attribute, value);
@@ -219,23 +202,8 @@ export const commonAssertions = {
 };
 
 // Re-export commonly used testing utilities
-export {
-    render,
-    screen,
-    fireEvent,
-    waitFor,
-    act,
-} from '@testing-library/react';
+export { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
 
-export {
-    describe,
-    it,
-    expect,
-    vi,
-    beforeEach,
-    afterEach,
-    beforeAll,
-    afterAll,
-} from 'vitest';
+export { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 
 export { userEvent };

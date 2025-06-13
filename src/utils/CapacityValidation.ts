@@ -92,15 +92,15 @@ export function validateCapacityValue(value: string): CapacityValidationResult {
     if (trimmedValue.endsWith('%')) {
         const numericPart = trimmedValue.slice(0, -1);
         const numericValue = parseFloat(numericPart);
-        
+
         if (isNaN(numericValue)) {
             return { isValid: false, error: 'Invalid percentage value' };
         }
-        
+
         if (numericValue < 0 || numericValue > 100) {
             return { isValid: false, error: 'Percentage must be between 0 and 100' };
         }
-        
+
         return { isValid: true, normalizedValue: `${numericValue}%` };
     }
 
@@ -108,22 +108,22 @@ export function validateCapacityValue(value: string): CapacityValidationResult {
     if (trimmedValue.endsWith('w')) {
         const numericPart = trimmedValue.slice(0, -1);
         const numericValue = parseFloat(numericPart);
-        
+
         if (isNaN(numericValue)) {
             return { isValid: false, error: 'Invalid weight value' };
         }
-        
+
         if (numericValue <= 0) {
             return { isValid: false, error: 'Weight must be greater than 0' };
         }
-        
+
         return { isValid: true, normalizedValue: `${numericValue}w` };
     }
 
     // Absolute mode: [resource=value,resource=value]
     if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
         const resourcePart = trimmedValue.slice(1, -1);
-        
+
         if (resourcePart.trim() === '') {
             return { isValid: false, error: 'Resource specification cannot be empty' };
         }
@@ -136,7 +136,7 @@ export function validateCapacityValue(value: string): CapacityValidationResult {
                 return { isValid: false, error: 'Invalid resource format. Use [resource=value,resource=value]' };
             }
         }
-        
+
         return { isValid: true, normalizedValue: trimmedValue };
     }
 
@@ -149,5 +149,8 @@ export function validateCapacityValue(value: string): CapacityValidationResult {
         return { isValid: true, normalizedValue: `${numericValue}%` };
     }
 
-    return { isValid: false, error: 'Invalid capacity format. Use percentage (10%), weight (5w), or absolute ([memory=1024,vcores=2])' };
+    return {
+        isValid: false,
+        error: 'Invalid capacity format. Use percentage (10%), weight (5w), or absolute ([memory=1024,vcores=2])',
+    };
 }

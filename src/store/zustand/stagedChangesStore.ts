@@ -7,17 +7,17 @@ interface StagedChangesStore extends StagedChangesState {
     stageChange: (change: ChangeSet) => void;
     unstageChange: (changeId: string) => void;
     clearAllChanges: () => void;
-    
+
     // Apply changes actions
     applyChangesStart: () => void;
     applyChangesSuccess: () => void;
     applyChangesError: () => void;
-    
+
     // Conflict management actions
     addConflict: (conflict: ConflictInfo) => void;
     removeConflict: (changeId: string) => void;
     clearConflicts: () => void;
-    
+
     // Utility actions
     hasUnsavedChanges: () => boolean;
     getChangesByQueue: (queuePath: string) => ChangeSet[];
@@ -32,52 +32,56 @@ export const useStagedChangesStore = create<StagedChangesStore>()((set, get) => 
     conflicts: [],
 
     // Change management actions
-    stageChange: (change) => set((state) => ({
-        changes: [...state.changes.filter(c => c.id !== change.id), change]
-    })),
+    stageChange: (change) =>
+        set((state) => ({
+            changes: [...state.changes.filter((c) => c.id !== change.id), change],
+        })),
 
-    unstageChange: (changeId) => set((state) => ({
-        changes: state.changes.filter(c => c.id !== changeId),
-        conflicts: state.conflicts.filter(c => c.changeId !== changeId)
-    })),
+    unstageChange: (changeId) =>
+        set((state) => ({
+            changes: state.changes.filter((c) => c.id !== changeId),
+            conflicts: state.conflicts.filter((c) => c.changeId !== changeId),
+        })),
 
-    clearAllChanges: () => set({
-        changes: [],
-        conflicts: []
-    }),
+    clearAllChanges: () =>
+        set({
+            changes: [],
+            conflicts: [],
+        }),
 
     // Apply changes actions
     applyChangesStart: () => set({ applying: true }),
 
-    applyChangesSuccess: () => set({
-        applying: false,
-        lastApplied: Date.now(),
-        changes: [],
-        conflicts: []
-    }),
+    applyChangesSuccess: () =>
+        set({
+            applying: false,
+            lastApplied: Date.now(),
+            changes: [],
+            conflicts: [],
+        }),
 
     applyChangesError: () => set({ applying: false }),
 
     // Conflict management actions
-    addConflict: (conflict) => set((state) => ({
-        conflicts: [
-            ...state.conflicts.filter(c => 
-                !(c.changeId === conflict.changeId && c.type === conflict.type)
-            ),
-            conflict
-        ]
-    })),
+    addConflict: (conflict) =>
+        set((state) => ({
+            conflicts: [
+                ...state.conflicts.filter((c) => !(c.changeId === conflict.changeId && c.type === conflict.type)),
+                conflict,
+            ],
+        })),
 
-    removeConflict: (changeId) => set((state) => ({
-        conflicts: state.conflicts.filter(c => c.changeId !== changeId)
-    })),
+    removeConflict: (changeId) =>
+        set((state) => ({
+            conflicts: state.conflicts.filter((c) => c.changeId !== changeId),
+        })),
 
     clearConflicts: () => set({ conflicts: [] }),
 
     // Utility actions
     hasUnsavedChanges: () => get().changes.length > 0,
 
-    getChangesByQueue: (queuePath) => get().changes.filter(change => change.queueName === queuePath),
+    getChangesByQueue: (queuePath) => get().changes.filter((change) => change.queueName === queuePath),
 
-    getConflictsByChange: (changeId) => get().conflicts.filter(conflict => conflict.changeId === changeId),
+    getConflictsByChange: (changeId) => get().conflicts.filter((conflict) => conflict.changeId === changeId),
 }));

@@ -21,10 +21,12 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const selectedQueueData = useSelectedQueue();
 
     // Process queue data
-    const { nodes, flows, isLoading: dataLoading, error: dataError } = useQueueDataProcessor(
-        configStore.configuration,
-        configStore.scheduler
-    );
+    const {
+        nodes,
+        flows,
+        isLoading: dataLoading,
+        error: dataError,
+    } = useQueueDataProcessor(configStore.configuration, configStore.scheduler);
 
     // Local state for hover
     const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
@@ -36,13 +38,16 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const error = apiError?.message || dataError;
 
     // Handle selection events from canvas
-    const handleSelectionChange = useCallback((event: SelectionEvent) => {
-        if (event.type === 'select' && event.nodeId) {
-            uiStore.selectQueue(event.nodeId);
-        } else if (event.type === 'deselect' || !event.nodeId) {
-            uiStore.selectQueue(undefined);
-        }
-    }, [uiStore]);
+    const handleSelectionChange = useCallback(
+        (event: SelectionEvent) => {
+            if (event.type === 'select' && event.nodeId) {
+                uiStore.selectQueue(event.nodeId);
+            } else if (event.type === 'deselect' || !event.nodeId) {
+                uiStore.selectQueue(undefined);
+            }
+        },
+        [uiStore]
+    );
 
     // Handle hover events from canvas
     const handleHoverChange = useCallback((event: HoverEvent) => {
@@ -91,20 +96,23 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
         console.log('Save properties for queue:', queuePath, changes);
     }, []);
 
-    const handleQueueSelect = useCallback((queue: Queue) => {
-        // Get the queue path from the queue object
-        const queuePath = (queue as any).queuePath || (queue as any).id || queue.queueName;
-        
-        // Find the node in the current nodes array that matches this queue path
-        const nodeToSelect = nodes.find(node => node.id === queuePath);
-        
-        if (nodeToSelect) {
-            uiStore.selectQueue(queuePath);
-            
-            // Update canvas selection
-            canvasRef.current?.updateSelection(new Set([queuePath]));
-        }
-    }, [nodes, uiStore]);
+    const handleQueueSelect = useCallback(
+        (queue: Queue) => {
+            // Get the queue path from the queue object
+            const queuePath = (queue as any).queuePath || (queue as any).id || queue.queueName;
+
+            // Find the node in the current nodes array that matches this queue path
+            const nodeToSelect = nodes.find((node) => node.id === queuePath);
+
+            if (nodeToSelect) {
+                uiStore.selectQueue(queuePath);
+
+                // Update canvas selection
+                canvasRef.current?.updateSelection(new Set([queuePath]));
+            }
+        },
+        [nodes, uiStore]
+    );
 
     // Center on root when data is first loaded
     useEffect(() => {
@@ -120,9 +128,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     if (error) {
         return (
             <Box sx={{ p: 3 }}>
-                <Alert severity="error">
-                    Failed to load scheduler data: {error}
-                </Alert>
+                <Alert severity="error">Failed to load scheduler data: {error}</Alert>
             </Box>
         );
     }
@@ -190,6 +196,26 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 onSaveProperties={handleQueueSaveProperties}
                 onQueueSelect={handleQueueSelect}
             />
+            
+            {/* Debug info */}
+            {process.env.NODE_ENV === 'development' && (
+                <div style={{ 
+                    position: 'fixed', 
+                    top: 10, 
+                    right: 10, 
+                    background: 'rgba(0,0,0,0.8)', 
+                    color: 'white', 
+                    padding: '10px',
+                    fontSize: '12px',
+                    borderRadius: '4px',
+                    zIndex: 9999
+                }}>
+                    Selected: {uiStore.selectedQueuePath || 'none'}<br/>
+                    Panel Open: {uiStore.selectedQueuePath ? 'true' : 'false'}<br/>
+                    Queue Data: {selectedQueueData ? 'found' : 'null'}<br/>
+                    Nodes Count: {nodes.length}
+                </div>
+            )}
         </Box>
     );
 };

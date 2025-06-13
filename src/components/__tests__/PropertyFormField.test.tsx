@@ -10,11 +10,7 @@ vi.mock('../CapacityEditor', () => ({
     CapacityEditor: ({ label, value, onChange, error, siblings }: any) => (
         <div data-testid="capacity-editor">
             <label>{label}</label>
-            <input
-                value={value || ''}
-                onChange={(e) => onChange(e.target.value)}
-                data-testid="capacity-input"
-            />
+            <input value={value || ''} onChange={(e) => onChange(e.target.value)} data-testid="capacity-input" />
             {error && <span data-testid="capacity-error">{error}</span>}
             {siblings && <div data-testid="siblings-info">Siblings: {siblings.length}</div>}
         </div>
@@ -93,7 +89,7 @@ describe('PropertyFormField', () => {
 
             // Open select dropdown
             await user.click(screen.getByRole('combobox'));
-            
+
             // Select different option
             await user.click(screen.getByText('STOPPED'));
 
@@ -211,7 +207,7 @@ describe('PropertyFormField', () => {
             render(<PropertyFormField property={percentageProperty} value={0.25} onChange={defaultOnChange} />);
 
             expect(screen.getByText('Maximum AM Resource Percent: 25.0%')).toBeInTheDocument();
-            
+
             const slider = screen.getByRole('slider');
             expect(slider).toHaveAttribute('aria-valuenow', '25');
         });
@@ -220,7 +216,7 @@ describe('PropertyFormField', () => {
             render(<PropertyFormField property={percentageProperty} value={0.1} onChange={defaultOnChange} />);
 
             const slider = screen.getByRole('slider');
-            
+
             // Simulate slider change to 50%
             fireEvent.change(slider, { target: { value: 50 } });
 
@@ -287,7 +283,9 @@ describe('PropertyFormField', () => {
                 type: 'string',
             };
 
-            render(<PropertyFormField property={descriptionProperty} value="Test description" onChange={defaultOnChange} />);
+            render(
+                <PropertyFormField property={descriptionProperty} value="Test description" onChange={defaultOnChange} />
+            );
 
             const input = screen.getByDisplayValue('Test description');
             expect(input).toHaveAttribute('rows', '3');
@@ -332,7 +330,7 @@ describe('PropertyFormField', () => {
 
         it('renders CapacityEditor for capacity properties', () => {
             const siblings = [{ name: 'sibling1', capacity: '30%' }];
-            
+
             render(
                 <PropertyFormField
                     property={capacityProperty}
@@ -373,7 +371,7 @@ describe('PropertyFormField', () => {
 
         it('renders CapacityEditor for maximum-capacity', () => {
             const maxCapacityProperty = { ...capacityProperty, key: 'maximum-capacity' };
-            
+
             render(<PropertyFormField property={maxCapacityProperty} value="100%" onChange={defaultOnChange} />);
 
             expect(screen.getByTestId('capacity-editor')).toBeInTheDocument();
@@ -381,7 +379,7 @@ describe('PropertyFormField', () => {
 
         it('renders CapacityEditor for template capacity properties', () => {
             const templateCapacityProperty = { ...capacityProperty, key: 'leaf-queue-template.capacity' };
-            
+
             render(<PropertyFormField property={templateCapacityProperty} value="20%" onChange={defaultOnChange} />);
 
             expect(screen.getByTestId('capacity-editor')).toBeInTheDocument();
@@ -418,7 +416,9 @@ describe('PropertyFormField', () => {
                 defaultValue: 0.5,
             };
 
-            render(<PropertyFormField property={percentagePropertyWithDefault} value={0.3} onChange={defaultOnChange} />);
+            render(
+                <PropertyFormField property={percentagePropertyWithDefault} value={0.3} onChange={defaultOnChange} />
+            );
 
             expect(screen.queryByText('Default: 0.5')).not.toBeInTheDocument();
         });
@@ -429,7 +429,9 @@ describe('PropertyFormField', () => {
                 type: 'boolean',
             };
 
-            render(<PropertyFormField property={booleanPropertyWithMetadata} value={true} onChange={defaultOnChange} />);
+            render(
+                <PropertyFormField property={booleanPropertyWithMetadata} value={true} onChange={defaultOnChange} />
+            );
 
             // The property name should be in the FormControlLabel, not as separate text
             expect(screen.getByText('Test Property')).toBeInTheDocument();

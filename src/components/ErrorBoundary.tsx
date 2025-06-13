@@ -79,7 +79,7 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     };
 
     toggleDetails = () => {
-        this.setState(prev => ({
+        this.setState((prev) => ({
             showDetails: !prev.showDetails,
         }));
     };
@@ -118,45 +118,44 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                     }}
                 >
                     <Box sx={{ maxWidth: 600, width: '100%' }}>
-                        <Alert 
-                            severity={severity}
-                            icon={<ErrorOutline />}
-                            sx={{ mb: 2 }}
-                        >
+                        <Alert severity={severity} icon={<ErrorOutline />} sx={{ mb: 2 }}>
                             <AlertTitle>{title}</AlertTitle>
                             <Typography variant="body2" sx={{ mb: 2 }}>
                                 {context && `Context: ${context} - `}
                                 Something went wrong while rendering this {level === 'app' ? 'application' : level}.
                                 {level !== 'app' && ' The rest of the application should continue to work normally.'}
                             </Typography>
-                            
+
                             {process.env.NODE_ENV === 'development' && error && (
-                                <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace', color: 'error.dark' }}>
+                                <Typography
+                                    variant="body2"
+                                    sx={{ mb: 2, fontFamily: 'monospace', color: 'error.dark' }}
+                                >
                                     {error.message}
                                 </Typography>
                             )}
 
                             <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                <Button 
-                                    variant="outlined" 
-                                    size="small" 
+                                <Button
+                                    variant="outlined"
+                                    size="small"
                                     onClick={this.handleRetry}
                                     startIcon={<Refresh />}
                                 >
                                     Try Again
                                 </Button>
-                                
+
                                 {level === 'app' && (
-                                    <Button 
-                                        variant="contained" 
-                                        size="small" 
+                                    <Button
+                                        variant="contained"
+                                        size="small"
                                         onClick={this.handleReload}
                                         startIcon={<Refresh />}
                                     >
                                         Reload Page
                                     </Button>
                                 )}
-                                
+
                                 <Button
                                     variant="text"
                                     size="small"
@@ -171,16 +170,16 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                         <Collapse in={showDetails}>
                             <Alert severity="info" sx={{ mt: 2 }}>
                                 <AlertTitle>Error Details</AlertTitle>
-                                
+
                                 {error && (
                                     <Box sx={{ mb: 2 }}>
                                         <Typography variant="subtitle2" gutterBottom>
                                             Error Message:
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                                fontFamily: 'monospace', 
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontFamily: 'monospace',
                                                 backgroundColor: 'grey.100',
                                                 p: 1,
                                                 borderRadius: 1,
@@ -198,10 +197,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                                         <Typography variant="subtitle2" gutterBottom>
                                             Stack Trace:
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                                fontFamily: 'monospace', 
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontFamily: 'monospace',
                                                 backgroundColor: 'grey.100',
                                                 p: 1,
                                                 borderRadius: 1,
@@ -221,10 +220,10 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
                                         <Typography variant="subtitle2" gutterBottom>
                                             Component Stack:
                                         </Typography>
-                                        <Typography 
-                                            variant="body2" 
-                                            sx={{ 
-                                                fontFamily: 'monospace', 
+                                        <Typography
+                                            variant="body2"
+                                            sx={{
+                                                fontFamily: 'monospace',
                                                 backgroundColor: 'grey.100',
                                                 p: 1,
                                                 borderRadius: 1,

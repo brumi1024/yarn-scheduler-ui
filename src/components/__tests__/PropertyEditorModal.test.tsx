@@ -45,7 +45,7 @@ vi.mock('../../config', () => ({
                 {
                     groupName: 'Resource Management',
                     properties: {
-                        'capacity': {
+                        capacity: {
                             key: 'capacity',
                             label: 'Capacity',
                             type: 'capacity',
@@ -135,26 +135,26 @@ describe('PropertyEditorModal', () => {
     describe('Basic Rendering', () => {
         it('renders when open with queue data', () => {
             render(<PropertyEditorModal {...defaultProps} />);
-            
+
             expect(screen.getByText('Edit Queue Properties: test-queue')).toBeInTheDocument();
             expect(screen.getByRole('dialog')).toBeInTheDocument();
         });
 
         it('does not render when closed', () => {
             render(<PropertyEditorModal {...defaultProps} open={false} />);
-            
+
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
 
         it('does not render when queue is null', () => {
             render(<PropertyEditorModal {...defaultProps} queue={null} />);
-            
+
             expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
         });
 
         it('renders all property group tabs', () => {
             render(<PropertyEditorModal {...defaultProps} />);
-            
+
             // Use getByRole to find tabs specifically
             expect(screen.getByRole('tab', { name: 'Resource Management' })).toBeInTheDocument();
             expect(screen.getByRole('tab', { name: 'Application Settings' })).toBeInTheDocument();
@@ -165,7 +165,7 @@ describe('PropertyEditorModal', () => {
     describe('Form Initialization', () => {
         it('initializes form data with queue properties', () => {
             render(<PropertyEditorModal {...defaultProps} />);
-            
+
             // Check that form fields are populated with queue data
             expect(screen.getByDisplayValue('25%')).toBeInTheDocument(); // capacity
             expect(screen.getByDisplayValue('50%')).toBeInTheDocument(); // maximum-capacity
@@ -180,7 +180,7 @@ describe('PropertyEditorModal', () => {
             };
 
             render(<PropertyEditorModal {...defaultProps} queue={minimalQueue} />);
-            
+
             // Should render without errors even when properties are missing
             expect(screen.getByText('Edit Queue Properties: test-queue')).toBeInTheDocument();
             // The first tab should show capacity properties
@@ -219,7 +219,7 @@ describe('PropertyEditorModal', () => {
             render(<PropertyEditorModal {...defaultProps} />);
 
             const capacityInput = screen.getByTestId('input-capacity');
-            
+
             // Clear the field to trigger validation error
             await user.clear(capacityInput);
 
@@ -233,7 +233,7 @@ describe('PropertyEditorModal', () => {
             render(<PropertyEditorModal {...defaultProps} />);
 
             const maxCapacityInput = screen.getByTestId('input-maximum-capacity');
-            
+
             // Set invalid value
             await user.clear(maxCapacityInput);
             await user.type(maxCapacityInput, '150%');
@@ -294,7 +294,7 @@ describe('PropertyEditorModal', () => {
         it('shows confirmation dialog when closing with unsaved changes', async () => {
             const user = userEvent.setup();
             const mockOnClose = vi.fn();
-            
+
             // Mock window.confirm
             window.confirm = vi.fn(() => false);
 
@@ -307,9 +307,7 @@ describe('PropertyEditorModal', () => {
             // Try to close (look for close icon button)
             await user.click(screen.getByTestId('CloseIcon').closest('button')!);
 
-            expect(window.confirm).toHaveBeenCalledWith(
-                'You have unsaved changes. Are you sure you want to close?'
-            );
+            expect(window.confirm).toHaveBeenCalledWith('You have unsaved changes. Are you sure you want to close?');
             expect(mockOnClose).not.toHaveBeenCalled();
         });
 
@@ -341,9 +339,12 @@ describe('PropertyEditorModal', () => {
             // Save
             await user.click(screen.getByText('Save Changes'));
 
-            expect(mockOnSave).toHaveBeenCalledWith('test-queue', expect.objectContaining({
-                'capacity': '30%',
-            }));
+            expect(mockOnSave).toHaveBeenCalledWith(
+                'test-queue',
+                expect.objectContaining({
+                    capacity: '30%',
+                })
+            );
             expect(mockOnClose).toHaveBeenCalled();
         });
 

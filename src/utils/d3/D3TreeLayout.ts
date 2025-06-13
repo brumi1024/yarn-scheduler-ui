@@ -84,16 +84,14 @@ export class D3TreeLayout {
         // Create tree layout
         const treeLayout =
             this.options.orientation === 'horizontal'
-                ? tree<LayoutQueue>()
-                      .nodeSize([
-                          this.options.nodeHeight + this.options.verticalSpacing,
-                          this.options.nodeWidth + this.options.horizontalSpacing,
-                      ])
-                : tree<LayoutQueue>()
-                      .nodeSize([
-                          this.options.nodeWidth + this.options.horizontalSpacing,
-                          this.options.nodeHeight + this.options.verticalSpacing,
-                      ]);
+                ? tree<LayoutQueue>().nodeSize([
+                      this.options.nodeHeight + this.options.verticalSpacing,
+                      this.options.nodeWidth + this.options.horizontalSpacing,
+                  ])
+                : tree<LayoutQueue>().nodeSize([
+                      this.options.nodeWidth + this.options.horizontalSpacing,
+                      this.options.nodeHeight + this.options.verticalSpacing,
+                  ]);
 
         // Apply layout
         const treeNodes = treeLayout(hierarchyRoot);

@@ -68,10 +68,10 @@ describe('ErrorBoundary', () => {
             // Click retry button
             const retryButton = screen.getByText('Try Again');
             expect(retryButton).toBeInTheDocument();
-            
+
             // The retry button should be clickable (this verifies the error boundary sets up correctly)
             fireEvent.click(retryButton);
-            
+
             // After clicking retry, the error boundary will attempt to re-render
             // but since our ThrowError component always throws, we'll still see the error
             // This tests that the retry mechanism works, even if it doesn't succeed

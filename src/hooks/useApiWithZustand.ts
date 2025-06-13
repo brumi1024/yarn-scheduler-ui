@@ -4,19 +4,19 @@ import { useConfigurationStore, useActivityStore } from '../store/zustand';
 
 // Hook for scheduler data with Zustand integration
 export function useScheduler() {
-    const scheduler = useConfigurationStore(state => state.scheduler);
-    const loading = useConfigurationStore(state => state.loading.scheduler);
-    const error = useConfigurationStore(state => state.errors.scheduler);
-    const loadSchedulerStart = useConfigurationStore(state => state.loadSchedulerStart);
-    const loadSchedulerSuccess = useConfigurationStore(state => state.loadSchedulerSuccess);
-    const loadSchedulerError = useConfigurationStore(state => state.loadSchedulerError);
-    const addApiCallLog = useActivityStore(state => state.addApiCallLog);
-    const addLogEntry = useActivityStore(state => state.addLogEntry);
+    const scheduler = useConfigurationStore((state) => state.scheduler);
+    const loading = useConfigurationStore((state) => state.loading.scheduler);
+    const error = useConfigurationStore((state) => state.errors.scheduler);
+    const loadSchedulerStart = useConfigurationStore((state) => state.loadSchedulerStart);
+    const loadSchedulerSuccess = useConfigurationStore((state) => state.loadSchedulerSuccess);
+    const loadSchedulerError = useConfigurationStore((state) => state.loadSchedulerError);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
     const mountedRef = useRef(true);
 
     const fetchData = useCallback(async () => {
         if (!mountedRef.current) return;
-        
+
         loadSchedulerStart();
         addApiCallLog({
             method: 'GET',
@@ -31,7 +31,7 @@ export function useScheduler() {
                     type: 'api_call',
                     level: 'info',
                     message: 'Successfully loaded scheduler data',
-                    details: { dataSize: JSON.stringify(result).length }
+                    details: { dataSize: JSON.stringify(result).length },
                 });
             }
         } catch (err) {
@@ -42,7 +42,7 @@ export function useScheduler() {
                     type: 'error',
                     level: 'error',
                     message: 'Failed to load scheduler data',
-                    details: { error: error.message }
+                    details: { error: error.message },
                 });
             }
         }
@@ -67,19 +67,19 @@ export function useScheduler() {
 
 // Hook for configuration data with Zustand integration
 export function useConfiguration() {
-    const configuration = useConfigurationStore(state => state.configuration);
-    const loading = useConfigurationStore(state => state.loading.configuration);
-    const error = useConfigurationStore(state => state.errors.configuration);
-    const loadConfigurationStart = useConfigurationStore(state => state.loadConfigurationStart);
-    const loadConfigurationSuccess = useConfigurationStore(state => state.loadConfigurationSuccess);
-    const loadConfigurationError = useConfigurationStore(state => state.loadConfigurationError);
-    const addApiCallLog = useActivityStore(state => state.addApiCallLog);
-    const addLogEntry = useActivityStore(state => state.addLogEntry);
+    const configuration = useConfigurationStore((state) => state.configuration);
+    const loading = useConfigurationStore((state) => state.loading.configuration);
+    const error = useConfigurationStore((state) => state.errors.configuration);
+    const loadConfigurationStart = useConfigurationStore((state) => state.loadConfigurationStart);
+    const loadConfigurationSuccess = useConfigurationStore((state) => state.loadConfigurationSuccess);
+    const loadConfigurationError = useConfigurationStore((state) => state.loadConfigurationError);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
     const mountedRef = useRef(true);
 
     const fetchData = useCallback(async () => {
         if (!mountedRef.current) return;
-        
+
         loadConfigurationStart();
         addApiCallLog({
             method: 'GET',
@@ -94,7 +94,7 @@ export function useConfiguration() {
                     type: 'api_call',
                     level: 'info',
                     message: 'Successfully loaded configuration data',
-                    details: { propertyCount: result.property?.length || 0 }
+                    details: { propertyCount: result.property?.length || 0 },
                 });
             }
         } catch (err) {
@@ -105,7 +105,7 @@ export function useConfiguration() {
                     type: 'error',
                     level: 'error',
                     message: 'Failed to load configuration data',
-                    details: { error: error.message }
+                    details: { error: error.message },
                 });
             }
         }
@@ -136,7 +136,7 @@ export function useNodeLabels() {
 
     const fetchData = useCallback(async () => {
         if (!mountedRef.current) return;
-        
+
         store.loadNodeLabelsStart();
         activityStore.addApiCallLog({
             method: 'GET',
@@ -151,7 +151,7 @@ export function useNodeLabels() {
                     type: 'api_call',
                     level: 'info',
                     message: 'Successfully loaded node labels',
-                    details: { labelCount: result.nodeLabelsInfo?.nodeLabelInfo?.length || 0 }
+                    details: { labelCount: result.nodeLabelsInfo?.nodeLabelInfo?.length || 0 },
                 });
             }
         } catch (err) {
@@ -162,7 +162,7 @@ export function useNodeLabels() {
                     type: 'error',
                     level: 'error',
                     message: 'Failed to load node labels',
-                    details: { error: error.message }
+                    details: { error: error.message },
                 });
             }
         }
@@ -193,7 +193,7 @@ export function useNodes() {
 
     const fetchData = useCallback(async () => {
         if (!mountedRef.current) return;
-        
+
         store.loadNodesStart();
         activityStore.addApiCallLog({
             method: 'GET',
@@ -208,7 +208,7 @@ export function useNodes() {
                     type: 'api_call',
                     level: 'info',
                     message: 'Successfully loaded node data',
-                    details: { nodeCount: result.nodes?.node?.length || 0 }
+                    details: { nodeCount: result.nodes?.node?.length || 0 },
                 });
             }
         } catch (err) {
@@ -219,7 +219,7 @@ export function useNodes() {
                     type: 'error',
                     level: 'error',
                     message: 'Failed to load node data',
-                    details: { error: error.message }
+                    details: { error: error.message },
                 });
             }
         }
@@ -251,20 +251,20 @@ export function useHealthCheck() {
 
     const checkHealth = useCallback(async () => {
         if (!mountedRef.current) return;
-        
+
         setStatus('checking');
         try {
             const result = await apiService.healthCheck();
             if (mountedRef.current) {
                 setStatus(result.status);
                 setLastCheck(result.timestamp);
-                
+
                 if (result.status === 'error') {
                     activityStore.addLogEntry({
                         type: 'system_event',
                         level: 'warn',
                         message: 'Health check failed',
-                        details: { timestamp: result.timestamp }
+                        details: { timestamp: result.timestamp },
                     });
                 }
             }
@@ -276,7 +276,7 @@ export function useHealthCheck() {
                     type: 'error',
                     level: 'error',
                     message: 'Health check error',
-                    details: { error: error instanceof Error ? error.message : 'Unknown error' }
+                    details: { error: error instanceof Error ? error.message : 'Unknown error' },
                 });
             }
         }
@@ -288,7 +288,7 @@ export function useHealthCheck() {
 
         // Check health every 30 seconds
         const interval = setInterval(checkHealth, 30000);
-        
+
         return () => {
             mountedRef.current = false;
             clearInterval(interval);
@@ -304,56 +304,59 @@ export function useApiMutation<T, P = void>() {
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
-    const mutate = useCallback(async (
-        fn: (params: P) => Promise<T>, 
-        params: P,
-        options?: { 
-            description?: string;
-            method?: string;
-            url?: string;
-        }
-    ): Promise<T | null> => {
-        try {
-            setLoading(true);
-            setError(null);
-            
-            if (options?.method && options?.url) {
-                activityStore.addApiCallLog({
-                    method: options.method,
-                    url: options.url,
-                });
+    const mutate = useCallback(
+        async (
+            fn: (params: P) => Promise<T>,
+            params: P,
+            options?: {
+                description?: string;
+                method?: string;
+                url?: string;
             }
-            
-            const result = await fn(params);
-            
-            if (options?.description) {
-                activityStore.addLogEntry({
-                    type: 'user_action',
-                    level: 'info',
-                    message: options.description,
-                    details: { success: true }
-                });
+        ): Promise<T | null> => {
+            try {
+                setLoading(true);
+                setError(null);
+
+                if (options?.method && options?.url) {
+                    activityStore.addApiCallLog({
+                        method: options.method,
+                        url: options.url,
+                    });
+                }
+
+                const result = await fn(params);
+
+                if (options?.description) {
+                    activityStore.addLogEntry({
+                        type: 'user_action',
+                        level: 'info',
+                        message: options.description,
+                        details: { success: true },
+                    });
+                }
+
+                return result;
+            } catch (err) {
+                const error = err instanceof Error ? err : new Error('Unknown error');
+                setError(error);
+
+                if (options?.description) {
+                    activityStore.addLogEntry({
+                        type: 'error',
+                        level: 'error',
+                        message: `Failed: ${options.description}`,
+                        details: { error: error.message },
+                    });
+                }
+
+                throw error;
+            } finally {
+                setLoading(false);
             }
-            
-            return result;
-        } catch (err) {
-            const error = err instanceof Error ? err : new Error('Unknown error');
-            setError(error);
-            
-            if (options?.description) {
-                activityStore.addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: `Failed: ${options.description}`,
-                    details: { error: error.message }
-                });
-            }
-            
-            throw error;
-        } finally {
-            setLoading(false);
-        }
-    }, []); // Zustand stores are stable
+        },
+        []
+    ); // Zustand stores are stable
 
     return { mutate, loading, error };
 }
