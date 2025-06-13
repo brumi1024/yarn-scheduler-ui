@@ -1,7 +1,17 @@
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { render, screen, fireEvent, act } from '@testing-library/react';
-import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { ZoomControls } from '../ZoomControls';
+import { 
+    describe, 
+    it, 
+    expect, 
+    beforeEach, 
+    vi, 
+    afterEach, 
+    screen, 
+    fireEvent, 
+    act
+} from '../../test/testUtils';
+import { render } from '@testing-library/react';
+import { ThemeProvider, createTheme } from '@mui/material/styles';
 
 // Mock PanZoomController
 class MockPanZoomController {

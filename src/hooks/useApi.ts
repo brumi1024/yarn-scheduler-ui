@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { apiService } from '../api/ApiService';
 import type { SchedulerResponse, ConfigurationResponse } from '../types/Configuration';
 import type { NodeLabelsResponse, NodesResponse } from '../types/NodeLabel';
@@ -16,23 +16,45 @@ export function useScheduler(): UseApiState<SchedulerResponse> {
     const [error, setError] = useState<Error | null>(null);
 
     const fetchData = useCallback(async () => {
+        const controller = new AbortController();
+        
         try {
             setLoading(true);
             setError(null);
             const result = await apiService.getScheduler();
-            setData(result);
+            
+            // Check if component is still mounted before setting state
+            if (!controller.signal.aborted) {
+                setData(result);
+            }
         } catch (err) {
-            setError(err instanceof Error ? err : new Error('Unknown error'));
+            if (!controller.signal.aborted) {
+                setError(err instanceof Error ? err : new Error('Unknown error'));
+            }
         } finally {
-            setLoading(false);
+            if (!controller.signal.aborted) {
+                setLoading(false);
+            }
         }
+        
+        return controller;
     }, []);
 
     useEffect(() => {
-        fetchData();
+        let abortController: AbortController | undefined;
+        
+        fetchData().then(controller => {
+            abortController = controller;
+        });
+
+        return () => {
+            if (abortController) {
+                abortController.abort();
+            }
+        };
     }, [fetchData]);
 
-    return { data, loading, error, refetch: fetchData };
+    return { data, loading, error, refetch: async () => { await fetchData(); } };
 }
 
 export function useConfiguration(): UseApiState<ConfigurationResponse> {
@@ -41,23 +63,44 @@ export function useConfiguration(): UseApiState<ConfigurationResponse> {
     const [error, setError] = useState<Error | null>(null);
 
     const fetchData = useCallback(async () => {
+        const controller = new AbortController();
+        
         try {
             setLoading(true);
             setError(null);
             const result = await apiService.getConfiguration();
-            setData(result);
+            
+            if (!controller.signal.aborted) {
+                setData(result);
+            }
         } catch (err) {
-            setError(err instanceof Error ? err : new Error('Unknown error'));
+            if (!controller.signal.aborted) {
+                setError(err instanceof Error ? err : new Error('Unknown error'));
+            }
         } finally {
-            setLoading(false);
+            if (!controller.signal.aborted) {
+                setLoading(false);
+            }
         }
+        
+        return controller;
     }, []);
 
     useEffect(() => {
-        fetchData();
+        let abortController: AbortController | undefined;
+        
+        fetchData().then(controller => {
+            abortController = controller;
+        });
+
+        return () => {
+            if (abortController) {
+                abortController.abort();
+            }
+        };
     }, [fetchData]);
 
-    return { data, loading, error, refetch: fetchData };
+    return { data, loading, error, refetch: async () => { await fetchData(); } };
 }
 
 export function useNodeLabels(): UseApiState<NodeLabelsResponse> {
@@ -137,25 +180,37 @@ export function useApiMutation<T, P = void>() {
 export function useHealthCheck() {
     const [status, setStatus] = useState<'ok' | 'error' | 'checking'>('checking');
     const [lastCheck, setLastCheck] = useState<number>(0);
+    const mountedRef = useRef(true);
 
     const checkHealth = useCallback(async () => {
+        if (!mountedRef.current) return;
+        
         setStatus('checking');
         try {
             const result = await apiService.healthCheck();
-            setStatus(result.status);
-            setLastCheck(result.timestamp);
+            if (mountedRef.current) {
+                setStatus(result.status);
+                setLastCheck(result.timestamp);
+            }
         } catch {
-            setStatus('error');
-            setLastCheck(Date.now());
+            if (mountedRef.current) {
+                setStatus('error');
+                setLastCheck(Date.now());
+            }
         }
     }, []);
 
     useEffect(() => {
+        mountedRef.current = true;
         checkHealth();
 
         // Check health every 30 seconds
         const interval = setInterval(checkHealth, 30000);
-        return () => clearInterval(interval);
+        
+        return () => {
+            mountedRef.current = false;
+            clearInterval(interval);
+        };
     }, [checkHealth]);
 
     return { status, lastCheck, checkHealth };

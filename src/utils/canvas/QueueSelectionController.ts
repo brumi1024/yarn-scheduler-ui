@@ -143,10 +143,7 @@ export class QueueSelectionController {
      * Remove selection event listener
      */
     removeSelectionListener(listener: (event: SelectionEvent) => void): void {
-        const index = this.selectionListeners.indexOf(listener);
-        if (index > -1) {
-            this.selectionListeners.splice(index, 1);
-        }
+        this.selectionListeners = this.selectionListeners.filter(l => l !== listener);
     }
 
     /**
@@ -160,10 +157,7 @@ export class QueueSelectionController {
      * Remove hover event listener
      */
     removeHoverListener(listener: (event: HoverEvent) => void): void {
-        const index = this.hoverListeners.indexOf(listener);
-        if (index > -1) {
-            this.hoverListeners.splice(index, 1);
-        }
+        this.hoverListeners = this.hoverListeners.filter(l => l !== listener);
     }
 
     /**

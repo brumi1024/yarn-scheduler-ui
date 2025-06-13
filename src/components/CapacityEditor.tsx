@@ -294,7 +294,7 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
                         </Box>
 
                         {siblingUsage.siblings.map((sibling, index) => (
-                            <Box key={index} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
+                            <Box key={`${sibling.name}-${index}`} sx={{ mb: 1, display: 'flex', alignItems: 'center', gap: 1 }}>
                                 <Typography variant="body2">
                                     {sibling.name}: {sibling.usage.toFixed(1)}%
                                 </Typography>

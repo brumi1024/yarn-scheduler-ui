@@ -123,7 +123,7 @@ export class ApiService {
         try {
             await this.getScheduler();
             return { status: 'ok', timestamp: Date.now() };
-        } catch {
+        } catch (error) {
             return { status: 'error', timestamp: Date.now() };
         }
     }

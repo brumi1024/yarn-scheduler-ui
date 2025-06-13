@@ -1,5 +1,6 @@
 import { Box, Typography } from '@mui/material';
 import { QueueVisualization } from '../components/QueueVisualization';
+import { ComponentErrorBoundary } from '../components/ErrorBoundary';
 
 export default function QueueEditor() {
     return (
@@ -36,7 +37,9 @@ export default function QueueEditor() {
                     minHeight: 0, // Important for flex children
                 }}
             >
-                <QueueVisualization />
+                <ComponentErrorBoundary context="Queue Visualization">
+                    <QueueVisualization />
+                </ComponentErrorBoundary>
             </Box>
         </Box>
     );

@@ -9,6 +9,7 @@
 import type { ParsedQueue, Configuration } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
 import { CapacityModeDetector } from './CapacityModeDetector';
+import { parseIntProperty, parseNumericProperty, parseBooleanProperty, parseStringArray } from './CapacityValidation';
 
 export interface ParsedProperty {
     key: string;
@@ -351,28 +352,28 @@ export class ConfigParser {
             state: (properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED',
 
             // Resource limits
-            maxApplications: this.parseIntProperty(properties.get('maximum-applications'), -1),
-            maxAMResourcePercent: this.parseFloatProperty(properties.get('maximum-am-resource-percent')),
+            maxApplications: parseIntProperty(properties.get('maximum-applications'), -1),
+            maxAMResourcePercent: parseNumericProperty(properties.get('maximum-am-resource-percent')),
 
             // User limits
-            minimumUserLimitPercent: this.parseFloatProperty(properties.get('minimum-user-limit-percent'), 100) ?? 100,
-            userLimitFactor: this.parseFloatProperty(properties.get('user-limit-factor'), 1.0) ?? 1.0,
+            minimumUserLimitPercent: parseNumericProperty(properties.get('minimum-user-limit-percent'), 100),
+            userLimitFactor: parseNumericProperty(properties.get('user-limit-factor'), 1.0),
 
             // Application settings
-            maxParallelApps: this.parseIntProperty(properties.get('max-parallel-apps'), Number.MAX_SAFE_INTEGER),
-            priority: this.parseIntProperty(properties.get('priority'), 0),
+            maxParallelApps: parseIntProperty(properties.get('max-parallel-apps'), Number.MAX_SAFE_INTEGER),
+            priority: parseIntProperty(properties.get('priority'), 0),
 
             // Access control
             submitACL: properties.get('acl_submit_applications') || (queuePath === 'root' ? '*' : ''),
             adminACL: properties.get('acl_administer_queue') || (queuePath === 'root' ? '*' : ''),
 
             // Node labels
-            accessibleNodeLabels: this.parseStringArray(properties.get('accessible-node-labels')),
+            accessibleNodeLabels: parseStringArray(properties.get('accessible-node-labels')),
             defaultNodeLabelExpression: properties.get('default-node-label-expression'),
 
             // Preemption
-            preemptionDisabled: this.parseBooleanProperty(properties.get('disable_preemption'), false),
-            intraQueuePreemptionDisabled: this.parseBooleanProperty(
+            preemptionDisabled: parseBooleanProperty(properties.get('disable_preemption'), false),
+            intraQueuePreemptionDisabled: parseBooleanProperty(
                 properties.get('intra-queue-preemption.disable_preemption'),
                 false
             ),
@@ -460,29 +461,4 @@ export class ConfigParser {
         }
     }
 
-    // Utility methods for parsing properties
-    private static parseIntProperty(value: string | undefined, defaultValue: number = -1): number {
-        if (!value) return defaultValue;
-        const parsed = parseInt(value, 10);
-        return isNaN(parsed) ? defaultValue : parsed;
-    }
-
-    private static parseFloatProperty(value: string | undefined, defaultValue?: number): number | undefined {
-        if (!value) return defaultValue;
-        const parsed = parseFloat(value);
-        return isNaN(parsed) ? defaultValue : parsed;
-    }
-
-    private static parseBooleanProperty(value: string | undefined, defaultValue: boolean): boolean {
-        if (!value) return defaultValue;
-        return value.toLowerCase() === 'true';
-    }
-
-    private static parseStringArray(value: string | undefined): string[] {
-        if (!value) return [];
-        return value
-            .split(',')
-            .map((s) => s.trim())
-            .filter((s) => s.length > 0);
-    }
 }

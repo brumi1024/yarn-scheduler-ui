@@ -5,6 +5,7 @@ This guide explains how to add new properties to the property editor in the YARN
 ## Overview
 
 The property system consists of:
+
 - **Metadata files** in `src/config/` that define property schemas
 - **ConfigService** that provides access to property definitions
 - **PropertyEditorModal** that generates forms dynamically
@@ -49,6 +50,7 @@ Edit `src/config/queue-metadata.ts`:
 #### Property Type Examples
 
 **String Property:**
+
 ```typescript
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.queue-description`]: {
   key: 'queue-description',
@@ -62,6 +64,7 @@ Edit `src/config/queue-metadata.ts`:
 ```
 
 **Number Property:**
+
 ```typescript
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.minimum-allocation-mb`]: {
   key: 'minimum-allocation-mb',
@@ -76,6 +79,7 @@ Edit `src/config/queue-metadata.ts`:
 ```
 
 **Boolean Property:**
+
 ```typescript
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.enable-size-based-weight`]: {
   key: 'enable-size-based-weight',
@@ -88,6 +92,7 @@ Edit `src/config/queue-metadata.ts`:
 ```
 
 **Enum Property:**
+
 ```typescript
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.queue-priority`]: {
   key: 'queue-priority',
@@ -101,6 +106,7 @@ Edit `src/config/queue-metadata.ts`:
 ```
 
 **Percentage Property:**
+
 ```typescript
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.guaranteed-allocation`]: {
   key: 'guaranteed-allocation',
@@ -119,21 +125,21 @@ If your property doesn't fit existing groups, create a new one:
 
 ```typescript
 export const QUEUE_CONFIG_METADATA: ConfigGroup[] = [
-  // ... existing groups ...
-  {
-    groupName: 'Custom Feature Settings',
-    properties: {
-      [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.custom-feature-enabled`]: {
-        key: 'custom-feature-enabled',
-        displayName: 'Enable Custom Feature',
-        description: 'Enables the custom feature for this queue',
-        type: 'boolean',
-        defaultValue: 'false',
-        availableInTemplate: false,
-      },
-      // Add more related properties here
+    // ... existing groups ...
+    {
+        groupName: 'Custom Feature Settings',
+        properties: {
+            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.custom-feature-enabled`]: {
+                key: 'custom-feature-enabled',
+                displayName: 'Enable Custom Feature',
+                description: 'Enables the custom feature for this queue',
+                type: 'boolean',
+                defaultValue: 'false',
+                availableInTemplate: false,
+            },
+            // Add more related properties here
+        },
     },
-  },
 ];
 ```
 
@@ -166,19 +172,19 @@ Update the data mapping in `src/components/PropertyEditorModal.tsx` to show curr
 
 ```typescript
 useEffect(() => {
-  if (queue && open) {
-    const initialData: Record<string, any> = {};
-    
-    // ... existing mappings ...
-    
-    // Add mapping for your new property
-    initialData['your-new-property'] = queue.yourNewProperty || 'default-value';
-    
-    setFormData(initialData);
-    setErrors({});
-    setHasChanges(false);
-    setTabValue(0);
-  }
+    if (queue && open) {
+        const initialData: Record<string, any> = {};
+
+        // ... existing mappings ...
+
+        // Add mapping for your new property
+        initialData['your-new-property'] = queue.yourNewProperty || 'default-value';
+
+        setFormData(initialData);
+        setErrors({});
+        setHasChanges(false);
+        setTabValue(0);
+    }
 }, [queue, open]);
 ```
 
@@ -190,7 +196,7 @@ If your property needs a custom input component, create one and update `Property
 const renderField = () => {
   switch (property.type) {
     // ... existing cases ...
-    
+
     case 'your-custom-type':
       return (
         <YourCustomInput
@@ -200,7 +206,7 @@ const renderField = () => {
           property={property}
         />
       );
-      
+
     default:
       // ... existing default case ...
   }
@@ -210,17 +216,18 @@ const renderField = () => {
 ### Step 7: Test Your Property
 
 1. **Start the development server:**
-   ```bash
-   npm start
-   ```
+
+    ```bash
+    npm start
+    ```
 
 2. **Test the property editor:**
-   - Click on a queue in the visualization
-   - Click the Edit button in the Queue Info Panel
-   - Find your new property in the appropriate tab
-   - Verify the input control renders correctly
-   - Test validation by entering invalid values
-   - Check that changes are tracked properly
+    - Click on a queue in the visualization
+    - Click the Edit button in the Queue Info Panel
+    - Find your new property in the appropriate tab
+    - Verify the input control renders correctly
+    - Test validation by entering invalid values
+    - Check that changes are tracked properly
 
 ### Step 8: Document Known Properties
 
@@ -245,6 +252,7 @@ private isKnownPropertyName(name: string): boolean {
 Let's add a "max-application-lifetime" property:
 
 1. **Edit `src/config/queue-metadata.ts`:**
+
 ```typescript
 {
   groupName: 'Resource Limits & Management',
@@ -265,11 +273,13 @@ Let's add a "max-application-lifetime" property:
 ```
 
 2. **Update `PropertyEditorModal.tsx`:**
+
 ```typescript
 initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || 0;
 ```
 
 3. **Update `config-service.ts`:**
+
 ```typescript
 'maximum-application-lifetime', // Add to knownProperties array
 ```
@@ -286,16 +296,19 @@ initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || 0;
 ## Troubleshooting
 
 ### Property not showing up?
+
 - Check that the property is in the correct metadata file
 - Verify the property group is included in the tab navigation
 - Ensure there are no TypeScript compilation errors
 
 ### Validation not working?
+
 - Check the property type is correct
 - Verify custom validation logic in ConfigService
 - Test with console.log to debug validation flow
 
 ### Value not saving?
+
 - Ensure the property key matches between metadata and save handler
 - Check that the property is included in the changes object
 - Verify the onSave callback is properly connected
@@ -328,16 +341,16 @@ To update related properties automatically:
 
 ```typescript
 const handleFieldChange = (propertyKey: string, value: any) => {
-  const newFormData = { ...formData, [propertyKey]: value };
-  
-  // Example: Update max when min changes
-  if (propertyKey === 'minimum-capacity' && value > formData['maximum-capacity']) {
-    newFormData['maximum-capacity'] = value;
-  }
-  
-  setFormData(newFormData);
-  setHasChanges(true);
-  // ... validation ...
+    const newFormData = { ...formData, [propertyKey]: value };
+
+    // Example: Update max when min changes
+    if (propertyKey === 'minimum-capacity' && value > formData['maximum-capacity']) {
+        newFormData['maximum-capacity'] = value;
+    }
+
+    setFormData(newFormData);
+    setHasChanges(true);
+    // ... validation ...
 };
 ```
 

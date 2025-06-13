@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, IconButton, Tooltip, Paper, Divider, Typography, useTheme } from '@mui/material';
+import { Box, Divider, Typography, useTheme } from '@mui/material';
 import {
     ZoomIn as ZoomInIcon,
     ZoomOut as ZoomOutIcon,
@@ -7,6 +7,7 @@ import {
     FitScreen as FitScreenIcon,
 } from '@mui/icons-material';
 import type { PanZoomController } from '../utils/canvas/PanZoomController';
+import { StyledIconButton, ElevatedPaper } from './shared';
 
 export interface ZoomControlsProps {
     panZoomController: PanZoomController | null;
@@ -92,96 +93,52 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
     };
 
     return (
-        <Paper
-            elevation={6}
+        <ElevatedPaper
+            variant="floating"
             sx={{
                 ...getPositionStyles(),
                 display: 'flex',
                 flexDirection: 'column',
-                bgcolor: 'background.paper',
-                borderRadius: 2,
-                overflow: 'hidden',
-                boxShadow: '0 4px 12px rgba(0, 0, 0, 0.15), 0 2px 4px rgba(0, 0, 0, 0.1)',
             }}
         >
             <Box sx={{ p: 1 }}>
-                <Tooltip title="Zoom In (Ctrl/Cmd + +)" placement="left">
-                    <span>
-                        <IconButton
-                            onClick={handleZoomIn}
-                            disabled={disabled || !panZoomController}
-                            size="small"
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                '&:hover': {
-                                    bgcolor: 'action.hover',
-                                },
-                            }}
-                        >
-                            <ZoomInIcon />
-                        </IconButton>
-                    </span>
-                </Tooltip>
+                <StyledIconButton
+                    tooltip="Zoom In (Ctrl/Cmd + +)"
+                    tooltipPlacement="left"
+                    onClick={handleZoomIn}
+                    disabled={disabled || !panZoomController}
+                >
+                    <ZoomInIcon />
+                </StyledIconButton>
 
-                <Tooltip title="Zoom Out (Ctrl/Cmd + -)" placement="left">
-                    <span>
-                        <IconButton
-                            onClick={handleZoomOut}
-                            disabled={disabled || !panZoomController}
-                            size="small"
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                '&:hover': {
-                                    bgcolor: 'action.hover',
-                                },
-                            }}
-                        >
-                            <ZoomOutIcon />
-                        </IconButton>
-                    </span>
-                </Tooltip>
+                <StyledIconButton
+                    tooltip="Zoom Out (Ctrl/Cmd + -)"
+                    tooltipPlacement="left"
+                    onClick={handleZoomOut}
+                    disabled={disabled || !panZoomController}
+                >
+                    <ZoomOutIcon />
+                </StyledIconButton>
 
                 <Divider sx={{ my: 1 }} />
 
-                <Tooltip title="Fit to Screen" placement="left">
-                    <span>
-                        <IconButton
-                            onClick={handleFitToScreen}
-                            disabled={disabled}
-                            size="small"
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                '&:hover': {
-                                    bgcolor: 'action.hover',
-                                },
-                            }}
-                        >
-                            <FitScreenIcon />
-                        </IconButton>
-                    </span>
-                </Tooltip>
+                <StyledIconButton
+                    tooltip="Fit to Screen"
+                    tooltipPlacement="left"
+                    onClick={handleFitToScreen}
+                    disabled={disabled}
+                >
+                    <FitScreenIcon />
+                </StyledIconButton>
 
-                <Tooltip title="Reset View (Ctrl/Cmd + 0)" placement="left">
-                    <span>
-                        <IconButton
-                            onClick={handleReset}
-                            disabled={disabled || !panZoomController}
-                            size="small"
-                            sx={{
-                                width: 40,
-                                height: 40,
-                                '&:hover': {
-                                    bgcolor: 'action.hover',
-                                },
-                            }}
-                        >
-                            <ResetIcon />
-                        </IconButton>
-                    </span>
-                </Tooltip>
+                <StyledIconButton
+                    tooltip="Reset View (Ctrl/Cmd + 0)"
+                    tooltipPlacement="left"
+                    onClick={handleReset}
+                    disabled={disabled || !panZoomController}
+                >
+                    <ResetIcon />
+                </StyledIconButton>
 
                 {showScale && (
                     <>
@@ -209,7 +166,7 @@ export const ZoomControls: React.FC<ZoomControlsProps> = ({
                     </>
                 )}
             </Box>
-        </Paper>
+        </ElevatedPaper>
     );
 };
 

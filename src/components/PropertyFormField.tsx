@@ -16,6 +16,7 @@ import {
 import { Help as HelpIcon } from '@mui/icons-material';
 import type { ConfigProperty } from '../config';
 import { CapacityEditor } from './CapacityEditor';
+import { isCapacityProperty } from '../utils/CapacityValidation';
 
 interface PropertyFormFieldProps {
     property: ConfigProperty;
@@ -28,14 +29,7 @@ interface PropertyFormFieldProps {
 export function PropertyFormField({ property, value, error, onChange, siblings }: PropertyFormFieldProps) {
     const renderField = () => {
         // Special handling for capacity properties (including template capacity)
-        if (
-            property.key === 'capacity' ||
-            property.key === 'maximum-capacity' ||
-            property.key === 'leaf-queue-template.capacity' ||
-            property.key === 'leaf-queue-template.maximum-capacity' ||
-            property.key === 'auto-queue-creation-v2.template.capacity' ||
-            property.key === 'auto-queue-creation-v2.template.maximum-capacity'
-        ) {
+        if (isCapacityProperty(property.key)) {
             return (
                 <CapacityEditor
                     label={property.displayName}
@@ -86,7 +80,17 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         type="number"
                         label={property.displayName}
                         value={value || ''}
-                        onChange={(e) => onChange(e.target.value ? parseFloat(e.target.value) : '')}
+                        onChange={(e) => {
+                            const inputValue = e.target.value;
+                            if (inputValue === '') {
+                                onChange('');
+                            } else {
+                                const parsed = parseFloat(inputValue);
+                                if (!isNaN(parsed)) {
+                                    onChange(parsed);
+                                }
+                            }
+                        }}
                         error={!!error}
                         helperText={error}
                         placeholder={property.placeholder}
@@ -97,7 +101,8 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                 );
 
             case 'percentage': {
-                const percentValue = value ? parseFloat(value) * 100 : 0;
+                const parsedValue = value ? parseFloat(value) : 0;
+                const percentValue = isNaN(parsedValue) ? 0 : parsedValue * 100;
 
                 return (
                     <Box sx={{ px: 1 }}>
@@ -106,7 +111,10 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
                         </Typography>
                         <Slider
                             value={percentValue}
-                            onChange={(_, newValue) => onChange((newValue as number) / 100)}
+                            onChange={(_, newValue) => {
+                                const numValue = newValue as number;
+                                onChange(numValue / 100);
+                            }}
                             min={0}
                             max={100}
                             step={0.1}
@@ -144,14 +152,7 @@ export function PropertyFormField({ property, value, error, onChange, siblings }
     };
 
     // For capacity properties, the CapacityEditor handles its own layout
-    if (
-        property.key === 'capacity' ||
-        property.key === 'maximum-capacity' ||
-        property.key === 'leaf-queue-template.capacity' ||
-        property.key === 'leaf-queue-template.maximum-capacity' ||
-        property.key === 'auto-queue-creation-v2.template.capacity' ||
-        property.key === 'auto-queue-creation-v2.template.maximum-capacity'
-    ) {
+    if (isCapacityProperty(property.key)) {
         return renderField();
     }
 

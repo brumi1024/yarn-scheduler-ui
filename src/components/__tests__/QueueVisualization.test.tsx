@@ -2,14 +2,17 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { QueueVisualization } from '../QueueVisualization';
-import { useScheduler } from '../../hooks/useApi';
 
 // Mock the hooks and components
-vi.mock('../../hooks/useApi');
-const mockUseScheduler = vi.mocked(useScheduler);
+vi.mock('../../hooks/useApi', () => ({
+    useScheduler: vi.fn(),
+    useConfiguration: vi.fn(),
+}));
 
-// We need to import useConfiguration to mock it too
-import { useConfiguration } from '../../hooks/useApi';
+// Import after mocking
+import { useScheduler, useConfiguration } from '../../hooks/useApi';
+
+const mockUseScheduler = vi.mocked(useScheduler);
 const mockUseConfiguration = vi.mocked(useConfiguration);
 
 vi.mock('../../utils/d3', () => ({

@@ -6,13 +6,20 @@ import QueueEditor from '../features/QueueEditor';
 import GlobalSettings from '../features/GlobalSettings';
 import NodeLabels from '../features/NodeLabels';
 import Diagnostics from '../features/Diagnostics';
+import { FeatureErrorBoundary } from './ErrorBoundary';
 
-const TAB_COMPONENTS = [QueueEditor, GlobalSettings, NodeLabels, Diagnostics];
+const TAB_COMPONENTS = [
+    { component: QueueEditor, name: 'Queue Editor' },
+    { component: GlobalSettings, name: 'Global Settings' },
+    { component: NodeLabels, name: 'Node Labels' },
+    { component: Diagnostics, name: 'Diagnostics' },
+];
 
 export default function MainLayout() {
     const [activeTab, setActiveTab] = useState(0);
 
-    const ActiveComponent = TAB_COMPONENTS[activeTab];
+    const activeTabConfig = TAB_COMPONENTS[activeTab];
+    const ActiveComponent = activeTabConfig.component;
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -40,7 +47,9 @@ export default function MainLayout() {
                 id={`tabpanel-${activeTab}`}
                 aria-labelledby={`tab-${activeTab}`}
             >
-                <ActiveComponent />
+                <FeatureErrorBoundary context={activeTabConfig.name}>
+                    <ActiveComponent />
+                </FeatureErrorBoundary>
             </Box>
 
             {/* Status Bar */}

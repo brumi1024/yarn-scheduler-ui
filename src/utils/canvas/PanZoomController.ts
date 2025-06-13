@@ -605,8 +605,8 @@ export class PanZoomController {
         this.listeners.forEach((listener) => {
             try {
                 listener(event);
-            } catch (error) {
-                console.error('Error in pan/zoom listener:', error);
+            } catch {
+                // Silently ignore listener errors
             }
         });
     }
