@@ -2,15 +2,12 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect } from 'vitest';
 import { ThemeProvider } from '@mui/material/styles';
 import { theme } from '../theme';
-import { StoreProvider } from '../store/StoreProvider';
 import MainLayout from './MainLayout';
 
-// Helper to render with theme and store
+// Helper to render with theme
 const renderWithProviders = (component: React.ReactElement) => {
     return render(
-        <StoreProvider>
-            <ThemeProvider theme={theme}>{component}</ThemeProvider>
-        </StoreProvider>
+        <ThemeProvider theme={theme}>{component}</ThemeProvider>
     );
 };
 

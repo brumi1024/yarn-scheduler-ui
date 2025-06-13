@@ -2,18 +2,22 @@ import { ThemeProvider } from '@mui/material/styles';
 import CssBaseline from '@mui/material/CssBaseline';
 import { theme } from './theme';
 import MainLayout from './components/MainLayout';
-import { StoreProvider } from './store/StoreProvider';
 import { ErrorBoundary } from './components/ErrorBoundary';
+import { useScheduler, useConfiguration, useNodeLabels, useNodes } from './hooks/useApiWithZustand';
 
 function App() {
+    // Initialize data loading for all stores
+    useScheduler();
+    useConfiguration();
+    useNodeLabels();
+    useNodes();
+
     return (
         <ErrorBoundary>
-            <StoreProvider>
-                <ThemeProvider theme={theme}>
-                    <CssBaseline />
-                    <MainLayout />
-                </ThemeProvider>
-            </StoreProvider>
+            <ThemeProvider theme={theme}>
+                <CssBaseline />
+                <MainLayout />
+            </ThemeProvider>
         </ErrorBoundary>
     );
 }

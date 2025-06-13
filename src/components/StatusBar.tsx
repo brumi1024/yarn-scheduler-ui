@@ -1,14 +1,14 @@
 import { Box, Typography, Chip, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { useSelector } from '../store/useSelector';
-import { selectAllQueues } from '../store/selectors';
+import { useAllQueues } from '../store/zustand';
+import { useHealthCheck } from '../hooks/useApiWithZustand';
 
 export default function StatusBar() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-    const allQueues = useSelector(selectAllQueues);
+    const allQueues = useAllQueues();
+    const { status: healthStatus } = useHealthCheck();
 
     const totalQueues = allQueues.length;
-    const healthStatus = 'ok'; // Simplified for now - will be enhanced later
 
     useEffect(() => {
         const interval = setInterval(() => {

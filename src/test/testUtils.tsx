@@ -7,7 +7,6 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { theme } from '../theme';
-import { StoreProvider } from '../store/StoreProvider';
 import type { ConfigProperty } from '../config';
 
 // Common test setup patterns
@@ -23,37 +22,27 @@ export const commonTestSetup = {
     user: () => userEvent.setup(),
 };
 
-// Wrapper component for tests that need theme and store
+// Wrapper component for tests that need theme
 interface TestWrapperProps {
     children: React.ReactNode;
-    includeStore?: boolean;
 }
 
 export const TestWrapper: React.FC<TestWrapperProps> = ({ 
-    children, 
-    includeStore = false 
+    children
 }) => {
-    const content = <ThemeProvider theme={theme}>{children}</ThemeProvider>;
-    
-    if (includeStore) {
-        return <StoreProvider>{content}</StoreProvider>;
-    }
-    
-    return content;
+    return <ThemeProvider theme={theme}>{children}</ThemeProvider>;
 };
 
 // Custom render function with default wrappers
 export const renderWithTheme = (
     ui: React.ReactElement,
-    options?: Omit<RenderOptions, 'wrapper'> & { includeStore?: boolean }
+    options?: Omit<RenderOptions, 'wrapper'>
 ): RenderResult => {
-    const { includeStore = false, ...renderOptions } = options || {};
-    
     return render(ui, {
         wrapper: ({ children }) => (
-            <TestWrapper includeStore={includeStore}>{children}</TestWrapper>
+            <TestWrapper>{children}</TestWrapper>
         ),
-        ...renderOptions,
+        ...options,
     });
 };
 

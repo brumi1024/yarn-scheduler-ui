@@ -4,7 +4,7 @@ import { CanvasDisplay, type CanvasDisplayRef } from './CanvasDisplay';
 import { VisualizationControls } from './VisualizationControls';
 import { useQueueDataProcessor } from './QueueDataProcessor';
 import { QueueInfoPanel } from '../QueueInfoPanel';
-import { useConfiguration, useScheduler } from '../../hooks/useApi';
+import { useConfigurationStore, useUIStore, useSelectedQueue } from '../../store/zustand';
 import type { Queue } from '../../types/Queue';
 import type { SelectionEvent, HoverEvent } from '../../utils/canvas';
 
@@ -15,40 +15,34 @@ export interface QueueVisualizationContainerProps {
 export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerProps> = ({ className }) => {
     const canvasRef = useRef<CanvasDisplayRef>(null);
 
-    // API data
-    const { data: configData, loading: configLoading, error: configError } = useConfiguration();
-    const { data: schedulerData, loading: schedulerLoading, error: schedulerError } = useScheduler();
+    // Zustand stores
+    const configStore = useConfigurationStore();
+    const uiStore = useUIStore();
+    const selectedQueueData = useSelectedQueue();
 
     // Process queue data
     const { nodes, flows, isLoading: dataLoading, error: dataError } = useQueueDataProcessor(
-        configData,
-        schedulerData
+        configStore.configuration,
+        configStore.scheduler
     );
 
-    // Selection state
-    const [selectedQueue, setSelectedQueue] = useState<string | null>(null);
+    // Local state for hover
     const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
-    const [selectedQueueData, setSelectedQueueData] = useState<Queue | null>(null);
-    const [infoPanelOpen, setInfoPanelOpen] = useState(false);
 
     // Loading and error states
-    const apiLoading = configLoading || schedulerLoading;
-    const apiError = configError || schedulerError;
+    const apiLoading = configStore.loading.configuration || configStore.loading.scheduler;
+    const apiError = configStore.errors.configuration || configStore.errors.scheduler;
     const isLoading = apiLoading || dataLoading;
     const error = apiError?.message || dataError;
 
     // Handle selection events from canvas
     const handleSelectionChange = useCallback((event: SelectionEvent) => {
-        if (event.type === 'select' && event.nodeId && event.node?.data) {
-            setSelectedQueue(event.nodeId);
-            setSelectedQueueData(event.node.data as Queue);
-            setInfoPanelOpen(true);
+        if (event.type === 'select' && event.nodeId) {
+            uiStore.selectQueue(event.nodeId);
         } else if (event.type === 'deselect' || !event.nodeId) {
-            setSelectedQueue(null);
-            setSelectedQueueData(null);
-            setInfoPanelOpen(false);
+            uiStore.selectQueue(undefined);
         }
-    }, []);
+    }, [uiStore]);
 
     // Handle hover events from canvas
     const handleHoverChange = useCallback((event: HoverEvent) => {
@@ -62,29 +56,35 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
 
     // Handle info panel close
     const handleInfoPanelClose = useCallback(() => {
-        setInfoPanelOpen(false);
-        setSelectedQueueData(null);
-        setSelectedQueue(null);
-
+        uiStore.selectQueue(undefined);
         // Clear selection in canvas
         canvasRef.current?.updateSelection(new Set());
-    }, []);
+    }, [uiStore]);
 
     // Queue action handlers
     const handleQueueEdit = useCallback(() => {
-        // TODO: Open property editor modal
-        console.log('Edit queue:', selectedQueue);
-    }, [selectedQueue]);
+        if (uiStore.selectedQueuePath) {
+            uiStore.openPropertyEditor(uiStore.selectedQueuePath, 'edit');
+        }
+    }, [uiStore]);
 
     const handleQueueDelete = useCallback(() => {
-        // TODO: Show confirmation dialog and delete queue
-        console.log('Delete queue:', selectedQueue);
-    }, [selectedQueue]);
+        if (uiStore.selectedQueuePath) {
+            uiStore.openConfirmDialog(
+                'Delete Queue',
+                `Are you sure you want to delete queue "${uiStore.selectedQueuePath}"?`,
+                () => {
+                    // TODO: Implement queue deletion
+                    console.log('Delete queue:', uiStore.selectedQueuePath);
+                }
+            );
+        }
+    }, [uiStore]);
 
     const handleQueueStateToggle = useCallback(() => {
         // TODO: Update queue state via API
-        console.log('Toggle queue state:', selectedQueue);
-    }, [selectedQueue]);
+        console.log('Toggle queue state:', uiStore.selectedQueuePath);
+    }, [uiStore]);
 
     const handleQueueSaveProperties = useCallback((queuePath: string, changes: Record<string, any>) => {
         // TODO: Save queue properties via API
@@ -92,18 +92,19 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     }, []);
 
     const handleQueueSelect = useCallback((queue: Queue) => {
-        // Find the node in the current nodes array that matches this queue
-        const nodeToSelect = nodes.find(node => node.data.queueName === queue.queueName);
+        // Get the queue path from the queue object
+        const queuePath = (queue as any).queuePath || (queue as any).id || queue.queueName;
+        
+        // Find the node in the current nodes array that matches this queue path
+        const nodeToSelect = nodes.find(node => node.id === queuePath);
         
         if (nodeToSelect) {
-            setSelectedQueue(queue.queueName);
-            setSelectedQueueData(queue);
-            setInfoPanelOpen(true);
+            uiStore.selectQueue(queuePath);
             
             // Update canvas selection
-            canvasRef.current?.updateSelection(new Set([queue.queueName]));
+            canvasRef.current?.updateSelection(new Set([queuePath]));
         }
-    }, [nodes]);
+    }, [nodes, uiStore]);
 
     // Center on root when data is first loaded
     useEffect(() => {
@@ -173,7 +174,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 panZoomController={canvasRef.current?.panZoomController || null}
                 onZoomToFit={handleZoomToFit}
                 disabled={isLoading}
-                selectedQueue={selectedQueue}
+                selectedQueue={uiStore.selectedQueuePath}
                 hoveredQueue={hoveredQueue}
                 nodeCount={nodes.length}
             />
@@ -181,7 +182,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
             {/* Queue Info Panel */}
             <QueueInfoPanel
                 queue={selectedQueueData}
-                open={infoPanelOpen}
+                open={!!uiStore.selectedQueuePath}
                 onClose={handleInfoPanelClose}
                 onEdit={handleQueueEdit}
                 onDelete={handleQueueDelete}
