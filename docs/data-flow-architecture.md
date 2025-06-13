@@ -5,6 +5,7 @@
 This document describes the complete data flow in the YARN Scheduler UI, from API calls to visualization rendering, and how configuration changes are staged and applied.
 
 ## Table of Contents
+
 1. [Data Sources](#data-sources)
 2. [Data Flow from API to Visualization](#data-flow-from-api-to-visualization)
 3. [Data Transformation Pipeline](#data-transformation-pipeline)
@@ -16,11 +17,13 @@ This document describes the complete data flow in the YARN Scheduler UI, from AP
 The YARN Scheduler UI uses two primary data sources:
 
 ### 1. Configuration Data (`/ws/v1/cluster/scheduler-conf`)
+
 - **Purpose**: Provides the queue configuration (structure, capacity allocations, properties)
 - **Format**: Flat key-value pairs representing hierarchical queue properties
 - **Mock file**: `/mock/ws/v1/cluster/scheduler-conf.json`
 
 ### 2. Runtime Data (`/ws/v1/cluster/scheduler`)
+
 - **Purpose**: Provides real-time metrics (usage, applications, resources)
 - **Format**: Hierarchical JSON with nested queue information
 - **Mock file**: `/mock/ws/v1/cluster/scheduler.json`
@@ -34,7 +37,7 @@ The YARN Scheduler UI uses two primary data sources:
 const { data: configData } = useConfiguration();
 // Fetches from: GET /ws/v1/cluster/scheduler-conf
 
-// In useScheduler hook  
+// In useScheduler hook
 const { data: schedulerData } = useScheduler();
 // Fetches from: GET /ws/v1/cluster/scheduler
 ```
@@ -84,24 +87,28 @@ const layoutData = treeLayout.computeLayout(rootQueue);
 
 // Result: Array of positioned nodes
 [
-  {
-    id: "root",
-    x: 0,
-    y: 200,
-    width: 280,
-    height: 180,
-    data: { /* queue data */ }
-  },
-  {
-    id: "root.default",
-    x: 380,
-    y: 50,
-    width: 280,
-    height: 180,
-    data: { /* queue data */ }
-  }
-  // ... more nodes
-]
+    {
+        id: 'root',
+        x: 0,
+        y: 200,
+        width: 280,
+        height: 180,
+        data: {
+            /* queue data */
+        },
+    },
+    {
+        id: 'root.default',
+        x: 380,
+        y: 50,
+        width: 280,
+        height: 180,
+        data: {
+            /* queue data */
+        },
+    },
+    // ... more nodes
+];
 ```
 
 ### Step 4: Runtime Data Merge
@@ -176,7 +183,7 @@ const mergeQueueData = (layoutQueue, runtimeQueue) => {
   const defaultPartition = runtimeQueue?.capacities?.queueCapacitiesByPartition?.find(
     partition => !partition.partitionName || partition.partitionName === ""
   );
-  
+
   return {
     ...layoutQueue,
     // Use default partition data for backward compatibility
@@ -247,13 +254,13 @@ const flowPaths = sankeyCalculator.calculateFlows(layoutData.nodes);
 
 // Result: SVG path strings showing capacity flow
 [
-  {
-    source: rootNode,
-    target: defaultNode,
-    path: "M 280,200 C 330,200 330,140 380,140",
-    width: 20  // Based on capacity percentage
-  }
-]
+    {
+        source: rootNode,
+        target: defaultNode,
+        path: 'M 280,200 C 330,200 330,140 380,140',
+        width: 20, // Based on capacity percentage
+    },
+];
 ```
 
 ### Step 6: Canvas Rendering
@@ -282,13 +289,13 @@ When a user modifies a queue property:
 ```typescript
 // User changes default queue capacity from 20% to 30%
 const change: ConfigChange = {
-  id: "change-001",
-  timestamp: Date.now(),
-  queuePath: "root.default",
-  property: "capacity",
-  oldValue: "20",
-  newValue: "30",
-  changeType: "update"
+    id: 'change-001',
+    timestamp: Date.now(),
+    queuePath: 'root.default',
+    property: 'capacity',
+    oldValue: '20',
+    newValue: '30',
+    changeType: 'update',
 };
 
 // Stage the change
@@ -322,7 +329,7 @@ Staged changes are shown in the UI with visual indicators:
 // Visual states for queues:
 - Normal: Default blue border
 - Modified: Orange border + "MODIFIED" badge
-- New: Green border + "NEW" badge  
+- New: Green border + "NEW" badge
 - Deleted: Red border + "DELETED" badge
 - Error: Red border + error icon
 ```
@@ -352,8 +359,8 @@ const configDiff = changeManager.generateDiff();
 ```typescript
 // PUT request to /ws/v1/cluster/scheduler-conf
 const response = await apiClient.put('/ws/v1/cluster/scheduler-conf', {
-  headers: { 'Content-Type': 'application/xml' },
-  body: configDiff
+    headers: { 'Content-Type': 'application/xml' },
+    body: configDiff,
 });
 
 // Success: Changes are applied to cluster
@@ -367,30 +374,30 @@ const response = await apiClient.put('/ws/v1/cluster/scheduler-conf', {
 ```typescript
 // 1. User action: Add queue "analytics" under "production"
 const newQueue = {
-  queueName: "analytics",
-  capacity: 20,
-  maxCapacity: 50,
-  state: "RUNNING"
+    queueName: 'analytics',
+    capacity: 20,
+    maxCapacity: 50,
+    state: 'RUNNING',
 };
 
 // 2. Stage changes
 changeManager.stageChange({
-  changeType: "create",
-  queuePath: "root.production.analytics",
-  properties: {
-    "yarn.scheduler.capacity.root.production.analytics.capacity": "20",
-    "yarn.scheduler.capacity.root.production.analytics.maximum-capacity": "50",
-    "yarn.scheduler.capacity.root.production.analytics.state": "RUNNING"
-  }
+    changeType: 'create',
+    queuePath: 'root.production.analytics',
+    properties: {
+        'yarn.scheduler.capacity.root.production.analytics.capacity': '20',
+        'yarn.scheduler.capacity.root.production.analytics.maximum-capacity': '50',
+        'yarn.scheduler.capacity.root.production.analytics.state': 'RUNNING',
+    },
 });
 
 // 3. Update parent's child list
 changeManager.stageChange({
-  changeType: "update",
-  queuePath: "root.production",
-  property: "queues",
-  oldValue: "frontend,backend",
-  newValue: "frontend,backend,analytics"
+    changeType: 'update',
+    queuePath: 'root.production',
+    property: 'queues',
+    oldValue: 'frontend,backend',
+    newValue: 'frontend,backend,analytics',
 });
 
 // 4. Rebalance sibling capacities
@@ -463,28 +470,30 @@ changeManager.stageChange({
 ## Error Handling
 
 ### API Errors
+
 ```typescript
 try {
-  const response = await apiClient.put('/scheduler-conf', changes);
+    const response = await apiClient.put('/scheduler-conf', changes);
 } catch (error) {
-  if (error.status === 400) {
-    // Validation error from YARN
-    showError("Invalid configuration: " + error.message);
-  } else if (error.status === 403) {
-    // Permission denied
-    showError("You don't have permission to modify scheduler configuration");
-  }
+    if (error.status === 400) {
+        // Validation error from YARN
+        showError('Invalid configuration: ' + error.message);
+    } else if (error.status === 403) {
+        // Permission denied
+        showError("You don't have permission to modify scheduler configuration");
+    }
 }
 ```
 
 ### Validation Errors
+
 ```typescript
 const validationResult = validator.validateChanges(stagedChanges);
 if (!validationResult.isValid) {
-  validationResult.errors.forEach(error => {
-    highlightQueue(error.queuePath, 'error');
-    showTooltip(error.queuePath, error.message);
-  });
+    validationResult.errors.forEach((error) => {
+        highlightQueue(error.queuePath, 'error');
+        showTooltip(error.queuePath, error.message);
+    });
 }
 ```
 
@@ -499,14 +508,14 @@ The application maintains several state layers:
 
 ```typescript
 interface AppState {
-  original: QueueConfiguration;
-  staged: ChangeSet;
-  visual: {
-    selected: string | null;
-    hovered: string | null;
-    expanded: Set<string>;
-  };
-  validation: ValidationResult;
+    original: QueueConfiguration;
+    staged: ChangeSet;
+    visual: {
+        selected: string | null;
+        hovered: string | null;
+        expanded: Set<string>;
+    };
+    validation: ValidationResult;
 }
 ```
 

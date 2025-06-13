@@ -8,6 +8,10 @@ import { useScheduler } from '../../hooks/useApi';
 vi.mock('../../hooks/useApi');
 const mockUseScheduler = vi.mocked(useScheduler);
 
+// We need to import useConfiguration to mock it too
+import { useConfiguration } from '../../hooks/useApi';
+const mockUseConfiguration = vi.mocked(useConfiguration);
+
 vi.mock('../../utils/d3', () => ({
     D3TreeLayout: vi.fn().mockImplementation(() => ({
         computeLayout: vi.fn().mockReturnValue({
