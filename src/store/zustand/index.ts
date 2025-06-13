@@ -65,11 +65,11 @@ export const useAllQueues = () => {
         return [];
     }
     
-    const flattenQueues = (queues: any[], parentPath = ''): any[] => {
+    const flattenQueues = (queues: any[], parentPath = 'root'): any[] => {
         const result: any[] = [];
         
         for (const queue of queues) {
-            const queuePath = parentPath ? `${parentPath}.${queue.queueName}` : queue.queueName;
+            const queuePath = `${parentPath}.${queue.queueName}`;
             const queueWithPath = { ...queue, path: queuePath };
             
             result.push(queueWithPath);

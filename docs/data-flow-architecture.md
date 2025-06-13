@@ -298,8 +298,9 @@ const change: ConfigChange = {
     changeType: 'update',
 };
 
-// Stage the change
-changeManager.stageChange(change);
+// Stage the change using Zustand store
+const { stageChange } = useStagedChangesState();
+stageChange(change);
 ```
 
 ### Stage 2: Validation
@@ -339,7 +340,9 @@ Staged changes are shown in the UI with visual indicators:
 When ready to apply changes:
 
 ```typescript
-const configDiff = changeManager.generateDiff();
+// Generate diff using Zustand store
+const { changes, generateDiff } = useStagedChangesState();
+const configDiff = generateDiff();
 
 // Result: XML mutation format for YARN
 <configuration>
@@ -380,24 +383,38 @@ const newQueue = {
     state: 'RUNNING',
 };
 
-// 2. Stage changes
-changeManager.stageChange({
+// 2. Stage changes using Zustand store
+const { stageChange } = useStagedChangesState();
+
+stageChange({
+    id: generateId(),
     changeType: 'create',
     queuePath: 'root.production.analytics',
-    properties: {
-        'yarn.scheduler.capacity.root.production.analytics.capacity': '20',
-        'yarn.scheduler.capacity.root.production.analytics.maximum-capacity': '50',
-        'yarn.scheduler.capacity.root.production.analytics.state': 'RUNNING',
-    },
+    property: 'capacity',
+    oldValue: '',
+    newValue: '20',
+    timestamp: Date.now()
+});
+
+stageChange({
+    id: generateId(),
+    changeType: 'create',
+    queuePath: 'root.production.analytics',
+    property: 'maximum-capacity',
+    oldValue: '',
+    newValue: '50',
+    timestamp: Date.now()
 });
 
 // 3. Update parent's child list
-changeManager.stageChange({
+stageChange({
+    id: generateId(),
     changeType: 'update',
     queuePath: 'root.production',
     property: 'queues',
     oldValue: 'frontend,backend',
     newValue: 'frontend,backend,analytics',
+    timestamp: Date.now()
 });
 
 // 4. Rebalance sibling capacities
@@ -415,11 +432,15 @@ changeManager.stageChange({
 }
 
 // 2. User changes default from 20% to 10%
-changeManager.stageChange({
+const { stageChange } = useStagedChangesState();
+stageChange({
+  id: generateId(),
   queuePath: "root.default",
   property: "capacity",
   oldValue: "20",
-  newValue: "10"
+  newValue: "10",
+  changeType: 'update',
+  timestamp: Date.now()
 });
 
 // 3. System suggests rebalancing
@@ -445,22 +466,31 @@ suggestions = [
 
 ```typescript
 // 1. Mark queue for deletion
-changeManager.stageChange({
+const { stageChange } = useStagedChangesState();
+stageChange({
+  id: generateId(),
   changeType: "delete",
-  queuePath: "root.development.experimental"
+  queuePath: "root.development.experimental",
+  property: '',
+  oldValue: '',
+  newValue: '',
+  timestamp: Date.now()
 });
 
-// 2. Validation
-- Check: No running applications
-- Check: No child queues
-- Check: Capacity can be redistributed
+// 2. Validation (handled by Zustand store)
+// - Check: No running applications
+// - Check: No child queues  
+// - Check: Capacity can be redistributed
 
 // 3. Update parent
-changeManager.stageChange({
+stageChange({
+  id: generateId(),
   queuePath: "root.development",
   property: "queues",
   oldValue: "team1,team2,experimental",
-  newValue: "team1,team2"
+  newValue: "team1,team2",
+  changeType: 'update',
+  timestamp: Date.now()
 });
 
 // 4. Redistribute capacity
@@ -499,24 +529,76 @@ if (!validationResult.isValid) {
 
 ## State Management
 
-The application maintains several state layers:
+The application uses **Zustand** for state management, with 4 focused stores that provide a clean, hook-based API with direct mutations via Immer integration:
 
-1. **Original State**: Configuration as loaded from API
-2. **Current State**: Original + staged changes
-3. **Visual State**: Current + UI states (hover, selection)
-4. **Validation State**: Errors and warnings for current changes
+### Zustand Stores
+
+1. **UIState**: Visual interface state (selection, hover, expanded nodes)
+2. **ConfigurationState**: Queue configuration data and parsing
+3. **StagedChangesState**: Change tracking and validation
+4. **ActivityState**: Loading states and user activity
 
 ```typescript
-interface AppState {
-    original: QueueConfiguration;
-    staged: ChangeSet;
-    visual: {
-        selected: string | null;
-        hovered: string | null;
-        expanded: Set<string>;
-    };
-    validation: ValidationResult;
+// UIState store
+interface UIState {
+    selectedQueue: string | null;
+    hoveredQueue: string | null;
+    expandedQueues: Set<string>;
+    setSelectedQueue: (queueId: string | null) => void;
+    setHoveredQueue: (queueId: string | null) => void;
+    toggleExpanded: (queueId: string) => void;
 }
+
+// ConfigurationState store
+interface ConfigurationState {
+    originalConfig: QueueConfiguration | null;
+    parsedQueues: LayoutQueue[];
+    setConfiguration: (config: QueueConfiguration) => void;
+    parseConfiguration: () => void;
+}
+
+// StagedChangesState store
+interface StagedChangesState {
+    changes: Map<string, ConfigChange>;
+    validationErrors: ValidationError[];
+    stageChange: (change: ConfigChange) => void;
+    unstageChange: (changeId: string) => void;
+    validateChanges: () => void;
+    clearChanges: () => void;
+}
+
+// ActivityState store
+interface ActivityState {
+    isLoading: boolean;
+    lastActivity: number;
+    setLoading: (loading: boolean) => void;
+    updateActivity: () => void;
+}
+```
+
+### Usage Example
+
+```typescript
+// Component usage with Zustand stores
+const { selectedQueue, setSelectedQueue } = useUIState();
+const { stageChange } = useStagedChangesState();
+
+// Stage a capacity change
+const handleCapacityChange = (queuePath: string, newCapacity: number, oldCapacity: number) => {
+    stageChange({
+        id: generateId(),
+        queuePath,
+        property: 'capacity',
+        oldValue: oldCapacity.toString(),
+        newValue: newCapacity.toString(),
+        changeType: 'update',
+        timestamp: Date.now()
+    });
+};
+
+// Access UI state
+const isSelected = selectedQueue === 'root.default';
+setSelectedQueue('root.production');
 ```
 
 ## Performance Considerations
@@ -525,6 +607,8 @@ interface AppState {
 2. **Incremental Rendering**: Only affected queues are re-rendered
 3. **Virtual Scrolling**: Large queue hierarchies use viewport culling
 4. **Memoized Calculations**: Layout calculations are cached until structure changes
+5. **Optimized State Updates**: Zustand with Immer provides efficient immutable updates
+6. **Selective Re-renders**: Individual stores prevent unnecessary component re-renders
 
 ## Security
 
