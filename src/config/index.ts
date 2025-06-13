@@ -1,5 +1,12 @@
 // Export types
-export type { ConfigProperty, ConfigGroup, PerLabelProperties, NodeLabelConfigMetadata, SchedulerInfoField, ConfigMetadata } from './types';
+export type {
+    ConfigProperty,
+    ConfigGroup,
+    PerLabelProperties,
+    NodeLabelConfigMetadata,
+    SchedulerInfoField,
+    ConfigMetadata,
+} from './types';
 export { Q_PATH_PLACEHOLDER } from './types';
 
 // Export metadata
