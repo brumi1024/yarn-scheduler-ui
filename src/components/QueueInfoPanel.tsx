@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Box,
   Paper,
@@ -21,6 +21,7 @@ import {
   Info as InfoIcon
 } from '@mui/icons-material';
 import type { Queue } from '../types/Queue';
+import { PropertyEditorModal } from './PropertyEditorModal';
 
 export interface QueueInfoPanelProps {
   queue: Queue | null;
@@ -29,6 +30,7 @@ export interface QueueInfoPanelProps {
   onEdit?: (queuePath: string) => void;
   onDelete?: (queuePath: string) => void;
   onToggleState?: (queuePath: string, newState: 'RUNNING' | 'STOPPED') => void;
+  onSaveProperties?: (queuePath: string, changes: Record<string, any>) => void;
 }
 
 export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
@@ -37,15 +39,21 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
   onClose,
   onEdit,
   onDelete,
-  onToggleState
+  onToggleState,
+  onSaveProperties
 }) => {
+  const [editorOpen, setEditorOpen] = useState(false);
   if (!queue || !open) {
     return null;
   }
 
   const handleEdit = () => {
-    if (onEdit) {
-      onEdit(queue.queueName);
+    setEditorOpen(true);
+  };
+
+  const handleEditorSave = (queuePath: string, changes: Record<string, any>) => {
+    if (onSaveProperties) {
+      onSaveProperties(queuePath, changes);
     }
   };
 
@@ -405,8 +413,15 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
           </Tooltip>
         </Box>
       </Box>
+
+      {/* Property Editor Modal */}
+      <PropertyEditorModal
+        open={editorOpen}
+        onClose={() => setEditorOpen(false)}
+        queue={queue}
+        onSave={handleEditorSave}
+      />
     </Paper>
   );
 };
 
-export default QueueInfoPanel;
