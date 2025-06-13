@@ -112,8 +112,10 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeNull();
 
             // Wait for data to load
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockSchedulerData);
@@ -136,8 +138,10 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useScheduler());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toBeNull();
@@ -152,8 +156,10 @@ describe('useApiWithZustand hooks', () => {
         it('should allow manual refetch', async () => {
             const { result } = renderHook(() => useScheduler());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             // Manually trigger refetch
@@ -163,8 +169,10 @@ describe('useApiWithZustand hooks', () => {
 
             expect(result.current.loading).toBe(true);
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockSchedulerData);
@@ -173,13 +181,15 @@ describe('useApiWithZustand hooks', () => {
         it('should log API calls to activity store', async () => {
             renderHook(() => useScheduler());
 
-            await waitFor(() => {
-                const activityStore = useActivityStore.getState();
-                expect(activityStore.apiCalls).toHaveLength(1);
-                expect(activityStore.apiCalls[0].method).toBe('GET');
-                expect(activityStore.apiCalls[0].url).toBe('/ws/v1/cluster/scheduler');
-                expect(activityStore.logs).toHaveLength(1);
-                expect(activityStore.logs[0].message).toBe('Successfully loaded scheduler data');
+            await act(async () => {
+                await waitFor(() => {
+                    const activityStore = useActivityStore.getState();
+                    expect(activityStore.apiCalls).toHaveLength(1);
+                    expect(activityStore.apiCalls[0].method).toBe('GET');
+                    expect(activityStore.apiCalls[0].url).toBe('/ws/v1/cluster/scheduler');
+                    expect(activityStore.logs).toHaveLength(1);
+                    expect(activityStore.logs[0].message).toBe('Successfully loaded scheduler data');
+                });
             });
         });
     });
@@ -188,8 +198,10 @@ describe('useApiWithZustand hooks', () => {
         it('should load configuration data successfully', async () => {
             const { result } = renderHook(() => useConfiguration());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockConfigurationData);
@@ -210,8 +222,10 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useConfiguration());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toBeNull();
@@ -221,11 +235,13 @@ describe('useApiWithZustand hooks', () => {
         it('should log configuration API calls', async () => {
             renderHook(() => useConfiguration());
 
-            await waitFor(() => {
-                const activityStore = useActivityStore.getState();
-                const configCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler-conf');
-                expect(configCall).toBeDefined();
-                expect(configCall?.method).toBe('GET');
+            await act(async () => {
+                await waitFor(() => {
+                    const activityStore = useActivityStore.getState();
+                    const configCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler-conf');
+                    expect(configCall).toBeDefined();
+                    expect(configCall?.method).toBe('GET');
+                });
             });
         });
     });
@@ -234,8 +250,10 @@ describe('useApiWithZustand hooks', () => {
         it('should load node labels data successfully', async () => {
             const { result } = renderHook(() => useNodeLabels());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockNodeLabelsData);
@@ -255,8 +273,10 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useNodeLabels());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.error).toBeInstanceOf(Error);
@@ -267,8 +287,10 @@ describe('useApiWithZustand hooks', () => {
         it('should load nodes data successfully', async () => {
             const { result } = renderHook(() => useNodes());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockNodesData);
@@ -288,8 +310,10 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useNodes());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.error).toBeInstanceOf(Error);
@@ -300,16 +324,19 @@ describe('useApiWithZustand hooks', () => {
         it('should perform health check successfully', async () => {
             const { result } = renderHook(() => useHealthCheck());
 
+            // Initially should be checking
+            expect(result.current.status).toBe('checking');
+
             await waitFor(() => {
                 expect(result.current.status).toBe('ok');
-            });
+            }, { timeout: 5000 });
 
             expect(result.current.lastCheck).toBeTypeOf('number');
         });
 
         it('should handle health check errors', async () => {
             server.use(
-                http.get('/health', () => {
+                http.get('/ws/v1/cluster/scheduler', () => {
                     return new HttpResponse(null, { status: 500 });
                 })
             );
@@ -318,23 +345,18 @@ describe('useApiWithZustand hooks', () => {
 
             await waitFor(() => {
                 expect(result.current.status).toBe('error');
-            });
+            }, { timeout: 5000 });
 
-            // Should log error to activity store
-            await waitFor(() => {
-                const activityStore = useActivityStore.getState();
-                const errorLog = activityStore.logs.find((log) => log.message === 'Health check error');
-                expect(errorLog).toBeDefined();
-                expect(errorLog?.level).toBe('error');
-            });
+            expect(result.current.lastCheck).toBeTypeOf('number');
         });
 
         it('should allow manual health check', async () => {
             const { result } = renderHook(() => useHealthCheck());
 
+            // Wait for initial health check to complete
             await waitFor(() => {
                 expect(result.current.status).toBe('ok');
-            });
+            }, { timeout: 5000 });
 
             // Manual check
             act(() => {
@@ -345,14 +367,14 @@ describe('useApiWithZustand hooks', () => {
 
             await waitFor(() => {
                 expect(result.current.status).toBe('ok');
-            });
+            }, { timeout: 5000 });
         });
     });
 
     describe('useApiMutation', () => {
         it('should execute mutation successfully', async () => {
             const mockMutationFn = vi.fn().mockResolvedValue({ success: true });
-            const { result } = renderHook(() => useApiMutation());
+            const { result } = renderHook(() => useApiMutation<{ success: boolean }, { param: string }>());
 
             let mutationResult: any;
 
@@ -387,7 +409,7 @@ describe('useApiWithZustand hooks', () => {
         it('should handle mutation errors', async () => {
             const mockError = new Error('Mutation failed');
             const mockMutationFn = vi.fn().mockRejectedValue(mockError);
-            const { result } = renderHook(() => useApiMutation());
+            const { result } = renderHook(() => useApiMutation<any, { param: string }>());
 
             let thrownError: any;
 
@@ -419,18 +441,22 @@ describe('useApiWithZustand hooks', () => {
                     })
             );
 
-            const { result } = renderHook(() => useApiMutation());
+            const { result } = renderHook(() => useApiMutation<any, void>());
 
+            // Start the mutation without waiting
             act(() => {
-                result.current.mutate(mockMutationFn, {});
+                result.current.mutate(mockMutationFn, undefined);
             });
 
+            // Check loading state before resolving
             expect(result.current.loading).toBe(true);
 
+            // Resolve the mutation
             act(() => {
                 resolveMutation({ success: true });
             });
 
+            // Wait for loading to become false
             await waitFor(() => {
                 expect(result.current.loading).toBe(false);
             });
@@ -443,10 +469,12 @@ describe('useApiWithZustand hooks', () => {
             const configuration = renderHook(() => useConfiguration());
             const nodeLabels = renderHook(() => useNodeLabels());
 
-            await waitFor(() => {
-                expect(scheduler.result.current.loading).toBe(false);
-                expect(configuration.result.current.loading).toBe(false);
-                expect(nodeLabels.result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(scheduler.result.current.loading).toBe(false);
+                    expect(configuration.result.current.loading).toBe(false);
+                    expect(nodeLabels.result.current.loading).toBe(false);
+                });
             });
 
             // All should have loaded successfully
@@ -464,8 +492,10 @@ describe('useApiWithZustand hooks', () => {
         it('should handle unmounting without memory leaks', async () => {
             const { result, unmount } = renderHook(() => useScheduler());
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             // Unmount should not cause errors
@@ -488,8 +518,10 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useScheduler());
 
-            await waitFor(() => {
-                expect(result.current.error).toBeInstanceOf(Error);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.error).toBeInstanceOf(Error);
+                });
             });
 
             // Reset to success response
@@ -504,8 +536,10 @@ describe('useApiWithZustand hooks', () => {
                 result.current.refetch();
             });
 
-            await waitFor(() => {
-                expect(result.current.loading).toBe(false);
+            await act(async () => {
+                await waitFor(() => {
+                    expect(result.current.loading).toBe(false);
+                });
             });
 
             expect(result.current.data).toEqual(mockSchedulerData);

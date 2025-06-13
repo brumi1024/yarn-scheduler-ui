@@ -14,15 +14,15 @@ describe('MainLayout', () => {
         renderWithProviders(<MainLayout />);
 
         expect(screen.getByText('YARN Capacity Scheduler')).toBeInTheDocument();
-        expect(screen.getByText('Queue Editor')).toBeInTheDocument();
+        expect(screen.getByText('Queue Visualization')).toBeInTheDocument();
         expect(screen.getByText('YARN Scheduler UI v2.0')).toBeInTheDocument();
     });
 
     it('switches between tabs correctly', () => {
         renderWithProviders(<MainLayout />);
 
-        // Initially shows Queue Editor
-        expect(screen.getByText(/Interactive queue tree visualization and editing/)).toBeInTheDocument();
+        // Initially shows Queue Visualization
+        expect(screen.getByText(/Interactive YARN Capacity Scheduler queue tree/)).toBeInTheDocument();
 
         // Click Global Settings tab
         fireEvent.click(screen.getByText('Global Settings'));

@@ -16,10 +16,10 @@ describe('App', () => {
         expect(screen.getByText('Diagnostics')).toBeInTheDocument();
     });
 
-    it('renders the default Queue Editor view', () => {
+    it('renders the default Queue Visualization view', () => {
         render(<App />);
-        expect(screen.getByText('Queue Editor')).toBeInTheDocument();
-        expect(screen.getByText(/Interactive queue tree visualization/)).toBeInTheDocument();
+        expect(screen.getByText('Queue Visualization')).toBeInTheDocument();
+        expect(screen.getByText(/Interactive YARN Capacity Scheduler queue tree/)).toBeInTheDocument();
     });
 
     it('renders status bar', () => {

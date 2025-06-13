@@ -3,17 +3,38 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { QueueVisualization } from '../QueueVisualization';
 
-// Mock the hooks and components
+// Mock the hooks and stores
 vi.mock('../../hooks/useApiWithZustand', () => ({
     useScheduler: vi.fn(),
     useConfiguration: vi.fn(),
 }));
 
+// Mock Zustand stores
+vi.mock('../../store/zustand', () => ({
+    useConfigurationStore: vi.fn(() => ({
+        scheduler: null,
+        configuration: null,
+        loading: { scheduler: false, configuration: false },
+        errors: { scheduler: null, configuration: null },
+    })),
+    useUIStore: vi.fn(() => ({
+        selectedQueuePath: null,
+        selectQueue: vi.fn(),
+        openPropertyEditor: vi.fn(),
+        openConfirmDialog: vi.fn(),
+    })),
+    useSelectedQueue: vi.fn(() => null),
+}));
+
 // Import after mocking
 import { useScheduler, useConfiguration } from '../../hooks/useApiWithZustand';
+import { useConfigurationStore, useUIStore, useSelectedQueue } from '../../store/zustand';
 
 const mockUseScheduler = vi.mocked(useScheduler);
 const mockUseConfiguration = vi.mocked(useConfiguration);
+const mockUseConfigurationStore = vi.mocked(useConfigurationStore);
+const mockUseUIStore = vi.mocked(useUIStore);
+const mockUseSelectedQueue = vi.mocked(useSelectedQueue);
 
 vi.mock('../../utils/d3', () => ({
     D3TreeLayout: vi.fn().mockImplementation(() => ({
@@ -54,6 +75,13 @@ vi.mock('../../utils/canvas', () => ({
         setHoveredNode: vi.fn(),
     })),
     PanZoomController: vi.fn().mockImplementation(() => ({
+        addEventListener: vi.fn(),
+        removeEventListener: vi.fn(),
+        getState: vi.fn().mockReturnValue({ x: 0, y: 0, scale: 1 }),
+        setState: vi.fn(),
+        destroy: vi.fn(),
+    })),
+    D3ZoomController: vi.fn().mockImplementation(() => ({
         addEventListener: vi.fn(),
         removeEventListener: vi.fn(),
         getState: vi.fn().mockReturnValue({ x: 0, y: 0, scale: 1 }),
@@ -125,6 +153,53 @@ describe('QueueVisualization', () => {
             error: null,
             refetch: vi.fn(),
         });
+
+        // Default configuration mock
+        mockUseConfiguration.mockReturnValue({
+            data: {
+                property: [
+                    { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
+                    { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
+                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
+                ]
+            },
+            loading: false,
+            error: null,
+            refetch: vi.fn(),
+        });
+
+        // Mock store functions
+        mockUseConfigurationStore.mockReturnValue({
+            scheduler: {
+                scheduler: {
+                    schedulerInfo: {
+                        type: 'capacityScheduler' as const,
+                        queueName: 'root',
+                        capacity: 100,
+                        usedCapacity: 50,
+                        maxCapacity: 100,
+                    },
+                },
+            },
+            configuration: {
+                property: [
+                    { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
+                    { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
+                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
+                ]
+            },
+            loading: { scheduler: false, configuration: false },
+            errors: { scheduler: null, configuration: null },
+        });
+
+        mockUseUIStore.mockReturnValue({
+            selectedQueuePath: null,
+            selectQueue: vi.fn(),
+            openPropertyEditor: vi.fn(),
+            openConfirmDialog: vi.fn(),
+        });
+
+        mockUseSelectedQueue.mockReturnValue(null);
     });
 
     afterEach(() => {
@@ -153,6 +228,20 @@ describe('QueueVisualization', () => {
                 refetch: vi.fn(),
             });
 
+            mockUseConfiguration.mockReturnValue({
+                data: null,
+                loading: true,
+                error: null,
+                refetch: vi.fn(),
+            });
+
+            mockUseConfigurationStore.mockReturnValue({
+                scheduler: null,
+                configuration: null,
+                loading: { scheduler: true, configuration: true },
+                errors: { scheduler: null, configuration: null },
+            });
+
             render(
                 <TestWrapper>
                     <QueueVisualization />
@@ -170,16 +259,65 @@ describe('QueueVisualization', () => {
                 refetch: vi.fn(),
             });
 
+            mockUseConfiguration.mockReturnValue({
+                data: null,
+                loading: false,
+                error: new Error('API Error'),
+                refetch: vi.fn(),
+            });
+
+            mockUseConfigurationStore.mockReturnValue({
+                scheduler: null,
+                configuration: null,
+                loading: { scheduler: false, configuration: false },
+                errors: { scheduler: new Error('API Error'), configuration: null },
+            });
+
             render(
                 <TestWrapper>
                     <QueueVisualization />
                 </TestWrapper>
             );
 
-            expect(screen.getByText(/Failed to load scheduler data/)).toBeInTheDocument();
+            expect(screen.getByText(/Failed to load scheduler data: API Error/)).toBeInTheDocument();
         });
 
         it('should show queue count when data is loaded', async () => {
+            // Mock configuration data that will create a valid queue tree
+            mockUseConfiguration.mockReturnValue({
+                data: {
+                    property: [
+                        { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
+                        { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
+                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
+                    ]
+                },
+                loading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+
+            mockUseConfigurationStore.mockReturnValue({
+                scheduler: {
+                    scheduler: {
+                        schedulerInfo: {
+                            type: 'capacityScheduler' as const,
+                            queueName: 'root',
+                            capacity: 100,
+                        },
+                    },
+                },
+                configuration: {
+                    property: [
+                        { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
+                        { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
+                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
+                    ]
+                },
+                loading: { scheduler: false, configuration: false },
+                errors: { scheduler: null, configuration: null },
+            });
+
             render(
                 <TestWrapper>
                     <QueueVisualization />
@@ -187,7 +325,7 @@ describe('QueueVisualization', () => {
             );
 
             await waitFor(() => {
-                expect(screen.getByText('1 queue')).toBeInTheDocument();
+                expect(screen.getByText('1 queue')).toBeInTheDocument(); // Based on the mock data structure
             });
         });
     });
@@ -199,6 +337,20 @@ describe('QueueVisualization', () => {
                 loading: false,
                 error: null,
                 refetch: vi.fn(),
+            });
+
+            mockUseConfiguration.mockReturnValue({
+                data: null,
+                loading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+
+            mockUseConfigurationStore.mockReturnValue({
+                scheduler: null,
+                configuration: null,
+                loading: { scheduler: false, configuration: false },
+                errors: { scheduler: null, configuration: null },
             });
 
             const { container } = render(
@@ -220,12 +372,27 @@ describe('QueueVisualization', () => {
                 refetch: vi.fn(),
             });
 
+            mockUseConfiguration.mockReturnValue({
+                data: {} as any, // Empty config data
+                loading: false,
+                error: null,
+                refetch: vi.fn(),
+            });
+
+            mockUseConfigurationStore.mockReturnValue({
+                scheduler: {},
+                configuration: {},
+                loading: { scheduler: false, configuration: false },
+                errors: { scheduler: null, configuration: null },
+            });
+
             render(
                 <TestWrapper>
                     <QueueVisualization />
                 </TestWrapper>
             );
 
+            // Since config data is empty, it should show an error message
             await waitFor(() => {
                 expect(screen.getByText(/No queue data available/)).toBeInTheDocument();
             });
