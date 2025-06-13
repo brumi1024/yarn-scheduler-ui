@@ -16,10 +16,9 @@ import {
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
 import type { Queue } from '../types/Queue';
-import type { ConfigGroup } from '../config';
-import { ConfigService } from '../config';
-import { PropertyFormFieldHookForm } from './PropertyFormFieldHookForm';
-import { AutoQueueCreationSectionHookForm } from './AutoQueueCreationSectionHookForm';
+import { getQueuePropertyGroups } from '../config';
+import { PropertyFormField } from './PropertyFormField';
+import { AutoQueueCreationSection } from './AutoQueueCreationSection';
 import { createFormSchema } from '../schemas/propertySchemas';
 
 interface PropertyEditorModalProps {
@@ -47,11 +46,17 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
     const [tabValue, setTabValue] = useState(0);
     const [hasChanges, setHasChanges] = useState(false);
 
-    const configService = ConfigService.getInstance();
-    const propertyGroups = configService.getQueuePropertyGroups();
+    const propertyGroups = getQueuePropertyGroups();
     
     // Create combined properties object for schema generation
-    const allProperties = propertyGroups.reduce((acc, group) => ({ ...acc, ...group.properties }), {});
+    const allProperties = propertyGroups.reduce((acc: any, group: any) => {
+        // Convert properties array to object keyed by property key
+        const propsObject = group.properties.reduce((obj: any, prop: any) => {
+            obj[prop.key] = prop;
+            return obj;
+        }, {});
+        return { ...acc, ...propsObject };
+    }, {});
     const validationSchema = createFormSchema(allProperties);
     
     const form = useForm({
@@ -121,7 +126,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         }
     };
 
-    const renderPropertyGroup = (group: ConfigGroup) => {
+    const renderPropertyGroup = (group: any) => {
         // Get sibling queues for capacity calculations
         const siblings =
             queue && (queue as any).parent
@@ -133,7 +138,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         // Special handling for Auto-Queue Creation group
         if (group.groupName === 'Auto-Queue Creation') {
             return (
-                <AutoQueueCreationSectionHookForm
+                <AutoQueueCreationSection
                     key={group.groupName}
                     properties={group.properties}
                     siblings={siblings}
@@ -147,8 +152,8 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                     {group.groupName}
                 </Typography>
 
-                {Object.entries(group.properties).map(([, property]) => (
-                    <PropertyFormFieldHookForm
+                {group.properties.map((property: any) => (
+                    <PropertyFormField
                         key={property.key}
                         property={property}
                         control={form.control}
@@ -197,12 +202,12 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                     variant="scrollable"
                     scrollButtons="auto"
                 >
-                    {propertyGroups.map((group) => (
+                    {propertyGroups.map((group: any) => (
                         <Tab key={group.groupName} label={group.groupName} />
                     ))}
                 </Tabs>
 
-                {propertyGroups.map((group, index) => (
+                {propertyGroups.map((group: any, index: number) => (
                     <TabPanel key={group.groupName} value={tabValue} index={index}>
                         {renderPropertyGroup(group)}
                     </TabPanel>

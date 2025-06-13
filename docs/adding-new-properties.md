@@ -1,13 +1,14 @@
 # Adding New Properties to the YARN Scheduler UI
 
-This guide explains how to add new properties to the property editor in the YARN Scheduler UI. The system uses a metadata-driven approach, making it easy to add new configuration options.
+This guide explains how to add new properties to the simplified configuration system in the YARN Scheduler UI. The new system uses direct TypeScript definitions instead of complex metadata abstractions.
 
 ## Overview
 
-The property system consists of:
+The simplified property system consists of:
 
-- **Metadata files** in `src/config/` that define property schemas
-- **ConfigService** that provides access to property definitions
+- **Property definitions** in `src/config/property-definitions.ts` that define property schemas
+- **Simple validation functions** in `src/config/property-validation.ts`
+- **Configuration API** in `src/config/simple-config.ts` that provides access to properties
 - **PropertyEditorModal** that generates forms dynamically
 - **PropertyFormField** that renders appropriate input controls
 
@@ -17,33 +18,31 @@ The property system consists of:
 
 First, decide where your property belongs:
 
-- **Queue-specific properties** → `src/config/queue-metadata.ts`
-- **Global scheduler settings** → `src/config/global-metadata.ts`
-- **Auto-creation properties** → `src/config/auto-creation-metadata.ts`
-- **Node label properties** → `src/config/node-label-metadata.ts`
+- **Queue-specific properties** → Add to `QUEUE_PROPERTIES` in `property-definitions.ts`
+- **Global scheduler settings** → Add to `GLOBAL_PROPERTIES` in `property-definitions.ts`
+- **Auto-creation properties** → Add to `AUTO_CREATION_PROPERTIES` in `property-definitions.ts`
+- **Node label properties** → Add to `NODE_LABEL_PROPERTIES` in `property-definitions.ts`
 
-### Step 2: Define the Property Metadata
+### Step 2: Define the Property
 
 #### For Queue Properties (Most Common)
 
-Edit `src/config/queue-metadata.ts`:
+Edit `src/config/property-definitions.ts` and add your property to the appropriate group in `QUEUE_PROPERTIES`:
 
 ```typescript
 // Find the appropriate group or create a new one
 {
-  groupName: 'Resource Limits & Management',
-  properties: {
-    // Add your new property here
-    [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.your-new-property`]: {
-      key: 'your-new-property',
-      displayName: 'Your Property Display Name',
-      description: 'Detailed description of what this property does',
-      type: 'string', // Options: 'string' | 'number' | 'boolean' | 'enum' | 'percentage'
-      defaultValue: 'default-value',
-      placeholder: 'Placeholder text',
-      availableInTemplate: true, // Can be used in auto-creation templates
-    },
-  },
+    groupName: 'Resource Limits & Management',
+    properties: [
+        // ... existing properties ...
+        {
+            key: 'maximum-apps',
+            displayName: 'Maximum Applications',
+            description: 'Maximum number of applications that can be active or pending in this queue',
+            type: 'number',
+            placeholder: 'No limit (unlimited)',
+        },
+    ],
 },
 ```
 
@@ -52,71 +51,86 @@ Edit `src/config/queue-metadata.ts`:
 **String Property:**
 
 ```typescript
-[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.queue-description`]: {
-  key: 'queue-description',
-  displayName: 'Queue Description',
-  description: 'A text description of this queue\'s purpose',
-  type: 'string',
-  defaultValue: '',
-  placeholder: 'Enter queue description',
-  availableInTemplate: false,
+{
+    key: 'queue-description',
+    displayName: 'Queue Description',
+    description: 'A text description of this queue\'s purpose',
+    type: 'string',
+    defaultValue: '',
+    placeholder: 'Enter queue description',
 }
 ```
 
 **Number Property:**
 
 ```typescript
-[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.minimum-allocation-mb`]: {
-  key: 'minimum-allocation-mb',
-  displayName: 'Minimum Allocation (MB)',
-  description: 'Minimum memory allocation per container in MB',
-  type: 'number',
-  defaultValue: '1024',
-  placeholder: 'Default: 1024',
-  step: '512', // Optional: step increment for number input
-  availableInTemplate: true,
+{
+    key: 'minimum-allocation-mb',
+    displayName: 'Minimum Allocation (MB)',
+    description: 'Minimum memory allocation per container in MB',
+    type: 'number',
+    defaultValue: 1024,
+    placeholder: 'Default: 1024',
+    step: '512', // Optional: step increment for number input
 }
 ```
 
 **Boolean Property:**
 
 ```typescript
-[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.enable-size-based-weight`]: {
-  key: 'enable-size-based-weight',
-  displayName: 'Enable Size-Based Weight',
-  description: 'Whether to enable size-based weight for resource allocation',
-  type: 'boolean',
-  defaultValue: 'false',
-  availableInTemplate: true,
+{
+    key: 'enable-size-based-weight',
+    displayName: 'Enable Size-Based Weight',
+    description: 'Whether to enable size-based weight for resource allocation',
+    type: 'boolean',
+    defaultValue: false,
 }
 ```
 
 **Enum Property:**
 
 ```typescript
-[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.queue-priority`]: {
-  key: 'queue-priority',
-  displayName: 'Queue Priority',
-  description: 'Priority level for this queue',
-  type: 'enum',
-  options: ['HIGH', 'NORMAL', 'LOW'],
-  defaultValue: 'NORMAL',
-  availableInTemplate: true,
+{
+    key: 'queue-priority',
+    displayName: 'Queue Priority',
+    description: 'Priority level for this queue',
+    type: 'enum',
+    options: ['HIGH', 'NORMAL', 'LOW'],
+    defaultValue: 'NORMAL',
 }
 ```
 
 **Percentage Property:**
 
 ```typescript
-[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.guaranteed-allocation`]: {
-  key: 'guaranteed-allocation',
-  displayName: 'Guaranteed Allocation',
-  description: 'Guaranteed resource allocation as a percentage (0.0 to 1.0)',
-  type: 'percentage',
-  defaultValue: '0.5',
-  placeholder: 'Default: 0.5 (50%)',
-  availableInTemplate: true,
+{
+    key: 'guaranteed-allocation',
+    displayName: 'Guaranteed Allocation',
+    description: 'Guaranteed resource allocation as a percentage (0.0 to 1.0)',
+    type: 'percentage',
+    defaultValue: 0.5,
+    placeholder: 'Default: 0.5 (50%)',
 }
+```
+
+#### For Global Properties
+
+Add to `GLOBAL_PROPERTIES` in the appropriate group:
+
+```typescript
+{
+    groupName: 'Global Application Management',
+    properties: [
+        // ... existing properties ...
+        {
+            key: 'maximum-apps',
+            displayName: 'Maximum Applications (Global)',
+            description: 'Total number of applications that can be active or pending in the cluster',
+            type: 'number',
+            defaultValue: 10000,
+        },
+    ],
+},
 ```
 
 ### Step 3: Add Property Groups (If Needed)
@@ -124,51 +138,46 @@ Edit `src/config/queue-metadata.ts`:
 If your property doesn't fit existing groups, create a new one:
 
 ```typescript
-export const QUEUE_CONFIG_METADATA: ConfigGroup[] = [
+export const QUEUE_PROPERTIES: PropertyGroup[] = [
     // ... existing groups ...
     {
         groupName: 'Custom Feature Settings',
-        properties: {
-            [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.custom-feature-enabled`]: {
+        properties: [
+            {
                 key: 'custom-feature-enabled',
                 displayName: 'Enable Custom Feature',
                 description: 'Enables the custom feature for this queue',
                 type: 'boolean',
-                defaultValue: 'false',
-                availableInTemplate: false,
+                defaultValue: false,
             },
             // Add more related properties here
-        },
+        ],
     },
 ];
 ```
 
-### Step 4: Update Property Validation (If Needed)
+### Step 4: Add Custom Validation (If Needed)
 
-If your property requires custom validation beyond the standard type validation, update `src/config/config-service.ts`:
+If your property requires custom validation beyond the standard type validation, update `src/config/property-validation.ts`:
 
 ```typescript
-validateProperty(key: string, value: any): { valid: boolean; error?: string } {
-  const property = this.getPropertyDefinition(key);
-  if (!property) {
-    return { valid: false, error: `Unknown property: ${key}` };
-  }
-
-  // Add custom validation for your property
-  if (property.key === 'your-new-property') {
-    // Custom validation logic
-    if (value && !value.match(/^[A-Z]+$/)) {
-      return { valid: false, error: 'Must contain only uppercase letters' };
+export function validateProperty(key: string, value: any): ValidationResult {
+    // Add custom validation for your property
+    if (key === 'your-new-property') {
+        // Custom validation logic
+        if (value && !value.match(/^[A-Z]+$/)) {
+            return { valid: false, error: 'Must contain only uppercase letters' };
+        }
     }
-  }
 
-  // ... existing validation code ...
+    // ... existing validation code ...
+    return validateByType(type, value);
 }
 ```
 
-### Step 5: Map Queue Data (For Display)
+### Step 5: Update Component Data Mapping (If Needed)
 
-Update the data mapping in `src/components/PropertyEditorModal.tsx` to show current values:
+Update the data mapping in component files to show current values. For queue properties, this is typically in `PropertyEditorModal.tsx`:
 
 ```typescript
 useEffect(() => {
@@ -178,7 +187,7 @@ useEffect(() => {
         // ... existing mappings ...
 
         // Add mapping for your new property
-        initialData['your-new-property'] = queue.yourNewProperty || 'default-value';
+        initialData['your-new-property'] = queue.yourNewProperty || getDefaultValue('your-new-property');
 
         setFormData(initialData);
         setErrors({});
@@ -194,22 +203,22 @@ If your property needs a custom input component, create one and update `Property
 
 ```typescript
 const renderField = () => {
-  switch (property.type) {
-    // ... existing cases ...
+    switch (property.type) {
+        // ... existing cases ...
 
-    case 'your-custom-type':
-      return (
-        <YourCustomInput
-          value={value}
-          onChange={onChange}
-          error={error}
-          property={property}
-        />
-      );
+        case 'your-custom-type':
+            return (
+                <YourCustomInput
+                    value={value}
+                    onChange={onChange}
+                    error={error}
+                    property={property}
+                />
+            );
 
-    default:
-      // ... existing default case ...
-  }
+        default:
+            // ... existing default case ...
+    }
 };
 ```
 
@@ -229,59 +238,109 @@ const renderField = () => {
     - Test validation by entering invalid values
     - Check that changes are tracked properly
 
-### Step 8: Document Known Properties
+### Step 8: How the System Handles Queue vs Global Properties
 
-Update `src/config/config-service.ts` to include your property name in the known properties list:
+The simplified system automatically handles the distinction between queue-level and global properties:
 
+#### Queue-Level Properties
+When used with a queue context, the system generates YARN property keys like:
 ```typescript
-private isKnownPropertyName(name: string): boolean {
-  const knownProperties = [
-    'capacity', 'maximum-capacity', 'state', 'user-limit-factor',
-    'maximum-am-resource-percent', 'max-parallel-apps', 'ordering-policy',
-    'disable_preemption', 'accessible-node-labels', 'auto-create-child-queue',
-    'auto-queue-creation-v2',
-    'your-new-property' // Add your property here
-  ];
-
-  return knownProperties.some(prop => name.includes(prop));
-}
+buildYarnPropertyKey('root.production', 'maximum-apps')
+// Results in: "yarn.scheduler.capacity.root.production.maximum-apps"
 ```
+
+#### Global Properties
+When used without a queue context, the system generates global YARN property keys like:
+```typescript
+buildYarnPropertyKey('', 'maximum-apps')
+// Results in: "yarn.scheduler.capacity.maximum-apps"
+```
+
+The UI components automatically:
+- Show queue-level properties when editing a queue
+- Show global properties when editing global settings
+- Handle property key construction based on context
 
 ## Example: Adding a Complete Property
 
-Let's add a "max-application-lifetime" property:
+Let's add a "maximum-application-lifetime" property with both queue and global variants:
 
-1. **Edit `src/config/queue-metadata.ts`:**
+1. **Edit `src/config/property-definitions.ts`:**
 
 ```typescript
+// Add to QUEUE_PROPERTIES
 {
-  groupName: 'Resource Limits & Management',
-  properties: {
-    // ... existing properties ...
-    [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-application-lifetime`]: {
-      key: 'maximum-application-lifetime',
-      displayName: 'Maximum Application Lifetime',
-      description: 'Maximum lifetime of an application in seconds (0 for unlimited)',
-      type: 'number',
-      defaultValue: '0',
-      placeholder: 'Default: 0 (unlimited)',
-      step: '3600', // 1 hour increments
-      availableInTemplate: true,
-    },
-  },
+    groupName: 'Resource Limits & Management',
+    properties: [
+        // ... existing properties ...
+        {
+            key: 'maximum-application-lifetime',
+            displayName: 'Maximum Application Lifetime',
+            description: 'Maximum lifetime of an application in seconds (0 for unlimited)',
+            type: 'number',
+            defaultValue: 0,
+            placeholder: 'Default: 0 (unlimited)',
+            step: '3600', // 1 hour increments
+        },
+    ],
+},
+
+// Add to GLOBAL_PROPERTIES
+{
+    groupName: 'Global Application Management',
+    properties: [
+        // ... existing properties ...
+        {
+            key: 'maximum-application-lifetime',
+            displayName: 'Maximum Application Lifetime (Global)',
+            description: 'Global maximum lifetime of applications in seconds (0 for unlimited)',
+            type: 'number',
+            defaultValue: 0,
+            placeholder: 'Default: 0 (unlimited)',
+            step: '3600',
+        },
+    ],
 },
 ```
 
-2. **Update `PropertyEditorModal.tsx`:**
+2. **Update component mapping (if needed):**
 
 ```typescript
-initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || 0;
+// In PropertyEditorModal.tsx
+initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || getDefaultValue('maximum-application-lifetime');
 ```
 
-3. **Update `config-service.ts`:**
+## Key Differences from the Old System
 
+### Before (Complex Metadata System)
 ```typescript
-'maximum-application-lifetime', // Add to knownProperties array
+// Complex metadata with placeholder substitution
+[`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-apps`]: {
+    key: 'maximum-apps',
+    displayName: 'Maximum Applications',
+    // ... complex metadata structure
+}
+
+// Usage required ConfigService singleton
+const configService = ConfigService.getInstance();
+const property = configService.getPropertyDefinition(key);
+```
+
+### After (Simplified System)
+```typescript
+// Direct property definition
+{
+    key: 'maximum-apps',
+    displayName: 'Maximum Applications',
+    description: 'Maximum number of applications...',
+    type: 'number',
+    // ... simple, direct structure
+}
+
+// Usage with simple functions
+import { getPropertyDefinition, buildYarnPropertyKey } from '../config/simple-config';
+const property = getPropertyDefinition(key);
+const yarnKey = buildYarnPropertyKey(queuePath, key);
 ```
 
 ## Tips and Best Practices
@@ -289,28 +348,28 @@ initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || 0;
 1. **Use descriptive names:** Property keys should clearly indicate their purpose
 2. **Provide helpful descriptions:** Users rely on descriptions to understand properties
 3. **Set sensible defaults:** Choose defaults that work for most use cases
-4. **Consider templates:** Mark properties as `availableInTemplate: true` if they should be available for auto-created queues
-5. **Group related properties:** Keep related settings together for better UX
-6. **Test edge cases:** Ensure validation handles empty values, extreme values, and invalid formats
+4. **Group related properties:** Keep related settings together for better UX
+5. **Test edge cases:** Ensure validation handles empty values, extreme values, and invalid formats
+6. **Follow the simplified approach:** Don't add unnecessary abstractions
 
 ## Troubleshooting
 
 ### Property not showing up?
 
-- Check that the property is in the correct metadata file
-- Verify the property group is included in the tab navigation
-- Ensure there are no TypeScript compilation errors
+- Check that the property is in the correct array (`QUEUE_PROPERTIES`, `GLOBAL_PROPERTIES`, etc.)
+- Verify there are no TypeScript compilation errors
+- Ensure the property group is included in the component that renders it
 
 ### Validation not working?
 
 - Check the property type is correct
-- Verify custom validation logic in ConfigService
+- Verify custom validation logic in `property-validation.ts`
 - Test with console.log to debug validation flow
 
 ### Value not saving?
 
-- Ensure the property key matches between metadata and save handler
-- Check that the property is included in the changes object
+- Ensure the property key matches between definitions and save handler
+- Check that the property is included in the form data
 - Verify the onSave callback is properly connected
 
 ## Advanced Topics
@@ -321,17 +380,17 @@ To show/hide properties based on other values:
 
 ```typescript
 // In PropertyFormField or PropertyEditorModal
-const isVisible = (property: ConfigProperty) => {
-  // Example: Only show if legacy mode is disabled
-  if (property.key === 'your-v2-only-property') {
-    return !formData['legacy-mode-enabled'];
-  }
-  return true;
+const isVisible = (property: PropertyDefinition) => {
+    // Example: Only show if legacy mode is disabled
+    if (property.key === 'your-v2-only-property') {
+        return !formData['legacy-mode-enabled'];
+    }
+    return true;
 };
 
 // In render:
 {isVisible(property) && (
-  <PropertyFormField ... />
+    <PropertyFormField ... />
 )}
 ```
 
@@ -354,13 +413,4 @@ const handleFieldChange = (propertyKey: string, value: any) => {
 };
 ```
 
-### Custom Property Categories
-
-For entirely new categories, create a new metadata file:
-
-1. Create `src/config/my-feature-metadata.ts`
-2. Export metadata following the same pattern
-3. Import in `src/config/index.ts`
-4. Update ConfigService to include the new metadata
-
-This system is designed to be extensible while maintaining consistency across all property types.
+The simplified system makes it much easier to add new properties while maintaining type safety and clear code structure.

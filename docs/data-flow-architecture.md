@@ -393,7 +393,7 @@ stageChange({
     property: 'capacity',
     oldValue: '',
     newValue: '20',
-    timestamp: Date.now()
+    timestamp: Date.now(),
 });
 
 stageChange({
@@ -403,7 +403,7 @@ stageChange({
     property: 'maximum-capacity',
     oldValue: '',
     newValue: '50',
-    timestamp: Date.now()
+    timestamp: Date.now(),
 });
 
 // 3. Update parent's child list
@@ -414,7 +414,7 @@ stageChange({
     property: 'queues',
     oldValue: 'frontend,backend',
     newValue: 'frontend,backend,analytics',
-    timestamp: Date.now()
+    timestamp: Date.now(),
 });
 
 // 4. Rebalance sibling capacities
@@ -468,29 +468,29 @@ suggestions = [
 // 1. Mark queue for deletion
 const { stageChange } = useStagedChangesState();
 stageChange({
-  id: generateId(),
-  changeType: "delete",
-  queuePath: "root.development.experimental",
-  property: '',
-  oldValue: '',
-  newValue: '',
-  timestamp: Date.now()
+    id: generateId(),
+    changeType: 'delete',
+    queuePath: 'root.development.experimental',
+    property: '',
+    oldValue: '',
+    newValue: '',
+    timestamp: Date.now(),
 });
 
 // 2. Validation (handled by Zustand store)
 // - Check: No running applications
-// - Check: No child queues  
+// - Check: No child queues
 // - Check: Capacity can be redistributed
 
 // 3. Update parent
 stageChange({
-  id: generateId(),
-  queuePath: "root.development",
-  property: "queues",
-  oldValue: "team1,team2,experimental",
-  newValue: "team1,team2",
-  changeType: 'update',
-  timestamp: Date.now()
+    id: generateId(),
+    queuePath: 'root.development',
+    property: 'queues',
+    oldValue: 'team1,team2,experimental',
+    newValue: 'team1,team2',
+    changeType: 'update',
+    timestamp: Date.now(),
 });
 
 // 4. Redistribute capacity
@@ -527,9 +527,9 @@ if (!validationResult.isValid) {
 }
 ```
 
-## State Management
+## State Management and Configuration
 
-The application uses **Zustand** for state management, with 4 focused stores that provide a clean, hook-based API with direct mutations via Immer integration:
+The application uses **Zustand** for state management and a **simplified configuration system** that replaced the previous complex metadata-driven approach.
 
 ### Zustand Stores
 
@@ -537,6 +537,38 @@ The application uses **Zustand** for state management, with 4 focused stores tha
 2. **ConfigurationState**: Queue configuration data and parsing
 3. **StagedChangesState**: Change tracking and validation
 4. **ActivityState**: Loading states and user activity
+
+### Simplified Configuration System
+
+The configuration system was simplified in January 2025, replacing complex metadata files with direct TypeScript definitions:
+
+#### New Configuration Structure
+
+- **`property-definitions.ts`**: Direct property definitions with TypeScript interfaces
+- **`property-validation.ts`**: Simple validation functions
+- **`simple-config.ts`**: Straightforward API for configuration operations
+
+#### Key Improvements
+
+- **78% code reduction** (1656+ lines → ~362 lines) while maintaining all functionality
+- **Direct property access** instead of runtime property resolution
+- **Clear TypeScript interfaces** with full type safety
+- **Simple validation functions** instead of complex validation layers
+
+#### Configuration API Usage
+
+```typescript
+// New simplified configuration API (after migration)
+import {
+    getQueuePropertyGroups,
+    validateSingleProperty,
+    buildYarnPropertyKey,
+} from '../config/simple-config';
+
+const propertyGroups = getQueuePropertyGroups();
+const validation = validateSingleProperty(key, value);
+const yarnKey = buildYarnPropertyKey(queuePath, propertyKey);
+```
 
 ```typescript
 // UIState store
@@ -579,12 +611,23 @@ interface ActivityState {
 ### Usage Example
 
 ```typescript
-// Component usage with Zustand stores
+// Component usage with Zustand stores and simplified config
 const { selectedQueue, setSelectedQueue } = useUIState();
 const { stageChange } = useStagedChangesState();
 
+// Use simplified config API for property definitions
+const propertyGroups = getQueuePropertyGroups();
+const propertyDef = getPropertyDefinition('capacity');
+
 // Stage a capacity change
 const handleCapacityChange = (queuePath: string, newCapacity: number, oldCapacity: number) => {
+    // Validate using simplified validation
+    const validation = validateSingleProperty('capacity', newCapacity);
+    if (!validation.valid) {
+        showError(validation.error);
+        return;
+    }
+
     stageChange({
         id: generateId(),
         queuePath,
@@ -592,7 +635,7 @@ const handleCapacityChange = (queuePath: string, newCapacity: number, oldCapacit
         oldValue: oldCapacity.toString(),
         newValue: newCapacity.toString(),
         changeType: 'update',
-        timestamp: Date.now()
+        timestamp: Date.now(),
     });
 };
 

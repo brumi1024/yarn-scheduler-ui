@@ -1,25 +1,34 @@
 import React from 'react';
+import { useFormContext, useWatch } from 'react-hook-form';
 import { Box, Typography, Alert, Divider } from '@mui/material';
-import type { ConfigProperty } from '../config';
+import type { PropertyDefinition } from '../config';
 import { PropertyFormField } from './PropertyFormField';
 
 interface AutoQueueCreationSectionProps {
-    properties: Record<string, ConfigProperty>;
-    formData: Record<string, any>;
-    errors: Record<string, string>;
-    onChange: (propertyKey: string, value: any) => void;
+    properties: Record<string, PropertyDefinition>;
     siblings?: Array<{ name: string; capacity: string }>;
 }
 
 export function AutoQueueCreationSection({
     properties,
-    formData,
-    errors,
-    onChange,
     siblings,
 }: AutoQueueCreationSectionProps) {
-    const v1Enabled = formData['auto-create-child-queue.enabled'] === true;
-    const v2Enabled = formData['auto-queue-creation-v2.enabled'] === true;
+    const { control, setValue } = useFormContext();
+    
+    // Watch for changes in auto-creation toggles
+    const v1Enabled = useWatch({ control, name: 'auto-create-child-queue.enabled' }) === true;
+    const v2Enabled = useWatch({ control, name: 'auto-queue-creation-v2.enabled' }) === true;
+
+    const handleToggleChange = (propertyKey: string, value: any) => {
+        // When enabling one mode, disable the other
+        if (value === true) {
+            if (propertyKey === 'auto-create-child-queue.enabled') {
+                setValue('auto-queue-creation-v2.enabled', false);
+            } else if (propertyKey === 'auto-queue-creation-v2.enabled') {
+                setValue('auto-create-child-queue.enabled', false);
+            }
+        }
+    };
 
     // Filter properties based on enabled mode
     const renderProperties = () => {
@@ -33,47 +42,35 @@ export function AutoQueueCreationSection({
                     <PropertyFormField
                         key={property.key}
                         property={property}
-                        value={formData[property.key]}
-                        error={errors[property.key]}
-                        onChange={(value) => {
-                            // When enabling one mode, disable the other
-                            if (value === true) {
-                                if (property.key === 'auto-create-child-queue.enabled') {
-                                    onChange('auto-queue-creation-v2.enabled', false);
-                                } else {
-                                    onChange('auto-create-child-queue.enabled', false);
-                                }
-                            }
-                            onChange(property.key, value);
-                        }}
+                        control={control}
+                        name={property.key}
                         siblings={siblings}
+                        onCustomChange={(value) => handleToggleChange(property.key, value)}
                     />
                 );
             }
 
             // Show v1 properties only when v1 is enabled
-            if (!property.v2Property && v1Enabled && property.key.includes('leaf-queue-template')) {
+            if (v1Enabled && property.key.includes('leaf-queue-template')) {
                 return (
                     <PropertyFormField
                         key={property.key}
                         property={property}
-                        value={formData[property.key]}
-                        error={errors[property.key]}
-                        onChange={(value) => onChange(property.key, value)}
+                        control={control}
+                        name={property.key}
                         siblings={siblings}
                     />
                 );
             }
 
             // Show v2 properties only when v2 is enabled
-            if (property.v2Property && v2Enabled && property.key !== 'auto-queue-creation-v2.enabled') {
+            if (v2Enabled && property.key.includes('auto-queue-creation-v2') && property.key !== 'auto-queue-creation-v2.enabled') {
                 return (
                     <PropertyFormField
                         key={property.key}
                         property={property}
-                        value={formData[property.key]}
-                        error={errors[property.key]}
-                        onChange={(value) => onChange(property.key, value)}
+                        control={control}
+                        name={property.key}
                         siblings={siblings}
                     />
                 );

@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import { useForm, FormProvider } from 'react-hook-form';
+import { zodResolver } from '@hookform/resolvers/zod';
 import {
     Box,
     Paper,
@@ -28,10 +30,10 @@ import {
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { Queue } from '../types/Queue';
-import type { ConfigGroup } from '../config';
-import { ConfigService } from '../config';
+import { getQueuePropertyGroups } from '../config';
 import { PropertyFormField } from './PropertyFormField';
 import { AutoQueueCreationSection } from './AutoQueueCreationSection';
+import { createFormSchema } from '../schemas/propertySchemas';
 
 export interface QueueInfoPanelProps {
     queue: Queue | null;
@@ -55,12 +57,27 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     onQueueSelect,
 }) => {
     const [activeTab, setActiveTab] = useState(0);
-    const [formData, setFormData] = useState<Record<string, any>>({});
-    const [errors, setErrors] = useState<Record<string, string>>({});
-    const [hasChanges, setHasChanges] = useState(false);
 
-    const configService = ConfigService.getInstance();
-    const propertyGroups = configService.getQueuePropertyGroups();
+    const propertyGroups = getQueuePropertyGroups();
+    
+    // Create combined properties object for schema generation
+    const allProperties = propertyGroups.reduce((acc: any, group: any) => {
+        // Convert properties array to object keyed by property key
+        const propsObject = group.properties.reduce((obj: any, prop: any) => {
+            obj[prop.key] = prop;
+            return obj;
+        }, {});
+        return { ...acc, ...propsObject };
+    }, {});
+    const validationSchema = createFormSchema(allProperties);
+    
+    const form = useForm({
+        resolver: zodResolver(validationSchema),
+        defaultValues: {},
+        mode: 'onChange',
+    });
+
+    const { handleSubmit, reset, formState: { errors, isDirty } } = form;
 
     useEffect(() => {
         if (queue && open) {
@@ -88,56 +105,13 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                 });
             }
 
-            setFormData(initialData);
-            setErrors({});
-            setHasChanges(false);
+            reset(initialData);
+            setActiveTab(0);
         }
-    }, [queue, open]);
+    }, [queue, open, reset]);
 
-    const handleFieldChange = (propertyKey: string, value: any) => {
-        const newFormData = { ...formData, [propertyKey]: value };
-        setFormData(newFormData);
-        setHasChanges(true);
 
-        // Validate the field
-        const validation = configService.validateProperty(propertyKey, value);
-        const newErrors = { ...errors };
-
-        if (validation.valid) {
-            delete newErrors[propertyKey];
-        } else {
-            newErrors[propertyKey] = validation.error || 'Invalid value';
-        }
-
-        setErrors(newErrors);
-    };
-
-    const handleSaveSettings = () => {
-        if (!queue?.queueName) return;
-
-        // Final validation
-        const finalErrors: Record<string, string> = {};
-
-        Object.entries(formData).forEach(([key, value]) => {
-            const validation = configService.validateProperty(key, value);
-            if (!validation.valid) {
-                finalErrors[key] = validation.error || 'Invalid value';
-            }
-        });
-
-        if (Object.keys(finalErrors).length > 0) {
-            setErrors(finalErrors);
-            return;
-        }
-
-        // Call the onSaveProperties callback
-        if (onSaveProperties) {
-            onSaveProperties(queue.queueName, { ...formData });
-        }
-        setHasChanges(false);
-    };
-
-    const renderPropertyGroup = (group: ConfigGroup) => {
+    const renderPropertyGroup = (group: any) => {
         // Get sibling queues for capacity calculations
         const siblings =
             queue && (queue as any).parent
@@ -152,9 +126,6 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                 <AutoQueueCreationSection
                     key={group.groupName}
                     properties={group.properties}
-                    formData={formData}
-                    errors={errors}
-                    onChange={handleFieldChange}
                     siblings={siblings}
                 />
             );
@@ -162,13 +133,12 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
         return (
             <Box key={group.groupName}>
-                {Object.entries(group.properties).map(([, property]) => (
+                {group.properties.map((property: any) => (
                     <PropertyFormField
                         key={property.key}
                         property={property}
-                        value={formData[property.key]}
-                        error={errors[property.key]}
-                        onChange={(value) => handleFieldChange(property.key, value)}
+                        control={form.control}
+                        name={property.key}
                         siblings={siblings}
                     />
                 ))}
@@ -254,7 +224,8 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const liveCapacityData = getLiveCapacityData(queue);
 
     return (
-        <Paper
+        <FormProvider {...form}>
+            <Paper
             elevation={0}
             sx={{
                 position: 'fixed',
@@ -768,7 +739,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                             </Alert>
                         )}
 
-                        {propertyGroups.map((group, index) => (
+                        {propertyGroups.map((group: any, index: number) => (
                             <Accordion
                                 key={group.groupName}
                                 defaultExpanded={index === 0}
@@ -793,15 +764,13 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                             </Accordion>
                         ))}
 
-                        {hasChanges && (
+                        {isDirty && (
                             <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                                 <Button
                                     variant="outlined"
                                     size="small"
                                     onClick={() => {
-                                        setFormData({});
-                                        setHasChanges(false);
-                                        setErrors({});
+                                        reset();
                                     }}
                                 >
                                     Reset
@@ -809,7 +778,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                 <Button
                                     variant="contained"
                                     size="small"
-                                    onClick={handleSaveSettings}
+                                    onClick={handleSubmit((data) => {
+                                        if (!queue?.queueName || !onSaveProperties) return;
+                                        onSaveProperties(queue.queueName, data);
+                                    })}
                                     disabled={Object.keys(errors).length > 0}
                                 >
                                     Save Changes
@@ -820,5 +792,6 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                 )}
             </Box>
         </Paper>
+        </FormProvider>
     );
 };

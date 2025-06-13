@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { ConfigProperty } from '../config/types';
+import type { PropertyDefinition } from '../config/property-definitions';
 
 /**
  * Capacity property keys that should use the CapacityEditor component
@@ -129,9 +129,9 @@ export function enumPropertySchema(options: string[]) {
 }
 
 /**
- * Create a Zod schema for a ConfigProperty
+ * Create a Zod schema for a PropertyDefinition
  */
-export function createPropertySchema(property: ConfigProperty) {
+export function createPropertySchema(property: PropertyDefinition) {
     if (isCapacityProperty(property.key)) {
         return capacityValueSchema;
     }
@@ -153,7 +153,7 @@ export function createPropertySchema(property: ConfigProperty) {
 /**
  * Create a Zod schema for a form with multiple properties
  */
-export function createFormSchema(properties: Record<string, ConfigProperty>) {
+export function createFormSchema(properties: Record<string, PropertyDefinition>) {
     const schemaShape: Record<string, z.ZodTypeAny> = {};
 
     Object.entries(properties).forEach(([key, property]) => {

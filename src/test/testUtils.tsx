@@ -7,7 +7,7 @@ import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { theme } from '../theme';
-import type { ConfigProperty } from '../config';
+import type { PropertyDefinition } from '../config';
 
 // Common test setup patterns
 export const commonTestSetup = {
@@ -41,7 +41,7 @@ export const renderWithTheme = (ui: React.ReactElement, options?: Omit<RenderOpt
 
 // Common test prop factories
 export const testPropFactories = {
-    configProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    configProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'test-property',
         displayName: 'Test Property',
         description: 'Test property description',
@@ -50,7 +50,7 @@ export const testPropFactories = {
         ...overrides,
     }),
 
-    booleanProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    booleanProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'test-boolean',
         displayName: 'Test Boolean',
         description: 'Test boolean property',
@@ -59,7 +59,7 @@ export const testPropFactories = {
         ...overrides,
     }),
 
-    enumProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    enumProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'test-enum',
         displayName: 'Test Enum',
         description: 'Test enum property',
@@ -69,7 +69,7 @@ export const testPropFactories = {
         ...overrides,
     }),
 
-    numberProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    numberProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'test-number',
         displayName: 'Test Number',
         description: 'Test number property',
@@ -79,7 +79,7 @@ export const testPropFactories = {
         ...overrides,
     }),
 
-    percentageProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    percentageProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'test-percentage',
         displayName: 'Test Percentage',
         description: 'Test percentage property',
@@ -88,7 +88,7 @@ export const testPropFactories = {
         ...overrides,
     }),
 
-    capacityProperty: (overrides: Partial<ConfigProperty> = {}): ConfigProperty => ({
+    capacityProperty: (overrides: Partial<PropertyDefinition> = {}): PropertyDefinition => ({
         key: 'capacity',
         displayName: 'Capacity',
         description: 'Queue capacity setting',

@@ -4,13 +4,13 @@ import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { QueueVisualization } from '../QueueVisualization';
 
 // Mock the hooks and components
-vi.mock('../../hooks/useApi', () => ({
+vi.mock('../../hooks/useApiWithZustand', () => ({
     useScheduler: vi.fn(),
     useConfiguration: vi.fn(),
 }));
 
 // Import after mocking
-import { useScheduler, useConfiguration } from '../../hooks/useApi';
+import { useScheduler, useConfiguration } from '../../hooks/useApiWithZustand';
 
 const mockUseScheduler = vi.mocked(useScheduler);
 const mockUseConfiguration = vi.mocked(useConfiguration);
