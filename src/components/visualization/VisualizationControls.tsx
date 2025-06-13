@@ -1,10 +1,10 @@
 import React from 'react';
 import { Box } from '@mui/material';
 import { ZoomControls } from '../ZoomControls';
-import type { PanZoomController } from '../../utils/canvas';
+import type { D3ZoomController } from '../../utils/canvas';
 
 export interface VisualizationControlsProps {
-    panZoomController: PanZoomController | null;
+    panZoomController: D3ZoomController | null;
     onZoomToFit: () => void;
     disabled?: boolean;
     selectedQueue?: string | null;

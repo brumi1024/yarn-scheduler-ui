@@ -1,10 +1,9 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { D3TreeLayout } from '../D3TreeLayout';
-import type { Queue } from '../../../types/Queue';
+import { D3TreeLayout, type LayoutQueue } from '../D3TreeLayout';
 
 describe('D3TreeLayout', () => {
     let layout: D3TreeLayout;
-    let mockQueue: Queue;
+    let mockQueue: LayoutQueue;
 
     beforeEach(() => {
         layout = new D3TreeLayout();
@@ -30,17 +29,19 @@ describe('D3TreeLayout', () => {
 
     describe('computeLayout', () => {
         it('should compute layout for a single node', () => {
-            const singleNode: Queue = {
+            const singleNode: LayoutQueue = {
                 id: 'root',
-                name: 'root',
-                path: 'root',
-                type: 'PARENT',
+                queueName: 'root',
+                queuePath: 'root',
                 state: 'RUNNING',
                 capacity: 100,
+                usedCapacity: 0,
                 maxCapacity: 100,
                 absoluteCapacity: 100,
+                absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 100,
-                weight: 1,
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
                 children: [],
             };
 
@@ -204,102 +205,110 @@ describe('D3TreeLayout', () => {
     });
 });
 
-function createMockQueue(): Queue {
+function createMockQueue(): LayoutQueue {
     return {
         id: 'root',
-        name: 'root',
-        path: 'root',
-        type: 'PARENT',
+        queueName: 'root',
+        queuePath: 'root',
         state: 'RUNNING',
         capacity: 100,
+        usedCapacity: 0,
         maxCapacity: 100,
         absoluteCapacity: 100,
+        absoluteUsedCapacity: 0,
         absoluteMaxCapacity: 100,
-        weight: 1,
+        numApplications: 0,
+        resourcesUsed: { memory: 0, vCores: 0 },
         children: [
             {
                 id: 'root.prod',
-                name: 'prod',
-                path: 'root.prod',
-                type: 'PARENT',
+                queueName: 'prod',
+                queuePath: 'root.prod',
                 state: 'RUNNING',
                 capacity: 50,
+                usedCapacity: 0,
                 maxCapacity: 100,
                 absoluteCapacity: 50,
+                absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 100,
-                weight: 0.5,
-                parentQueue: 'root',
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
                 children: [
                     {
                         id: 'root.prod.app1',
-                        name: 'app1',
-                        path: 'root.prod.app1',
-                        type: 'LEAF',
+                        queueName: 'app1',
+                        queuePath: 'root.prod.app1',
                         state: 'RUNNING',
                         capacity: 100,
+                        usedCapacity: 0,
                         maxCapacity: 100,
                         absoluteCapacity: 50,
+                        absoluteUsedCapacity: 0,
                         absoluteMaxCapacity: 100,
-                        weight: 1,
-                        parentQueue: 'root.prod',
+                        numApplications: 0,
+                        resourcesUsed: { memory: 0, vCores: 0 },
                         children: [],
                     },
                 ],
             },
             {
                 id: 'root.dev',
-                name: 'dev',
-                path: 'root.dev',
-                type: 'PARENT',
+                queueName: 'dev',
+                queuePath: 'root.dev',
                 state: 'RUNNING',
                 capacity: 30,
+                usedCapacity: 0,
                 maxCapacity: 50,
                 absoluteCapacity: 30,
+                absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 50,
-                weight: 0.3,
-                parentQueue: 'root',
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
                 children: [
                     {
                         id: 'root.dev.app2',
-                        name: 'app2',
-                        path: 'root.dev.app2',
-                        type: 'LEAF',
+                        queueName: 'app2',
+                        queuePath: 'root.dev.app2',
                         state: 'RUNNING',
                         capacity: 100,
+                        usedCapacity: 0,
                         maxCapacity: 100,
                         absoluteCapacity: 30,
+                        absoluteUsedCapacity: 0,
                         absoluteMaxCapacity: 50,
-                        weight: 1,
-                        parentQueue: 'root.dev',
+                        numApplications: 0,
+                        resourcesUsed: { memory: 0, vCores: 0 },
                         children: [],
                     },
                 ],
             },
             {
                 id: 'root.test',
-                name: 'test',
-                path: 'root.test',
-                type: 'PARENT',
+                queueName: 'test',
+                queuePath: 'root.test',
                 state: 'RUNNING',
                 capacity: 20,
+                usedCapacity: 0,
                 maxCapacity: 30,
                 absoluteCapacity: 20,
+                absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 30,
-                weight: 0.2,
-                parentQueue: 'root',
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
                 children: [
                     {
                         id: 'root.test.app3',
-                        name: 'app3',
-                        path: 'root.test.app3',
-                        type: 'LEAF',
+                        queueName: 'app3',
+                        queuePath: 'root.test.app3',
                         state: 'STOPPED',
                         capacity: 100,
+                        usedCapacity: 0,
                         maxCapacity: 100,
                         absoluteCapacity: 20,
+                        absoluteUsedCapacity: 0,
                         absoluteMaxCapacity: 30,
-                        weight: 1,
-                        parentQueue: 'root.test',
+                        numApplications: 0,
+                        resourcesUsed: { memory: 0, vCores: 0 },
                         children: [],
                     },
                 ],

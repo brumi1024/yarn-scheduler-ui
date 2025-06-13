@@ -6,11 +6,11 @@ import {
     CenterFocusStrong as ResetIcon,
     FitScreen as FitScreenIcon,
 } from '@mui/icons-material';
-import type { PanZoomController } from '../utils/canvas/PanZoomController';
+import type { D3ZoomController } from '../utils/canvas/D3ZoomController';
 import { StyledIconButton, ElevatedPaper } from './shared';
 
 export interface ZoomControlsProps {
-    panZoomController: PanZoomController | null;
+    panZoomController: D3ZoomController | null;
     onZoomToFit?: () => void;
     disabled?: boolean;
     position?: 'top-right' | 'top-left' | 'bottom-right' | 'bottom-left';

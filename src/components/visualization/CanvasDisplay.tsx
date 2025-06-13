@@ -2,7 +2,7 @@ import { useRef, useEffect, useState, useCallback, useImperativeHandle, forwardR
 import { Box } from '@mui/material';
 import {
     CanvasRenderer,
-    PanZoomController,
+    D3ZoomController,
     QueueSelectionController,
     type SelectionEvent,
     type HoverEvent,
@@ -18,7 +18,7 @@ export interface CanvasDisplayProps {
 }
 
 export interface CanvasDisplayRef {
-    panZoomController: PanZoomController | null;
+    panZoomController: D3ZoomController | null;
     zoomToFit: () => void;
     centerOnRoot: () => void;
     updateSelection: (selectedNodes: Set<string>) => void;
@@ -33,7 +33,7 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
 
         // Canvas controllers
         const [renderer, setRenderer] = useState<CanvasRenderer | null>(null);
-        const [panZoomController, setPanZoomController] = useState<PanZoomController | null>(null);
+        const [panZoomController, setPanZoomController] = useState<D3ZoomController | null>(null);
         const [selectionController, setSelectionController] = useState<QueueSelectionController | null>(null);
 
         // Update refs when props change
@@ -55,10 +55,9 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
                 setRenderer(canvasRenderer);
 
                 // Initialize pan/zoom controller
-                const controller = new PanZoomController(canvasRef.current, {
+                const controller = new D3ZoomController(canvasRef.current, {
                     minScale: 0.1,
                     maxScale: 3.0,
-                    enableTouch: true,
                     enableKeyboard: true,
                 });
                 setPanZoomController(controller);

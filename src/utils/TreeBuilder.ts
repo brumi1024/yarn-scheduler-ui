@@ -77,127 +77,81 @@ export class TreeBuilder {
         }
 
         // Count capacity modes
-        switch (queue.capacity.mode) {
-            case 'percentage':
-                metrics.modeDistribution.percentage++;
-                break;
-            case 'weight':
-                metrics.modeDistribution.weight++;
-                break;
-            case 'absolute':
-                metrics.modeDistribution.absolute++;
-                break;
-        }
+        metrics.modeDistribution[queue.capacity.mode as keyof typeof metrics.modeDistribution]++;
 
         // Recursively process children
-        for (const child of queue.children) {
-            this.traverseAndCalculateMetrics(child, depth + 1, metrics);
-        }
+        queue.children.forEach(child => this.traverseAndCalculateMetrics(child, depth + 1, metrics));
     }
 
     /**
      * Search for queues matching the given criteria
      */
     static searchQueues(rootQueue: ParsedQueue, options: SearchOptions): ParsedQueue[] {
-        const results: ParsedQueue[] = [];
         const searchTerm = options.caseSensitive ? options.searchTerm : options.searchTerm.toLowerCase();
+        const allQueues = this.flattenTree(rootQueue);
+        
+        return allQueues.filter(queue => {
+            const queueName = options.caseSensitive ? queue.name : queue.name.toLowerCase();
+            const queuePath = options.caseSensitive ? queue.path : queue.path.toLowerCase();
 
-        this.traverseAndSearch(rootQueue, searchTerm, options, results);
-        return results;
-    }
-
-    /**
-     * Traverse tree and search for matching queues
-     */
-    private static traverseAndSearch(
-        queue: ParsedQueue,
-        searchTerm: string,
-        options: SearchOptions,
-        results: ParsedQueue[]
-    ): void {
-        const queueName = options.caseSensitive ? queue.name : queue.name.toLowerCase();
-        const queuePath = options.caseSensitive ? queue.path : queue.path.toLowerCase();
-
-        // Check name and path
-        if (queueName.includes(searchTerm) || queuePath.includes(searchTerm)) {
-            results.push(queue);
-        }
-
-        // Check properties if requested
-        if (options.includeProperties && queue.properties) {
-            for (const [key, value] of Object.entries(queue.properties)) {
-                const searchKey = options.caseSensitive ? key : key.toLowerCase();
-                const searchValue = options.caseSensitive ? value : value.toLowerCase();
-
-                if (searchKey.includes(searchTerm) || searchValue.includes(searchTerm)) {
-                    if (!results.includes(queue)) {
-                        results.push(queue);
-                    }
-                    break;
-                }
+            // Check name and path
+            if (queueName.includes(searchTerm) || queuePath.includes(searchTerm)) {
+                return true;
             }
-        }
 
-        // Recursively search children
-        for (const child of queue.children) {
-            this.traverseAndSearch(child, searchTerm, options, results);
-        }
+            // Check properties if requested
+            if (options.includeProperties && queue.properties) {
+                return Object.entries(queue.properties).some(([key, value]) => {
+                    const searchKey = options.caseSensitive ? key : key.toLowerCase();
+                    const searchValue = options.caseSensitive ? value : value.toLowerCase();
+                    return searchKey.includes(searchTerm) || searchValue.includes(searchTerm);
+                });
+            }
+
+            return false;
+        });
     }
 
     /**
      * Filter queues based on criteria
      */
     static filterQueues(rootQueue: ParsedQueue, options: FilterOptions): ParsedQueue[] {
-        const results: ParsedQueue[] = [];
-        this.traverseAndFilter(rootQueue, options, results);
-        return results;
-    }
-
-    /**
-     * Traverse tree and filter queues
-     */
-    private static traverseAndFilter(queue: ParsedQueue, options: FilterOptions, results: ParsedQueue[]): void {
-        let matches = true;
-
-        // Check state filter
-        if (options.state && queue.state !== options.state) {
-            matches = false;
-        }
-
-        // Check capacity mode filter
-        if (options.capacityMode && queue.capacity.mode !== options.capacityMode) {
-            matches = false;
-        }
-
-        // Check children filter
-        if (options.hasChildren !== undefined) {
-            const hasChildren = queue.children.length > 0;
-            if (options.hasChildren !== hasChildren) {
-                matches = false;
-            }
-        }
-
-        // Check capacity range filters
-        if (options.minCapacity !== undefined || options.maxCapacity !== undefined) {
-            const capacity = CapacityModeDetector.toDisplayPercentage(queue.capacity);
-
-            if (options.minCapacity !== undefined && capacity < options.minCapacity) {
-                matches = false;
+        const allQueues = this.flattenTree(rootQueue);
+        
+        return allQueues.filter(queue => {
+            // Check state filter
+            if (options.state && queue.state !== options.state) {
+                return false;
             }
 
-            if (options.maxCapacity !== undefined && capacity > options.maxCapacity) {
-                matches = false;
+            // Check capacity mode filter
+            if (options.capacityMode && queue.capacity.mode !== options.capacityMode) {
+                return false;
             }
-        }
 
-        if (matches) {
-            results.push(queue);
-        }
+            // Check children filter
+            if (options.hasChildren !== undefined) {
+                const hasChildren = queue.children.length > 0;
+                if (options.hasChildren !== hasChildren) {
+                    return false;
+                }
+            }
 
-        // Recursively filter children
-        for (const child of queue.children) {
-            this.traverseAndFilter(child, options, results);
-        }
+            // Check capacity range filters
+            if (options.minCapacity !== undefined || options.maxCapacity !== undefined) {
+                const capacity = CapacityModeDetector.toDisplayPercentage(queue.capacity);
+
+                if (options.minCapacity !== undefined && capacity < options.minCapacity) {
+                    return false;
+                }
+
+                if (options.maxCapacity !== undefined && capacity > options.maxCapacity) {
+                    return false;
+                }
+            }
+
+            return true;
+        });
     }
 
     /**
@@ -250,22 +204,7 @@ export class TreeBuilder {
      * Get all leaf queues in the tree
      */
     static getLeafQueues(rootQueue: ParsedQueue): ParsedQueue[] {
-        const leafQueues: ParsedQueue[] = [];
-        this.traverseAndCollectLeaves(rootQueue, leafQueues);
-        return leafQueues;
-    }
-
-    /**
-     * Traverse and collect leaf queues
-     */
-    private static traverseAndCollectLeaves(queue: ParsedQueue, leafQueues: ParsedQueue[]): void {
-        if (queue.children.length === 0) {
-            leafQueues.push(queue);
-        } else {
-            for (const child of queue.children) {
-                this.traverseAndCollectLeaves(child, leafQueues);
-            }
-        }
+        return this.flattenTree(rootQueue).filter(queue => queue.children.length === 0);
     }
 
     /**
@@ -294,12 +233,12 @@ export class TreeBuilder {
         visitedPaths.add(queue.path);
 
         // Validate queue name
-        if (!queue.name || queue.name.trim().length === 0) {
+        if (!queue.name?.trim()) {
             errors.push(`Queue at path '${queue.path}' has empty name`);
         }
 
-        // Validate parent-child relationship
-        for (const child of queue.children) {
+        // Validate parent-child relationships
+        queue.children.forEach(child => {
             if (child.parent !== queue.path) {
                 errors.push(
                     `Child queue '${child.path}' has incorrect parent reference: expected '${queue.path}', got '${child.parent}'`
@@ -313,7 +252,7 @@ export class TreeBuilder {
             }
 
             this.validateQueueRecursively(child, visitedPaths, errors);
-        }
+        });
     }
 
     /**
@@ -374,20 +313,7 @@ export class TreeBuilder {
      * Convert queue tree to flat list for table views
      */
     static flattenTree(rootQueue: ParsedQueue): ParsedQueue[] {
-        const flattened: ParsedQueue[] = [];
-        this.traverseAndFlatten(rootQueue, flattened);
-        return flattened;
-    }
-
-    /**
-     * Traverse and flatten tree structure
-     */
-    private static traverseAndFlatten(queue: ParsedQueue, flattened: ParsedQueue[]): void {
-        flattened.push(queue);
-
-        for (const child of queue.children) {
-            this.traverseAndFlatten(child, flattened);
-        }
+        return [rootQueue, ...rootQueue.children.flatMap(child => this.flattenTree(child))];
     }
 
     /**
@@ -420,10 +346,6 @@ export class TreeBuilder {
         const parentPath = parts.slice(0, -1).join('.');
         const parent = this.findQueueByPath(rootQueue, parentPath);
 
-        if (!parent) {
-            return [];
-        }
-
-        return parent.children.filter((child: ParsedQueue) => child.path !== targetPath);
+        return parent?.children.filter(child => child.path !== targetPath) ?? [];
     }
 }

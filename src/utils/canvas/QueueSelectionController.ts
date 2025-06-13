@@ -1,5 +1,5 @@
 import type { LayoutNode } from '../d3/D3TreeLayout';
-import type { PanZoomController } from './PanZoomController';
+import type { D3ZoomController } from './D3ZoomController';
 
 export interface SelectionEvent {
     type: 'select' | 'deselect' | 'multi-select';
@@ -34,7 +34,7 @@ const DEFAULT_CONFIG: QueueSelectionConfig = {
 
 export class QueueSelectionController {
     private canvas: HTMLCanvasElement;
-    private panZoomController: PanZoomController;
+    private panZoomController: D3ZoomController;
     private config: QueueSelectionConfig;
 
     // State
@@ -52,7 +52,7 @@ export class QueueSelectionController {
 
     constructor(
         canvas: HTMLCanvasElement,
-        panZoomController: PanZoomController,
+        panZoomController: D3ZoomController,
         config: Partial<QueueSelectionConfig> = {}
     ) {
         this.canvas = canvas;

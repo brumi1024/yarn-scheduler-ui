@@ -1,4 +1,6 @@
-import * as d3 from 'd3';
+import { hierarchy, tree } from 'd3-hierarchy';
+import { easeCubicInOut } from 'd3-ease';
+import type { HierarchyNode } from 'd3-hierarchy';
 import type { Queue } from '../../types/Queue';
 
 // Extended Queue type for layout purposes
@@ -8,7 +10,7 @@ export interface LayoutQueue extends Queue {
     children?: LayoutQueue[];
 }
 
-export interface TreeNode extends d3.HierarchyNode<LayoutQueue> {
+export interface TreeNode extends HierarchyNode<LayoutQueue> {
     x: number;
     y: number;
     collapsed?: boolean;
@@ -77,26 +79,24 @@ export class D3TreeLayout {
      */
     computeLayout(root: LayoutQueue): LayoutData {
         // Create D3 hierarchy
-        const hierarchy = d3.hierarchy<LayoutQueue>(root, (d) => (this.collapsedNodes.has(d.id) ? [] : d.children));
+        const hierarchyRoot = hierarchy<LayoutQueue>(root, (d) => (this.collapsedNodes.has(d.id) ? [] : d.children));
 
         // Create tree layout
         const treeLayout =
             this.options.orientation === 'horizontal'
-                ? d3
-                      .tree<LayoutQueue>()
+                ? tree<LayoutQueue>()
                       .nodeSize([
                           this.options.nodeHeight + this.options.verticalSpacing,
                           this.options.nodeWidth + this.options.horizontalSpacing,
                       ])
-                : d3
-                      .tree<LayoutQueue>()
+                : tree<LayoutQueue>()
                       .nodeSize([
                           this.options.nodeWidth + this.options.horizontalSpacing,
                           this.options.nodeHeight + this.options.verticalSpacing,
                       ]);
 
         // Apply layout
-        const treeNodes = treeLayout(hierarchy);
+        const treeNodes = treeLayout(hierarchyRoot);
 
         // Convert to LayoutNode format
         const layoutNodes = this.convertToLayoutNodes(treeNodes);
@@ -196,12 +196,12 @@ export class D3TreeLayout {
             // TODO: Temporary hardcoded values for testing - replace with real capacity data
             const getTestCapacity = (queueName: string): number => {
                 const testCapacities: { [key: string]: number } = {
-                    prod01: 30,
-                    prod02: 70,
-                    team1: 40,
-                    team2: 60,
-                    prodteam01: 100,
-                    prodteam001: 100,
+                    prod: 50,
+                    dev: 30,
+                    test: 20,
+                    app1: 50,
+                    app2: 20,
+                    app3: 20,
                 };
                 return testCapacities[queueName] || 50;
             };
@@ -214,7 +214,7 @@ export class D3TreeLayout {
 
             // Calculate proportional segments for each child, starting from top-right corner
             let currentY = 0;
-            children.forEach((child, index) => {
+            children.forEach((child) => {
                 const childCapacity = getTestCapacity(child.data.queueName);
                 const proportion = totalChildCapacity > 0 ? childCapacity / totalChildCapacity : 1 / children.length;
                 const segmentHeight = parent.height * proportion;
@@ -343,14 +343,14 @@ export class D3TreeLayout {
     animateToNewLayout(
         currentNodes: LayoutNode[],
         targetLayout: LayoutData,
-        duration: number = 750
+        _duration: number = 750
     ): { nodes: LayoutNode[]; flows: FlowPath[]; progress: number }[] {
         const frames: { nodes: LayoutNode[]; flows: FlowPath[]; progress: number }[] = [];
         const steps = 60; // 60 frames for smooth animation
 
         for (let i = 0; i <= steps; i++) {
             const progress = i / steps;
-            const easedProgress = d3.easeCubicInOut(progress);
+            const easedProgress = easeCubicInOut(progress);
 
             const interpolatedNodes = currentNodes.map((currentNode) => {
                 const targetNode = targetLayout.nodes.find((n) => n.id === currentNode.id);

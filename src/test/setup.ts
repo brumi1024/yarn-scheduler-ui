@@ -1,9 +1,5 @@
 import '@testing-library/jest-dom';
 import { vi } from 'vitest';
-import { enableMapSet } from 'immer';
-
-// Enable Immer plugins for tests
-enableMapSet();
 
 // Ensure proper AbortController is available
 if (typeof globalThis.AbortController === 'undefined') {
