@@ -1,5 +1,8 @@
 import { hierarchy, tree } from 'd3-hierarchy';
 import { easeCubicInOut } from 'd3-ease';
+import { extent } from 'd3-array';
+import { scaleLinear } from 'd3-scale';
+import { interpolateObject } from 'd3-interpolate';
 import type { HierarchyNode } from 'd3-hierarchy';
 import type { Queue } from '../../types/Queue';
 
@@ -25,6 +28,7 @@ export interface LayoutNode {
     data: LayoutQueue;
     parent?: LayoutNode;
     children?: LayoutNode[];
+    depth?: number; // Store D3's depth for efficiency
 }
 
 export interface FlowPath {
@@ -144,6 +148,7 @@ export class D3TreeLayout {
         const nodes: LayoutNode[] = [];
         const nodeMap = new Map<string, LayoutNode>();
 
+        // Use D3's built-in traversal and properties
         root.each((node) => {
             const layoutNode: LayoutNode = {
                 id: node.data.id,
@@ -153,15 +158,19 @@ export class D3TreeLayout {
                 height: this.options.nodeHeight,
                 data: node.data,
                 children: [],
+                depth: node.depth, // Store D3's depth calculation
             };
 
             nodeMap.set(node.data.id, layoutNode);
             nodes.push(layoutNode);
 
-            // Set parent reference
-            if (node.parent && nodeMap.has(node.parent.data.id)) {
-                layoutNode.parent = nodeMap.get(node.parent.data.id);
-                layoutNode.parent!.children!.push(layoutNode);
+            // Use D3's parent reference directly
+            if (node.parent) {
+                const parentLayout = nodeMap.get(node.parent.data.id);
+                if (parentLayout) {
+                    layoutNode.parent = parentLayout;
+                    parentLayout.children!.push(layoutNode);
+                }
             }
         });
 
@@ -169,7 +178,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Compute Sankey-style flow paths between nodes
+     * Compute optimized flow paths between nodes using D3 scales
      */
     private computeFlowPaths(nodes: LayoutNode[]): FlowPath[] {
         const flows: FlowPath[] = [];
@@ -186,38 +195,26 @@ export class D3TreeLayout {
             }
         });
 
-        // Create Sankey-style flows for each parent-children group
+        // Create flows for each parent-children group
         nodesByParent.forEach((children, parentId) => {
             const parent = nodes.find((n) => n.id === parentId);
             if (!parent) return;
 
-            // TODO: Temporary hardcoded values for testing - replace with real capacity data
-            const getTestCapacity = (queueName: string): number => {
-                const testCapacities: { [key: string]: number } = {
-                    prod: 50,
-                    dev: 30,
-                    test: 20,
-                    app1: 50,
-                    app2: 20,
-                    app3: 20,
-                };
-                return testCapacities[queueName] || 50;
-            };
+            // Get capacities from actual queue data
+            const childCapacities = children.map(child => child.data.capacity || 0);
+            const totalChildCapacity = childCapacities.reduce((sum, cap) => sum + cap, 0);
+            
+            // Use D3 scale for proportional distribution
+            const capacityScale = scaleLinear()
+                .domain([0, totalChildCapacity])
+                .range([0, parent.height]);
 
-            // Calculate total capacity of all children using test values
-            const totalChildCapacity = children.reduce((sum, child) => {
-                const childCapacity = getTestCapacity(child.data.queueName);
-                return sum + childCapacity;
-            }, 0);
-
-            // Calculate proportional segments for each child, starting from top-right corner
             let currentY = 0;
-            children.forEach((child) => {
-                const childCapacity = getTestCapacity(child.data.queueName);
-                const proportion = totalChildCapacity > 0 ? childCapacity / totalChildCapacity : 1 / children.length;
-                const segmentHeight = parent.height * proportion;
+            children.forEach((child, index) => {
+                const childCapacity = childCapacities[index];
+                const segmentHeight = capacityScale(childCapacity);
 
-                // Source segment (parent's right side, starting from top-right)
+                // Source segment (parent's right side)
                 const sourceStartY = parent.y + currentY;
                 const sourceEndY = sourceStartY + segmentHeight;
 
@@ -225,8 +222,8 @@ export class D3TreeLayout {
                 const targetStartY = child.y;
                 const targetEndY = child.y + child.height;
 
-                // Create Sankey path
-                const path = this.calculateSankeyPath(
+                // Create optimized path
+                const path = this.createOptimizedFlowPath(
                     parent,
                     child,
                     sourceStartY,
@@ -240,7 +237,7 @@ export class D3TreeLayout {
                     source: parent,
                     target: child,
                     path,
-                    width: segmentHeight,
+                    width: segmentHeight, // This represents the visual thickness of the flow
                     capacity: childCapacity,
                     sourceStartY,
                     sourceEndY,
@@ -256,9 +253,9 @@ export class D3TreeLayout {
     }
 
     /**
-     * Calculate Sankey-style path with proper thickness
+     * Create optimized flow path with better curve calculations
      */
-    private calculateSankeyPath(
+    private createOptimizedFlowPath(
         source: LayoutNode,
         target: LayoutNode,
         sourceStartY: number,
@@ -266,143 +263,108 @@ export class D3TreeLayout {
         targetStartY: number,
         targetEndY: number
     ): string {
-        const borderRadius = 12; // Match the card border radius
-
-        // Adjust connection points to account for rounded corners
+        const borderRadius = 12;
         const sourceX = source.x + source.width;
         const targetX = target.x;
-
-        // Clamp source Y coordinates to avoid sharp corners
+        
+        // Clamp coordinates to avoid rounded corners
         const sourceTop = Math.max(sourceStartY, source.y + borderRadius);
         const sourceBottom = Math.min(sourceEndY, source.y + source.height - borderRadius);
-
-        // Clamp target Y coordinates to avoid sharp corners
         const targetTop = Math.max(targetStartY, target.y + borderRadius);
         const targetBottom = Math.min(targetEndY, target.y + target.height - borderRadius);
-
-        // Control point distance for smooth curves
-        const controlDistance = Math.abs(targetX - sourceX) * 0.4;
-
-        // Create a path that represents the flow band
-        const path = [
-            // Start at top of source segment (avoiding rounded corner)
+        
+        // Optimized control point calculation
+        const horizontalDistance = Math.abs(targetX - sourceX);
+        const controlDistance = Math.min(horizontalDistance * 0.4, 80); // Cap control distance
+        
+        // Build path with optimized curve points
+        return [
             `M ${sourceX} ${sourceTop}`,
-
-            // Curve to top of target segment (avoiding rounded corner)
             `C ${sourceX + controlDistance} ${sourceTop}, ${targetX - controlDistance} ${targetTop}, ${targetX} ${targetTop}`,
-
-            // Line down the left side of target (within safe zone)
             `L ${targetX} ${targetBottom}`,
-
-            // Curve back to bottom of source segment (avoiding rounded corner)
             `C ${targetX - controlDistance} ${targetBottom}, ${sourceX + controlDistance} ${sourceBottom}, ${sourceX} ${sourceBottom}`,
-
-            // Close path by going up the right side of source (within safe zone)
             `L ${sourceX} ${sourceTop}`,
-            `Z`,
-        ];
-
-        return path.join(' ');
+            'Z'
+        ].join(' ');
     }
 
     /**
-     * Calculate bounding box for all nodes
+     * Calculate bounding box for all nodes using D3's extent
      */
     private calculateBounds(nodes: LayoutNode[]): { x: number; y: number; width: number; height: number } {
         if (nodes.length === 0) {
             return { x: 0, y: 0, width: 0, height: 0 };
         }
 
-        let minX = Infinity;
-        let minY = Infinity;
-        let maxX = -Infinity;
-        let maxY = -Infinity;
-
-        nodes.forEach((node) => {
-            minX = Math.min(minX, node.x);
-            minY = Math.min(minY, node.y);
-            maxX = Math.max(maxX, node.x + node.width);
-            maxY = Math.max(maxY, node.y + node.height);
-        });
+        // Use D3's extent for cleaner min/max calculations
+        const xExtent = extent(nodes.flatMap(n => [n.x, n.x + n.width])) as [number, number];
+        const yExtent = extent(nodes.flatMap(n => [n.y, n.y + n.height])) as [number, number];
 
         // Add padding
         const padding = 50;
         return {
-            x: minX - padding,
-            y: minY - padding,
-            width: maxX - minX + padding * 2,
-            height: maxY - minY + padding * 2,
+            x: xExtent[0] - padding,
+            y: yExtent[0] - padding,
+            width: xExtent[1] - xExtent[0] + padding * 2,
+            height: yExtent[1] - yExtent[0] + padding * 2,
         };
     }
 
     /**
-     * Update node positions for animated transitions
+     * Create interpolation function for smooth layout transitions using D3
      */
-    animateToNewLayout(
+    createLayoutInterpolator(
         currentNodes: LayoutNode[],
-        targetLayout: LayoutData,
-        _duration: number = 750
-    ): { nodes: LayoutNode[]; flows: FlowPath[]; progress: number }[] {
-        const frames: { nodes: LayoutNode[]; flows: FlowPath[]; progress: number }[] = [];
-        const steps = 60; // 60 frames for smooth animation
+        targetLayout: LayoutData
+    ): (t: number) => { nodes: LayoutNode[]; flows: FlowPath[] } {
+        // Create interpolators for each node using D3's interpolateObject
+        const nodeInterpolators = currentNodes.map((currentNode) => {
+            const targetNode = targetLayout.nodes.find((n) => n.id === currentNode.id);
+            if (!targetNode) return () => currentNode;
 
-        for (let i = 0; i <= steps; i++) {
-            const progress = i / steps;
-            const easedProgress = easeCubicInOut(progress);
+            return interpolateObject(
+                { x: currentNode.x, y: currentNode.y },
+                { x: targetNode.x, y: targetNode.y }
+            );
+        });
 
-            const interpolatedNodes = currentNodes.map((currentNode) => {
-                const targetNode = targetLayout.nodes.find((n) => n.id === currentNode.id);
-                if (!targetNode) return currentNode;
-
+        return (t: number) => {
+            const easedT = easeCubicInOut(t);
+            
+            const interpolatedNodes = currentNodes.map((currentNode, index) => {
+                const interpolator = nodeInterpolators[index];
+                const interpolated = interpolator(easedT);
+                
                 return {
                     ...currentNode,
-                    x: currentNode.x + (targetNode.x - currentNode.x) * easedProgress,
-                    y: currentNode.y + (targetNode.y - currentNode.y) * easedProgress,
+                    x: interpolated.x,
+                    y: interpolated.y,
                 };
             });
 
             // Recalculate flows for interpolated positions
             const interpolatedFlows = this.computeFlowPaths(interpolatedNodes);
 
-            frames.push({
+            return {
                 nodes: interpolatedNodes,
                 flows: interpolatedFlows,
-                progress,
-            });
-        }
-
-        return frames;
+            };
+        };
     }
 
     /**
      * Get nodes at a specific depth level
      */
-    getNodesAtDepth(nodes: LayoutNode[], depth: number): LayoutNode[] {
-        return nodes.filter((node) => {
-            let currentDepth = 0;
-            let parent = node.parent;
-            while (parent) {
-                currentDepth++;
-                parent = parent.parent;
-            }
-            return currentDepth === depth;
-        });
+    getNodesAtDepth(nodes: LayoutNode[], targetDepth: number): LayoutNode[] {
+        // Use stored depth from D3
+        return nodes.filter(node => node.depth === targetDepth);
     }
 
     /**
      * Get maximum depth of the tree
      */
     getMaxDepth(nodes: LayoutNode[]): number {
-        let maxDepth = 0;
-        nodes.forEach((node) => {
-            let depth = 0;
-            let parent = node.parent;
-            while (parent) {
-                depth++;
-                parent = parent.parent;
-            }
-            maxDepth = Math.max(maxDepth, depth);
-        });
-        return maxDepth;
+        // Use stored depth from D3
+        return nodes.reduce((max, node) => Math.max(max, node.depth || 0), 0);
     }
 }

@@ -1,4 +1,4 @@
-import { zoom, zoomIdentity, type ZoomBehavior } from 'd3-zoom';
+import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior, type ZoomTransform } from 'd3-zoom';
 import { select, type Selection } from 'd3-selection';
 import 'd3-transition'; // Required for .transition() method
 import { easeCubicInOut } from 'd3-ease';
@@ -49,11 +49,7 @@ export class D3ZoomController {
     private listeners: ((event: PanZoomEvent) => void)[] = [];
     private clickListeners: ((event: MouseEvent) => void)[] = [];
     private keydownListener: ((e: KeyboardEvent) => void) | null = null;
-    private canvasClickListener: ((event: MouseEvent) => void) | null = null;
     private isDragging: boolean = false;
-    private dragEndTime: number = 0;
-    private lastZoomState: PanZoomState = { x: 0, y: 0, scale: 1 };
-    private hasActuallyMoved: boolean = false;
 
     constructor(canvas: HTMLCanvasElement, config: Partial<PanZoomConfig> = {}) {
         this.canvas = canvas;
@@ -87,7 +83,7 @@ export class D3ZoomController {
      * Check if currently dragging
      */
     isDraggingActive(): boolean {
-        return this.isDragging || Date.now() - this.dragEndTime < 50;
+        return this.isDragging;
     }
 
     /**
@@ -228,29 +224,49 @@ export class D3ZoomController {
     }
 
     /**
-     * Convert screen coordinates to world coordinates
+     * Convert screen coordinates to world coordinates using D3 transform
      */
     screenToWorld(screenX: number, screenY: number): { x: number; y: number } {
         const rect = this.canvas.getBoundingClientRect();
         const canvasX = screenX - rect.left;
         const canvasY = screenY - rect.top;
 
-        return {
-            x: (canvasX - this.state.x) / this.state.scale,
-            y: (canvasY - this.state.y) / this.state.scale,
-        };
+        try {
+            // Use D3's transform invert for proper coordinate conversion
+            const transform = zoomTransform(this.canvas);
+            const [x, y] = transform.invert([canvasX, canvasY]);
+            return { x, y };
+        } catch {
+            // Fallback to manual calculation if D3 transform is not available (e.g., in tests)
+            return {
+                x: (canvasX - this.state.x) / this.state.scale,
+                y: (canvasY - this.state.y) / this.state.scale,
+            };
+        }
     }
 
     /**
-     * Convert world coordinates to screen coordinates
+     * Convert world coordinates to screen coordinates using D3 transform
      */
     worldToScreen(worldX: number, worldY: number): { x: number; y: number } {
         const rect = this.canvas.getBoundingClientRect();
 
-        return {
-            x: worldX * this.state.scale + this.state.x + rect.left,
-            y: worldY * this.state.scale + this.state.y + rect.top,
-        };
+        try {
+            // Use D3's transform apply for proper coordinate conversion
+            const transform = zoomTransform(this.canvas);
+            const [x, y] = transform.apply([worldX, worldY]);
+            
+            return {
+                x: x + rect.left,
+                y: y + rect.top,
+            };
+        } catch {
+            // Fallback to manual calculation if D3 transform is not available (e.g., in tests)
+            return {
+                x: worldX * this.state.scale + this.state.x + rect.left,
+                y: worldY * this.state.scale + this.state.y + rect.top,
+            };
+        }
     }
 
     /**
@@ -258,13 +274,8 @@ export class D3ZoomController {
      */
     destroy(): void {
         this.selection.on('.zoom', null);
+        this.selection.on('click', null);
         this.removeKeyboardListeners();
-        
-        // Remove canvas click listener
-        if (this.canvasClickListener) {
-            this.canvas.removeEventListener('click', this.canvasClickListener);
-            this.canvasClickListener = null;
-        }
         
         this.listeners = [];
         this.clickListeners = [];
@@ -282,15 +293,10 @@ export class D3ZoomController {
             event.preventDefault();
         });
 
-        // Add click handler using addEventListener on the raw canvas element
-        // This bypasses D3's event handling which can interfere with clicks
-        this.canvasClickListener = (event) => {
-            // Check if this was a click vs a drag
-            const timeSinceDragEnd = Date.now() - this.dragEndTime;
-            // Allow clicks if we're not dragging and either haven't moved significantly or enough time has passed
-            const isQuickClick = !this.isDragging && (!this.hasActuallyMoved || timeSinceDragEnd > 50);
-            
-            if (isQuickClick) {
+        // Use D3's click event with proper filtering
+        this.selection.on('click', (event) => {
+            // D3's zoom behavior sets event.defaultPrevented when dragging
+            if (!event.defaultPrevented) {
                 this.clickListeners.forEach(listener => {
                     try {
                         listener(event);
@@ -299,9 +305,7 @@ export class D3ZoomController {
                     }
                 });
             }
-        };
-        
-        this.canvas.addEventListener('click', this.canvasClickListener);
+        });
 
         // Setup keyboard listeners if enabled
         if (this.config.enableKeyboard) {
@@ -332,8 +336,6 @@ export class D3ZoomController {
      */
     private handleZoomStart(): void {
         this.isDragging = true;
-        this.hasActuallyMoved = false;
-        this.lastZoomState = { ...this.state };
     }
 
     /**
@@ -349,16 +351,6 @@ export class D3ZoomController {
             scale: transform.k,
         };
 
-        // Check if we've actually moved significantly from the start
-        const movementThreshold = 5; // pixels
-        const scaleThreshold = 0.01; // scale difference
-        const deltaX = Math.abs(this.state.x - this.lastZoomState.x);
-        const deltaY = Math.abs(this.state.y - this.lastZoomState.y);
-        const deltaScale = Math.abs(this.state.scale - this.lastZoomState.scale);
-        
-        if (deltaX > movementThreshold || deltaY > movementThreshold || deltaScale > scaleThreshold) {
-            this.hasActuallyMoved = true;
-        }
 
         this.updateBounds();
 
@@ -381,7 +373,6 @@ export class D3ZoomController {
      */
     private handleZoomEnd(): void {
         this.isDragging = false;
-        this.dragEndTime = Date.now();
     }
 
     /**
@@ -444,17 +435,32 @@ export class D3ZoomController {
     }
 
     /**
-     * Update viewport bounds
+     * Update viewport bounds using D3 transform
      */
     private updateBounds(): void {
         const rect = this.canvas.getBoundingClientRect();
+        
+        try {
+            const transform = zoomTransform(this.canvas);
+            // Use D3's transform to calculate viewport bounds
+            const topLeft = transform.invert([0, 0]);
+            const bottomRight = transform.invert([rect.width, rect.height]);
 
-        this.bounds = {
-            x: -this.state.x / this.state.scale,
-            y: -this.state.y / this.state.scale,
-            width: rect.width / this.state.scale,
-            height: rect.height / this.state.scale,
-        };
+            this.bounds = {
+                x: topLeft[0],
+                y: topLeft[1],
+                width: bottomRight[0] - topLeft[0],
+                height: bottomRight[1] - topLeft[1],
+            };
+        } catch {
+            // Fallback to manual calculation if D3 transform is not available
+            this.bounds = {
+                x: -this.state.x / this.state.scale,
+                y: -this.state.y / this.state.scale,
+                width: rect.width / this.state.scale,
+                height: rect.height / this.state.scale,
+            };
+        }
     }
 
     /**

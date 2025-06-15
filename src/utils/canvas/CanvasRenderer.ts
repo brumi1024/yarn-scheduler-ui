@@ -1,3 +1,4 @@
+import { scaleLinear } from 'd3-scale';
 import type { LayoutNode, FlowPath } from '../d3/D3TreeLayout';
 import type { Queue } from '../../types/Queue';
 
@@ -87,8 +88,6 @@ export class CanvasRenderer {
     private hoveredNode: LayoutNode | null = null;
     private selectedNodes: Set<string> = new Set();
     private nodes: LayoutNode[] = [];
-    private hoverAnimations: Map<string, { currentScale: number; targetScale: number; startTime: number }> = new Map();
-    private readonly HOVER_ANIMATION_DURATION = 800; // milliseconds
     private flows: FlowPath[] = [];
     private currentTransform: Transform = { x: 0, y: 0, scale: 1 };
 
@@ -197,14 +196,7 @@ export class CanvasRenderer {
         // Restore transform
         this.ctx.restore();
 
-        // Continue animation loop if animations are active
-        if (this.hasActiveAnimations()) {
-            requestAnimationFrame(() => {
-                if (this.nodes && this.flows) {
-                    this.render(this.nodes, this.flows, this.currentTransform);
-                }
-            });
-        }
+        // Simplified rendering without complex animations
     }
 
     /**
@@ -461,47 +453,12 @@ export class CanvasRenderer {
         // Auto-creation badge if enabled
         if (data.autoCreateChildQueueEnabled) {
             this.drawEnhancedBadge(ctx, 'AUTO', currentX, badgeY, '#f59e0b', '#fef3c7');
-            const autoBadge = this.measureBadge(ctx, 'AUTO');
-            currentX += autoBadge.width + 8; // spacing for potential future badges
         }
 
         // Additional badges can be added here in the future
         // Examples: PREEMPTION, ELASTIC, MANAGED, etc.
     }
 
-    /**
-     * Calculate total space needed for badges
-     */
-    private calculateBadgeSpace(ctx: CanvasRenderingContext2D, data: Queue): number {
-        let totalWidth = 0;
-        let badgeCount = 0;
-
-        // Capacity mode badge
-        const modeText = this.getCapacityMode(data);
-        if (modeText) {
-            const modeBadge = this.measureBadge(ctx, modeText.toUpperCase());
-            totalWidth += modeBadge.width;
-            badgeCount++;
-        }
-
-        // State badge (always present)
-        const stateText = data.state === 'RUNNING' ? 'RUNNING' : 'STOPPED';
-        const stateBadge = this.measureBadge(ctx, stateText);
-        totalWidth += stateBadge.width;
-        badgeCount++;
-
-        // Auto-creation badge if enabled
-        if (data.autoCreateChildQueueEnabled) {
-            const autoBadge = this.measureBadge(ctx, 'AUTO');
-            totalWidth += autoBadge.width;
-            badgeCount++;
-        }
-
-        // Add spacing between badges (8px between each badge)
-        const spacing = Math.max(0, (badgeCount - 1) * 8);
-
-        return totalWidth + spacing;
-    }
 
     /**
      * Measure badge dimensions
@@ -555,39 +512,6 @@ export class CanvasRenderer {
         ctx.fillText(text, x + dimensions.width / 2, y + dimensions.height / 2);
     }
 
-    /**
-     * Draw a badge (legacy method - kept for compatibility)
-     */
-    private drawBadge(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, color: string): number {
-        ctx.font = '11px sans-serif';
-        const metrics = ctx.measureText(text);
-        const width = metrics.width + 12;
-        const height = 20;
-
-        // Draw badge shadow
-        ctx.save();
-        ctx.shadowColor = 'rgba(0, 0, 0, 0.2)';
-        ctx.shadowBlur = 2;
-        ctx.shadowOffsetX = 0;
-        ctx.shadowOffsetY = 1;
-        ctx.fillStyle = color;
-        this.drawRoundedRect(ctx, x, y, width, height, 10);
-        ctx.fill();
-        ctx.restore();
-
-        // Draw badge background (without shadow)
-        ctx.fillStyle = color;
-        this.drawRoundedRect(ctx, x, y, width, height, 10);
-        ctx.fill();
-
-        // Draw badge text
-        ctx.fillStyle = '#ffffff';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(text, x + width / 2, y + height / 2);
-
-        return width;
-    }
 
     /**
      * Render overlay (selection, hover effects)
@@ -665,42 +589,6 @@ export class CanvasRenderer {
         ctx.closePath();
     }
 
-    /**
-     * Draw rounded left border
-     */
-    private drawRoundedLeftBorder(
-        ctx: CanvasRenderingContext2D,
-        x: number,
-        y: number,
-        borderWidth: number,
-        height: number,
-        radius: number
-    ): void {
-        ctx.beginPath();
-
-        // Start at top-left corner
-        ctx.moveTo(x + radius, y);
-
-        // Top edge of border
-        ctx.lineTo(x + borderWidth, y);
-
-        // Right edge of border (straight line down)
-        ctx.lineTo(x + borderWidth, y + height);
-
-        // Bottom edge of border
-        ctx.lineTo(x + radius, y + height);
-
-        // Bottom-left corner (rounded)
-        ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
-
-        // Left edge (straight line up)
-        ctx.lineTo(x, y + radius);
-
-        // Top-left corner (rounded)
-        ctx.quadraticCurveTo(x, y, x + radius, y);
-
-        ctx.closePath();
-    }
 
     /**
      * Get card style based on queue state
@@ -748,47 +636,52 @@ export class CanvasRenderer {
     }
 
     /**
-     * Draw capacity bar visualization
+     * Draw capacity bar visualization using D3 scales
      */
     private drawCapacityBar(ctx: CanvasRenderingContext2D, queue: Queue, x: number, y: number, width: number): void {
         const barHeight = 6;
         const barRadius = 3;
 
-        // Determine capacity type and values
-        const capacityMode = this.getCapacityMode(queue);
+        // Get capacity values
         const usedCapacity = queue.usedCapacity || 0;
         const totalCapacity = queue.capacity || 0;
         const maxCapacity = queue.maxCapacity || 100;
+        const capacityMode = this.getCapacityMode(queue);
 
-        // Background bar (total available capacity relative to parent)
+        // Create D3 scale for consistent width calculations
+        const capacityScale = scaleLinear()
+            .domain([0, 100])
+            .range([0, width])
+            .clamp(true);
+
+        // Background bar (total available capacity)
         ctx.fillStyle = '#f0f0f0';
         this.drawRoundedRect(ctx, x, y, width, barHeight, barRadius);
         ctx.fill();
 
         // Max capacity bar (shows the maximum this queue can grow to)
         if (maxCapacity > totalCapacity) {
-            const maxWidth = (maxCapacity / 100) * width;
+            const maxWidth = capacityScale(maxCapacity);
             ctx.fillStyle = '#e8f4ff';
-            this.drawRoundedRect(ctx, x, y, Math.min(maxWidth, width), barHeight, barRadius);
+            this.drawRoundedRect(ctx, x, y, maxWidth, barHeight, barRadius);
             ctx.fill();
         }
 
         // Current capacity bar (allocated capacity)
         if (totalCapacity > 0) {
-            const currentWidth = (totalCapacity / 100) * width;
+            const currentWidth = capacityScale(totalCapacity);
             ctx.fillStyle = capacityMode === 'weight' ? '#dbeafe' : '#bfdbfe';
-            this.drawRoundedRect(ctx, x, y, Math.min(currentWidth, width), barHeight, barRadius);
+            this.drawRoundedRect(ctx, x, y, currentWidth, barHeight, barRadius);
             ctx.fill();
         }
 
         // Used capacity bar (actually used portion)
         if (usedCapacity > 0 && totalCapacity > 0) {
-            // usedCapacity in scheduler data is a percentage, but we need to show it relative to the allocated capacity
-            // So if total capacity is 30% and used is 42.5%, we show 42.5% of the 30% allocated portion
-            const usedWidth = (usedCapacity / 100) * (totalCapacity / 100) * width;
-            const color = this.getUsageColor(usedCapacity, totalCapacity);
-            ctx.fillStyle = color;
-            this.drawRoundedRect(ctx, x, y, Math.min(usedWidth, width), barHeight, barRadius);
+            // Calculate used portion relative to allocated capacity
+            const usedPortion = (usedCapacity / 100) * totalCapacity;
+            const usedWidth = capacityScale(usedPortion);
+            ctx.fillStyle = this.getUsageColor(usedCapacity, totalCapacity);
+            this.drawRoundedRect(ctx, x, y, usedWidth, barHeight, barRadius);
             ctx.fill();
         }
     }
@@ -849,17 +742,19 @@ export class CanvasRenderer {
     }
 
     /**
-     * Get usage color based on percentage
+     * Get usage color based on percentage using D3-inspired color scale
      */
     private getUsageColor(used: number, total: number): string {
         if (total === 0) return '#94a3b8';
 
-        const percentage = (used / total) * 100;
+        // Use a more sophisticated scale approach
+        const percentage = used;
+        const colorScale = scaleLinear<string>()
+            .domain([0, 50, 75, 90, 100])
+            .range(['#22c55e', '#22c55e', '#eab308', '#f97316', '#ef4444'])
+            .clamp(true);
 
-        if (percentage >= 90) return '#ef4444'; // Red
-        if (percentage >= 75) return '#f97316'; // Orange
-        if (percentage >= 50) return '#eab308'; // Yellow
-        return '#22c55e'; // Green
+        return colorScale(percentage);
     }
 
     /**
@@ -873,12 +768,6 @@ export class CanvasRenderer {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-    /**
-     * Get capacity display text (legacy - kept for compatibility)
-     */
-    private getCapacityText(queue: Queue): string {
-        return `Capacity: ${queue.capacity || 0}% (${queue.usedCapacity || 0}% used)`;
-    }
 
     /**
      * Get capacity mode text
@@ -909,19 +798,7 @@ export class CanvasRenderer {
      * Set hovered node
      */
     setHoveredNode(node: LayoutNode | null): void {
-        const previousHovered = this.hoveredNode;
         this.hoveredNode = node;
-
-        // Handle hover animations
-        if (previousHovered && previousHovered.id !== node?.id) {
-            // Start fade out animation for previously hovered node
-            this.startHoverAnimation(previousHovered.id, 1.0);
-        }
-
-        if (node && node.id !== previousHovered?.id) {
-            // Start fade in animation for newly hovered node
-            this.startHoverAnimation(node.id, 1.05);
-        }
     }
 
     /**
@@ -931,55 +808,8 @@ export class CanvasRenderer {
         this.selectedNodes = nodeIds;
     }
 
-    /**
-     * Start hover animation for a node
-     */
-    private startHoverAnimation(nodeId: string, targetScale: number): void {
-        const currentAnimation = this.hoverAnimations.get(nodeId);
-        const currentScale = currentAnimation?.currentScale || 1.0;
 
-        this.hoverAnimations.set(nodeId, {
-            currentScale,
-            targetScale,
-            startTime: performance.now(),
-        });
-    }
 
-    /**
-     * Update hover animations and return current scale for a node
-     */
-    private getAnimatedScale(nodeId: string): number {
-        const animation = this.hoverAnimations.get(nodeId);
-        if (!animation) return 1.0;
-
-        const now = performance.now();
-        const elapsed = now - animation.startTime;
-        const progress = Math.min(elapsed / this.HOVER_ANIMATION_DURATION, 1);
-
-        // Smooth easing function (ease-out)
-        const easedProgress = 1 - Math.pow(1 - progress, 3);
-
-        const currentScale = animation.currentScale + (animation.targetScale - animation.currentScale) * easedProgress;
-
-        // Update current scale for next frame
-        animation.currentScale = currentScale;
-
-        // Remove animation when complete
-        if (progress >= 1) {
-            if (animation.targetScale === 1.0) {
-                this.hoverAnimations.delete(nodeId);
-            }
-        }
-
-        return currentScale;
-    }
-
-    /**
-     * Check if any hover animations are currently running
-     */
-    private hasActiveAnimations(): boolean {
-        return this.hoverAnimations.size > 0;
-    }
 
     /**
      * Add selected node
@@ -1042,6 +872,5 @@ export class CanvasRenderer {
     destroy(): void {
         this.stopRenderLoop();
         this.layers.clear();
-        this.hoverAnimations.clear();
     }
 }

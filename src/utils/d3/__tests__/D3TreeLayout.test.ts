@@ -154,23 +154,37 @@ describe('D3TreeLayout', () => {
         });
     });
 
-    describe('animateToNewLayout', () => {
-        it('should create animation frames', () => {
+    describe('createLayoutInterpolator', () => {
+        it('should create smooth interpolation function', () => {
             const result1 = layout.computeLayout(mockQueue);
 
             // Simulate layout change
             layout.toggleNodeCollapse('root.prod');
             const result2 = layout.computeLayout(mockQueue);
 
-            const frames = layout.animateToNewLayout(result1.nodes, result2, 750);
+            const interpolator = layout.createLayoutInterpolator(result1.nodes, result2);
 
-            expect(frames.length).toBe(61); // 0 to 60 frames
-            expect(frames[0].progress).toBe(0);
-            expect(frames[frames.length - 1].progress).toBe(1);
+            // Test interpolation at different points
+            const startFrame = interpolator(0);
+            const midFrame = interpolator(0.5);
+            const endFrame = interpolator(1);
 
-            // Check interpolation
-            const midFrame = frames[30];
-            expect(midFrame.progress).toBeCloseTo(0.5, 1);
+            expect(startFrame.nodes.length).toBe(result1.nodes.length);
+            expect(endFrame.nodes.length).toBe(result1.nodes.length);
+            
+            // Check that interpolation happens
+            const startNode = startFrame.nodes[0];
+            const midNode = midFrame.nodes[0];
+            const endNode = endFrame.nodes[0];
+            
+            expect(startNode.x).toBeCloseTo(result1.nodes[0].x);
+            expect(endNode.x).toBeCloseTo(result2.nodes[0].x);
+            
+            // Mid frame should be between start and end
+            if (result1.nodes[0].x !== result2.nodes[0].x) {
+                expect(midNode.x).toBeGreaterThan(Math.min(startNode.x, endNode.x));
+                expect(midNode.x).toBeLessThan(Math.max(startNode.x, endNode.x));
+            }
         });
     });
 

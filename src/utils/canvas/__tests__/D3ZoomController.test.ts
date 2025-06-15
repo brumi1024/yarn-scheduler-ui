@@ -180,38 +180,36 @@ describe('D3ZoomController', () => {
         expect(clickListener).toHaveBeenCalledWith(clickEvent);
     });
 
-    it('should not forward clicks after actual drag operations', async () => {
+    it('should not forward clicks when D3 sets defaultPrevented', () => {
         const clickListener = vi.fn();
         controller.addClickListener(clickListener);
 
-        // Simulate actual drag operation
-        (controller as any).handleZoomStart();
-        
-        // Simulate significant movement during zoom
-        (controller as any).handleZoom({
-            transform: { x: 10, y: 10, k: 1 } // Movement beyond threshold
-        });
-        
-        (controller as any).handleZoomEnd();
-
-        // Immediately trigger a click
-        const clickEvent = new MouseEvent('click', {
+        // Create a click event with defaultPrevented set to true (as D3 does during drag)
+        const preventedClickEvent = new MouseEvent('click', {
             clientX: 100,
             clientY: 100,
         });
-        canvas.dispatchEvent(clickEvent);
+        
+        // Simulate D3's behavior of preventing default on drag
+        Object.defineProperty(preventedClickEvent, 'defaultPrevented', {
+            value: true,
+            writable: false
+        });
+        
+        canvas.dispatchEvent(preventedClickEvent);
 
-        // The click should be ignored since there was actual movement
+        // The click should be ignored since defaultPrevented is true
         expect(clickListener).not.toHaveBeenCalled();
 
-        // Wait for the threshold time to pass
-        await new Promise(resolve => setTimeout(resolve, 60));
+        // Try a normal click (not prevented)
+        const normalClickEvent = new MouseEvent('click', {
+            clientX: 50,
+            clientY: 50,
+        });
+        canvas.dispatchEvent(normalClickEvent);
 
-        // Now trigger another click
-        canvas.dispatchEvent(clickEvent);
-
-        // This click should be forwarded
-        expect(clickListener).toHaveBeenCalledWith(clickEvent);
+        // This click should be allowed
+        expect(clickListener).toHaveBeenCalledWith(normalClickEvent);
     });
 
     it('should allow removing click listeners', () => {
