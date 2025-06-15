@@ -1,4 +1,4 @@
 export { StyledIconButton } from './StyledIconButton';
 export { ElevatedPaper } from './ElevatedPaper';
-export type { default as StyledIconButtonProps } from './StyledIconButton';
-export type { default as ElevatedPaperProps } from './ElevatedPaper';
+export type { StyledIconButtonProps } from './StyledIconButton';
+export type { ElevatedPaperProps } from './ElevatedPaper';

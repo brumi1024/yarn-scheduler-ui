@@ -559,11 +559,7 @@ The configuration system was simplified in January 2025, replacing complex metad
 
 ```typescript
 // New simplified configuration API (after migration)
-import {
-    getQueuePropertyGroups,
-    validateSingleProperty,
-    buildYarnPropertyKey,
-} from '../config/simple-config';
+import { getQueuePropertyGroups, validateSingleProperty, buildYarnPropertyKey } from '../config/simple-config';
 
 const propertyGroups = getQueuePropertyGroups();
 const validation = validateSingleProperty(key, value);

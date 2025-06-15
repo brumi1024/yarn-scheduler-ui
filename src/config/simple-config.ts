@@ -1,6 +1,6 @@
 /**
  * Simplified Configuration API
- * 
+ *
  * Simple, direct API for working with YARN configuration properties.
  * Replaces the complex ConfigService with straightforward functions.
  */
@@ -71,7 +71,7 @@ export function getPropertyDefinition(key: string): PropertyDefinition | undefin
  * Get properties available in templates
  */
 export function getTemplateProperties(): PropertyDefinition[] {
-    return getAllQueueProperties().filter(property => 
+    return getAllQueueProperties().filter((property) =>
         // Basic properties that make sense in templates
         ['capacity', 'maximum-capacity', 'user-limit-factor', 'ordering-policy'].includes(property.key)
     );
@@ -87,7 +87,10 @@ export function validateSingleProperty(key: string, value: any): ValidationResul
 /**
  * Validate multiple properties at once
  */
-export function validateMultipleProperties(properties: Record<string, any>): { valid: boolean; errors: Record<string, string> } {
+export function validateMultipleProperties(properties: Record<string, any>): {
+    valid: boolean;
+    errors: Record<string, string>;
+} {
     return validateProperties(properties);
 }
 
@@ -192,12 +195,6 @@ export const utils = {
 };
 
 // Re-export key types and interfaces
-export type {
-    PropertyDefinition,
-    PropertyGroup,
-    PropertyType,
-} from './property-definitions';
+export type { PropertyDefinition, PropertyGroup, PropertyType } from './property-definitions';
 
-export type {
-    ValidationResult,
-} from './property-validation';
+export type { ValidationResult } from './property-validation';

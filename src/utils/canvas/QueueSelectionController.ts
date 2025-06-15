@@ -185,7 +185,7 @@ export class QueueSelectionController {
         // Use D3ZoomController for click events instead of direct DOM events
         // This is necessary because D3 zoom behavior intercepts click events
         this.panZoomController.addClickListener(onClick);
-        
+
         // Still use DOM events for mouse move and leave (these aren't interfered with by D3 zoom)
         this.canvas.addEventListener('mousemove', onMouseMove);
         this.canvas.addEventListener('mouseleave', onMouseLeave);

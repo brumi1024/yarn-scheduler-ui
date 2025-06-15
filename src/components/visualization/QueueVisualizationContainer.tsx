@@ -196,23 +196,28 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 onSaveProperties={handleQueueSaveProperties}
                 onQueueSelect={handleQueueSelect}
             />
-            
+
             {/* Debug info */}
             {process.env.NODE_ENV === 'development' && (
-                <div style={{ 
-                    position: 'fixed', 
-                    top: 10, 
-                    right: 10, 
-                    background: 'rgba(0,0,0,0.8)', 
-                    color: 'white', 
-                    padding: '10px',
-                    fontSize: '12px',
-                    borderRadius: '4px',
-                    zIndex: 9999
-                }}>
-                    Selected: {uiStore.selectedQueuePath || 'none'}<br/>
-                    Panel Open: {uiStore.selectedQueuePath ? 'true' : 'false'}<br/>
-                    Queue Data: {selectedQueueData ? 'found' : 'null'}<br/>
+                <div
+                    style={{
+                        position: 'fixed',
+                        top: 10,
+                        right: 10,
+                        background: 'rgba(0,0,0,0.8)',
+                        color: 'white',
+                        padding: '10px',
+                        fontSize: '12px',
+                        borderRadius: '4px',
+                        zIndex: 9999,
+                    }}
+                >
+                    Selected: {uiStore.selectedQueuePath || 'none'}
+                    <br />
+                    Panel Open: {uiStore.selectedQueuePath ? 'true' : 'false'}
+                    <br />
+                    Queue Data: {selectedQueueData ? 'found' : 'null'}
+                    <br />
                     Nodes Count: {nodes.length}
                 </div>
             )}

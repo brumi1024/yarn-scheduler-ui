@@ -41,9 +41,9 @@ export default function QueueEditor() {
                 <ComponentErrorBoundary context="Queue Visualization">
                     <QueueVisualization />
                 </ComponentErrorBoundary>
-                
+
                 {/* Staged Changes Panel */}
-                <StagedChangesPanel 
+                <StagedChangesPanel
                     onApplyChanges={() => {
                         // TODO: Implement apply changes logic
                         console.log('Apply changes requested');

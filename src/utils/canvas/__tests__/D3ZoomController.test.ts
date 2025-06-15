@@ -189,13 +189,13 @@ describe('D3ZoomController', () => {
             clientX: 100,
             clientY: 100,
         });
-        
+
         // Simulate D3's behavior of preventing default on drag
         Object.defineProperty(preventedClickEvent, 'defaultPrevented', {
             value: true,
-            writable: false
+            writable: false,
         });
-        
+
         canvas.dispatchEvent(preventedClickEvent);
 
         // The click should be ignored since defaultPrevented is true

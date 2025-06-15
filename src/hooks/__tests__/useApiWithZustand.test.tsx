@@ -238,7 +238,9 @@ describe('useApiWithZustand hooks', () => {
             await act(async () => {
                 await waitFor(() => {
                     const activityStore = useActivityStore.getState();
-                    const configCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler-conf');
+                    const configCall = activityStore.apiCalls.find(
+                        (call) => call.url === '/ws/v1/cluster/scheduler-conf'
+                    );
                     expect(configCall).toBeDefined();
                     expect(configCall?.method).toBe('GET');
                 });
@@ -327,9 +329,12 @@ describe('useApiWithZustand hooks', () => {
             // Initially should be checking
             expect(result.current.status).toBe('checking');
 
-            await waitFor(() => {
-                expect(result.current.status).toBe('ok');
-            }, { timeout: 5000 });
+            await waitFor(
+                () => {
+                    expect(result.current.status).toBe('ok');
+                },
+                { timeout: 5000 }
+            );
 
             expect(result.current.lastCheck).toBeTypeOf('number');
         });
@@ -343,9 +348,12 @@ describe('useApiWithZustand hooks', () => {
 
             const { result } = renderHook(() => useHealthCheck());
 
-            await waitFor(() => {
-                expect(result.current.status).toBe('error');
-            }, { timeout: 5000 });
+            await waitFor(
+                () => {
+                    expect(result.current.status).toBe('error');
+                },
+                { timeout: 5000 }
+            );
 
             expect(result.current.lastCheck).toBeTypeOf('number');
         });
@@ -354,9 +362,12 @@ describe('useApiWithZustand hooks', () => {
             const { result } = renderHook(() => useHealthCheck());
 
             // Wait for initial health check to complete
-            await waitFor(() => {
-                expect(result.current.status).toBe('ok');
-            }, { timeout: 5000 });
+            await waitFor(
+                () => {
+                    expect(result.current.status).toBe('ok');
+                },
+                { timeout: 5000 }
+            );
 
             // Manual check
             act(() => {
@@ -365,9 +376,12 @@ describe('useApiWithZustand hooks', () => {
 
             expect(result.current.status).toBe('checking');
 
-            await waitFor(() => {
-                expect(result.current.status).toBe('ok');
-            }, { timeout: 5000 });
+            await waitFor(
+                () => {
+                    expect(result.current.status).toBe('ok');
+                },
+                { timeout: 5000 }
+            );
         });
     });
 

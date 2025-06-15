@@ -24,9 +24,9 @@ describe('Simplified Configuration System', () => {
             const groups = getQueuePropertyGroups();
             expect(groups).toBeDefined();
             expect(groups.length).toBeGreaterThan(0);
-            
+
             // Check that we have expected groups
-            const groupNames = groups.map(g => g.groupName);
+            const groupNames = groups.map((g) => g.groupName);
             expect(groupNames).toContain('Core Properties');
             expect(groupNames).toContain('Resource Limits & Management');
             expect(groupNames).toContain('Advanced Settings');
@@ -37,8 +37,8 @@ describe('Simplified Configuration System', () => {
             const groups = getGlobalPropertyGroups();
             expect(groups).toBeDefined();
             expect(groups.length).toBeGreaterThan(0);
-            
-            const groupNames = groups.map(g => g.groupName);
+
+            const groupNames = groups.map((g) => g.groupName);
             expect(groupNames).toContain('General Scheduler Settings');
             expect(groupNames).toContain('Global Application Management');
         });
@@ -47,8 +47,8 @@ describe('Simplified Configuration System', () => {
             const properties = getNodeLabelProperties();
             expect(properties).toBeDefined();
             expect(properties.length).toBeGreaterThan(0);
-            
-            const keys = properties.map(p => p.key);
+
+            const keys = properties.map((p) => p.key);
             expect(keys).toContain('accessible-node-labels');
         });
     });
@@ -127,8 +127,8 @@ describe('Simplified Configuration System', () => {
 
         test('should validate multiple properties', () => {
             const properties = {
-                'capacity': '10%',
-                'state': 'RUNNING',
+                capacity: '10%',
+                state: 'RUNNING',
                 'user-limit-factor': 1,
             };
 
@@ -139,8 +139,8 @@ describe('Simplified Configuration System', () => {
 
         test('should return errors for invalid properties', () => {
             const properties = {
-                'capacity': '10%',
-                'state': 'INVALID_STATE',
+                capacity: '10%',
+                state: 'INVALID_STATE',
                 'user-limit-factor': 'not-a-number',
             };
 
@@ -176,12 +176,12 @@ describe('Simplified Configuration System', () => {
     describe('Property Organization', () => {
         test('should organize properties correctly', () => {
             const queueGroups = getQueuePropertyGroups();
-            
+
             // Check core properties are in the right group
-            const coreGroup = queueGroups.find(g => g.groupName === 'Core Properties');
+            const coreGroup = queueGroups.find((g) => g.groupName === 'Core Properties');
             expect(coreGroup).toBeDefined();
-            
-            const coreKeys = coreGroup!.properties.map(p => p.key);
+
+            const coreKeys = coreGroup!.properties.map((p) => p.key);
             expect(coreKeys).toContain('capacity');
             expect(coreKeys).toContain('maximum-capacity');
             expect(coreKeys).toContain('state');
@@ -189,11 +189,11 @@ describe('Simplified Configuration System', () => {
 
         test('should have auto-creation properties in separate group', () => {
             const queueGroups = getQueuePropertyGroups();
-            
-            const autoGroup = queueGroups.find(g => g.groupName === 'Auto-Queue Creation');
+
+            const autoGroup = queueGroups.find((g) => g.groupName === 'Auto-Queue Creation');
             expect(autoGroup).toBeDefined();
-            
-            const autoKeys = autoGroup!.properties.map(p => p.key);
+
+            const autoKeys = autoGroup!.properties.map((p) => p.key);
             expect(autoKeys).toContain('auto-create-child-queue.enabled');
             expect(autoKeys).toContain('auto-queue-creation-v2.enabled');
         });

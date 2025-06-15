@@ -126,7 +126,11 @@ export const useUIStore = create<UIStore>()(
             name: 'yarn-ui-store',
             partialize: (state) => ({
                 expandedQueues: Array.from(state.expandedQueues),
-                viewSettings: state.viewSettings,
+                viewSettings: {
+                    showCapacityBars: state.viewSettings.showCapacityBars,
+                    showUsageMetrics: state.viewSettings.showUsageMetrics,
+                    layout: state.viewSettings.layout,
+                },
             }),
             onRehydrateStorage: () => (state) => {
                 if (state && Array.isArray(state.expandedQueues)) {

@@ -15,13 +15,14 @@ import {
     IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
-import type { Queue } from '../types/Queue';
-import { getQueuePropertyGroups } from '../config';
+import type { Queue } from '../../types/Queue';
+import { getQueuePropertyGroups } from '../../config';
 import { PropertyFormField } from './PropertyFormField';
 import { AutoQueueCreationSection } from './AutoQueueCreationSection';
-import { createFormSchema } from '../schemas/propertySchemas';
-import { useStagedChangesStore } from '../store/zustand/stagedChangesStore';
-import { createChangeSetsFromFormData } from '../utils/configurationUtils';
+import { createFormSchema } from '../../schemas/propertySchemas';
+import { useStagedChangesStore } from '../../store/zustand/stagedChangesStore';
+import { createChangeSetsFromFormData } from '../../utils/configurationUtils';
+import { getQueueFormDefaults } from '../../config/property-utils';
 
 interface PropertyEditorModalProps {
     open: boolean;
@@ -50,7 +51,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
 
     const propertyGroups = getQueuePropertyGroups();
     const { stageChange } = useStagedChangesStore();
-    
+
     // Create combined properties object for schema generation
     const allProperties = propertyGroups.reduce((acc: any, group: any) => {
         // Convert properties array to object keyed by property key
@@ -61,7 +62,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         return { ...acc, ...propsObject };
     }, {});
     const validationSchema = createFormSchema(allProperties);
-    
+
     const form = useForm({
         resolver: zodResolver(validationSchema),
         defaultValues: {},
@@ -69,34 +70,15 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         reValidateMode: 'onChange',
     });
 
-    const { handleSubmit, reset, formState: { errors, isDirty } } = form;
+    const {
+        handleSubmit,
+        reset,
+        formState: { errors, isDirty },
+    } = form;
 
     useEffect(() => {
         if (queue && open) {
-            // Initialize form data with current queue configuration
-            const initialData: Record<string, any> = {};
-
-            // Map current queue properties to form data
-            initialData['capacity'] = `${queue.capacity}%`;
-            initialData['maximum-capacity'] = `${queue.maxCapacity}%`;
-            initialData['state'] = queue.state;
-            initialData['user-limit-factor'] = queue.userLimitFactor || 1;
-            initialData['max-parallel-apps'] = queue.maxApplications || '';
-            initialData['ordering-policy'] = queue.orderingPolicy || 'fifo';
-            initialData['disable_preemption'] = queue.preemptionDisabled || false;
-
-            // Auto-creation properties
-            initialData['auto-create-child-queue.enabled'] = queue.autoCreateChildQueueEnabled || false;
-            initialData['auto-queue-creation-v2.enabled'] = false; // Default to v1
-            initialData['auto-queue-creation-v2.max-queues'] = 1000;
-
-            // Template properties (if auto-creation is enabled)
-            if (queue.leafQueueTemplate) {
-                Object.entries(queue.leafQueueTemplate).forEach(([key, value]) => {
-                    initialData[`leaf-queue-template.${key}`] = value;
-                });
-            }
-
+            const initialData = getQueueFormDefaults(queue);
             reset(initialData);
             setTabValue(0);
             setSaveError(null);
@@ -121,7 +103,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
             }
 
             // Stage all changes
-            changes.forEach(change => stageChange(change));
+            changes.forEach((change) => stageChange(change));
 
             // Call the original onSave callback for backward compatibility
             onSave(queue.queueName, data);
@@ -154,13 +136,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
 
         // Special handling for Auto-Queue Creation group
         if (group.groupName === 'Auto-Queue Creation') {
-            return (
-                <AutoQueueCreationSection
-                    key={group.groupName}
-                    properties={group.properties}
-                    siblings={siblings}
-                />
-            );
+            return <AutoQueueCreationSection key={group.groupName} properties={group.properties} siblings={siblings} />;
         }
 
         return (
@@ -197,45 +173,45 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                     sx: { height: '80vh' },
                 }}
             >
-            <DialogTitle>
-                <Box display="flex" justifyContent="space-between" alignItems="center">
-                    <Typography variant="h6">Edit Queue Properties: {queue.queueName}</Typography>
-                    <IconButton onClick={handleClose} size="small">
-                        <CloseIcon />
-                    </IconButton>
-                </Box>
-            </DialogTitle>
+                <DialogTitle>
+                    <Box display="flex" justifyContent="space-between" alignItems="center">
+                        <Typography variant="h6">Edit Queue Properties: {queue.queueName}</Typography>
+                        <IconButton onClick={handleClose} size="small">
+                            <CloseIcon />
+                        </IconButton>
+                    </Box>
+                </DialogTitle>
 
-            <DialogContent dividers>
-                {hasErrors && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        Please fix the validation errors before saving.
-                    </Alert>
-                )}
-                
-                {saveError && (
-                    <Alert severity="error" sx={{ mb: 2 }}>
-                        {saveError}
-                    </Alert>
-                )}
+                <DialogContent dividers>
+                    {hasErrors && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            Please fix the validation errors before saving.
+                        </Alert>
+                    )}
 
-                <Tabs
-                    value={tabValue}
-                    onChange={(_, newValue) => setTabValue(newValue)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                >
-                    {propertyGroups.map((group: any) => (
-                        <Tab key={group.groupName} label={group.groupName} />
+                    {saveError && (
+                        <Alert severity="error" sx={{ mb: 2 }}>
+                            {saveError}
+                        </Alert>
+                    )}
+
+                    <Tabs
+                        value={tabValue}
+                        onChange={(_, newValue) => setTabValue(newValue)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                    >
+                        {propertyGroups.map((group: any) => (
+                            <Tab key={group.groupName} label={group.groupName} />
+                        ))}
+                    </Tabs>
+
+                    {propertyGroups.map((group: any, index: number) => (
+                        <TabPanel key={group.groupName} value={tabValue} index={index}>
+                            {renderPropertyGroup(group)}
+                        </TabPanel>
                     ))}
-                </Tabs>
-
-                {propertyGroups.map((group: any, index: number) => (
-                    <TabPanel key={group.groupName} value={tabValue} index={index}>
-                        {renderPropertyGroup(group)}
-                    </TabPanel>
-                ))}
-            </DialogContent>
+                </DialogContent>
 
                 <DialogActions sx={{ p: 2, borderTop: 1, borderColor: 'divider' }}>
                     {hasErrors && (
@@ -246,11 +222,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                     <Button onClick={handleClose} color="inherit">
                         Cancel
                     </Button>
-                    <Button 
-                        onClick={handleSubmit(onSubmit)} 
-                        variant="contained" 
-                        disabled={hasErrors || !isDirty}
-                    >
+                    <Button onClick={handleSubmit(onSubmit)} variant="contained" disabled={hasErrors || !isDirty}>
                         Save Changes
                     </Button>
                 </DialogActions>

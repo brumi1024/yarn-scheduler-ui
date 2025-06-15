@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm, FormProvider } from 'react-hook-form';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PropertyFormField } from '../PropertyFormField';
+import { PropertyFormField } from '../forms/PropertyFormField';
 import type { PropertyDefinition } from '../../config';
 
 // Mock CapacityEditor
@@ -24,21 +24,21 @@ vi.mock('../../schemas/propertySchemas', () => ({
 }));
 
 // Helper component to wrap PropertyFormField with FormProvider
-const PropertyFormFieldWrapper = ({ 
-    property, 
-    defaultValue, 
-    siblings, 
-    onCustomChange 
-}: { 
-    property: PropertyDefinition; 
-    defaultValue?: any; 
+const PropertyFormFieldWrapper = ({
+    property,
+    defaultValue,
+    siblings,
+    onCustomChange,
+}: {
+    property: PropertyDefinition;
+    defaultValue?: any;
     siblings?: Array<{ name: string; capacity: string }>;
     onCustomChange?: (value: any) => void;
 }) => {
     const form = useForm({
         defaultValues: {
-            [property.key]: defaultValue
-        }
+            [property.key]: defaultValue,
+        },
     });
 
     return (
@@ -301,13 +301,7 @@ describe('PropertyFormField', () => {
         it('renders CapacityEditor for capacity properties', () => {
             const siblings = [{ name: 'sibling1', capacity: '30%' }];
 
-            render(
-                <PropertyFormFieldWrapper
-                    property={capacityProperty}
-                    defaultValue="25%"
-                    siblings={siblings}
-                />
-            );
+            render(<PropertyFormFieldWrapper property={capacityProperty} defaultValue="25%" siblings={siblings} />);
 
             expect(screen.getByTestId('capacity-editor')).toBeInTheDocument();
             expect(screen.getByText('Queue Capacity')).toBeInTheDocument();
@@ -458,8 +452,8 @@ describe('PropertyFormField', () => {
             };
 
             render(
-                <PropertyFormFieldWrapper 
-                    property={booleanProperty} 
+                <PropertyFormFieldWrapper
+                    property={booleanProperty}
                     defaultValue={false}
                     onCustomChange={customChangeHandler}
                 />

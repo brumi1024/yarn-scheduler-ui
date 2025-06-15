@@ -202,13 +202,11 @@ export class D3TreeLayout {
             if (!parent) return;
 
             // Get capacities from actual queue data
-            const childCapacities = children.map(child => child.data.capacity || 0);
+            const childCapacities = children.map((child) => child.data.capacity || 0);
             const totalChildCapacity = childCapacities.reduce((sum, cap) => sum + cap, 0);
-            
+
             // Use D3 scale for proportional distribution
-            const capacityScale = scaleLinear()
-                .domain([0, totalChildCapacity])
-                .range([0, parent.height]);
+            const capacityScale = scaleLinear().domain([0, totalChildCapacity]).range([0, parent.height]);
 
             let currentY = 0;
             children.forEach((child, index) => {
@@ -267,43 +265,49 @@ export class D3TreeLayout {
         const borderRadius = 12;
         const sourceX = source.x + source.width;
         const targetX = target.x;
-        
+
         // Clamp coordinates to avoid rounded corners
         const sourceTop = Math.max(sourceStartY, source.y + borderRadius);
         const sourceBottom = Math.min(sourceEndY, source.y + source.height - borderRadius);
         const targetTop = Math.max(targetStartY, target.y + borderRadius);
         const targetBottom = Math.min(targetEndY, target.y + target.height - borderRadius);
-        
+
         // Use D3's path generator for cleaner construction
         const pathGenerator = path();
-        
+
         // Optimized control point calculation
         const horizontalDistance = Math.abs(targetX - sourceX);
         const controlDistance = Math.min(horizontalDistance * 0.4, 80);
-        
+
         // Build path using D3's path API instead of manual string construction
         pathGenerator.moveTo(sourceX, sourceTop);
-        
+
         // Top curve using bezier
         pathGenerator.bezierCurveTo(
-            sourceX + controlDistance, sourceTop,
-            targetX - controlDistance, targetTop,
-            targetX, targetTop
+            sourceX + controlDistance,
+            sourceTop,
+            targetX - controlDistance,
+            targetTop,
+            targetX,
+            targetTop
         );
-        
+
         // Right edge
         pathGenerator.lineTo(targetX, targetBottom);
-        
+
         // Bottom curve back
         pathGenerator.bezierCurveTo(
-            targetX - controlDistance, targetBottom,
-            sourceX + controlDistance, sourceBottom,
-            sourceX, sourceBottom
+            targetX - controlDistance,
+            targetBottom,
+            sourceX + controlDistance,
+            sourceBottom,
+            sourceX,
+            sourceBottom
         );
-        
+
         // Close the path
         pathGenerator.closePath();
-        
+
         return pathGenerator.toString();
     }
 
@@ -316,8 +320,8 @@ export class D3TreeLayout {
         }
 
         // Use D3's extent for cleaner min/max calculations
-        const xExtent = extent(nodes.flatMap(n => [n.x, n.x + n.width])) as [number, number];
-        const yExtent = extent(nodes.flatMap(n => [n.y, n.y + n.height])) as [number, number];
+        const xExtent = extent(nodes.flatMap((n) => [n.x, n.x + n.width])) as [number, number];
+        const yExtent = extent(nodes.flatMap((n) => [n.y, n.y + n.height])) as [number, number];
 
         // Add padding
         const padding = 50;
@@ -341,19 +345,16 @@ export class D3TreeLayout {
             const targetNode = targetLayout.nodes.find((n) => n.id === currentNode.id);
             if (!targetNode) return () => currentNode;
 
-            return interpolateObject(
-                { x: currentNode.x, y: currentNode.y },
-                { x: targetNode.x, y: targetNode.y }
-            );
+            return interpolateObject({ x: currentNode.x, y: currentNode.y }, { x: targetNode.x, y: targetNode.y });
         });
 
         return (t: number) => {
             const easedT = easeCubicInOut(t);
-            
+
             const interpolatedNodes = currentNodes.map((currentNode, index) => {
                 const interpolator = nodeInterpolators[index];
                 const interpolated = interpolator(easedT);
-                
+
                 return {
                     ...currentNode,
                     x: interpolated.x,
@@ -376,7 +377,7 @@ export class D3TreeLayout {
      */
     getNodesAtDepth(nodes: LayoutNode[], targetDepth: number): LayoutNode[] {
         // Use stored depth from D3
-        return nodes.filter(node => node.depth === targetDepth);
+        return nodes.filter((node) => node.depth === targetDepth);
     }
 
     /**

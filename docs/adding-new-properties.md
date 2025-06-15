@@ -243,20 +243,25 @@ const renderField = () => {
 The simplified system automatically handles the distinction between queue-level and global properties:
 
 #### Queue-Level Properties
+
 When used with a queue context, the system generates YARN property keys like:
+
 ```typescript
-buildYarnPropertyKey('root.production', 'maximum-apps')
+buildYarnPropertyKey('root.production', 'maximum-apps');
 // Results in: "yarn.scheduler.capacity.root.production.maximum-apps"
 ```
 
 #### Global Properties
+
 When used without a queue context, the system generates global YARN property keys like:
+
 ```typescript
-buildYarnPropertyKey('', 'maximum-apps')
+buildYarnPropertyKey('', 'maximum-apps');
 // Results in: "yarn.scheduler.capacity.maximum-apps"
 ```
 
 The UI components automatically:
+
 - Show queue-level properties when editing a queue
 - Show global properties when editing global settings
 - Handle property key construction based on context
@@ -307,12 +312,14 @@ Let's add a "maximum-application-lifetime" property with both queue and global v
 
 ```typescript
 // In PropertyEditorModal.tsx
-initialData['maximum-application-lifetime'] = queue.maxApplicationLifetime || getDefaultValue('maximum-application-lifetime');
+initialData['maximum-application-lifetime'] =
+    queue.maxApplicationLifetime || getDefaultValue('maximum-application-lifetime');
 ```
 
 ## Key Differences from the Old System
 
 ### Before (Complex Metadata System)
+
 ```typescript
 // Complex metadata with placeholder substitution
 [`yarn.scheduler.capacity.${Q_PATH_PLACEHOLDER}.maximum-apps`]: {
@@ -327,6 +334,7 @@ const property = configService.getPropertyDefinition(key);
 ```
 
 ### After (Simplified System)
+
 ```typescript
 // Direct property definition
 {

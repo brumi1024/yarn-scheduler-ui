@@ -8,50 +8,25 @@ import type { ChangeSet } from '../types/Configuration';
 import type { Queue } from '../types/Queue';
 
 /**
- * Maps form field names to YARN configuration property names
- */
-const FORM_TO_YARN_PROPERTY_MAP: Record<string, string> = {
-    'capacity': 'capacity',
-    'maximum-capacity': 'maximum-capacity',
-    'state': 'state',
-    'user-limit-factor': 'user-limit-factor',
-    'max-parallel-apps': 'max-parallel-apps',
-    'ordering-policy': 'ordering-policy',
-    'disable_preemption': 'disable_preemption',
-    'auto-create-child-queue.enabled': 'auto-create-child-queue.enabled',
-    'auto-queue-creation-v2.enabled': 'auto-queue-creation-v2.enabled',
-    'auto-queue-creation-v2.max-queues': 'auto-queue-creation-v2.max-queues',
-    'minimum-user-limit-percent': 'minimum-user-limit-percent',
-    'maximum-applications': 'maximum-applications',
-    'maximum-am-resource-percent': 'maximum-am-resource-percent',
-    'priority': 'priority',
-    'acl_submit_applications': 'acl_submit_applications',
-    'acl_administer_queue': 'acl_administer_queue',
-    'accessible-node-labels': 'accessible-node-labels',
-    'default-node-label-expression': 'default-node-label-expression',
-    'intra-queue-preemption.disable_preemption': 'intra-queue-preemption.disable_preemption',
-};
-
-/**
  * Maps form field names to human-readable descriptions
  */
 const PROPERTY_DESCRIPTIONS: Record<string, string> = {
-    'capacity': 'Queue Capacity',
+    capacity: 'Queue Capacity',
     'maximum-capacity': 'Maximum Queue Capacity',
-    'state': 'Queue State',
+    state: 'Queue State',
     'user-limit-factor': 'User Limit Factor',
     'max-parallel-apps': 'Maximum Parallel Applications',
     'ordering-policy': 'Application Ordering Policy',
-    'disable_preemption': 'Preemption Disabled',
+    disable_preemption: 'Preemption Disabled',
     'auto-create-child-queue.enabled': 'Auto-Create Child Queues',
     'auto-queue-creation-v2.enabled': 'Auto-Queue Creation V2',
     'auto-queue-creation-v2.max-queues': 'Maximum Auto-Created Queues',
     'minimum-user-limit-percent': 'Minimum User Limit Percent',
     'maximum-applications': 'Maximum Applications',
     'maximum-am-resource-percent': 'Maximum AM Resource Percent',
-    'priority': 'Queue Priority',
-    'acl_submit_applications': 'Submit Applications ACL',
-    'acl_administer_queue': 'Administer Queue ACL',
+    priority: 'Queue Priority',
+    acl_submit_applications: 'Submit Applications ACL',
+    acl_administer_queue: 'Administer Queue ACL',
     'accessible-node-labels': 'Accessible Node Labels',
     'default-node-label-expression': 'Default Node Label Expression',
     'intra-queue-preemption.disable_preemption': 'Intra-Queue Preemption Disabled',
@@ -87,9 +62,12 @@ function convertFormValueToYarnValue(property: string, value: unknown): string {
 /**
  * Gets the current value of a property from a queue object for comparison
  */
-function getCurrentQueuePropertyValue(queue: Queue | Record<string, unknown> | null | undefined, property: string): string {
+function getCurrentQueuePropertyValue(
+    queue: Queue | Record<string, unknown> | null | undefined,
+    property: string
+): string {
     if (!queue) return '';
-    
+
     switch (property) {
         case 'capacity':
             return String(queue.capacity || 0);
@@ -121,9 +99,7 @@ function getCurrentQueuePropertyValue(queue: Queue | Record<string, unknown> | n
             return String((queue as Record<string, unknown>).adminACL || '');
         case 'accessible-node-labels': {
             const labels = queue.accessibleNodeLabels;
-            return Array.isArray(labels) 
-                ? labels.join(',') 
-                : String(labels || '');
+            return Array.isArray(labels) ? labels.join(',') : String(labels || '');
         }
         case 'default-node-label-expression':
             return String(queue.defaultNodeLabelExpression || '');
@@ -154,25 +130,19 @@ export function createChangeSetsFromFormData(
             continue;
         }
 
-        // Map form field to YARN property
-        const yarnProperty = FORM_TO_YARN_PROPERTY_MAP[formFieldName];
-        if (!yarnProperty) {
-            // Skip unknown form fields silently
-            continue;
-        }
+        // Build YARN property key
+        const yarnProperty = formFieldName;
 
         // Convert form value to YARN format
         const yarnValue = convertFormValueToYarnValue(yarnProperty, newValue);
 
         // Get current value for comparison
-        const currentValue = currentQueue 
-            ? getCurrentQueuePropertyValue(currentQueue, yarnProperty)
-            : '';
+        const currentValue = currentQueue ? getCurrentQueuePropertyValue(currentQueue, yarnProperty) : '';
 
         // Only create change if value actually changed
         if (yarnValue !== currentValue) {
             const description = PROPERTY_DESCRIPTIONS[formFieldName] || formFieldName;
-            
+
             changes.push({
                 id: nanoid(),
                 timestamp,
@@ -193,9 +163,7 @@ export function createChangeSetsFromFormData(
  * Converts form data to YARN configuration update format
  * This format is used when actually applying changes to the YARN API
  */
-export function convertFormDataToYarnConfig(
-    formData: Record<string, unknown>
-): Record<string, string> {
+export function convertFormDataToYarnConfig(formData: Record<string, unknown>): Record<string, string> {
     const yarnConfig: Record<string, string> = {};
 
     for (const [formFieldName, value] of Object.entries(formData)) {
@@ -204,10 +172,8 @@ export function convertFormDataToYarnConfig(
             continue;
         }
 
-        const yarnProperty = FORM_TO_YARN_PROPERTY_MAP[formFieldName];
-        if (yarnProperty) {
-            yarnConfig[yarnProperty] = convertFormValueToYarnValue(yarnProperty, value);
-        }
+        const yarnProperty = formFieldName;
+        yarnConfig[yarnProperty] = convertFormValueToYarnValue(yarnProperty, value);
     }
 
     return yarnConfig;
@@ -239,13 +205,13 @@ export function validateChange(change: ChangeSet): { valid: boolean; error?: str
             }
             break;
         }
-        
+
         case 'state':
             if (!['RUNNING', 'STOPPED'].includes(change.newValue)) {
                 return { valid: false, error: 'State must be RUNNING or STOPPED' };
             }
             break;
-        
+
         case 'user-limit-factor': {
             const ulfValue = parseFloat(change.newValue);
             if (isNaN(ulfValue) || ulfValue < 0) {
@@ -270,8 +236,8 @@ export function createChangesSummary(changes: ChangeSet[]): string {
         return changes[0].description;
     }
 
-    const queueNames = [...new Set(changes.map(c => c.queueName))];
-    const properties = [...new Set(changes.map(c => c.property))];
+    const queueNames = [...new Set(changes.map((c) => c.queueName))];
+    const properties = [...new Set(changes.map((c) => c.property))];
 
     if (queueNames.length === 1) {
         return `${changes.length} changes to queue ${queueNames[0]} (${properties.join(', ')})`;

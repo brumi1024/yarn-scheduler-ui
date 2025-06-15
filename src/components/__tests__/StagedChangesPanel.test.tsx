@@ -22,9 +22,7 @@ const mockStore = {
 const theme = createTheme();
 
 const TestWrapper: React.FC<{ children: React.ReactNode }> = ({ children }) => (
-    <ThemeProvider theme={theme}>
-        {children}
-    </ThemeProvider>
+    <ThemeProvider theme={theme}>{children}</ThemeProvider>
 );
 
 const mockChanges: ChangeSet[] = [
@@ -78,7 +76,7 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             expect(screen.queryByText(/staged changes/i)).not.toBeInTheDocument();
             expect(screen.queryByText(/changes staged/i)).not.toBeInTheDocument();
         });
@@ -99,7 +97,7 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             expect(screen.getByText('3 Changes Staged')).toBeInTheDocument();
             expect(screen.getByRole('button', { name: /3 changes staged/i })).toBeInTheDocument();
         });
@@ -110,11 +108,11 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             await act(async () => {
                 fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
             });
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Staged Changes')).toBeInTheDocument();
             });
@@ -126,10 +124,10 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             // Expand the panel
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 expect(screen.getByText('capacity')).toBeInTheDocument();
                 expect(screen.getByText('state')).toBeInTheDocument();
@@ -144,9 +142,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Queue: default')).toBeInTheDocument();
                 expect(screen.getByText('Queue: production')).toBeInTheDocument();
@@ -160,14 +158,14 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 const groupByButton = screen.getByRole('button', { name: /group by type/i });
                 fireEvent.click(groupByButton);
             });
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Type: update-queue')).toBeInTheDocument();
                 expect(screen.getByText('Type: add-queue')).toBeInTheDocument();
@@ -188,14 +186,14 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 const deleteButtons = screen.getAllByLabelText(/remove change/i);
                 fireEvent.click(deleteButtons[0]);
             });
-            
+
             expect(mockUnstageChange).toHaveBeenCalledWith('change-1');
         });
 
@@ -213,33 +211,33 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 const clearButton = screen.getByRole('button', { name: /clear all/i });
                 fireEvent.click(clearButton);
             });
-            
+
             expect(mockClearAllChanges).toHaveBeenCalled();
         });
 
         it('should call onApplyChanges when apply button is clicked', async () => {
             const mockOnApplyChanges = vi.fn();
-            
+
             render(
                 <TestWrapper>
                     <StagedChangesPanel onApplyChanges={mockOnApplyChanges} />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 const applyButton = screen.getByRole('button', { name: /apply changes/i });
                 fireEvent.click(applyButton);
             });
-            
+
             expect(mockOnApplyChanges).toHaveBeenCalled();
         });
 
@@ -249,9 +247,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 // Check that change type chips are rendered
                 expect(screen.getByText('update queue')).toBeInTheDocument();
@@ -283,7 +281,7 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             const button = screen.getByRole('button', { name: /3 changes staged/i });
             expect(button).toHaveStyle({ backgroundColor: expect.stringContaining('warning') });
         });
@@ -294,9 +292,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 expect(screen.getByText(/1 conflict detected/i)).toBeInTheDocument();
             });
@@ -308,9 +306,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 const applyButton = screen.getByRole('button', { name: /apply changes/i });
                 expect(applyButton).toBeDisabled();
@@ -333,9 +331,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /3 changes staged/i }));
-            
+
             await waitFor(() => {
                 expect(screen.getAllByLabelText(/remove change/i)).toHaveLength(3);
             });
@@ -347,15 +345,15 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             const expandButton = screen.getByRole('button', { name: /3 changes staged/i });
-            
+
             await act(async () => {
                 expandButton.focus();
                 // Press Enter to expand
                 fireEvent.keyDown(expandButton, { key: 'Enter' });
             });
-            
+
             await waitFor(() => {
                 expect(screen.getByText('Staged Changes')).toBeInTheDocument();
             });
@@ -377,9 +375,9 @@ describe('StagedChangesPanel', () => {
                     <StagedChangesPanel />
                 </TestWrapper>
             );
-            
+
             fireEvent.click(screen.getByRole('button', { name: /1 change staged/i }));
-            
+
             await waitFor(() => {
                 // The timestamp should be formatted as HH:MM:SS
                 expect(screen.getByText(/\d{1,2}:\d{2}:\d{2}/)).toBeInTheDocument();

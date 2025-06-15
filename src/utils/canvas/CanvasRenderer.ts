@@ -207,7 +207,7 @@ export class CanvasRenderer {
     startRenderLoop(nodes: LayoutNode[], flows: FlowPath[], transform?: Transform): void {
         // Stop existing timer if running
         this.stopRenderLoop();
-        
+
         // Start new D3 timer for rendering
         this.renderTimer = timer(() => {
             this.render(nodes, flows, transform);
@@ -463,7 +463,6 @@ export class CanvasRenderer {
         // Examples: PREEMPTION, ELASTIC, MANAGED, etc.
     }
 
-
     /**
      * Measure badge dimensions
      */
@@ -515,7 +514,6 @@ export class CanvasRenderer {
         ctx.textBaseline = 'middle';
         ctx.fillText(text, x + dimensions.width / 2, y + dimensions.height / 2);
     }
-
 
     /**
      * Render overlay (selection, hover effects)
@@ -593,7 +591,6 @@ export class CanvasRenderer {
         ctx.closePath();
     }
 
-
     /**
      * Get card style based on queue state
      */
@@ -653,10 +650,7 @@ export class CanvasRenderer {
         const capacityMode = this.getCapacityMode();
 
         // Create D3 scale for consistent width calculations
-        const capacityScale = scaleLinear()
-            .domain([0, 100])
-            .range([0, width])
-            .clamp(true);
+        const capacityScale = scaleLinear().domain([0, 100]).range([0, width]).clamp(true);
 
         // Background bar (total available capacity)
         ctx.fillStyle = '#f0f0f0';
@@ -772,7 +766,6 @@ export class CanvasRenderer {
         return parseFloat((bytes / Math.pow(k, i)).toFixed(1)) + ' ' + sizes[i];
     }
 
-
     /**
      * Get capacity mode text
      */
@@ -811,9 +804,6 @@ export class CanvasRenderer {
     setSelectedNodes(nodeIds: Set<string>): void {
         this.selectedNodes = nodeIds;
     }
-
-
-
 
     /**
      * Add selected node

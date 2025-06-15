@@ -9,9 +9,9 @@ describe('configurationUtils', () => {
         it('should create ChangeSet objects for changed properties', () => {
             const queuePath = 'root.test';
             const formData = {
-                'capacity': '50%',
+                capacity: '50%',
                 'maximum-capacity': '80%',
-                'state': 'RUNNING',
+                state: 'RUNNING',
                 'user-limit-factor': 2,
             };
 
@@ -26,8 +26,8 @@ describe('configurationUtils', () => {
             const changes = createChangeSetsFromFormData(queuePath, formData, currentQueue);
 
             expect(changes).toHaveLength(4); // All properties changed
-            
-            const capacityChange = changes.find(c => c.property === 'capacity');
+
+            const capacityChange = changes.find((c) => c.property === 'capacity');
             expect(capacityChange).toBeDefined();
             expect(capacityChange?.queueName).toBe(queuePath);
             expect(capacityChange?.oldValue).toBe('30');
@@ -36,7 +36,7 @@ describe('configurationUtils', () => {
             expect(capacityChange?.id).toBeDefined();
             expect(capacityChange?.timestamp).toBeInstanceOf(Date);
 
-            const stateChange = changes.find(c => c.property === 'state');
+            const stateChange = changes.find((c) => c.property === 'state');
             expect(stateChange?.oldValue).toBe('STOPPED');
             expect(stateChange?.newValue).toBe('RUNNING');
         });
@@ -44,8 +44,8 @@ describe('configurationUtils', () => {
         it('should not create ChangeSet objects for unchanged properties', () => {
             const queuePath = 'root.test';
             const formData = {
-                'capacity': '30%',
-                'state': 'RUNNING',
+                capacity: '30%',
+                state: 'RUNNING',
             };
 
             const currentQueue = {
@@ -62,15 +62,15 @@ describe('configurationUtils', () => {
         it('should handle missing current queue', () => {
             const queuePath = 'root.new';
             const formData = {
-                'capacity': '50%',
-                'state': 'RUNNING',
+                capacity: '50%',
+                state: 'RUNNING',
             };
 
             const changes = createChangeSetsFromFormData(queuePath, formData);
 
             expect(changes).toHaveLength(2); // All properties are "changes" since no current values
-            
-            const capacityChange = changes.find(c => c.property === 'capacity');
+
+            const capacityChange = changes.find((c) => c.property === 'capacity');
             expect(capacityChange?.oldValue).toBe('');
             expect(capacityChange?.newValue).toBe('50');
         });
@@ -79,22 +79,22 @@ describe('configurationUtils', () => {
     describe('convertFormDataToYarnConfig', () => {
         it('should convert form data to YARN configuration format', () => {
             const formData = {
-                'capacity': '50%',
+                capacity: '50%',
                 'maximum-capacity': '80%',
-                'state': 'RUNNING',
+                state: 'RUNNING',
                 'user-limit-factor': 2,
-                'disable_preemption': true,
+                disable_preemption: true,
                 'unknown-field': 'should be ignored',
             };
 
             const yarnConfig = convertFormDataToYarnConfig(formData);
 
             expect(yarnConfig).toEqual({
-                'capacity': '50',
+                capacity: '50',
                 'maximum-capacity': '80',
-                'state': 'RUNNING',
+                state: 'RUNNING',
                 'user-limit-factor': '2',
-                'disable_preemption': 'true',
+                disable_preemption: 'true',
             });
         });
 

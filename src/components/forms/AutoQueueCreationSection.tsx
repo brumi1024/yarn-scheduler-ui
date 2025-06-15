@@ -1,7 +1,7 @@
 import React from 'react';
 import { useFormContext, useWatch } from 'react-hook-form';
 import { Box, Typography, Alert, Divider } from '@mui/material';
-import type { PropertyDefinition } from '../config';
+import type { PropertyDefinition } from '../../config';
 import { PropertyFormField } from './PropertyFormField';
 
 interface AutoQueueCreationSectionProps {
@@ -9,12 +9,9 @@ interface AutoQueueCreationSectionProps {
     siblings?: Array<{ name: string; capacity: string }>;
 }
 
-export function AutoQueueCreationSection({
-    properties,
-    siblings,
-}: AutoQueueCreationSectionProps) {
+export function AutoQueueCreationSection({ properties, siblings }: AutoQueueCreationSectionProps) {
     const { control, setValue } = useFormContext();
-    
+
     // Watch for changes in auto-creation toggles
     const v1Enabled = useWatch({ control, name: 'auto-create-child-queue.enabled' }) === true;
     const v2Enabled = useWatch({ control, name: 'auto-queue-creation-v2.enabled' }) === true;
@@ -64,7 +61,11 @@ export function AutoQueueCreationSection({
             }
 
             // Show v2 properties only when v2 is enabled
-            if (v2Enabled && property.key.includes('auto-queue-creation-v2') && property.key !== 'auto-queue-creation-v2.enabled') {
+            if (
+                v2Enabled &&
+                property.key.includes('auto-queue-creation-v2') &&
+                property.key !== 'auto-queue-creation-v2.enabled'
+            ) {
                 return (
                     <PropertyFormField
                         key={property.key}

@@ -1,6 +1,6 @@
 /**
  * Simplified YARN Configuration Property Definitions
- * 
+ *
  * Direct TypeScript interfaces for YARN Capacity Scheduler properties.
  * Replaces the complex metadata system with simple, direct definitions.
  */
@@ -330,47 +330,47 @@ export const SCHEDULER_INFO_FIELDS: Record<string, InfoField> = {
 export function findPropertyByKey(key: string): PropertyDefinition | undefined {
     // Search in queue properties
     for (const group of QUEUE_PROPERTIES) {
-        const property = group.properties.find(p => p.key === key);
+        const property = group.properties.find((p) => p.key === key);
         if (property) return property;
     }
-    
+
     // Search in auto-creation properties
-    const autoProperty = AUTO_CREATION_PROPERTIES.find(p => p.key === key);
+    const autoProperty = AUTO_CREATION_PROPERTIES.find((p) => p.key === key);
     if (autoProperty) return autoProperty;
-    
+
     // Search in global properties
     for (const group of GLOBAL_PROPERTIES) {
-        const property = group.properties.find(p => p.key === key);
+        const property = group.properties.find((p) => p.key === key);
         if (property) return property;
     }
-    
+
     // Search in node label properties
-    const nodeLabelProperty = NODE_LABEL_PROPERTIES.find(p => p.key === key);
+    const nodeLabelProperty = NODE_LABEL_PROPERTIES.find((p) => p.key === key);
     if (nodeLabelProperty) return nodeLabelProperty;
-    
+
     return undefined;
 }
 
 export function getAllQueueProperties(): PropertyDefinition[] {
     const allProperties: PropertyDefinition[] = [];
-    
+
     // Add all queue properties
     for (const group of QUEUE_PROPERTIES) {
         allProperties.push(...group.properties);
     }
-    
+
     // Add auto-creation properties
     allProperties.push(...AUTO_CREATION_PROPERTIES);
-    
+
     return allProperties;
 }
 
 export function getAllGlobalProperties(): PropertyDefinition[] {
     const allProperties: PropertyDefinition[] = [];
-    
+
     for (const group of GLOBAL_PROPERTIES) {
         allProperties.push(...group.properties);
     }
-    
+
     return allProperties;
 }

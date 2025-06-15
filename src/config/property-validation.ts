@@ -1,6 +1,6 @@
 /**
  * Simplified Property Validation
- * 
+ *
  * Direct validation functions for YARN properties.
  * Replaces the complex validation system with simple, direct functions.
  */
@@ -61,11 +61,11 @@ function validateBoolean(value: any): ValidationResult {
     if (typeof value === 'boolean') {
         return { valid: true };
     }
-    
+
     if (value === 'true' || value === 'false') {
         return { valid: true };
     }
-    
+
     return { valid: false, error: 'Must be true or false' };
 }
 
@@ -74,16 +74,16 @@ function validateBoolean(value: any): ValidationResult {
  */
 function validateNumber(value: any, property: PropertyDefinition): ValidationResult {
     const numValue = parseFloat(value);
-    
+
     if (isNaN(numValue)) {
         return { valid: false, error: 'Must be a valid number' };
     }
-    
+
     // Additional validation for specific number ranges could be added here
     if (numValue < 0) {
         return { valid: false, error: 'Must be a non-negative number' };
     }
-    
+
     return { valid: true };
 }
 
@@ -92,15 +92,15 @@ function validateNumber(value: any, property: PropertyDefinition): ValidationRes
  */
 function validatePercentage(value: any): ValidationResult {
     const numValue = parseFloat(value);
-    
+
     if (isNaN(numValue)) {
         return { valid: false, error: 'Must be a valid number' };
     }
-    
+
     if (numValue < 0 || numValue > 1) {
         return { valid: false, error: 'Must be a number between 0 and 1' };
     }
-    
+
     return { valid: true };
 }
 
@@ -111,7 +111,7 @@ function validateEnum(value: any, options: string[]): ValidationResult {
     if (!options.includes(value)) {
         return { valid: false, error: `Must be one of: ${options.join(', ')}` };
     }
-    
+
     return { valid: true };
 }
 
@@ -122,7 +122,7 @@ function validateString(value: any): ValidationResult {
     if (typeof value !== 'string') {
         return { valid: false, error: 'Must be a string' };
     }
-    
+
     return { valid: true };
 }
 
@@ -133,7 +133,7 @@ export function validateCapacity(value: string): ValidationResult {
     if (!value) {
         return { valid: false, error: 'Capacity is required' };
     }
-    
+
     // Percentage format (e.g., "10%", "50%")
     if (value.endsWith('%')) {
         const numValue = parseFloat(value.slice(0, -1));
@@ -142,7 +142,7 @@ export function validateCapacity(value: string): ValidationResult {
         }
         return { valid: true };
     }
-    
+
     // Weight format (e.g., "1w", "5w")
     if (value.endsWith('w')) {
         const numValue = parseFloat(value.slice(0, -1));
@@ -151,28 +151,31 @@ export function validateCapacity(value: string): ValidationResult {
         }
         return { valid: true };
     }
-    
+
     // Absolute resource format (e.g., "[memory=2048,vcores=2]")
     if (value.startsWith('[') && value.endsWith(']')) {
         const resourceSpec = value.slice(1, -1);
         const parts = resourceSpec.split(',');
-        
+
         for (const part of parts) {
             const [resource, amount] = part.split('=');
             if (!resource || !amount) {
                 return { valid: false, error: 'Invalid absolute resource format. Use [memory=2048,vcores=2]' };
             }
-            
+
             const numAmount = parseFloat(amount);
             if (isNaN(numAmount) || numAmount < 0) {
                 return { valid: false, error: `Invalid resource amount: ${amount}` };
             }
         }
-        
+
         return { valid: true };
     }
-    
-    return { valid: false, error: 'Invalid capacity format. Use percentage (10%), weight (1w), or absolute ([memory=2048,vcores=2])' };
+
+    return {
+        valid: false,
+        error: 'Invalid capacity format. Use percentage (10%), weight (1w), or absolute ([memory=2048,vcores=2])',
+    };
 }
 
 /**
@@ -182,36 +185,39 @@ export function validateNodeLabels(value: string): ValidationResult {
     if (!value) {
         return { valid: true }; // Empty is valid (inherits from parent)
     }
-    
+
     if (value === '*') {
         return { valid: true }; // Wildcard is valid
     }
-    
+
     // Comma-separated list of labels
-    const labels = value.split(',').map(l => l.trim());
-    
+    const labels = value.split(',').map((l) => l.trim());
+
     for (const label of labels) {
         if (!/^[a-zA-Z0-9_-]+$/.test(label)) {
             return { valid: false, error: 'Node labels must contain only letters, numbers, underscores, and hyphens' };
         }
     }
-    
+
     return { valid: true };
 }
 
 /**
  * Batch validate multiple properties
  */
-export function validateProperties(properties: Record<string, any>): { valid: boolean; errors: Record<string, string> } {
+export function validateProperties(properties: Record<string, any>): {
+    valid: boolean;
+    errors: Record<string, string>;
+} {
     const errors: Record<string, string> = {};
-    
+
     for (const [key, value] of Object.entries(properties)) {
         const result = validateProperty(key, value);
         if (!result.valid && result.error) {
             errors[key] = result.error;
         }
     }
-    
+
     return {
         valid: Object.keys(errors).length === 0,
         errors,

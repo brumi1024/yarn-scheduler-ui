@@ -102,7 +102,7 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
                 parsed: { percentage: rawNumber },
             };
         }
-        
+
         // Default to percentage
         return {
             mode: 'percentage',

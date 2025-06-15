@@ -1,7 +1,19 @@
-// Re-export all stores
+/**
+ * Store modules for YARN Scheduler UI state management
+ *
+ * @module stores
+ */
+
+/** UI state management store for selection, view settings, and modals */
 export { useUIStore } from './uiStore';
+
+/** Configuration data store for scheduler, queues, and node information */
 export { useConfigurationStore } from './configurationStore';
+
+/** Staged changes store for managing pending configuration updates */
 export { useStagedChangesStore } from './stagedChangesStore';
+
+/** Activity logging store for user actions and API calls */
 export { useActivityStore } from './activityStore';
 
 // Re-export types
@@ -13,19 +25,16 @@ import { useConfigurationStore } from './configurationStore';
 import { useStagedChangesStore } from './stagedChangesStore';
 import { useActivityStore } from './activityStore';
 
-// Utility hooks for common store combinations
-export const useStores = () => ({
-    ui: useUIStore,
-    configuration: useConfigurationStore,
-    stagedChanges: useStagedChangesStore,
-    activity: useActivityStore,
-});
 
-// Selectors that combine data from multiple stores
+/**
+ * Selectors that combine data from multiple stores
+ * These are memoized automatically by Zustand's selector functions
+ */
+
+/** Get the currently selected queue data */
 export const useSelectedQueue = () => {
     const selectedQueuePath = useUIStore((state) => state.selectedQueuePath);
     const scheduler = useConfigurationStore((state) => state.scheduler);
-    
 
     if (!selectedQueuePath || !scheduler?.scheduler.schedulerInfo) {
         return null;
@@ -86,27 +95,7 @@ export const useAllQueues = () => {
     return flattenQueues(scheduler.scheduler.schedulerInfo.queues.queue);
 };
 
-export const useQueueByPath = (path: string) => {
-    const allQueues = useAllQueues();
-    return allQueues.find((queue) => queue.path === path) || null;
-};
-
 export const useHasUnsavedChanges = () => {
     const store = useStagedChangesStore();
     return store.hasUnsavedChanges();
-};
-
-export const useChangesByQueue = (queuePath: string) => {
-    const store = useStagedChangesStore();
-    return store.getChangesByQueue(queuePath);
-};
-
-export const useConflictsByChange = (changeId: string) => {
-    const store = useStagedChangesStore();
-    return store.getConflictsByChange(changeId);
-};
-
-export const useIsQueueExpanded = (queuePath: string) => {
-    const expandedQueues = useUIStore((state) => state.expandedQueues);
-    return expandedQueues.has(queuePath);
 };

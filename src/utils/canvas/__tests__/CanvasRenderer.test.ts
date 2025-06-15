@@ -73,7 +73,7 @@ describe('CanvasRenderer', () => {
         vi.stubGlobal('window', { devicePixelRatio: 1 });
 
         canvas = new MockHTMLCanvasElement();
-        
+
         renderer = new CanvasRenderer({
             canvas: canvas as any,
             devicePixelRatio: 1,
@@ -97,12 +97,12 @@ describe('CanvasRenderer', () => {
             // Create a fresh canvas and context to test setup
             const testCanvas = new MockHTMLCanvasElement();
             const ctx = testCanvas.getContext();
-            
+
             new CanvasRenderer({
                 canvas: testCanvas as any,
                 devicePixelRatio: 1,
             });
-            
+
             expect(ctx.scale).toHaveBeenCalledWith(1, 1);
         });
 
@@ -178,7 +178,7 @@ describe('CanvasRenderer', () => {
         it('should remove selected node', () => {
             renderer.addSelectedNode('node1');
             const initialStrokeCalls = canvas.getContext().stroke.mock.calls.length;
-            
+
             renderer.removeSelectedNode('node1');
             renderer.render(mockNodes, mockFlows);
 
@@ -192,7 +192,7 @@ describe('CanvasRenderer', () => {
             renderer.addSelectedNode('node1');
             renderer.addSelectedNode('node2');
             const selectedStrokeCalls = canvas.getContext().stroke.mock.calls.length;
-            
+
             renderer.clearSelection();
             renderer.render(mockNodes, mockFlows);
 
@@ -252,7 +252,7 @@ describe('CanvasRenderer', () => {
 
             // Clear the mock to isolate this test
             vi.clearAllMocks();
-            
+
             renderer.updateTheme(newTheme);
             renderer.render(mockNodes, mockFlows);
 
@@ -265,7 +265,7 @@ describe('CanvasRenderer', () => {
     describe('layers', () => {
         it('should set layer visibility', () => {
             const withFlows = canvas.getContext().fill.mock.calls.length;
-            
+
             renderer.setLayerVisibility('flows', false);
             renderer.render(mockNodes, mockFlows);
 

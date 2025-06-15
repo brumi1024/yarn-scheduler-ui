@@ -171,15 +171,15 @@ describe('D3TreeLayout', () => {
 
             expect(startFrame.nodes.length).toBe(result1.nodes.length);
             expect(endFrame.nodes.length).toBe(result1.nodes.length);
-            
+
             // Check that interpolation happens
             const startNode = startFrame.nodes[0];
             const midNode = midFrame.nodes[0];
             const endNode = endFrame.nodes[0];
-            
+
             expect(startNode.x).toBeCloseTo(result1.nodes[0].x);
             expect(endNode.x).toBeCloseTo(result2.nodes[0].x);
-            
+
             // Mid frame should be between start and end
             if (result1.nodes[0].x !== result2.nodes[0].x) {
                 expect(midNode.x).toBeGreaterThan(Math.min(startNode.x, endNode.x));

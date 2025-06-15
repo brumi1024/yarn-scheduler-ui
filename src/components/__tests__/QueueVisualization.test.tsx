@@ -160,8 +160,8 @@ describe('QueueVisualization', () => {
                 property: [
                     { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
                     { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
-                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
-                ]
+                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' },
+                ],
             },
             loading: false,
             error: null,
@@ -185,8 +185,8 @@ describe('QueueVisualization', () => {
                 property: [
                     { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
                     { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
-                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
-                ]
+                    { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' },
+                ],
             },
             loading: { scheduler: false, configuration: false },
             errors: { scheduler: null, configuration: null },
@@ -289,8 +289,8 @@ describe('QueueVisualization', () => {
                     property: [
                         { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
                         { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
-                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
-                    ]
+                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' },
+                    ],
                 },
                 loading: false,
                 error: null,
@@ -311,8 +311,8 @@ describe('QueueVisualization', () => {
                     property: [
                         { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
                         { name: 'yarn.scheduler.capacity.root.default.capacity', value: '100' },
-                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' }
-                    ]
+                        { name: 'yarn.scheduler.capacity.root.default.state', value: 'RUNNING' },
+                    ],
                 },
                 loading: { scheduler: false, configuration: false },
                 errors: { scheduler: null, configuration: null },

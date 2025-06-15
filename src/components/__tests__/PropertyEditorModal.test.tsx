@@ -1,8 +1,8 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { PropertyEditorModal } from '../PropertyEditorModal';
+import { PropertyEditorModal } from '../forms/PropertyEditorModal';
 import type { Queue } from '../../types/Queue';
 
 // Mock react-hook-form
@@ -33,10 +33,7 @@ vi.mock('../PropertyFormField', () => ({
     PropertyFormField: ({ property }: any) => (
         <div data-testid={`property-field-${property.key}`}>
             <label>{property.label || property.displayName}</label>
-            <input
-                data-testid={`input-${property.key}`}
-                defaultValue=""
-            />
+            <input data-testid={`input-${property.key}`} defaultValue="" />
         </div>
     ),
 }));
@@ -44,15 +41,14 @@ vi.mock('../PropertyFormField', () => ({
 vi.mock('../AutoQueueCreationSection', () => ({
     AutoQueueCreationSection: ({ properties }: any) => (
         <div data-testid="auto-queue-creation-section">
-            {properties && Array.isArray(properties) && properties.map((property: any) => (
-                <div key={property.key} data-testid={`auto-property-${property.key}`}>
-                    <label>{property.label || property.displayName}</label>
-                    <input
-                        data-testid={`auto-input-${property.key}`}
-                        defaultValue=""
-                    />
-                </div>
-            ))}
+            {properties &&
+                Array.isArray(properties) &&
+                properties.map((property: any) => (
+                    <div key={property.key} data-testid={`auto-property-${property.key}`}>
+                        <label>{property.label || property.displayName}</label>
+                        <input data-testid={`auto-input-${property.key}`} defaultValue="" />
+                    </div>
+                ))}
         </div>
     ),
 }));
@@ -275,7 +271,7 @@ describe('PropertyEditorModal', () => {
     describe('Save Functionality', () => {
         it('has save button in the dialog', () => {
             render(<PropertyEditorModal {...defaultProps} />);
-            
+
             const saveButton = screen.getByText('Save Changes');
             expect(saveButton).toBeInTheDocument();
             expect(saveButton.tagName).toBe('BUTTON');
@@ -283,7 +279,7 @@ describe('PropertyEditorModal', () => {
 
         it('passes queue name to onSave callback', () => {
             render(<PropertyEditorModal {...defaultProps} />);
-            
+
             // Just verify the component renders with the queue
             expect(screen.getByText('Edit Queue Properties: test-queue')).toBeInTheDocument();
         });

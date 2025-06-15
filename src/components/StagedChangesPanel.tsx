@@ -42,14 +42,8 @@ interface GroupedChanges {
 }
 
 export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) {
-    const { 
-        changes, 
-        unstageChange, 
-        clearAllChanges, 
-        hasUnsavedChanges,
-        conflicts 
-    } = useStagedChangesStore();
-    
+    const { changes, unstageChange, clearAllChanges, hasUnsavedChanges, conflicts } = useStagedChangesStore();
+
     const [isExpanded, setIsExpanded] = useState(false);
     const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
 
@@ -58,7 +52,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         if (groupBy === 'queue') {
             // Group by queue name
             const grouped: GroupedChanges = {};
-            changes.forEach(change => {
+            changes.forEach((change) => {
                 const key = change.queueName || 'global';
                 if (!grouped[key]) {
                     grouped[key] = [];
@@ -69,7 +63,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         } else {
             // Group by change type
             const grouped: GroupedChanges = {};
-            changes.forEach(change => {
+            changes.forEach((change) => {
                 const key = change.type;
                 if (!grouped[key]) {
                     grouped[key] = [];
@@ -159,7 +153,15 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                             {change.description}
                         </Box>
                         <Box display="flex" alignItems="center" gap={2} mt={0.5}>
-                            <Box component="span" sx={{ fontSize: '0.75rem', color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
+                            <Box
+                                component="span"
+                                sx={{
+                                    fontSize: '0.75rem',
+                                    color: 'text.secondary',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                }}
+                            >
                                 <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5 }} />
                                 {formatTimestamp(change.timestamp)}
                             </Box>
@@ -179,11 +181,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             />
             <ListItemSecondaryAction>
                 <Tooltip title="Remove change">
-                    <IconButton 
-                        edge="end" 
-                        onClick={() => unstageChange(change.id)}
-                        size="small"
-                    >
+                    <IconButton edge="end" onClick={() => unstageChange(change.id)} size="small">
                         <DeleteIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
@@ -199,18 +197,11 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                         <Typography variant="subtitle2" fontWeight="medium">
                             {groupBy === 'queue' ? `Queue: ${groupKey}` : `Type: ${groupKey}`}
                         </Typography>
-                        <Chip 
-                            label={groupChanges.length} 
-                            size="small" 
-                            color="primary" 
-                            variant="outlined"
-                        />
+                        <Chip label={groupChanges.length} size="small" color="primary" variant="outlined" />
                     </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ p: 0 }}>
-                    <List dense>
-                        {groupChanges.map(renderChangeItem)}
-                    </List>
+                    <List dense>{groupChanges.map(renderChangeItem)}</List>
                 </AccordionDetails>
             </Accordion>
         ));
@@ -278,7 +269,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                         <Typography variant="h6" fontWeight="bold">
                             Staged Changes
                         </Typography>
-                        <Chip 
+                        <Chip
                             label={`${changeCount} change${changeCount !== 1 ? 's' : ''}`}
                             color="primary"
                             size="small"
@@ -302,16 +293,14 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                 {hasConflicts && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         <Typography variant="body2">
-                            {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} detected. 
-                            Please resolve before applying changes.
+                            {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} detected. Please resolve
+                            before applying changes.
                         </Typography>
                     </Alert>
                 )}
 
                 {/* Changes List */}
-                <Box sx={{ maxHeight: 400, overflow: 'auto', mb: 2 }}>
-                    {renderGroupedChanges()}
-                </Box>
+                <Box sx={{ maxHeight: 400, overflow: 'auto', mb: 2 }}>{renderGroupedChanges()}</Box>
 
                 {/* Actions */}
                 <Stack direction="row" spacing={1} justifyContent="space-between">
@@ -324,7 +313,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                     >
                         Clear All
                     </Button>
-                    
+
                     <Button
                         variant="contained"
                         startIcon={<SaveIcon />}

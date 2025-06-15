@@ -255,7 +255,7 @@ export class D3ZoomController {
             // Use D3's transform apply for proper coordinate conversion
             const transform = zoomTransform(this.canvas);
             const [x, y] = transform.apply([worldX, worldY]);
-            
+
             return {
                 x: x + rect.left,
                 y: y + rect.top,
@@ -276,7 +276,7 @@ export class D3ZoomController {
         this.selection.on('.zoom', null);
         this.selection.on('click', null);
         this.removeKeyboardListeners();
-        
+
         this.listeners = [];
         this.clickListeners = [];
     }
@@ -297,7 +297,7 @@ export class D3ZoomController {
         this.selection.on('click', (event) => {
             // D3's zoom behavior sets event.defaultPrevented when dragging
             if (!event.defaultPrevented) {
-                this.clickListeners.forEach(listener => {
+                this.clickListeners.forEach((listener) => {
                     try {
                         listener(event);
                     } catch {
@@ -350,7 +350,6 @@ export class D3ZoomController {
             y: transform.y,
             scale: transform.k,
         };
-
 
         this.updateBounds();
 
@@ -439,7 +438,7 @@ export class D3ZoomController {
      */
     private updateBounds(): void {
         const rect = this.canvas.getBoundingClientRect();
-        
+
         try {
             const transform = zoomTransform(this.canvas);
             // Use D3's transform to calculate viewport bounds
