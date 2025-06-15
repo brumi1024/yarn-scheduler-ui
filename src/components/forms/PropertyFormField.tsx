@@ -1,30 +1,29 @@
 import React from 'react';
-import { QUEUE_PROPERTIES } from '../../config/queueProperties';
-import { TextField, Select, MenuItem, Switch, FormControl, InputLabel, FormControlLabel, Box, Typography } from '@mui/material';
+import { useController } from 'react-hook-form';
+import type { Control } from 'react-hook-form';
+import type { PropertyDefinition } from '../../config/properties';
+import { TextField, Select, MenuItem, Switch, FormControl, InputLabel, FormControlLabel, Box, Typography, FormHelperText } from '@mui/material';
+import { CapacityEditor } from '../CapacityEditor';
 
 interface PropertyFormFieldProps {
-  propertyKey: string;
-  value: unknown;
-  onChange: (value: unknown) => void;
-  error?: string;
+  property: PropertyDefinition;
+  control: Control<any>;
+  name: string;
+  siblings?: Array<{ name: string; capacity: string }>;
 }
 
-export function PropertyFormField({ propertyKey, value, onChange, error }: PropertyFormFieldProps) {
-  const property = QUEUE_PROPERTIES[propertyKey as keyof typeof QUEUE_PROPERTIES];
-  if (!property) return null;
+export function PropertyFormField({ property, control, name, siblings }: PropertyFormFieldProps) {
+  const { field, fieldState: { error } } = useController({ control, name });
   
-  // Direct rendering based on type - no abstraction layers
   switch (property.type) {
     case 'capacity':
       return (
-        <TextField
+        <CapacityEditor
           label={property.label}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
-          error={!!error}
-          helperText={error || property.description}
-          fullWidth
-          margin="normal"
+          value={field.value || property.defaultValue}
+          onChange={field.onChange}
+          error={error?.message}
+          siblings={siblings}
         />
       );
       
@@ -32,34 +31,26 @@ export function PropertyFormField({ propertyKey, value, onChange, error }: Prope
       return (
         <FormControl fullWidth margin="normal" error={!!error}>
           <InputLabel>{property.label}</InputLabel>
-          <Select
-            value={value || ''}
-            onChange={(e) => onChange(e.target.value)}
-            label={property.label}
-          >
+          <Select {...field} label={property.label}>
             {property.options?.map(option => (
               <MenuItem key={option} value={option}>{option}</MenuItem>
             ))}
           </Select>
-          {(error || property.description) && (
-            <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 0.5 }}>
-              {error || property.description}
-            </Typography>
-          )}
+          <FormHelperText>{error?.message || property.description}</FormHelperText>
         </FormControl>
       );
       
     case 'number':
       return (
         <TextField
+          {...field}
           type="number"
           label={property.label}
-          value={value || ''}
-          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
           error={!!error}
-          helperText={error || property.description}
+          helperText={error?.message || property.description}
           fullWidth
           margin="normal"
+          onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
         />
       );
       
@@ -68,35 +59,29 @@ export function PropertyFormField({ propertyKey, value, onChange, error }: Prope
         <Box sx={{ my: 2 }}>
           <FormControlLabel
             control={
-              <Switch
-                checked={value || false}
-                onChange={(e) => onChange(e.target.checked)}
-              />
+              <Switch {...field} checked={field.value || false} />
             }
             label={property.label}
           />
           {(error || property.description) && (
             <Typography variant="caption" color={error ? 'error' : 'text.secondary'} display="block">
-              {error || property.description}
+              {error?.message || property.description}
             </Typography>
           )}
         </Box>
       );
 
     case 'text':
+    default:
       return (
         <TextField
+          {...field}
           label={property.label}
-          value={value || ''}
-          onChange={(e) => onChange(e.target.value)}
           error={!!error}
-          helperText={error || property.description}
+          helperText={error?.message || property.description}
           fullWidth
           margin="normal"
         />
       );
-      
-    default:
-      return null;
   }
 }

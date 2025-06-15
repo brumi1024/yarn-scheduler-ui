@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { z } from 'zod';
 import {
     Box,
     Paper,
@@ -30,11 +31,10 @@ import {
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { Queue } from '../types/Queue';
-import { getQueuePropertyGroups } from '../config';
+import { getPropertyGroups, QUEUE_PROPERTIES } from '../config';
 import { PropertyFormField } from './forms/PropertyFormField';
 import { AutoQueueCreationSection } from './forms/AutoQueueCreationSection';
-import { createFormSchema } from '../schemas/propertySchemas';
-import { useStagedChangesStore } from '../store/zustand/stagedChangesStore';
+import { useDataStore } from '../store/zustand';
 import { createChangeSetsFromFormData } from '../utils/configurationUtils';
 
 export interface QueueInfoPanelProps {
@@ -59,19 +59,16 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const [activeTab, setActiveTab] = useState(0);
     const [saveError, setSaveError] = useState<string | null>(null);
 
-    const propertyGroups = getQueuePropertyGroups();
-    const { stageChange } = useStagedChangesStore();
+    const propertyGroups = getPropertyGroups();
+    const { stageChange } = useDataStore();
 
-    // Create combined properties object for schema generation
-    const allProperties = propertyGroups.reduce((acc: any, group: any) => {
-        // Convert properties array to object keyed by property key
-        const propsObject = group.properties.reduce((obj: any, prop: any) => {
-            obj[prop.key] = prop;
-            return obj;
-        }, {});
-        return { ...acc, ...propsObject };
-    }, {});
-    const validationSchema = createFormSchema(allProperties);
+    // Create validation schema from properties
+    const validationSchema = z.object(
+        Object.entries(QUEUE_PROPERTIES).reduce((acc, [key, prop]) => ({
+            ...acc,
+            [key]: prop.validation.optional() // Make all validations optional to allow empty/unchanged fields
+        }), {})
+    );
 
     const form = useForm({
         resolver: zodResolver(validationSchema),
@@ -95,7 +92,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
             initialData['maximum-capacity'] = `${queue.maxCapacity}%`;
             initialData['state'] = queue.state;
             initialData['user-limit-factor'] = queue.userLimitFactor || 1;
-            initialData['max-parallel-apps'] = queue.maxApplications || '';
+            initialData['max-parallel-apps'] = queue.maxApplications || 0;
             initialData['ordering-policy'] = queue.orderingPolicy || 'fifo';
             initialData['disable_preemption'] = queue.preemptionDisabled || false;
 
@@ -104,12 +101,12 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
             initialData['auto-queue-creation-v2.enabled'] = false;
             initialData['auto-queue-creation-v2.max-queues'] = 1000;
 
-            // Template properties (if auto-creation is enabled)
-            if (queue.leafQueueTemplate) {
-                Object.entries(queue.leafQueueTemplate).forEach(([key, value]) => {
-                    initialData[`leaf-queue-template.${key}`] = value;
-                });
-            }
+            // Template properties (if auto-creation is enabled) - skip for now to avoid validation issues
+            // if (queue.leafQueueTemplate) {
+            //     Object.entries(queue.leafQueueTemplate).forEach(([key, value]) => {
+            //         initialData[`leaf-queue-template.${key}`] = value;
+            //     });
+            // }
 
             reset(initialData);
             setActiveTab(0);
@@ -126,13 +123,13 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                       .map((child: any) => ({ name: child.queueName, capacity: `${child.capacity}%` }))
                 : [];
 
-        // Special handling for Auto-Queue Creation group
-        if (group.groupName === 'Auto-Queue Creation') {
-            return <AutoQueueCreationSection key={group.groupName} properties={group.properties} siblings={siblings} />;
+        // Special handling for Auto-Creation group
+        if (group.name === 'Auto-Creation') {
+            return <AutoQueueCreationSection key={group.name} properties={group.properties} siblings={siblings} />;
         }
 
         return (
-            <Box key={group.groupName}>
+            <Box key={group.name}>
                 {group.properties.map((property: any) => (
                     <PropertyFormField
                         key={property.key}
@@ -757,7 +754,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
                             {propertyGroups.map((group: any, index: number) => (
                                 <Accordion
-                                    key={group.groupName}
+                                    key={group.name}
                                     defaultExpanded={index === 0}
                                     sx={{
                                         mb: 1,
@@ -773,7 +770,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         }}
                                     >
                                         <Typography variant="subtitle2" fontWeight="medium">
-                                            {group.groupName}
+                                            {group.name}
                                         </Typography>
                                     </AccordionSummary>
                                     <AccordionDetails sx={{ p: 2 }}>{renderPropertyGroup(group)}</AccordionDetails>
@@ -796,20 +793,23 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         variant="contained"
                                         size="small"
                                         onClick={handleSubmit((data) => {
+                                            
                                             if (!queue?.queueName) return;
 
                                             try {
                                                 setSaveError(null);
 
-                                                // Create ChangeSet objects from form data
+                                                // Create ChangeSet objects from form data  
+                                                // Use queuePath if available, otherwise fall back to queueName
+                                                const queuePath = (queue as any).queuePath || queue.queueName;
+                                                
                                                 const changes = createChangeSetsFromFormData(
-                                                    queue.queueName,
+                                                    queuePath,
                                                     data,
                                                     queue
                                                 );
 
                                                 if (changes.length === 0) {
-                                                    // No actual changes detected
                                                     return;
                                                 }
 

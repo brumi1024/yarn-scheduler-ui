@@ -87,8 +87,8 @@ function getCurrentQueuePropertyValue(
             return String(queue.autoCreateChildQueueEnabled || false);
         case 'minimum-user-limit-percent':
             return String((queue as Record<string, unknown>).minimumUserLimitPercent || 100);
-        case 'maximum-applications':
-            return String(queue.maxApplications || -1);
+        case 'max-parallel-apps':
+            return String(queue.maxApplications || 0);
         case 'maximum-am-resource-percent':
             return String((queue as Record<string, unknown>).maxAMResourcePercent || 0.1);
         case 'priority':
@@ -141,17 +141,13 @@ export function createChangeSetsFromFormData(
 
         // Only create change if value actually changed
         if (yarnValue !== currentValue) {
-            const description = PROPERTY_DESCRIPTIONS[formFieldName] || formFieldName;
-
             changes.push({
                 id: nanoid(),
                 timestamp,
-                type: 'update-queue',
-                queueName: queuePath,
+                queuePath: queuePath,
                 property: yarnProperty,
                 oldValue: currentValue,
                 newValue: yarnValue,
-                description: `Update ${description} for queue ${queuePath}: ${currentValue} → ${yarnValue}`,
             });
         }
     }

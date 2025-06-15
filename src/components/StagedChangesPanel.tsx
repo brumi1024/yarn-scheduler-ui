@@ -30,27 +30,19 @@ import {
     Edit as EditIcon,
     Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { useUIStore } from '../store/zustand';
+import { useDataStore } from '../store/zustand';
+import type { ChangeSet } from '../types/Configuration';
 
 interface StagedChangesPanelProps {
     onApplyChanges?: () => void;
 }
 
-interface PendingChange {
-  id: string;
-  queuePath: string;
-  property: string;
-  oldValue: unknown;
-  newValue: unknown;
-  timestamp: Date;
-}
-
 interface GroupedChanges {
-    [queueName: string]: PendingChange[];
+    [queueName: string]: ChangeSet[];
 }
 
 export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) {
-    const { pendingChanges, removePendingChange, clearPendingChanges } = useUIStore();
+    const { stagedChanges, unstageChange, clearStagedChanges, applyChanges, applyingChanges, conflicts } = useDataStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
@@ -60,7 +52,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         if (groupBy === 'queue') {
             // Group by queue name
             const grouped: GroupedChanges = {};
-            pendingChanges.forEach((change) => {
+            stagedChanges.forEach((change) => {
                 const key = change.queuePath || 'global';
                 if (!grouped[key]) {
                     grouped[key] = [];
@@ -71,7 +63,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         } else {
             // Group by property type
             const grouped: GroupedChanges = {};
-            pendingChanges.forEach((change) => {
+            stagedChanges.forEach((change) => {
                 const key = change.property;
                 if (!grouped[key]) {
                     grouped[key] = [];
@@ -80,23 +72,28 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             });
             return grouped;
         }
-    }, [pendingChanges, groupBy]);
+    }, [stagedChanges, groupBy]);
 
-    const changeCount = pendingChanges.length;
-    const hasConflicts = false; // Simplified for now - no conflict detection
+    const changeCount = stagedChanges.length;
+    const hasConflicts = conflicts.length > 0;
 
     if (changeCount === 0) {
         return null; // Don't show panel when no changes
     }
 
-    const handleApplyChanges = () => {
-        if (onApplyChanges) {
-            onApplyChanges();
+    const handleApplyChanges = async () => {
+        try {
+            await applyChanges();
+            if (onApplyChanges) {
+                onApplyChanges();
+            }
+        } catch (error) {
+            console.error('Failed to apply changes:', error);
         }
     };
 
     const handleClearAll = () => {
-        clearPendingChanges();
+        clearStagedChanges();
         setIsExpanded(false);
     };
 
@@ -116,7 +113,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         return <EditIcon fontSize="small" />; // All changes are edits for now
     };
 
-    const renderChangeItem = (change: PendingChange) => (
+    const renderChangeItem = (change: ChangeSet) => (
         <ListItem key={change.id} divider>
             <ListItemText
                 primary={
@@ -162,7 +159,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             />
             <ListItemSecondaryAction>
                 <Tooltip title="Remove change">
-                    <IconButton edge="end" onClick={() => removePendingChange(change.id)} size="small">
+                    <IconButton edge="end" onClick={() => unstageChange(change.id)} size="small">
                         <DeleteIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
@@ -299,10 +296,10 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                         variant="contained"
                         startIcon={<SaveIcon />}
                         onClick={handleApplyChanges}
-                        disabled={hasConflicts || changeCount === 0}
+                        disabled={hasConflicts || changeCount === 0 || applyingChanges}
                         size="small"
                     >
-                        Apply Changes
+                        {applyingChanges ? 'Applying...' : 'Apply Changes'}
                     </Button>
                 </Stack>
             </Box>

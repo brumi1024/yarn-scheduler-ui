@@ -1,149 +1,63 @@
-export interface Resource {
+// Runtime queue data from YARN API
+export interface Queue {
+  queueName: string;
+  queuePath?: string; // Full path like root.production.team1
+  capacity: number;
+  usedCapacity: number;
+  maxCapacity: number;
+  absoluteCapacity: number;
+  absoluteUsedCapacity: number;
+  absoluteMaxCapacity: number;
+  state: 'RUNNING' | 'STOPPED';
+  numApplications: number;
+  resourcesUsed: {
     memory: number;
     vCores: number;
+  };
+  queues?: {
+    queue: Queue[];
+  };
+  
+  // Optional fields
+  userLimitFactor?: number;
+  maxApplications?: number;
+  maxApplicationsPerUser?: number;
+  nodeLabels?: string[];
+  accessibleNodeLabels?: string[];
+  preemptionDisabled?: boolean;
+  priority?: number;
+  orderingPolicy?: string;
+  autoCreateChildQueueEnabled?: boolean;
 }
 
-export interface QueueCapacities {
-    queueCapacitiesByPartition: Array<{
-        partitionName?: string;
-        capacity: number;
-        usedCapacity: number;
-        maxCapacity: number;
-        absoluteCapacity: number;
-        absoluteUsedCapacity: number;
-        absoluteMaxCapacity: number;
-        configuredMaxResource?: Resource;
-        effectiveMaxResource?: Resource;
-    }>;
+// Configuration property
+export interface ConfigProperty {
+  name: string;
+  value: string;
 }
 
-export interface QueueUser {
-    username: string;
-    resourcesUsed: Resource;
-    numActiveApplications: number;
-    numPendingApplications: number;
-    userResourceLimit?: Resource;
-    isActive?: boolean;
-}
-
-export interface Queue {
-    queueName: string;
-    capacity: number;
-    usedCapacity: number;
-    maxCapacity: number;
-    absoluteCapacity: number;
-    absoluteUsedCapacity: number;
-    absoluteMaxCapacity: number;
-    state: 'RUNNING' | 'STOPPED';
-    numApplications: number;
-    resourcesUsed: Resource;
-    capacities?: QueueCapacities;
-    users?: {
-        user: QueueUser[];
-    };
-    queues?: {
-        queue: Queue[];
-    };
-    // Additional queue properties
-    userLimit?: number;
-    userLimitFactor?: number;
-    maxApplications?: number;
-    maxApplicationsPerUser?: number;
-    maxApplicationLifetime?: number;
-    defaultApplicationLifetime?: number;
-    nodeLabels?: string[];
-    accessibleNodeLabels?: string[];
-    defaultNodeLabelExpression?: string;
-    preemptionDisabled?: boolean;
-    intraQueuePreemptionDisabled?: boolean;
-    priority?: number;
-    orderingPolicy?: string;
-    autoCreateChildQueueEnabled?: boolean;
-    leafQueueTemplate?: Record<string, string>;
-}
-
-export interface SchedulerInfo {
-    type: 'capacityScheduler' | 'fairScheduler' | 'fifoScheduler';
-    capacity: number;
-    usedCapacity: number;
-    maxCapacity: number;
-    queueName: string;
-    queues?: {
-        queue: Queue[];
-    };
-    health?: {
-        lastrun: number;
-        operationsInfo: {
-            operation: Array<{
-                operation: string;
-                nodeId: string;
-                containerId: string;
-            }>;
-        };
-        lastRunDetails: Array<{
-            operation: string;
-            count: number;
-        }>;
-    };
-}
-
-export interface SchedulerResponse {
-    scheduler: {
-        schedulerInfo: SchedulerInfo;
-    };
-}
-
-// Configuration types for parser
-export interface Configuration {
-    [key: string]: string;
-}
-
-export interface CapacityValue {
-    mode: 'percentage' | 'weight' | 'absolute';
-    value: string;
-    numericValue?: number;
-    resources?: Record<string, string>;
-}
-
-// Parsed queue structure (different from API response Queue)
+// Parsed queue for internal use
 export interface ParsedQueue {
-    name: string;
-    path: string;
-    parent?: string;
-    children: ParsedQueue[];
-    isLeaf: boolean;
+  name: string;
+  path: string;
+  parent?: string;
+  children: ParsedQueue[];
+  capacity: string; // Raw capacity value like "50%", "2w", "[memory=1024,vcores=2]"
+  maxCapacity: string;
+  state: 'RUNNING' | 'STOPPED';
+  properties: Record<string, string>; // All raw properties
+}
 
-    // Capacity information
-    capacity: CapacityValue;
-    maxCapacity: CapacityValue;
+// Scheduler response structure
+export interface SchedulerResponse {
+  scheduler: {
+    schedulerInfo: Queue & {
+      type: 'capacityScheduler' | 'fairScheduler' | 'fifoScheduler';
+    };
+  };
+}
 
-    // Basic properties
-    state: 'RUNNING' | 'STOPPED';
-
-    // Resource limits
-    maxApplications: number;
-    maxAMResourcePercent?: number;
-
-    // User limits
-    minimumUserLimitPercent: number;
-    userLimitFactor: number;
-
-    // Application settings
-    maxParallelApps: number;
-    priority: number;
-
-    // Access control
-    submitACL: string;
-    adminACL: string;
-
-    // Node labels
-    accessibleNodeLabels: string[];
-    defaultNodeLabelExpression?: string;
-
-    // Preemption
-    preemptionDisabled: boolean;
-    intraQueuePreemptionDisabled: boolean;
-
-    // Raw properties for extensibility
-    properties: Record<string, string>;
+// Configuration response structure  
+export interface ConfigurationResponse {
+  property: ConfigProperty[];
 }

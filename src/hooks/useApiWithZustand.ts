@@ -1,298 +1,177 @@
 import { useEffect, useCallback, useRef, useState } from 'react';
 import { apiService } from '../api/ApiService';
-import { useConfigurationStore, useActivityStore } from '../store/zustand';
+import { useDataStore } from '../store/zustand';
+import { useActivityStore } from '../store/activityStore';
 
 // Hook for scheduler data with Zustand integration
 export function useScheduler() {
-    const scheduler = useConfigurationStore((state) => state.scheduler);
-    const loading = useConfigurationStore((state) => state.loading.scheduler);
-    const error = useConfigurationStore((state) => state.errors.scheduler);
-    const loadSchedulerStart = useConfigurationStore((state) => state.loadSchedulerStart);
-    const loadSchedulerSuccess = useConfigurationStore((state) => state.loadSchedulerSuccess);
-    const loadSchedulerError = useConfigurationStore((state) => state.loadSchedulerError);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
+    const { scheduler, loading, error, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const mountedRef = useRef(true);
 
     const fetchData = useCallback(async () => {
-        if (!mountedRef.current) return;
-
-        loadSchedulerStart();
-        addApiCallLog({
-            method: 'GET',
-            url: '/ws/v1/cluster/scheduler',
-        });
-
         try {
-            const result = await apiService.getScheduler();
-            if (mountedRef.current) {
-                loadSchedulerSuccess(result);
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded scheduler data',
-                    details: { dataSize: JSON.stringify(result).length },
-                });
-            }
+            await loadAllData();
+            addLogEntry({
+                type: 'api_call',
+                level: 'info',
+                message: 'Successfully loaded scheduler data',
+                details: { timestamp: Date.now() },
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
-            if (mountedRef.current) {
-                loadSchedulerError(error);
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load scheduler data',
-                    details: { error: error.message },
-                });
-            }
+            addLogEntry({
+                type: 'error',
+                level: 'error',
+                message: 'Failed to load scheduler data',
+                details: { error: error.message },
+            });
         }
-    }, [loadSchedulerStart, loadSchedulerSuccess, loadSchedulerError, addApiCallLog, addLogEntry]);
-
-    useEffect(() => {
-        mountedRef.current = true;
-        fetchData();
-
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [fetchData]);
+    }, [loadAllData, addLogEntry]);
 
     return {
         data: scheduler,
-        loading: loading,
-        error: error,
+        loading,
+        error,
         refetch: fetchData,
     };
 }
 
 // Hook for configuration data with Zustand integration
 export function useConfiguration() {
-    const configuration = useConfigurationStore((state) => state.configuration);
-    const loading = useConfigurationStore((state) => state.loading.configuration);
-    const error = useConfigurationStore((state) => state.errors.configuration);
-    const loadConfigurationStart = useConfigurationStore((state) => state.loadConfigurationStart);
-    const loadConfigurationSuccess = useConfigurationStore((state) => state.loadConfigurationSuccess);
-    const loadConfigurationError = useConfigurationStore((state) => state.loadConfigurationError);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
+    const { configuration, loading, error, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const mountedRef = useRef(true);
 
     const fetchData = useCallback(async () => {
-        if (!mountedRef.current) return;
-
-        loadConfigurationStart();
-        addApiCallLog({
-            method: 'GET',
-            url: '/ws/v1/cluster/scheduler-conf',
-        });
-
         try {
-            const result = await apiService.getConfiguration();
-            if (mountedRef.current) {
-                loadConfigurationSuccess(result);
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded configuration data',
-                    details: { propertyCount: result.property?.length || 0 },
-                });
-            }
+            await loadAllData();
+            addLogEntry({
+                type: 'api_call',
+                level: 'info',
+                message: 'Successfully loaded configuration data',
+                details: { timestamp: Date.now() },
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
-            if (mountedRef.current) {
-                loadConfigurationError(error);
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load configuration data',
-                    details: { error: error.message },
-                });
-            }
+            addLogEntry({
+                type: 'error',
+                level: 'error',
+                message: 'Failed to load configuration data',
+                details: { error: error.message },
+            });
         }
-    }, [loadConfigurationStart, loadConfigurationSuccess, loadConfigurationError, addApiCallLog, addLogEntry]);
-
-    useEffect(() => {
-        mountedRef.current = true;
-        fetchData();
-
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [fetchData]);
+    }, [loadAllData, addLogEntry]);
 
     return {
         data: configuration,
-        loading: loading,
-        error: error,
+        loading,
+        error,
         refetch: fetchData,
     };
 }
 
 // Hook for node labels with Zustand integration
 export function useNodeLabels() {
-    const store = useConfigurationStore();
-    const activityStore = useActivityStore();
-    const mountedRef = useRef(true);
+    const { nodeLabels, loading, error, loadAllData } = useDataStore();
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
 
     const fetchData = useCallback(async () => {
-        if (!mountedRef.current) return;
-
-        store.loadNodeLabelsStart();
-        activityStore.addApiCallLog({
-            method: 'GET',
-            url: '/ws/v1/cluster/get-node-labels',
-        });
-
         try {
-            const result = await apiService.getNodeLabels();
-            if (mountedRef.current) {
-                store.loadNodeLabelsSuccess(result);
-                activityStore.addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded node labels',
-                    details: { labelCount: result.nodeLabelsInfo?.nodeLabelInfo?.length || 0 },
-                });
-            }
+            await loadAllData();
+            addLogEntry({
+                type: 'api_call',
+                level: 'info',
+                message: 'Successfully loaded node labels',
+                details: { timestamp: Date.now() },
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
-            if (mountedRef.current) {
-                store.loadNodeLabelsError(error);
-                activityStore.addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load node labels',
-                    details: { error: error.message },
-                });
-            }
+            addLogEntry({
+                type: 'error',
+                level: 'error',
+                message: 'Failed to load node labels',
+                details: { error: error.message },
+            });
         }
-    }, []); // Zustand stores are stable, no need for dependencies
-
-    useEffect(() => {
-        mountedRef.current = true;
-        fetchData();
-
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [fetchData]);
+    }, [loadAllData, addLogEntry]);
 
     return {
-        data: store.nodeLabels,
-        loading: store.loading.nodeLabels,
-        error: store.errors.nodeLabels,
+        data: nodeLabels,
+        loading,
+        error,
         refetch: fetchData,
     };
 }
 
 // Hook for nodes with Zustand integration
 export function useNodes() {
-    const store = useConfigurationStore();
-    const activityStore = useActivityStore();
-    const mountedRef = useRef(true);
+    const { nodes, loading, error, loadAllData } = useDataStore();
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
 
     const fetchData = useCallback(async () => {
-        if (!mountedRef.current) return;
-
-        store.loadNodesStart();
-        activityStore.addApiCallLog({
-            method: 'GET',
-            url: '/ws/v1/cluster/nodes',
-        });
-
         try {
-            const result = await apiService.getNodes();
-            if (mountedRef.current) {
-                store.loadNodesSuccess(result);
-                activityStore.addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded node data',
-                    details: { nodeCount: result.nodes?.node?.length || 0 },
-                });
-            }
+            await loadAllData();
+            addLogEntry({
+                type: 'api_call',
+                level: 'info',
+                message: 'Successfully loaded node data',
+                details: { timestamp: Date.now() },
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
-            if (mountedRef.current) {
-                store.loadNodesError(error);
-                activityStore.addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load node data',
-                    details: { error: error.message },
-                });
-            }
+            addLogEntry({
+                type: 'error',
+                level: 'error',
+                message: 'Failed to load node data',
+                details: { error: error.message },
+            });
         }
-    }, []); // Zustand stores are stable, no need for dependencies
-
-    useEffect(() => {
-        mountedRef.current = true;
-        fetchData();
-
-        return () => {
-            mountedRef.current = false;
-        };
-    }, [fetchData]);
+    }, [loadAllData, addLogEntry]);
 
     return {
-        data: store.nodes,
-        loading: store.loading.nodes,
-        error: store.errors.nodes,
+        data: nodes,
+        loading,
+        error,
         refetch: fetchData,
     };
 }
 
 // Hook for health checking
 export function useHealthCheck() {
-    const activityStore = useActivityStore();
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
     const [status, setStatus] = useState<'ok' | 'error' | 'checking'>('checking');
     const [lastCheck, setLastCheck] = useState<number>(0);
-    const mountedRef = useRef(true);
 
     const checkHealth = useCallback(async () => {
-        if (!mountedRef.current) return;
-
         setStatus('checking');
         try {
             const result = await apiService.healthCheck();
-            if (mountedRef.current) {
-                setStatus(result.status);
-                setLastCheck(result.timestamp);
+            setStatus(result.status);
+            setLastCheck(result.timestamp);
 
-                if (result.status === 'error') {
-                    activityStore.addLogEntry({
-                        type: 'system_event',
-                        level: 'warn',
-                        message: 'Health check failed',
-                        details: { timestamp: result.timestamp },
-                    });
-                }
-            }
-        } catch (error) {
-            if (mountedRef.current) {
-                setStatus('error');
-                setLastCheck(Date.now());
-                activityStore.addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Health check error',
-                    details: { error: error instanceof Error ? error.message : 'Unknown error' },
+            if (result.status === 'error') {
+                addLogEntry({
+                    type: 'system_event',
+                    level: 'warn',
+                    message: 'Health check failed',
+                    details: { timestamp: result.timestamp },
                 });
             }
+        } catch (error) {
+            setStatus('error');
+            setLastCheck(Date.now());
+            addLogEntry({
+                type: 'error',
+                level: 'error',
+                message: 'Health check error',
+                details: { error: error instanceof Error ? error.message : 'Unknown error' },
+            });
         }
-    }, []); // Zustand stores are stable
+    }, [addLogEntry]);
 
     useEffect(() => {
-        mountedRef.current = true;
         checkHealth();
-
-        // Check health every 30 seconds
         const interval = setInterval(checkHealth, 30000);
-
-        return () => {
-            mountedRef.current = false;
-            clearInterval(interval);
-        };
+        return () => clearInterval(interval);
     }, [checkHealth]);
 
     return { status, lastCheck, checkHealth };
@@ -300,7 +179,7 @@ export function useHealthCheck() {
 
 // Generic mutation hook with activity logging
 export function useApiMutation<T, P = void>() {
-    const activityStore = useActivityStore();
+    const addLogEntry = useActivityStore((state) => state.addLogEntry);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
@@ -318,17 +197,10 @@ export function useApiMutation<T, P = void>() {
                 setLoading(true);
                 setError(null);
 
-                if (options?.method && options?.url) {
-                    activityStore.addApiCallLog({
-                        method: options.method,
-                        url: options.url,
-                    });
-                }
-
                 const result = await fn(params);
 
                 if (options?.description) {
-                    activityStore.addLogEntry({
+                    addLogEntry({
                         type: 'user_action',
                         level: 'info',
                         message: options.description,
@@ -342,7 +214,7 @@ export function useApiMutation<T, P = void>() {
                 setError(error);
 
                 if (options?.description) {
-                    activityStore.addLogEntry({
+                    addLogEntry({
                         type: 'error',
                         level: 'error',
                         message: `Failed: ${options.description}`,
@@ -355,8 +227,8 @@ export function useApiMutation<T, P = void>() {
                 setLoading(false);
             }
         },
-        []
-    ); // Zustand stores are stable
+        [addLogEntry]
+    );
 
     return { mutate, loading, error };
 }
