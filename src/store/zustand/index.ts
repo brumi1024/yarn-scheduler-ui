@@ -7,6 +7,9 @@
 /** UI state management store for selection, view settings, and modals */
 export { useUIStore } from './uiStore';
 
+/** Consolidated data store for all server data */
+export { useDataStore } from '../dataStore';
+
 /** Configuration data store for scheduler, queues, and node information */
 export { useConfigurationStore } from './configurationStore';
 
@@ -21,6 +24,7 @@ export type * from './types';
 
 // Import the stores after exporting them to avoid circular dependencies
 import { useUIStore } from './uiStore';
+import { useDataStore } from '../dataStore';
 import { useConfigurationStore } from './configurationStore';
 import { useStagedChangesStore } from './stagedChangesStore';
 import { useActivityStore } from './activityStore';
@@ -34,7 +38,7 @@ import { useActivityStore } from './activityStore';
 /** Get the currently selected queue data */
 export const useSelectedQueue = () => {
     const selectedQueuePath = useUIStore((state) => state.selectedQueuePath);
-    const scheduler = useConfigurationStore((state) => state.scheduler);
+    const scheduler = useDataStore((state) => state.scheduler);
 
     if (!selectedQueuePath || !scheduler?.scheduler.schedulerInfo) {
         return null;
@@ -69,7 +73,7 @@ export const useSelectedQueue = () => {
 };
 
 export const useAllQueues = () => {
-    const scheduler = useConfigurationStore((state) => state.scheduler);
+    const scheduler = useDataStore((state) => state.scheduler);
 
     if (!scheduler?.scheduler.schedulerInfo.queues?.queue) {
         return [];
@@ -96,6 +100,6 @@ export const useAllQueues = () => {
 };
 
 export const useHasUnsavedChanges = () => {
-    const store = useStagedChangesStore();
-    return store.hasUnsavedChanges();
+    const pendingChanges = useUIStore((state) => state.pendingChanges);
+    return pendingChanges.length > 0;
 };

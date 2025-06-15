@@ -1,141 +1,102 @@
 import React from 'react';
-import { useController, type Control } from 'react-hook-form';
-import { Box, Typography, Tooltip } from '@mui/material';
-import { Help as HelpIcon } from '@mui/icons-material';
-import type { PropertyDefinition } from '../../config';
-import { isCapacityProperty } from '../../schemas/propertySchemas';
-import { BooleanField } from './fields/BooleanField';
-import { EnumField } from './fields/EnumField';
-import { NumberField } from './fields/NumberField';
-import { StringField } from './fields/StringField';
-import { PercentageField } from './fields/PercentageField';
-import { CapacityField } from './fields/CapacityField';
+import { QUEUE_PROPERTIES } from '../../config/queueProperties';
+import { TextField, Select, MenuItem, Switch, FormControl, InputLabel, FormControlLabel, Box, Typography } from '@mui/material';
 
 interface PropertyFormFieldProps {
-    property: PropertyDefinition;
-    control: Control<any>;
-    name: string;
-    siblings?: Array<{ name: string; capacity: string }>;
-    onCustomChange?: (value: any) => void;
+  propertyKey: string;
+  value: unknown;
+  onChange: (value: unknown) => void;
+  error?: string;
 }
 
-export function PropertyFormField({ property, control, name, siblings, onCustomChange }: PropertyFormFieldProps) {
-    const {
-        field: { onChange, value, ref },
-        fieldState: { error },
-    } = useController({
-        name,
-        control,
-        defaultValue: property.defaultValue || '',
-    });
-
-    const handleChange = (newValue: any) => {
-        onChange(newValue);
-        if (onCustomChange) {
-            onCustomChange(newValue);
-        }
-    };
-
-    const renderField = () => {
-        // Special handling for capacity properties (including template capacity)
-        if (isCapacityProperty(property.key)) {
-            return (
-                <CapacityField
-                    label={property.displayName}
-                    value={value || ''}
-                    onChange={handleChange}
-                    error={error?.message}
-                    siblings={siblings}
-                />
-            );
-        }
-
-        switch (property.type) {
-            case 'boolean':
-                return (
-                    <BooleanField value={value} onChange={handleChange} label={property.displayName} inputRef={ref} />
-                );
-
-            case 'enum':
-                return (
-                    <EnumField
-                        value={value || ''}
-                        onChange={handleChange}
-                        label={property.displayName}
-                        options={property.options}
-                        error={error?.message}
-                        inputRef={ref}
-                    />
-                );
-
-            case 'number':
-                return (
-                    <NumberField
-                        value={value || ''}
-                        onChange={handleChange}
-                        label={property.displayName}
-                        error={error?.message}
-                        placeholder={property.placeholder}
-                        step={property.step || '1'}
-                        inputRef={ref}
-                    />
-                );
-
-            case 'percentage':
-                return (
-                    <PercentageField
-                        value={value}
-                        onChange={handleChange}
-                        label={property.displayName}
-                        error={error?.message}
-                        inputRef={ref}
-                    />
-                );
-
-            default: // 'string'
-                return (
-                    <StringField
-                        value={value || ''}
-                        onChange={handleChange}
-                        label={property.displayName}
-                        error={error?.message}
-                        placeholder={property.placeholder}
-                        multiline={property.key.includes('description') || property.key.includes('policy')}
-                        rows={property.key.includes('description') || property.key.includes('policy') ? 3 : 1}
-                        inputRef={ref}
-                    />
-                );
-        }
-    };
-
-    // For capacity properties, the CapacityEditor handles its own layout
-    if (isCapacityProperty(property.key)) {
-        return renderField();
-    }
-
-    return (
-        <Box sx={{ mb: 3 }}>
-            <Box display="flex" alignItems="center" gap={1} mb={1}>
-                {property.type !== 'boolean' && property.type !== 'percentage' && (
-                    <Typography variant="body2" color="text.secondary">
-                        {property.displayName}
-                    </Typography>
-                )}
-
-                {property.description && (
-                    <Tooltip title={property.description} arrow>
-                        <HelpIcon fontSize="small" color="action" />
-                    </Tooltip>
-                )}
-            </Box>
-
-            {renderField()}
-
-            {property.defaultValue && property.type !== 'percentage' && (
-                <Typography variant="caption" color="text.secondary" sx={{ mt: 0.5, display: 'block' }}>
-                    Default: {property.defaultValue}
-                </Typography>
-            )}
+export function PropertyFormField({ propertyKey, value, onChange, error }: PropertyFormFieldProps) {
+  const property = QUEUE_PROPERTIES[propertyKey as keyof typeof QUEUE_PROPERTIES];
+  if (!property) return null;
+  
+  // Direct rendering based on type - no abstraction layers
+  switch (property.type) {
+    case 'capacity':
+      return (
+        <TextField
+          label={property.label}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          error={!!error}
+          helperText={error || property.description}
+          fullWidth
+          margin="normal"
+        />
+      );
+      
+    case 'select':
+      return (
+        <FormControl fullWidth margin="normal" error={!!error}>
+          <InputLabel>{property.label}</InputLabel>
+          <Select
+            value={value || ''}
+            onChange={(e) => onChange(e.target.value)}
+            label={property.label}
+          >
+            {property.options?.map(option => (
+              <MenuItem key={option} value={option}>{option}</MenuItem>
+            ))}
+          </Select>
+          {(error || property.description) && (
+            <Typography variant="caption" color={error ? 'error' : 'text.secondary'} sx={{ mt: 0.5 }}>
+              {error || property.description}
+            </Typography>
+          )}
+        </FormControl>
+      );
+      
+    case 'number':
+      return (
+        <TextField
+          type="number"
+          label={property.label}
+          value={value || ''}
+          onChange={(e) => onChange(parseFloat(e.target.value) || 0)}
+          error={!!error}
+          helperText={error || property.description}
+          fullWidth
+          margin="normal"
+        />
+      );
+      
+    case 'boolean':
+      return (
+        <Box sx={{ my: 2 }}>
+          <FormControlLabel
+            control={
+              <Switch
+                checked={value || false}
+                onChange={(e) => onChange(e.target.checked)}
+              />
+            }
+            label={property.label}
+          />
+          {(error || property.description) && (
+            <Typography variant="caption" color={error ? 'error' : 'text.secondary'} display="block">
+              {error || property.description}
+            </Typography>
+          )}
         </Box>
-    );
+      );
+
+    case 'text':
+      return (
+        <TextField
+          label={property.label}
+          value={value || ''}
+          onChange={(e) => onChange(e.target.value)}
+          error={!!error}
+          helperText={error || property.description}
+          fullWidth
+          margin="normal"
+        />
+      );
+      
+    default:
+      return null;
+  }
 }

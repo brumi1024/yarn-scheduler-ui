@@ -4,7 +4,7 @@ import { CanvasDisplay, type CanvasDisplayRef } from './CanvasDisplay';
 import { VisualizationControls } from './VisualizationControls';
 import { useQueueDataProcessor } from './QueueDataProcessor';
 import { QueueInfoPanel } from '../QueueInfoPanel';
-import { useConfigurationStore, useUIStore, useSelectedQueue } from '../../store/zustand';
+import { useDataStore, useUIStore, useSelectedQueue } from '../../store/zustand';
 import type { Queue } from '../../types/Queue';
 import type { SelectionEvent, HoverEvent } from '../../utils/canvas';
 
@@ -16,7 +16,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const canvasRef = useRef<CanvasDisplayRef>(null);
 
     // Zustand stores
-    const configStore = useConfigurationStore();
+    const { configuration, scheduler, loading, error: apiError } = useDataStore();
     const uiStore = useUIStore();
     const selectedQueueData = useSelectedQueue();
 
@@ -26,15 +26,13 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
         flows,
         isLoading: dataLoading,
         error: dataError,
-    } = useQueueDataProcessor(configStore.configuration, configStore.scheduler);
+    } = useQueueDataProcessor(configuration, scheduler);
 
     // Local state for hover
     const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
 
     // Loading and error states
-    const apiLoading = configStore.loading.configuration || configStore.loading.scheduler;
-    const apiError = configStore.errors.configuration || configStore.errors.scheduler;
-    const isLoading = apiLoading || dataLoading;
+    const isLoading = loading || dataLoading;
     const error = apiError?.message || dataError;
 
     // Handle selection events from canvas

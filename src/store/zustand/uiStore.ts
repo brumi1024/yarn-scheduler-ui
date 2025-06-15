@@ -2,9 +2,19 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type { UIState, NotificationState } from './types';
 
+interface PendingChange {
+  id: string;
+  queuePath: string;
+  property: string;
+  oldValue: any;
+  newValue: any;
+  timestamp: Date;
+}
+
 interface UIStore extends UIState {
     // Selection actions
     selectQueue: (queuePath?: string) => void;
+    setHoveredQueue: (queuePath: string | null) => void;
 
     // Queue expansion actions
     toggleQueueExpanded: (queuePath: string) => void;
@@ -12,6 +22,12 @@ interface UIStore extends UIState {
 
     // View settings actions
     updateViewSettings: (settings: Partial<UIState['viewSettings']>) => void;
+
+    // Pending changes (moved from stagedChangesStore)
+    pendingChanges: PendingChange[];
+    addPendingChange: (change: Omit<PendingChange, 'id' | 'timestamp'>) => void;
+    removePendingChange: (id: string) => void;
+    clearPendingChanges: () => void;
 
     // Modal actions
     openPropertyEditor: (queuePath?: string, mode?: 'create' | 'edit') => void;
@@ -30,6 +46,7 @@ export const useUIStore = create<UIStore>()(
         (set, get) => ({
             // Initial state
             selectedQueuePath: undefined,
+            hoveredQueuePath: null,
             expandedQueues: new Set<string>(),
             viewSettings: {
                 showCapacityBars: true,
@@ -40,10 +57,15 @@ export const useUIStore = create<UIStore>()(
             },
             notifications: [],
             modals: {},
+            pendingChanges: [],
 
             // Actions
             selectQueue: (queuePath) => {
                 set({ selectedQueuePath: queuePath });
+            },
+
+            setHoveredQueue: (queuePath) => {
+                set({ hoveredQueuePath: queuePath });
             },
 
             toggleQueueExpanded: (queuePath) =>
@@ -63,6 +85,20 @@ export const useUIStore = create<UIStore>()(
                 set((state) => ({
                     viewSettings: { ...state.viewSettings, ...settings },
                 })),
+
+            addPendingChange: (change) => set((state) => ({
+                pendingChanges: [...state.pendingChanges, {
+                    ...change,
+                    id: `change-${Date.now()}`,
+                    timestamp: new Date()
+                }]
+            })),
+
+            removePendingChange: (id) => set((state) => ({
+                pendingChanges: state.pendingChanges.filter(c => c.id !== id)
+            })),
+
+            clearPendingChanges: () => set({ pendingChanges: [] }),
 
             openPropertyEditor: (queuePath, mode = 'edit') =>
                 set({

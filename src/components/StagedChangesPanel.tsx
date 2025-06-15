@@ -30,19 +30,27 @@ import {
     Edit as EditIcon,
     Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { useStagedChangesStore } from '../store/zustand/stagedChangesStore';
-import type { ChangeSet } from '../types/Configuration';
+import { useUIStore } from '../store/zustand';
 
 interface StagedChangesPanelProps {
     onApplyChanges?: () => void;
 }
 
+interface PendingChange {
+  id: string;
+  queuePath: string;
+  property: string;
+  oldValue: unknown;
+  newValue: unknown;
+  timestamp: Date;
+}
+
 interface GroupedChanges {
-    [queueName: string]: ChangeSet[];
+    [queueName: string]: PendingChange[];
 }
 
 export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) {
-    const { changes, unstageChange, clearAllChanges, hasUnsavedChanges, conflicts } = useStagedChangesStore();
+    const { pendingChanges, removePendingChange, clearPendingChanges } = useUIStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
@@ -52,8 +60,8 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         if (groupBy === 'queue') {
             // Group by queue name
             const grouped: GroupedChanges = {};
-            changes.forEach((change) => {
-                const key = change.queueName || 'global';
+            pendingChanges.forEach((change) => {
+                const key = change.queuePath || 'global';
                 if (!grouped[key]) {
                     grouped[key] = [];
                 }
@@ -61,10 +69,10 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             });
             return grouped;
         } else {
-            // Group by change type
+            // Group by property type
             const grouped: GroupedChanges = {};
-            changes.forEach((change) => {
-                const key = change.type;
+            pendingChanges.forEach((change) => {
+                const key = change.property;
                 if (!grouped[key]) {
                     grouped[key] = [];
                 }
@@ -72,10 +80,10 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             });
             return grouped;
         }
-    }, [changes, groupBy]);
+    }, [pendingChanges, groupBy]);
 
-    const changeCount = changes.length;
-    const hasConflicts = conflicts.length > 0;
+    const changeCount = pendingChanges.length;
+    const hasConflicts = false; // Simplified for now - no conflict detection
 
     if (changeCount === 0) {
         return null; // Don't show panel when no changes
@@ -88,7 +96,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
     };
 
     const handleClearAll = () => {
-        clearAllChanges();
+        clearPendingChanges();
         setIsExpanded(false);
     };
 
@@ -100,46 +108,24 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         }).format(timestamp);
     };
 
-    const getChangeTypeColor = (type: ChangeSet['type']) => {
-        switch (type) {
-            case 'add-queue':
-                return 'success';
-            case 'update-queue':
-                return 'info';
-            case 'remove-queue':
-                return 'error';
-            case 'global-update':
-                return 'warning';
-            default:
-                return 'default';
-        }
+    const getChangeTypeColor = () => {
+        return 'info'; // All changes are property updates for now
     };
 
-    const getChangeTypeIcon = (type: ChangeSet['type']) => {
-        switch (type) {
-            case 'add-queue':
-                return <EditIcon fontSize="small" />;
-            case 'update-queue':
-                return <InfoIcon fontSize="small" />;
-            case 'remove-queue':
-                return <DeleteIcon fontSize="small" />;
-            case 'global-update':
-                return <WarningIcon fontSize="small" />;
-            default:
-                return <InfoIcon fontSize="small" />;
-        }
+    const getChangeTypeIcon = () => {
+        return <EditIcon fontSize="small" />; // All changes are edits for now
     };
 
-    const renderChangeItem = (change: ChangeSet) => (
+    const renderChangeItem = (change: PendingChange) => (
         <ListItem key={change.id} divider>
             <ListItemText
                 primary={
                     <Box display="flex" alignItems="center" gap={1}>
                         <Chip
-                            icon={getChangeTypeIcon(change.type)}
-                            label={change.type.replace('-', ' ')}
+                            icon={getChangeTypeIcon()}
+                            label="Property Update"
                             size="small"
-                            color={getChangeTypeColor(change.type) as any}
+                            color={getChangeTypeColor() as any}
                             variant="outlined"
                         />
                         <Typography variant="body2" fontWeight="medium">
@@ -149,9 +135,6 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                 }
                 secondary={
                     <Box component="div">
-                        <Box component="div" sx={{ color: 'text.secondary', fontSize: '0.875rem' }}>
-                            {change.description}
-                        </Box>
                         <Box display="flex" alignItems="center" gap={2} mt={0.5}>
                             <Box
                                 component="span"
@@ -165,23 +148,21 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                                 <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5 }} />
                                 {formatTimestamp(change.timestamp)}
                             </Box>
-                            {change.oldValue && (
-                                <Box display="flex" alignItems="center" gap={0.5}>
-                                    <Box component="span" sx={{ fontSize: '0.75rem', color: 'error.main' }}>
-                                        From: {change.oldValue}
-                                    </Box>
-                                    <Box component="span" sx={{ fontSize: '0.75rem', color: 'success.main' }}>
-                                        To: {change.newValue}
-                                    </Box>
+                            <Box display="flex" alignItems="center" gap={0.5}>
+                                <Box component="span" sx={{ fontSize: '0.75rem', color: 'error.main' }}>
+                                    From: {String(change.oldValue)}
                                 </Box>
-                            )}
+                                <Box component="span" sx={{ fontSize: '0.75rem', color: 'success.main' }}>
+                                    To: {String(change.newValue)}
+                                </Box>
+                            </Box>
                         </Box>
                     </Box>
                 }
             />
             <ListItemSecondaryAction>
                 <Tooltip title="Remove change">
-                    <IconButton edge="end" onClick={() => unstageChange(change.id)} size="small">
+                    <IconButton edge="end" onClick={() => removePendingChange(change.id)} size="small">
                         <DeleteIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
@@ -318,7 +299,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                         variant="contained"
                         startIcon={<SaveIcon />}
                         onClick={handleApplyChanges}
-                        disabled={hasConflicts || !hasUnsavedChanges()}
+                        disabled={hasConflicts || changeCount === 0}
                         size="small"
                     >
                         Apply Changes

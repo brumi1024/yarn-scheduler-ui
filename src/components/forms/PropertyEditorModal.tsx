@@ -15,20 +15,17 @@ import {
     IconButton,
 } from '@mui/material';
 import { Close as CloseIcon } from '@mui/icons-material';
+import { z } from 'zod';
 import type { Queue } from '../../types/Queue';
-import { getQueuePropertyGroups } from '../../config';
+import { getQueuePropertyGroups, QUEUE_PROPERTIES } from '../../config';
 import { PropertyFormField } from './PropertyFormField';
-import { AutoQueueCreationSection } from './AutoQueueCreationSection';
-import { createFormSchema } from '../../schemas/propertySchemas';
-import { useStagedChangesStore } from '../../store/zustand/stagedChangesStore';
-import { createChangeSetsFromFormData } from '../../utils/configurationUtils';
-import { getQueueFormDefaults } from '../../config/property-utils';
+import { useUIStore } from '../../store/zustand';
 
 interface PropertyEditorModalProps {
     open: boolean;
     onClose: () => void;
     queue: Queue | null;
-    onSave: (queuePath: string, changes: Record<string, any>) => void;
+    onSave?: (queuePath: string, changes: Record<string, unknown>) => void;
 }
 
 interface TabPanelProps {
@@ -50,21 +47,21 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const propertyGroups = getQueuePropertyGroups();
-    const { stageChange } = useStagedChangesStore();
+    const { addPendingChange } = useUIStore();
 
-    // Create combined properties object for schema generation
-    const allProperties = propertyGroups.reduce((acc: any, group: any) => {
-        // Convert properties array to object keyed by property key
-        const propsObject = group.properties.reduce((obj: any, prop: any) => {
-            obj[prop.key] = prop;
-            return obj;
-        }, {});
-        return { ...acc, ...propsObject };
-    }, {});
-    const validationSchema = createFormSchema(allProperties);
+    // Create validation schema from property definitions
+    const createValidationSchema = () => {
+        const shape: Record<string, z.ZodType> = {};
+        
+        Object.entries(QUEUE_PROPERTIES).forEach(([key, prop]) => {
+            shape[key] = prop.schema;
+        });
+        
+        return z.object(shape);
+    };
 
     const form = useForm({
-        resolver: zodResolver(validationSchema),
+        resolver: zodResolver(createValidationSchema()),
         defaultValues: {},
         mode: 'onChange',
         reValidateMode: 'onChange',
@@ -78,35 +75,46 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
 
     useEffect(() => {
         if (queue && open) {
-            const initialData = getQueueFormDefaults(queue);
+            // Create initial form data from queue properties
+            const initialData: Record<string, unknown> = {};
+            Object.keys(QUEUE_PROPERTIES).forEach(key => {
+                const queueValue = (queue as any)[key];
+                if (queueValue !== undefined) {
+                    initialData[key] = queueValue;
+                } else {
+                    initialData[key] = QUEUE_PROPERTIES[key as keyof typeof QUEUE_PROPERTIES].defaultValue;
+                }
+            });
+            
             reset(initialData);
             setTabValue(0);
             setSaveError(null);
         }
     }, [queue, open, reset]);
 
-    // No need for watch effect anymore since we use isDirty directly
-
-    const onSubmit = (data: Record<string, any>) => {
+    const onSubmit = (data: Record<string, unknown>) => {
         if (!queue?.queueName) return;
 
         try {
             setSaveError(null);
 
-            // Create ChangeSet objects from form data
-            const changes = createChangeSetsFromFormData(queue.queueName, data, queue);
+            // Add changes to pending changes
+            Object.entries(data).forEach(([key, value]) => {
+                const currentValue = (queue as any)[key];
+                if (currentValue !== value) {
+                    addPendingChange({
+                        queuePath: queue.queueName,
+                        property: key,
+                        oldValue: currentValue,
+                        newValue: value
+                    });
+                }
+            });
 
-            if (changes.length === 0) {
-                // No actual changes detected
-                onClose();
-                return;
+            // Call the optional onSave callback
+            if (onSave) {
+                onSave(queue.queueName, data);
             }
-
-            // Stage all changes
-            changes.forEach((change) => stageChange(change));
-
-            // Call the original onSave callback for backward compatibility
-            onSave(queue.queueName, data);
 
             // Close the modal
             onClose();
@@ -126,19 +134,6 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
     };
 
     const renderPropertyGroup = (group: any) => {
-        // Get sibling queues for capacity calculations
-        const siblings =
-            queue && (queue as any).parent
-                ? ((queue as any).parent.children || [])
-                      .filter((child: any) => child.queueName !== queue.queueName)
-                      .map((child: any) => ({ name: child.queueName, capacity: `${child.capacity}%` }))
-                : [];
-
-        // Special handling for Auto-Queue Creation group
-        if (group.groupName === 'Auto-Queue Creation') {
-            return <AutoQueueCreationSection key={group.groupName} properties={group.properties} siblings={siblings} />;
-        }
-
         return (
             <Box key={group.groupName} sx={{ mb: 3 }}>
                 <Typography variant="h6" gutterBottom>
@@ -148,10 +143,10 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                 {group.properties.map((property: any) => (
                     <PropertyFormField
                         key={property.key}
-                        property={property}
-                        control={form.control}
-                        name={property.key}
-                        siblings={siblings}
+                        propertyKey={property.key}
+                        value={form.watch(property.key)}
+                        onChange={(value) => form.setValue(property.key, value)}
+                        error={errors[property.key]?.message as string}
                     />
                 ))}
             </Box>
@@ -201,12 +196,12 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                         variant="scrollable"
                         scrollButtons="auto"
                     >
-                        {propertyGroups.map((group: any) => (
+                        {propertyGroups.map((group) => (
                             <Tab key={group.groupName} label={group.groupName} />
                         ))}
                     </Tabs>
 
-                    {propertyGroups.map((group: any, index: number) => (
+                    {propertyGroups.map((group, index: number) => (
                         <TabPanel key={group.groupName} value={tabValue} index={index}>
                             {renderPropertyGroup(group)}
                         </TabPanel>

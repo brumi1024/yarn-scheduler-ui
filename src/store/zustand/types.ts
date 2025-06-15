@@ -7,6 +7,7 @@ export type { ChangeSet } from '../../types/Configuration';
 // UI State
 export interface UIState {
     selectedQueuePath?: string;
+    hoveredQueuePath?: string | null;
     expandedQueues: Set<string>;
     viewSettings: {
         showCapacityBars: boolean;
