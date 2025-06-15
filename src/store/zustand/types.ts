@@ -11,7 +11,7 @@ export interface UIState {
     viewSettings: {
         showCapacityBars: boolean;
         showUsageMetrics: boolean;
-        layout: 'tree' | 'sankey';
+        layout: 'tree';
         zoomLevel: number;
         panPosition: { x: number; y: number };
     };

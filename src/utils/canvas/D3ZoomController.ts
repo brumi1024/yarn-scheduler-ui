@@ -1,4 +1,4 @@
-import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior, type ZoomTransform } from 'd3-zoom';
+import { zoom, zoomIdentity, zoomTransform, type ZoomBehavior } from 'd3-zoom';
 import { select, type Selection } from 'd3-selection';
 import 'd3-transition'; // Required for .transition() method
 import { easeCubicInOut } from 'd3-ease';

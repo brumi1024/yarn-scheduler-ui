@@ -1,4 +1,6 @@
 import { scaleLinear } from 'd3-scale';
+import { interpolateRgb } from 'd3-interpolate';
+import { timer } from 'd3-timer';
 import type { LayoutNode, FlowPath } from '../d3/D3TreeLayout';
 import type { Queue } from '../../types/Queue';
 
@@ -84,7 +86,7 @@ export class CanvasRenderer {
     private devicePixelRatio: number;
     private theme: RenderTheme;
     private layers: Map<string, RenderLayer> = new Map();
-    private animationFrameId: number | null = null;
+    private renderTimer: ReturnType<typeof timer> | null = null;
     private hoveredNode: LayoutNode | null = null;
     private selectedNodes: Set<string> = new Set();
     private nodes: LayoutNode[] = [];
@@ -200,23 +202,25 @@ export class CanvasRenderer {
     }
 
     /**
-     * Render using requestAnimationFrame
+     * Render using D3 timer for consistent frame timing
      */
     startRenderLoop(nodes: LayoutNode[], flows: FlowPath[], transform?: Transform): void {
-        const renderFrame = () => {
+        // Stop existing timer if running
+        this.stopRenderLoop();
+        
+        // Start new D3 timer for rendering
+        this.renderTimer = timer(() => {
             this.render(nodes, flows, transform);
-            this.animationFrameId = requestAnimationFrame(renderFrame);
-        };
-        renderFrame();
+        });
     }
 
     /**
      * Stop render loop
      */
     stopRenderLoop(): void {
-        if (this.animationFrameId !== null) {
-            cancelAnimationFrame(this.animationFrameId);
-            this.animationFrameId = null;
+        if (this.renderTimer !== null) {
+            this.renderTimer.stop();
+            this.renderTimer = null;
         }
     }
 
@@ -434,7 +438,7 @@ export class CanvasRenderer {
         const badgeY = y;
 
         // Capacity mode badge (leftmost)
-        const modeText = this.getCapacityMode(data);
+        const modeText = this.getCapacityMode();
         if (modeText) {
             const modeDisplay = modeText.toUpperCase();
             this.drawEnhancedBadge(ctx, modeDisplay, currentX, badgeY, '#3b82f6', '#dbeafe');
@@ -646,7 +650,7 @@ export class CanvasRenderer {
         const usedCapacity = queue.usedCapacity || 0;
         const totalCapacity = queue.capacity || 0;
         const maxCapacity = queue.maxCapacity || 100;
-        const capacityMode = this.getCapacityMode(queue);
+        const capacityMode = this.getCapacityMode();
 
         // Create D3 scale for consistent width calculations
         const capacityScale = scaleLinear()
@@ -690,7 +694,7 @@ export class CanvasRenderer {
      * Get detailed capacity information from partition data
      */
     private getDetailedCapacityInfo(queue: Queue): { allocated: string; used: string; max: string } {
-        const capacityMode = this.getCapacityMode(queue);
+        const capacityMode = this.getCapacityMode();
         const usedCapacity = queue.usedCapacity || 0;
         const totalCapacity = queue.capacity || 0;
         const maxCapacity = queue.maxCapacity || 100;
@@ -742,19 +746,19 @@ export class CanvasRenderer {
     }
 
     /**
-     * Get usage color based on percentage using D3-inspired color scale
+     * Get usage color based on percentage using D3 color schemes
      */
     private getUsageColor(used: number, total: number): string {
         if (total === 0) return '#94a3b8';
 
-        // Use a more sophisticated scale approach
-        const percentage = used;
+        // Use D3's scaleLinear with proper color interpolation for a green-yellow-red scale
         const colorScale = scaleLinear<string>()
             .domain([0, 50, 75, 90, 100])
-            .range(['#22c55e', '#22c55e', '#eab308', '#f97316', '#ef4444'])
+            .range(['#22c55e', '#84cc16', '#eab308', '#f97316', '#ef4444'])
+            .interpolate(interpolateRgb)
             .clamp(true);
 
-        return colorScale(percentage);
+        return colorScale(used);
     }
 
     /**
@@ -772,7 +776,7 @@ export class CanvasRenderer {
     /**
      * Get capacity mode text
      */
-    private getCapacityMode(_queue: Queue): string {
+    private getCapacityMode(): string {
         return 'percentage';
     }
 

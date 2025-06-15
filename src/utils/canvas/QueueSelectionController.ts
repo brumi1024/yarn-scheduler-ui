@@ -238,6 +238,7 @@ export class QueueSelectionController {
      */
     private handleClick(e: MouseEvent): void {
         // No need to check isDraggingActive() here since D3ZoomController already filters out drag events
+        // Use screen coordinates since screenToWorld expects absolute coordinates
         const worldPos = this.panZoomController.screenToWorld(e.clientX, e.clientY);
         const hitNode = this.hitTest(worldPos.x, worldPos.y);
 
@@ -263,6 +264,7 @@ export class QueueSelectionController {
      * Update hover state
      */
     private updateHover(e: MouseEvent): void {
+        // Use screen coordinates since screenToWorld expects absolute coordinates
         const worldPos = this.panZoomController.screenToWorld(e.clientX, e.clientY);
         const hitNode = this.hitTest(worldPos.x, worldPos.y);
 

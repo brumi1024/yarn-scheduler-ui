@@ -3,6 +3,7 @@ import { easeCubicInOut } from 'd3-ease';
 import { extent } from 'd3-array';
 import { scaleLinear } from 'd3-scale';
 import { interpolateObject } from 'd3-interpolate';
+import { path } from 'd3-path';
 import type { HierarchyNode } from 'd3-hierarchy';
 import type { Queue } from '../../types/Queue';
 
@@ -253,7 +254,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Create optimized flow path with better curve calculations
+     * Create optimized flow path using D3 path generators
      */
     private createOptimizedFlowPath(
         source: LayoutNode,
@@ -273,19 +274,37 @@ export class D3TreeLayout {
         const targetTop = Math.max(targetStartY, target.y + borderRadius);
         const targetBottom = Math.min(targetEndY, target.y + target.height - borderRadius);
         
+        // Use D3's path generator for cleaner construction
+        const pathGenerator = path();
+        
         // Optimized control point calculation
         const horizontalDistance = Math.abs(targetX - sourceX);
-        const controlDistance = Math.min(horizontalDistance * 0.4, 80); // Cap control distance
+        const controlDistance = Math.min(horizontalDistance * 0.4, 80);
         
-        // Build path with optimized curve points
-        return [
-            `M ${sourceX} ${sourceTop}`,
-            `C ${sourceX + controlDistance} ${sourceTop}, ${targetX - controlDistance} ${targetTop}, ${targetX} ${targetTop}`,
-            `L ${targetX} ${targetBottom}`,
-            `C ${targetX - controlDistance} ${targetBottom}, ${sourceX + controlDistance} ${sourceBottom}, ${sourceX} ${sourceBottom}`,
-            `L ${sourceX} ${sourceTop}`,
-            'Z'
-        ].join(' ');
+        // Build path using D3's path API instead of manual string construction
+        pathGenerator.moveTo(sourceX, sourceTop);
+        
+        // Top curve using bezier
+        pathGenerator.bezierCurveTo(
+            sourceX + controlDistance, sourceTop,
+            targetX - controlDistance, targetTop,
+            targetX, targetTop
+        );
+        
+        // Right edge
+        pathGenerator.lineTo(targetX, targetBottom);
+        
+        // Bottom curve back
+        pathGenerator.bezierCurveTo(
+            targetX - controlDistance, targetBottom,
+            sourceX + controlDistance, sourceBottom,
+            sourceX, sourceBottom
+        );
+        
+        // Close the path
+        pathGenerator.closePath();
+        
+        return pathGenerator.toString();
     }
 
     /**
