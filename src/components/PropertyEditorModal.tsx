@@ -20,6 +20,8 @@ import { getQueuePropertyGroups } from '../config';
 import { PropertyFormField } from './PropertyFormField';
 import { AutoQueueCreationSection } from './AutoQueueCreationSection';
 import { createFormSchema } from '../schemas/propertySchemas';
+import { useStagedChangesStore } from '../store/zustand/stagedChangesStore';
+import { createChangeSetsFromFormData } from '../utils/configurationUtils';
 
 interface PropertyEditorModalProps {
     open: boolean;
@@ -36,17 +38,18 @@ interface TabPanelProps {
 
 function TabPanel({ children, value, index }: TabPanelProps) {
     return (
-        <div role="tabpanel" hidden={value !== index}>
-            {value === index && <Box sx={{ py: 2 }}>{children}</Box>}
+        <div role="tabpanel" hidden={value !== index} style={{ display: value !== index ? 'none' : 'block' }}>
+            <Box sx={{ py: 2 }}>{children}</Box>
         </div>
     );
 }
 
 export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEditorModalProps) {
     const [tabValue, setTabValue] = useState(0);
-    const [hasChanges, setHasChanges] = useState(false);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const propertyGroups = getQueuePropertyGroups();
+    const { stageChange } = useStagedChangesStore();
     
     // Create combined properties object for schema generation
     const allProperties = propertyGroups.reduce((acc: any, group: any) => {
@@ -63,9 +66,10 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
         resolver: zodResolver(validationSchema),
         defaultValues: {},
         mode: 'onChange',
+        reValidateMode: 'onChange',
     });
 
-    const { handleSubmit, reset, watch, formState: { errors, isDirty } } = form;
+    const { handleSubmit, reset, formState: { errors, isDirty } } = form;
 
     useEffect(() => {
         if (queue && open) {
@@ -94,30 +98,43 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
             }
 
             reset(initialData);
-            setHasChanges(false);
             setTabValue(0);
+            setSaveError(null);
         }
     }, [queue, open, reset]);
 
-    // Watch for form changes
-    useEffect(() => {
-        const subscription = watch(() => {
-            setHasChanges(isDirty);
-        });
-        return () => subscription.unsubscribe();
-    }, [watch, isDirty]);
+    // No need for watch effect anymore since we use isDirty directly
 
     const onSubmit = (data: Record<string, any>) => {
         if (!queue?.queueName) return;
 
-        // For now, just pass the form data as changes
-        // In a real implementation, this would map to YARN configuration keys
-        onSave(queue.queueName, data);
-        onClose();
+        try {
+            setSaveError(null);
+
+            // Create ChangeSet objects from form data
+            const changes = createChangeSetsFromFormData(queue.queueName, data, queue);
+
+            if (changes.length === 0) {
+                // No actual changes detected
+                onClose();
+                return;
+            }
+
+            // Stage all changes
+            changes.forEach(change => stageChange(change));
+
+            // Call the original onSave callback for backward compatibility
+            onSave(queue.queueName, data);
+
+            // Close the modal
+            onClose();
+        } catch (error) {
+            setSaveError(error instanceof Error ? error.message : 'Failed to save changes');
+        }
     };
 
     const handleClose = () => {
-        if (hasChanges) {
+        if (isDirty) {
             if (window.confirm('You have unsaved changes. Are you sure you want to close?')) {
                 onClose();
             }
@@ -195,6 +212,12 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                         Please fix the validation errors before saving.
                     </Alert>
                 )}
+                
+                {saveError && (
+                    <Alert severity="error" sx={{ mb: 2 }}>
+                        {saveError}
+                    </Alert>
+                )}
 
                 <Tabs
                     value={tabValue}
@@ -226,7 +249,7 @@ export function PropertyEditorModal({ open, onClose, queue, onSave }: PropertyEd
                     <Button 
                         onClick={handleSubmit(onSubmit)} 
                         variant="contained" 
-                        disabled={hasErrors || !hasChanges}
+                        disabled={hasErrors || !isDirty}
                     >
                         Save Changes
                     </Button>

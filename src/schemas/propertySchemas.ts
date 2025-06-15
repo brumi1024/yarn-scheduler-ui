@@ -72,10 +72,10 @@ export const capacityValueSchema = z
 
             // Raw number (assume percentage)
             const numericValue = parseFloat(trimmedValue);
-            return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 100;
+            return !isNaN(numericValue) && numericValue >= 0;
         },
         {
-            message: 'Invalid capacity format. Use percentage (10%), weight (5w), or absolute ([memory=1024,vcores=2])',
+            message: 'Invalid capacity format. Use percentage (10 or 10%), weight (5w), or absolute ([memory=1024,vcores=2])',
         }
     );
 
@@ -91,10 +91,29 @@ export const numberPropertySchema = z
     .union([
         z.number(),
         z.string().transform((val) => {
-            const parsed = parseFloat(val);
-            if (isNaN(parsed)) throw new Error('Invalid number');
+            // Handle empty strings and null/undefined
+            if (val === '' || val === null || val === undefined) {
+                return undefined;
+            }
+            
+            // Trim whitespace
+            const trimmed = String(val).trim();
+            
+            // Skip validation if this looks like a capacity value
+            // This shouldn't happen but provides a safety net
+            if (trimmed.endsWith('%') || trimmed.endsWith('w') || trimmed.startsWith('[')) {
+                return undefined;
+            }
+            
+            const parsed = parseFloat(trimmed);
+            if (isNaN(parsed)) {
+                // Return undefined instead of throwing to be more forgiving
+                return undefined;
+            }
             return parsed;
         }),
+        z.null().transform(() => undefined),
+        z.undefined(),
     ])
     .optional();
 

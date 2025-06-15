@@ -1,6 +1,7 @@
 import { Box, Typography } from '@mui/material';
 import { QueueVisualization } from '../components/QueueVisualization';
 import { ComponentErrorBoundary } from '../components/ErrorBoundary';
+import { StagedChangesPanel } from '../components/StagedChangesPanel';
 
 export default function QueueEditor() {
     return (
@@ -40,6 +41,14 @@ export default function QueueEditor() {
                 <ComponentErrorBoundary context="Queue Visualization">
                     <QueueVisualization />
                 </ComponentErrorBoundary>
+                
+                {/* Staged Changes Panel */}
+                <StagedChangesPanel 
+                    onApplyChanges={() => {
+                        // TODO: Implement apply changes logic
+                        console.log('Apply changes requested');
+                    }}
+                />
             </Box>
         </Box>
     );

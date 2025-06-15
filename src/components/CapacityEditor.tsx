@@ -93,6 +93,16 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
             };
         }
 
+        // Check if it's a raw number (assume percentage)
+        const rawNumber = parseFloat(trimmed);
+        if (!isNaN(rawNumber)) {
+            return {
+                mode: 'percentage',
+                value: `${rawNumber}%`,
+                parsed: { percentage: rawNumber },
+            };
+        }
+        
         // Default to percentage
         return {
             mode: 'percentage',

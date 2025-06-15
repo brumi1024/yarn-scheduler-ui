@@ -34,6 +34,8 @@ import { getQueuePropertyGroups } from '../config';
 import { PropertyFormField } from './PropertyFormField';
 import { AutoQueueCreationSection } from './AutoQueueCreationSection';
 import { createFormSchema } from '../schemas/propertySchemas';
+import { useStagedChangesStore } from '../store/zustand/stagedChangesStore';
+import { createChangeSetsFromFormData } from '../utils/configurationUtils';
 
 export interface QueueInfoPanelProps {
     queue: Queue | null;
@@ -57,8 +59,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     onQueueSelect,
 }) => {
     const [activeTab, setActiveTab] = useState(0);
+    const [saveError, setSaveError] = useState<string | null>(null);
 
     const propertyGroups = getQueuePropertyGroups();
+    const { stageChange } = useStagedChangesStore();
     
     // Create combined properties object for schema generation
     const allProperties = propertyGroups.reduce((acc: any, group: any) => {
@@ -107,6 +111,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
             reset(initialData);
             setActiveTab(0);
+            setSaveError(null);
         }
     }, [queue, open, reset]);
 
@@ -738,6 +743,12 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                 Please fix the validation errors before saving.
                             </Alert>
                         )}
+                        
+                        {saveError && (
+                            <Alert severity="error" sx={{ mb: 2 }}>
+                                {saveError}
+                            </Alert>
+                        )}
 
                         {propertyGroups.map((group: any, index: number) => (
                             <Accordion
@@ -771,6 +782,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                     size="small"
                                     onClick={() => {
                                         reset();
+                                        setSaveError(null);
                                     }}
                                 >
                                     Reset
@@ -779,8 +791,32 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                     variant="contained"
                                     size="small"
                                     onClick={handleSubmit((data) => {
-                                        if (!queue?.queueName || !onSaveProperties) return;
-                                        onSaveProperties(queue.queueName, data);
+                                        if (!queue?.queueName) return;
+
+                                        try {
+                                            setSaveError(null);
+
+                                            // Create ChangeSet objects from form data
+                                            const changes = createChangeSetsFromFormData(queue.queueName, data, queue);
+
+                                            if (changes.length === 0) {
+                                                // No actual changes detected
+                                                return;
+                                            }
+
+                                            // Stage all changes
+                                            changes.forEach(change => stageChange(change));
+
+                                            // Call the original onSaveProperties callback for backward compatibility
+                                            if (onSaveProperties) {
+                                                onSaveProperties(queue.queueName, data);
+                                            }
+
+                                            // Reset the form to clear isDirty state
+                                            reset();
+                                        } catch (error) {
+                                            setSaveError(error instanceof Error ? error.message : 'Failed to save changes');
+                                        }
                                     })}
                                     disabled={Object.keys(errors).length > 0}
                                 >
