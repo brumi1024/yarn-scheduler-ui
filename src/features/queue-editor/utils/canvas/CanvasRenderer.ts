@@ -2,7 +2,7 @@ import { scaleLinear } from 'd3-scale';
 import { interpolateRgb } from 'd3-interpolate';
 import { timer } from 'd3-timer';
 import type { LayoutNode, FlowPath } from '../d3/D3TreeLayout';
-import type { Queue } from '../../types/Queue';
+import type { Queue } from '../../../../types/Queue';
 
 export interface RenderOptions {
     canvas: HTMLCanvasElement;
@@ -80,18 +80,22 @@ export interface Transform {
     scale: number;
 }
 
+export interface CanvasRenderProps {
+    nodes: LayoutNode[];
+    flows: FlowPath[];
+    transform: Transform;
+    hoveredNodeId: string | null;
+    selectedNodeIds: Set<string>;
+    theme: RenderTheme;
+}
+
 export class CanvasRenderer {
     private canvas: HTMLCanvasElement;
     private ctx: CanvasRenderingContext2D;
     private devicePixelRatio: number;
-    private theme: RenderTheme;
+    private currentProps: CanvasRenderProps;
     private layers: Map<string, RenderLayer> = new Map();
     private renderTimer: ReturnType<typeof timer> | null = null;
-    private hoveredNode: LayoutNode | null = null;
-    private selectedNodes: Set<string> = new Set();
-    private nodes: LayoutNode[] = [];
-    private flows: FlowPath[] = [];
-    private currentTransform: Transform = { x: 0, y: 0, scale: 1 };
 
     constructor(options: RenderOptions) {
         this.canvas = options.canvas;
@@ -101,7 +105,15 @@ export class CanvasRenderer {
         }
         this.ctx = ctx;
         this.devicePixelRatio = options.devicePixelRatio || window.devicePixelRatio || 1;
-        this.theme = options.theme || DEFAULT_THEME;
+
+        this.currentProps = {
+            nodes: [],
+            flows: [],
+            transform: { x: 0, y: 0, scale: 1 },
+            hoveredNodeId: null,
+            selectedNodeIds: new Set(),
+            theme: options.theme || DEFAULT_THEME,
+        };
 
         this.setupCanvas();
         this.setupLayers();
@@ -166,24 +178,33 @@ export class CanvasRenderer {
     }
 
     /**
+     * Update canvas with new props
+     */
+    public update(newProps: Partial<CanvasRenderProps>): void {
+        // Merge new props with current props
+        const mergedProps = {
+            ...this.currentProps,
+            ...newProps,
+            transform: { ...this.currentProps.transform, ...newProps.transform },
+            theme: { ...this.currentProps.theme, ...newProps.theme },
+        };
+
+        this.currentProps = mergedProps;
+        this.renderInternal();
+    }
+
+    /**
      * Render the entire scene
      */
-    render(nodes: LayoutNode[], flows: FlowPath[], transform?: Transform): void {
-        // Store data for rendering
-        this.nodes = nodes;
-        this.flows = flows;
-        if (transform) {
-            this.currentTransform = transform;
-        }
-
+    private renderInternal(): void {
         // Clear canvas - use logical dimensions since context is already scaled
         const rect = this.canvas.getBoundingClientRect();
         this.ctx.clearRect(0, 0, rect.width, rect.height);
 
         // Apply transform
         this.ctx.save();
-        this.ctx.translate(this.currentTransform.x, this.currentTransform.y);
-        this.ctx.scale(this.currentTransform.scale, this.currentTransform.scale);
+        this.ctx.translate(this.currentProps.transform.x, this.currentProps.transform.y);
+        this.ctx.scale(this.currentProps.transform.scale, this.currentProps.transform.scale);
 
         // Render each layer
         this.layers.forEach((layer) => {
@@ -197,8 +218,6 @@ export class CanvasRenderer {
 
         // Restore transform
         this.ctx.restore();
-
-        // Simplified rendering without complex animations
     }
 
     /**
@@ -210,7 +229,7 @@ export class CanvasRenderer {
 
         // Start new D3 timer for rendering
         this.renderTimer = timer(() => {
-            this.render(nodes, flows, transform);
+            this.update({ nodes, flows, transform });
         });
     }
 
@@ -236,7 +255,7 @@ export class CanvasRenderer {
 
         // Fill entire logical canvas area
         const rect = this.canvas.getBoundingClientRect();
-        ctx.fillStyle = this.theme.background;
+        ctx.fillStyle = this.currentProps.theme.background;
         ctx.fillRect(0, 0, rect.width, rect.height);
 
         // Restore state
@@ -247,16 +266,16 @@ export class CanvasRenderer {
      * Render flow paths
      */
     private renderFlows(ctx: CanvasRenderingContext2D): void {
-        if (!this.flows) return;
+        if (!this.currentProps.flows) return;
 
-        this.flows.forEach((flow) => {
+        this.currentProps.flows.forEach((flow) => {
             ctx.save();
 
             // Set flow color based on target state
             const color = this.getFlowColor(flow.target.data);
             ctx.fillStyle = color;
             ctx.strokeStyle = color;
-            ctx.globalAlpha = this.theme.flow.opacity;
+            ctx.globalAlpha = this.currentProps.theme.flow.opacity;
 
             // Draw flow path
             const path = new Path2D(flow.path);
@@ -270,9 +289,9 @@ export class CanvasRenderer {
      * Render queue nodes
      */
     private renderNodes(ctx: CanvasRenderingContext2D): void {
-        if (!this.nodes) return;
+        if (!this.currentProps.nodes) return;
 
-        this.nodes.forEach((node) => {
+        this.currentProps.nodes.forEach((node) => {
             this.drawQueueCard(ctx, node);
         });
     }
@@ -282,8 +301,8 @@ export class CanvasRenderer {
      */
     private drawQueueCard(ctx: CanvasRenderingContext2D, node: LayoutNode): void {
         const { x, y, width, height, data } = node;
-        const isSelected = this.selectedNodes.has(node.id);
-        const isHovered = this.hoveredNode?.id === node.id;
+        const isSelected = this.currentProps.selectedNodeIds.has(node.id);
+        const isHovered = this.currentProps.hoveredNodeId === node.id;
 
         // Very subtle scale increase for hover effect (minimal distortion)
         const scale = isHovered ? 1.02 : 1.0; // Only 2% increase
@@ -519,21 +538,27 @@ export class CanvasRenderer {
      * Render overlay (selection, hover effects)
      */
     private renderOverlay(ctx: CanvasRenderingContext2D): void {
-        // Draw modern selection overlays
-        this.selectedNodes.forEach((nodeId) => {
-            const node = this.nodes?.find((n) => n.id === nodeId);
+        // Draw hover effect
+        if (this.currentProps.hoveredNodeId) {
+            const hoveredNode = this.currentProps.nodes.find(n => n.id === this.currentProps.hoveredNodeId);
+            if (hoveredNode) {
+                this.drawModernSelectionOverlay(ctx, hoveredNode, this.currentProps.theme.queueCard.hoverBackground, 'rgba(0, 0, 0, 0)');
+            }
+        }
+
+        // Draw selection overlays
+        this.currentProps.selectedNodeIds.forEach((nodeId) => {
+            const node = this.currentProps.nodes.find((n) => n.id === nodeId);
             if (node) {
-                this.drawModernSelectionOverlay(ctx, node);
+                this.drawModernSelectionOverlay(ctx, node, this.currentProps.theme.queueCard.selectedBackground, this.currentProps.theme.state.default);
             }
         });
-
-        // Hover effect is now handled by card scaling in drawQueueCard
     }
 
     /**
      * Draw modern selection overlay with gradient and glow
      */
-    private drawModernSelectionOverlay(ctx: CanvasRenderingContext2D, node: LayoutNode): void {
+    private drawModernSelectionOverlay(ctx: CanvasRenderingContext2D, node: LayoutNode, backgroundColor?: string, borderColor?: string): void {
         const padding = 3;
         const x = node.x - padding;
         const y = node.y - padding;
@@ -595,32 +620,32 @@ export class CanvasRenderer {
      * Get card style based on queue state
      */
     private getCardStyle(queue: Queue, isSelected: boolean, isHovered: boolean): QueueCardStyle {
-        let borderColor = this.theme.state.default;
-        let backgroundColor = this.theme.queueCard.background;
+        let borderColor = this.currentProps.theme.state.default;
+        let backgroundColor = this.currentProps.theme.queueCard.background;
 
         // Determine border color based on state
         if ((queue as any).hasValidationError) {
-            borderColor = this.theme.state.error;
+            borderColor = this.currentProps.theme.state.error;
         } else if ((queue as any).hasPendingChanges) {
-            borderColor = this.theme.state.pending;
+            borderColor = this.currentProps.theme.state.pending;
         } else if ((queue as any).isNew) {
-            borderColor = this.theme.state.new;
+            borderColor = this.currentProps.theme.state.new;
         } else if ((queue as any).isDeleted) {
-            borderColor = this.theme.state.deleted;
+            borderColor = this.currentProps.theme.state.deleted;
         }
 
         // Background color for selection/hover
         if (isSelected) {
-            backgroundColor = this.theme.queueCard.selectedBackground;
+            backgroundColor = this.currentProps.theme.queueCard.selectedBackground;
         } else if (isHovered) {
-            backgroundColor = this.theme.queueCard.hoverBackground;
+            backgroundColor = this.currentProps.theme.queueCard.hoverBackground;
         }
 
         return {
             borderColor,
             backgroundColor,
-            textColor: this.theme.queueCard.text,
-            shadowColor: this.theme.queueCard.shadow,
+            textColor: this.currentProps.theme.queueCard.text,
+            shadowColor: this.currentProps.theme.queueCard.shadow,
         };
     }
 
@@ -629,11 +654,11 @@ export class CanvasRenderer {
      */
     private getFlowColor(queue: Queue): string {
         if (queue.state === 'RUNNING') {
-            return this.theme.flow.running;
+            return this.currentProps.theme.flow.running;
         } else if (queue.state === 'STOPPED') {
-            return this.theme.flow.stopped;
+            return this.currentProps.theme.flow.stopped;
         }
-        return this.theme.flow.default;
+        return this.currentProps.theme.flow.default;
     }
 
     /**
@@ -792,45 +817,10 @@ export class CanvasRenderer {
     }
 
     /**
-     * Set hovered node
-     */
-    setHoveredNode(node: LayoutNode | null): void {
-        this.hoveredNode = node;
-    }
-
-    /**
-     * Set selected nodes
-     */
-    setSelectedNodes(nodeIds: Set<string>): void {
-        this.selectedNodes = nodeIds;
-    }
-
-    /**
-     * Add selected node
-     */
-    addSelectedNode(nodeId: string): void {
-        this.selectedNodes.add(nodeId);
-    }
-
-    /**
-     * Remove selected node
-     */
-    removeSelectedNode(nodeId: string): void {
-        this.selectedNodes.delete(nodeId);
-    }
-
-    /**
-     * Clear selection
-     */
-    clearSelection(): void {
-        this.selectedNodes.clear();
-    }
-
-    /**
      * Update theme
      */
     updateTheme(theme: Partial<RenderTheme>): void {
-        this.theme = { ...this.theme, ...theme };
+        this.update({ theme: { ...this.currentProps.theme, ...theme } });
     }
 
     /**

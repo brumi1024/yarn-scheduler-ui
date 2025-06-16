@@ -28,19 +28,12 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
     ({ nodes, flows, onSelectionChange, onHoverChange, className }, ref) => {
         const canvasRef = useRef<HTMLCanvasElement>(null);
         const containerRef = useRef<HTMLDivElement>(null);
-        const nodesRef = useRef<LayoutNode[]>([]);
-        const flowsRef = useRef<FlowPath[]>([]);
 
         // Canvas controllers
         const [renderer, setRenderer] = useState<CanvasRenderer | null>(null);
         const [panZoomController, setPanZoomController] = useState<D3ZoomController | null>(null);
         const [selectionController, setSelectionController] = useState<QueueSelectionController | null>(null);
 
-        // Update refs when props change
-        useEffect(() => {
-            nodesRef.current = nodes;
-            flowsRef.current = flows;
-        }, [nodes, flows]);
 
         // Initialize canvas components
         useEffect(() => {
@@ -80,54 +73,49 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
             }
         }, []);
 
-        // Setup pan/zoom event handler
+        // Consolidated rendering and event handling
         useEffect(() => {
-            if (!renderer || !panZoomController) return;
+            if (!renderer || !panZoomController || !selectionController) return;
 
+            // Handler for pan/zoom events
             const handlePanZoom = () => {
-                const state = panZoomController.getState();
-                renderer.render(nodesRef.current, flowsRef.current, state);
+                renderer.update({ transform: panZoomController.getState() });
             };
 
-            panZoomController.addEventListener(handlePanZoom);
-
-            return () => {
-                panZoomController.removeEventListener(handlePanZoom);
-            };
-        }, [renderer, panZoomController]);
-
-        // Setup selection event handlers
-        useEffect(() => {
-            if (!selectionController) return;
-
+            // Handler for selection events
             const handleSelection = (event: SelectionEvent) => {
-                if (renderer) {
-                    const selectedSet = new Set(event.selectedNodes);
-                    renderer.setSelectedNodes(selectedSet);
-                    const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
-                    renderer.render(nodesRef.current, flowsRef.current, state);
-                }
+                const selectedNodeIds = new Set(event.selectedNodes);
+                renderer.update({ selectedNodeIds });
                 onSelectionChange?.(event);
             };
 
+            // Handler for hover events
             const handleHover = (event: HoverEvent) => {
-                if (renderer) {
-                    const hoveredNode = event.node || null;
-                    renderer.setHoveredNode(hoveredNode);
-                    const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
-                    renderer.render(nodesRef.current, flowsRef.current, state);
-                }
+                renderer.update({ hoveredNodeId: event.node?.id || null });
                 onHoverChange?.(event);
             };
 
+            // Attach listeners
+            panZoomController.addEventListener(handlePanZoom);
             selectionController.addSelectionListener(handleSelection);
             selectionController.addHoverListener(handleHover);
 
+            // Initial render with all props
+            renderer.update({
+                nodes,
+                flows,
+                transform: panZoomController.getState(),
+                selectedNodeIds: new Set(selectionController.getSelection()),
+                hoveredNodeId: null,
+            });
+
+            // Cleanup
             return () => {
+                panZoomController.removeEventListener(handlePanZoom);
                 selectionController.removeSelectionListener(handleSelection);
                 selectionController.removeHoverListener(handleHover);
             };
-        }, [selectionController, renderer, panZoomController, onSelectionChange, onHoverChange]);
+        }, [renderer, panZoomController, selectionController, nodes, flows, onSelectionChange, onHoverChange]);
 
         // Update selection controller with new nodes
         useEffect(() => {
@@ -136,13 +124,6 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
             }
         }, [selectionController, nodes]);
 
-        // Render when nodes or flows change
-        useEffect(() => {
-            if (renderer && panZoomController && (nodes.length > 0 || flows.length > 0)) {
-                const state = panZoomController.getState();
-                renderer.render(nodes, flows, state);
-            }
-        }, [renderer, panZoomController, nodes, flows]);
 
         // Handle canvas resize
         useEffect(() => {
@@ -150,8 +131,11 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
                 if (renderer && containerRef.current) {
                     renderer.resize();
                     if (panZoomController && nodes.length > 0) {
-                        const state = panZoomController.getState();
-                        renderer.render(nodes, flows, state);
+                        renderer.update({
+                            nodes,
+                            flows,
+                            transform: panZoomController.getState(),
+                        });
                     }
                 }
             };
@@ -235,14 +219,12 @@ export const CanvasDisplay = forwardRef<CanvasDisplayRef, CanvasDisplayProps>(
 
         // Update visual selection
         const updateSelection = useCallback(
-            (selectedNodes: Set<string>) => {
+            (selectedNodeIds: Set<string>) => {
                 if (renderer) {
-                    renderer.setSelectedNodes(selectedNodes);
-                    const state = panZoomController?.getState() || { x: 0, y: 0, scale: 1 };
-                    renderer.render(nodes, flows, state);
+                    renderer.update({ selectedNodeIds });
                 }
             },
-            [renderer, panZoomController, nodes, flows]
+            [renderer]
         );
 
         // Expose methods through ref

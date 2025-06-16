@@ -5,7 +5,7 @@ import { scaleLinear } from 'd3-scale';
 import { interpolateObject } from 'd3-interpolate';
 import { path } from 'd3-path';
 import type { HierarchyNode } from 'd3-hierarchy';
-import type { Queue } from '../../types/Queue';
+import type { Queue } from '../../../../types/Queue';
 
 // Extended Queue type for layout purposes
 export interface LayoutQueue extends Queue {
