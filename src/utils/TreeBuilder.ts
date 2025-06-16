@@ -140,8 +140,7 @@ export class TreeBuilder {
 
             // Check capacity range filters
             if (options.minCapacity !== undefined || options.maxCapacity !== undefined) {
-                const capacityValue = parseCapacityValue(queue.capacity);
-                const capacity = toDisplayPercentage(capacityValue);
+                const capacity = toDisplayPercentage(queue.capacity);
 
                 if (options.minCapacity !== undefined && capacity < options.minCapacity) {
                     return false;

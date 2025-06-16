@@ -21,9 +21,10 @@ interface PropertyFormFieldProps {
     control: Control<any>;
     name: string;
     siblings?: Array<{ name: string; capacity: string }>;
+    onCustomChange?: (value: any) => void;
 }
 
-export function PropertyFormField({ property, control, name, siblings }: PropertyFormFieldProps) {
+export function PropertyFormField({ property, control, name, siblings, onCustomChange }: PropertyFormFieldProps) {
     const {
         field,
         fieldState: { error },
@@ -74,7 +75,16 @@ export function PropertyFormField({ property, control, name, siblings }: Propert
             return (
                 <Box sx={{ my: 2 }}>
                     <FormControlLabel
-                        control={<Switch {...field} checked={field.value || false} />}
+                        control={
+                            <Switch 
+                                {...field} 
+                                checked={field.value || false}
+                                onChange={(e) => {
+                                    field.onChange(e.target.checked);
+                                    onCustomChange?.(e.target.checked);
+                                }}
+                            />
+                        }
                         label={property.label}
                     />
                     {(error || property.description) && (

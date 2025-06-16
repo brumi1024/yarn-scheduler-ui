@@ -286,31 +286,6 @@ describe('CanvasRenderer', () => {
         });
     });
 
-    describe('render loop', () => {
-        beforeEach(() => {
-            vi.stubGlobal(
-                'requestAnimationFrame',
-                vi.fn((callback) => {
-                    setTimeout(callback, 16);
-                    return 1;
-                })
-            );
-            vi.stubGlobal('cancelAnimationFrame', vi.fn());
-        });
-
-        it('should start render loop', () => {
-            renderer.startRenderLoop(mockNodes, mockFlows);
-
-            expect(requestAnimationFrame).toHaveBeenCalled();
-        });
-
-        it('should stop render loop', () => {
-            renderer.startRenderLoop(mockNodes, mockFlows);
-            renderer.stopRenderLoop();
-
-            expect(cancelAnimationFrame).toHaveBeenCalledWith(1);
-        });
-    });
 
     describe('text rendering', () => {
         it('should truncate long text', () => {

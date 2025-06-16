@@ -10,9 +10,25 @@ interface DataStore {
     nodeLabels: NodeLabelsResponse | null;
     nodes: NodesResponse | null;
 
-    // Loading and error state for data fetching
-    loading: boolean;
-    error: Error | null;
+    // Loading and error state for individual data types
+    loading: {
+        scheduler: boolean;
+        configuration: boolean;
+        nodeLabels: boolean;
+        nodes: boolean;
+    };
+    errors: {
+        scheduler: Error | null;
+        configuration: Error | null;
+        nodeLabels: Error | null;
+        nodes: Error | null;
+    };
+    lastUpdated: {
+        scheduler?: number;
+        configuration?: number;
+        nodeLabels?: number;
+        nodes?: number;
+    };
 
     // Actions
     loadAllData: () => Promise<void>;
@@ -26,12 +42,36 @@ export const useDataStore = create<DataStore>((set, get) => ({
     configuration: null,
     nodeLabels: null,
     nodes: null,
-    loading: true, // Start in loading state
-    error: null,
+    loading: {
+        scheduler: false,
+        configuration: false,
+        nodeLabels: false,
+        nodes: false,
+    },
+    errors: {
+        scheduler: null,
+        configuration: null,
+        nodeLabels: null,
+        nodes: null,
+    },
+    lastUpdated: {},
 
     // Data loading actions
     loadAllData: async () => {
-        set({ loading: true, error: null });
+        set((state) => ({
+            loading: {
+                scheduler: true,
+                configuration: true,
+                nodeLabels: true,
+                nodes: true,
+            },
+            errors: {
+                scheduler: null,
+                configuration: null,
+                nodeLabels: null,
+                nodes: null,
+            },
+        }));
 
         try {
             const [scheduler, configuration, nodeLabels, nodes] = await Promise.all([
@@ -46,11 +86,35 @@ export const useDataStore = create<DataStore>((set, get) => ({
                 configuration,
                 nodeLabels,
                 nodes,
-                loading: false,
+                loading: {
+                    scheduler: false,
+                    configuration: false,
+                    nodeLabels: false,
+                    nodes: false,
+                },
+                lastUpdated: {
+                    scheduler: Date.now(),
+                    configuration: Date.now(),
+                    nodeLabels: Date.now(),
+                    nodes: Date.now(),
+                },
             });
         } catch (error) {
             const err = error instanceof Error ? error : new Error('Failed to load data');
-            set({ error: err, loading: false });
+            set((state) => ({
+                loading: {
+                    scheduler: false,
+                    configuration: false,
+                    nodeLabels: false,
+                    nodes: false,
+                },
+                errors: {
+                    scheduler: err,
+                    configuration: err,
+                    nodeLabels: err,
+                    nodes: err,
+                },
+            }));
             throw err; // Re-throw so callers can handle it
         }
     },
@@ -59,5 +123,12 @@ export const useDataStore = create<DataStore>((set, get) => ({
         await get().loadAllData();
     },
 
-    clearError: () => set({ error: null }),
+    clearError: () => set((state) => ({
+        errors: {
+            scheduler: null,
+            configuration: null,
+            nodeLabels: null,
+            nodes: null,
+        },
+    })),
 }));

@@ -127,7 +127,7 @@ describe('D3TreeLayout', () => {
             const result = layout.computeLayout(mockQueue);
             const flow = result.flows[0];
 
-            expect(flow.path).toMatch(/^M \d+(\.\d+)? \d+(\.\d+)? C/); // Starts with Move and Cubic bezier
+            expect(flow.path).toMatch(/^M\d+(\.\d+)?,\d+(\.\d+)?C/); // Starts with Move and Cubic bezier
         });
     });
 

@@ -4,8 +4,9 @@ import { useDataStore, useActivityStore } from '../store';
 
 // Hook for scheduler data with Zustand integration
 export function useScheduler() {
-    const { scheduler, loading, error, loadAllData } = useDataStore();
+    const { scheduler, loading, errors, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
 
     const fetchData = useCallback(async () => {
         try {
@@ -16,6 +17,12 @@ export function useScheduler() {
                 message: 'Successfully loaded scheduler data',
                 details: { timestamp: Date.now() },
             });
+            addApiCallLog({
+                method: 'GET',
+                url: '/ws/v1/cluster/scheduler',
+                status: 200,
+                duration: 0,
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
             addLogEntry({
@@ -25,20 +32,27 @@ export function useScheduler() {
                 details: { error: error.message },
             });
         }
-    }, [loadAllData, addLogEntry]);
+    }, [loadAllData, addLogEntry, addApiCallLog]);
+
+    useEffect(() => {
+        if (scheduler === null && !errors.scheduler) {
+            fetchData();
+        }
+    }, [scheduler, errors.scheduler, fetchData]);
 
     return {
         data: scheduler,
-        loading,
-        error,
+        loading: loading.scheduler,
+        error: errors.scheduler,
         refetch: fetchData,
     };
 }
 
 // Hook for configuration data with Zustand integration
 export function useConfiguration() {
-    const { configuration, loading, error, loadAllData } = useDataStore();
+    const { configuration, loading, errors, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
 
     const fetchData = useCallback(async () => {
         try {
@@ -49,6 +63,12 @@ export function useConfiguration() {
                 message: 'Successfully loaded configuration data',
                 details: { timestamp: Date.now() },
             });
+            addApiCallLog({
+                method: 'GET',
+                url: '/ws/v1/cluster/scheduler-conf',
+                status: 200,
+                duration: 0,
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
             addLogEntry({
@@ -58,20 +78,27 @@ export function useConfiguration() {
                 details: { error: error.message },
             });
         }
-    }, [loadAllData, addLogEntry]);
+    }, [loadAllData, addLogEntry, addApiCallLog]);
+
+    useEffect(() => {
+        if (configuration === null && !errors.configuration) {
+            fetchData();
+        }
+    }, [configuration, errors.configuration, fetchData]);
 
     return {
         data: configuration,
-        loading,
-        error,
+        loading: loading.configuration,
+        error: errors.configuration,
         refetch: fetchData,
     };
 }
 
 // Hook for node labels with Zustand integration
 export function useNodeLabels() {
-    const { nodeLabels, loading, error, loadAllData } = useDataStore();
+    const { nodeLabels, loading, errors, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
 
     const fetchData = useCallback(async () => {
         try {
@@ -82,6 +109,12 @@ export function useNodeLabels() {
                 message: 'Successfully loaded node labels',
                 details: { timestamp: Date.now() },
             });
+            addApiCallLog({
+                method: 'GET',
+                url: '/ws/v1/cluster/get-node-labels',
+                status: 200,
+                duration: 0,
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
             addLogEntry({
@@ -91,20 +124,27 @@ export function useNodeLabels() {
                 details: { error: error.message },
             });
         }
-    }, [loadAllData, addLogEntry]);
+    }, [loadAllData, addLogEntry, addApiCallLog]);
+
+    useEffect(() => {
+        if (nodeLabels === null && !errors.nodeLabels) {
+            fetchData();
+        }
+    }, [nodeLabels, errors.nodeLabels, fetchData]);
 
     return {
         data: nodeLabels,
-        loading,
-        error,
+        loading: loading.nodeLabels,
+        error: errors.nodeLabels,
         refetch: fetchData,
     };
 }
 
 // Hook for nodes with Zustand integration
 export function useNodes() {
-    const { nodes, loading, error, loadAllData } = useDataStore();
+    const { nodes, loading, errors, loadAllData } = useDataStore();
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
 
     const fetchData = useCallback(async () => {
         try {
@@ -115,6 +155,12 @@ export function useNodes() {
                 message: 'Successfully loaded node data',
                 details: { timestamp: Date.now() },
             });
+            addApiCallLog({
+                method: 'GET',
+                url: '/ws/v1/cluster/nodes',
+                status: 200,
+                duration: 0,
+            });
         } catch (err) {
             const error = err instanceof Error ? err : new Error('Unknown error');
             addLogEntry({
@@ -124,12 +170,18 @@ export function useNodes() {
                 details: { error: error.message },
             });
         }
-    }, [loadAllData, addLogEntry]);
+    }, [loadAllData, addLogEntry, addApiCallLog]);
+
+    useEffect(() => {
+        if (nodes === null && !errors.nodes) {
+            fetchData();
+        }
+    }, [nodes, errors.nodes, fetchData]);
 
     return {
         data: nodes,
-        loading,
-        error,
+        loading: loading.nodes,
+        error: errors.nodes,
         refetch: fetchData,
     };
 }
@@ -179,6 +231,7 @@ export function useHealthCheck() {
 // Generic mutation hook with activity logging
 export function useApiMutation<T, P = void>() {
     const addLogEntry = useActivityStore((state) => state.addLogEntry);
+    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState<Error | null>(null);
 
@@ -207,6 +260,15 @@ export function useApiMutation<T, P = void>() {
                     });
                 }
 
+                if (options?.method && options?.url) {
+                    addApiCallLog({
+                        method: options.method,
+                        url: options.url,
+                        status: 200,
+                        duration: 0,
+                    });
+                }
+
                 return result;
             } catch (err) {
                 const error = err instanceof Error ? err : new Error('Unknown error');
@@ -226,7 +288,7 @@ export function useApiMutation<T, P = void>() {
                 setLoading(false);
             }
         },
-        [addLogEntry]
+        [addLogEntry, addApiCallLog]
     );
 
     return { mutate, loading, error };

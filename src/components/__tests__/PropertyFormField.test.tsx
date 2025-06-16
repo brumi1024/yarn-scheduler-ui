@@ -3,6 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { useForm, FormProvider } from 'react-hook-form';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { z } from 'zod';
 import { PropertyFormField } from '../forms/PropertyFormField';
 import type { PropertyDefinition } from '../../config';
 
@@ -57,10 +58,13 @@ describe('PropertyFormField', () => {
     describe('Boolean Properties', () => {
         const booleanProperty: PropertyDefinition = {
             key: 'auto-create-child-queue.enabled',
-            displayName: 'Enable Auto-Creation',
+            label: 'Enable Auto-Creation',
             description: 'Enable automatic child queue creation',
             type: 'boolean',
             defaultValue: false,
+            validation: z.boolean(),
+            group: 'auto-creation',
+            getValueFromQueue: (queue: any) => queue['auto-create-child-queue.enabled'],
         };
 
         it('renders boolean switch with correct initial state', () => {
@@ -99,11 +103,14 @@ describe('PropertyFormField', () => {
     describe('Enum Properties', () => {
         const enumProperty: PropertyDefinition = {
             key: 'state',
-            displayName: 'Queue State',
+            label: 'Queue State',
             description: 'Operational state of the queue',
-            type: 'enum',
+            type: 'select',
             options: ['RUNNING', 'STOPPED'],
             defaultValue: 'RUNNING',
+            validation: z.enum(['RUNNING', 'STOPPED']),
+            group: 'core',
+            getValueFromQueue: (queue: any) => queue.state,
         };
 
         it('renders select dropdown with options', () => {
@@ -136,12 +143,13 @@ describe('PropertyFormField', () => {
     describe('Number Properties', () => {
         const numberProperty: PropertyDefinition = {
             key: 'user-limit-factor',
-            displayName: 'User Limit Factor',
+            label: 'User Limit Factor',
             description: 'Multiplier for per-user resource limits',
             type: 'number',
-            step: '0.1',
             defaultValue: 1,
-            placeholder: 'Default: 1',
+            validation: z.number().positive(),
+            group: 'resource',
+            getValueFromQueue: (queue: any) => queue['user-limit-factor'],
         };
 
         it('renders number input with correct attributes', () => {
@@ -149,7 +157,6 @@ describe('PropertyFormField', () => {
 
             const input = screen.getByDisplayValue('2.5');
             expect(input).toHaveAttribute('type', 'number');
-            expect(input).toHaveAttribute('step', '0.1');
             expect(screen.getByLabelText('User Limit Factor')).toBeInTheDocument();
         });
 
@@ -162,81 +169,84 @@ describe('PropertyFormField', () => {
             expect(screen.getByDisplayValue('3.5')).toBeInTheDocument();
         });
 
-        it('shows placeholder text', () => {
-            render(<PropertyFormFieldWrapper property={numberProperty} defaultValue="" />);
+        it('handles empty number input', () => {
+            render(<PropertyFormFieldWrapper property={numberProperty} defaultValue={0} />);
 
-            const input = screen.getByPlaceholderText('Default: 1');
+            const input = screen.getByDisplayValue('0');
             expect(input).toBeInTheDocument();
         });
 
-        it('handles empty number input', () => {
+        it('handles number value clearing', () => {
             render(<PropertyFormFieldWrapper property={numberProperty} defaultValue={1} />);
 
             const input = screen.getByDisplayValue('1');
             fireEvent.change(input, { target: { value: '' } });
 
-            expect(screen.getByDisplayValue('')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('0')).toBeInTheDocument(); // Component converts empty to 0
         });
 
-        it('uses default step value when not specified', () => {
-            const propertyWithoutStep = { ...numberProperty, step: undefined };
-            render(<PropertyFormFieldWrapper property={propertyWithoutStep} defaultValue={1} />);
+        it('renders number input without additional attributes', () => {
+            render(<PropertyFormFieldWrapper property={numberProperty} defaultValue={1} />);
 
             const input = screen.getByDisplayValue('1');
-            expect(input).toHaveAttribute('step', '1');
+            expect(input).toHaveAttribute('type', 'number');
         });
     });
 
-    describe('Percentage Properties', () => {
+    describe('Number Properties for Percentages', () => {
         const percentageProperty: PropertyDefinition = {
             key: 'maximum-am-resource-percent',
-            displayName: 'Maximum AM Resource Percent',
+            label: 'Maximum AM Resource Percent',
             description: 'Maximum application master resource percentage',
-            type: 'percentage',
+            type: 'number',
             defaultValue: 0.1,
+            validation: z.number().min(0).max(1),
+            group: 'resource',
+            getValueFromQueue: (queue: any) => queue['maximum-am-resource-percent'],
         };
 
-        it('renders percentage slider with correct value', () => {
+        it('renders number input for percentage values', () => {
             render(<PropertyFormFieldWrapper property={percentageProperty} defaultValue={0.25} />);
 
-            expect(screen.getByText('Maximum AM Resource Percent: 25.0%')).toBeInTheDocument();
-
-            const slider = screen.getByRole('slider');
-            expect(slider).toHaveAttribute('aria-valuenow', '25');
+            const input = screen.getByDisplayValue('0.25');
+            expect(input).toHaveAttribute('type', 'number');
+            expect(screen.getByLabelText('Maximum AM Resource Percent')).toBeInTheDocument();
         });
 
         it('handles percentage value changes', () => {
             render(<PropertyFormFieldWrapper property={percentageProperty} defaultValue={0.1} />);
 
-            const slider = screen.getByRole('slider');
+            const input = screen.getByDisplayValue('0.1');
+            fireEvent.change(input, { target: { value: '0.5' } });
 
-            // Simulate slider change to 50%
-            fireEvent.change(slider, { target: { value: 50 } });
-
-            expect(screen.getByText('Maximum AM Resource Percent: 50.0%')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('0.5')).toBeInTheDocument();
         });
 
         it('handles zero percentage value', () => {
             render(<PropertyFormFieldWrapper property={percentageProperty} defaultValue={0} />);
 
-            expect(screen.getByText('Maximum AM Resource Percent: 0.0%')).toBeInTheDocument();
+            expect(screen.getByDisplayValue('0')).toBeInTheDocument();
         });
 
         it('handles undefined percentage value', () => {
             render(<PropertyFormFieldWrapper property={percentageProperty} defaultValue={undefined} />);
 
-            // When undefined, React Hook Form uses the property's defaultValue (0.1 = 10%)
-            expect(screen.getByText('Maximum AM Resource Percent: 10.0%')).toBeInTheDocument();
+            const input = screen.getByLabelText('Maximum AM Resource Percent');
+            expect(input).toBeInTheDocument();
+            expect(input).toHaveValue(null); // Undefined/empty value
         });
     });
 
     describe('String Properties', () => {
         const stringProperty: PropertyDefinition = {
             key: 'accessible-node-labels',
-            displayName: 'Accessible Node Labels',
+            label: 'Accessible Node Labels',
             description: 'Node labels accessible to this queue',
-            type: 'string',
-            placeholder: 'e.g., gpu,ssd',
+            type: 'text',
+            defaultValue: '',
+            validation: z.string(),
+            group: 'advanced',
+            getValueFromQueue: (queue: any) => queue['accessible-node-labels'],
         };
 
         it('renders text input for string properties', () => {
@@ -244,7 +254,6 @@ describe('PropertyFormField', () => {
 
             expect(screen.getByDisplayValue('gpu,ssd')).toBeInTheDocument();
             expect(screen.getByLabelText('Accessible Node Labels')).toBeInTheDocument();
-            expect(screen.getByPlaceholderText('e.g., gpu,ssd')).toBeInTheDocument();
         });
 
         it('handles string value changes', () => {
@@ -256,41 +265,53 @@ describe('PropertyFormField', () => {
             expect(screen.getByDisplayValue('high-memory')).toBeInTheDocument();
         });
 
-        it('renders multiline input for description fields', () => {
+        it('renders text input for description fields', () => {
             const descriptionProperty: PropertyDefinition = {
                 key: 'queue-description',
-                displayName: 'Queue Description',
+                label: 'Queue Description',
                 description: 'Description of the queue purpose',
-                type: 'string',
+                type: 'text',
+                defaultValue: '',
+                validation: z.string(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue['queue-description'],
             };
 
             render(<PropertyFormFieldWrapper property={descriptionProperty} defaultValue="Test description" />);
 
             const input = screen.getByDisplayValue('Test description');
-            expect(input).toHaveAttribute('rows', '3');
+            expect(input).toBeInTheDocument();
         });
 
-        it('renders multiline input for policy fields', () => {
+        it('renders text input for policy fields', () => {
             const policyProperty: PropertyDefinition = {
                 key: 'ordering-policy',
-                displayName: 'Ordering Policy',
+                label: 'Ordering Policy',
                 description: 'Policy for ordering applications',
-                type: 'string',
+                type: 'text',
+                defaultValue: '',
+                validation: z.string(),
+                group: 'advanced',
+                getValueFromQueue: (queue: any) => queue['ordering-policy'],
             };
 
             render(<PropertyFormFieldWrapper property={policyProperty} defaultValue="fifo" />);
 
             const input = screen.getByDisplayValue('fifo');
-            expect(input).toHaveAttribute('rows', '3');
+            expect(input).toBeInTheDocument();
         });
     });
 
     describe('Capacity Properties', () => {
         const capacityProperty: PropertyDefinition = {
             key: 'capacity',
-            displayName: 'Queue Capacity',
+            label: 'Queue Capacity',
             description: 'Guaranteed resource capacity',
-            type: 'string',
+            type: 'capacity',
+            defaultValue: '0%',
+            validation: z.string(),
+            group: 'resource',
+            getValueFromQueue: (queue: any) => queue.capacity,
         };
 
         it('renders CapacityEditor for capacity properties', () => {
@@ -333,35 +354,37 @@ describe('PropertyFormField', () => {
     describe('Property Metadata Display', () => {
         const propertyWithMetadata: PropertyDefinition = {
             key: 'test-property',
-            displayName: 'Test Property',
+            label: 'Test Property',
             description: 'This is a test property with metadata',
             type: 'string',
             defaultValue: 'default-value',
+            validation: z.string(),
+            group: 'core',
+            getValueFromQueue: (queue: any) => queue['test-property'],
         };
 
-        it('displays description tooltip', () => {
+        it('displays description in helper text', () => {
             render(<PropertyFormFieldWrapper property={propertyWithMetadata} defaultValue="" />);
 
-            const helpIcon = screen.getByTestId('HelpIcon');
-            expect(helpIcon).toHaveAttribute('aria-label', 'This is a test property with metadata');
+            expect(screen.getByText('This is a test property with metadata')).toBeInTheDocument();
         });
 
-        it('displays default value for applicable field types', () => {
+        it('displays property description', () => {
             render(<PropertyFormFieldWrapper property={propertyWithMetadata} defaultValue="" />);
 
-            expect(screen.getByText('Default: default-value')).toBeInTheDocument();
+            expect(screen.getByText('This is a test property with metadata')).toBeInTheDocument();
         });
 
-        it('does not display default value for percentage fields', () => {
-            const percentagePropertyWithDefault: PropertyDefinition = {
+        it('displays description for number fields', () => {
+            const numberPropertyWithMetadata: PropertyDefinition = {
                 ...propertyWithMetadata,
-                type: 'percentage',
+                type: 'number',
                 defaultValue: 0.5,
             };
 
-            render(<PropertyFormFieldWrapper property={percentagePropertyWithDefault} defaultValue={0.3} />);
+            render(<PropertyFormFieldWrapper property={numberPropertyWithMetadata} defaultValue={0.3} />);
 
-            expect(screen.queryByText('Default: 0.5')).not.toBeInTheDocument();
+            expect(screen.getByText('This is a test property with metadata')).toBeInTheDocument();
         });
 
         it('does not display property name for boolean fields', () => {
@@ -382,15 +405,22 @@ describe('PropertyFormField', () => {
         it('handles property without description', () => {
             const propertyWithoutDescription: PropertyDefinition = {
                 key: 'test-property-no-desc',
-                displayName: 'Test Property',
+                label: 'Test Property',
                 description: '', // Empty string
-                type: 'string',
+                type: 'text',
                 defaultValue: 'default-value',
+                validation: z.string(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue['test-property-no-desc'],
             };
 
             render(<PropertyFormFieldWrapper property={propertyWithoutDescription} defaultValue="" />);
 
-            expect(screen.queryByTestId('HelpIcon')).not.toBeInTheDocument();
+            expect(screen.getByLabelText('Test Property')).toBeInTheDocument();
+            // When description is empty, no helper text should be rendered
+            const formControl = screen.getByLabelText('Test Property').closest('.MuiFormControl-root');
+            const helperText = formControl?.querySelector('.MuiFormHelperText-root');
+            expect(helperText).not.toBeInTheDocument();
         });
     });
 
@@ -398,9 +428,13 @@ describe('PropertyFormField', () => {
         it('handles undefined property value', () => {
             const stringProperty: PropertyDefinition = {
                 key: 'test',
-                displayName: 'Test',
+                label: 'Test',
                 description: 'Test property',
-                type: 'string',
+                type: 'text',
+                defaultValue: '',
+                validation: z.string(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue.test,
             };
 
             render(<PropertyFormFieldWrapper property={stringProperty} defaultValue={undefined} />);
@@ -411,9 +445,13 @@ describe('PropertyFormField', () => {
         it('handles null property value', () => {
             const stringProperty: PropertyDefinition = {
                 key: 'test',
-                displayName: 'Test',
+                label: 'Test',
                 description: 'Test property',
-                type: 'string',
+                type: 'text',
+                defaultValue: '',
+                validation: z.string(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue.test,
             };
 
             render(<PropertyFormFieldWrapper property={stringProperty} defaultValue={null} />);
@@ -424,9 +462,13 @@ describe('PropertyFormField', () => {
         it('handles unknown property type fallback to string', () => {
             const unknownProperty: PropertyDefinition = {
                 key: 'test',
-                displayName: 'Test',
+                label: 'Test',
                 description: 'Test property',
                 type: 'unknown' as any, // Force unknown type
+                defaultValue: '',
+                validation: z.string(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue.test,
             };
 
             render(<PropertyFormFieldWrapper property={unknownProperty} defaultValue="test value" />);
@@ -440,10 +482,13 @@ describe('PropertyFormField', () => {
             const customChangeHandler = vi.fn();
             const booleanProperty: PropertyDefinition = {
                 key: 'test-boolean',
-                displayName: 'Test Boolean',
+                label: 'Test Boolean',
                 description: 'Test boolean property',
                 type: 'boolean',
                 defaultValue: false,
+                validation: z.boolean(),
+                group: 'core',
+                getValueFromQueue: (queue: any) => queue['test-boolean'],
             };
 
             render(

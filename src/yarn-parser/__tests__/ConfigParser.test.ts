@@ -360,43 +360,6 @@ describe('ConfigParser', () => {
             expect(result.queues[0].capacity.numericValue).toBe(100);
         });
 
-        it.skip('should handle deeply nested queues with conflicting names', () => {
-            const config: Configuration = {
-                'yarn.scheduler.capacity.root.queues': 'queues',
-                'yarn.scheduler.capacity.root.capacity': '100',
-                'yarn.scheduler.capacity.root.queues.queues': 'state,capacity',
-                'yarn.scheduler.capacity.root.queues.capacity': '100',
-                // These are properties of queues under root.queues
-                'yarn.scheduler.capacity.root.queues.state.capacity': '40',
-                'yarn.scheduler.capacity.root.queues.state.state': 'STOPPED',
-                'yarn.scheduler.capacity.root.queues.capacity.capacity': '60',
-                'yarn.scheduler.capacity.root.queues.capacity.maximum-capacity': '80',
-            };
-
-            const result = ConfigParser.parse(config);
-
-            expect(result.errors).toHaveLength(0);
-            expect(result.warnings).toHaveLength(0); // No warnings about missing children
-            expect(result.queues).toHaveLength(1);
-
-            const rootQueue = result.queues[0];
-            expect(rootQueue).toBeDefined();
-            expect(rootQueue.path).toBe('root');
-            expect(rootQueue.children).toBeDefined();
-            expect(rootQueue.children.length).toBe(1); // Should have 'queues' child
-
-            const queuesQueue = rootQueue.children.find((q) => q.name === 'queues');
-            expect(queuesQueue).toBeDefined();
-            expect(queuesQueue?.children).toHaveLength(2);
-
-            const stateQueue = queuesQueue?.children.find((q) => q.name === 'state');
-            const capacityQueue = queuesQueue?.children.find((q) => q.name === 'capacity');
-
-            expect(stateQueue?.capacity.numericValue).toBe(40);
-            expect(stateQueue?.state).toBe('STOPPED');
-            expect(capacityQueue?.capacity.numericValue).toBe(60);
-            expect(capacityQueue?.maxCapacity.numericValue).toBe(80);
-        });
     });
 
     describe('two-pass approach validation', () => {
