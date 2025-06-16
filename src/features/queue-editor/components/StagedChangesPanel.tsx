@@ -54,7 +54,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
             // Group by queue name
             const grouped: GroupedChanges = {};
             stagedChanges.forEach((change) => {
-                const key = change.queuePath || 'global';
+                const key = change.queuePath === '_global' ? 'Global Settings' : (change.queuePath || 'global');
                 if (!grouped[key]) {
                     grouped[key] = [];
                 }
@@ -176,7 +176,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                 <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                     <Box display="flex" alignItems="center" gap={1}>
                         <Typography variant="subtitle2" fontWeight="medium">
-                            {groupBy === 'queue' ? `Queue: ${groupKey}` : `Type: ${groupKey}`}
+                            {groupBy === 'queue' ? (groupKey === 'Global Settings' ? groupKey : `Queue: ${groupKey}`) : `Type: ${groupKey}`}
                         </Typography>
                         <Chip label={groupChanges.length} size="small" color="primary" variant="outlined" />
                     </Box>

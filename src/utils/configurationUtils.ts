@@ -2,6 +2,7 @@ import { nanoid } from 'nanoid';
 import type { ChangeSet } from '../types/Configuration';
 import type { Queue } from '../types/Queue';
 import { QUEUE_PROPERTIES } from '../config/properties';
+import { globalProperties } from '../config/globalProperties';
 
 /**
  * Converts form data values to the string format required by YARN configuration.
@@ -10,18 +11,28 @@ import { QUEUE_PROPERTIES } from '../config/properties';
  * @returns A string formatted for YARN configuration.
  */
 function convertFormValueToYarnValue(propertyKey: string, value: unknown): string {
-    const definition = QUEUE_PROPERTIES[propertyKey];
-    if (!definition) {
-        // Fallback for unknown properties
-        return String(value ?? '');
-    }
-
+    // Check queue properties first, then global properties
+    const queueDefinition = QUEUE_PROPERTIES[propertyKey];
+    const globalDefinition = globalProperties[propertyKey];
+    const definition = queueDefinition || globalDefinition;
+    
     if (value === null || value === undefined) {
         return '';
     }
 
-    // For 'capacity' type, the value is already in the correct string format (e.g., "10%", "5w").
-    if (definition.type === 'capacity') {
+    if (!definition) {
+        // Fallback for unknown properties - handle common cases
+        if (typeof value === 'boolean') {
+            return value.toString();
+        }
+        if (Array.isArray(value)) {
+            return value.join(',');
+        }
+        return String(value ?? '');
+    }
+
+    // For queue 'capacity' type, the value is already in the correct string format (e.g., "10%", "5w").
+    if (queueDefinition && queueDefinition.type === 'capacity') {
         return String(value);
     }
 
@@ -88,23 +99,36 @@ export function createChangeSetsFromFormData(
  * @returns An object structured for the ConfigurationUpdateRequest.
  */
 export function convertChangesToApiRequest(changes: ChangeSet[]) {
-    const changesByQueue = changes.reduce(
-        (acc, change) => {
-            if (!acc[change.queuePath]) {
-                acc[change.queuePath] = {};
-            }
-            // The YARN API expects the property key without the full path prefix
-            const yarnPropertyKey = change.property;
-            acc[change.queuePath][yarnPropertyKey] = convertFormValueToYarnValue(yarnPropertyKey, change.newValue);
-            return acc;
-        },
-        {} as Record<string, Record<string, string>>
-    );
+    const globalChanges: Record<string, string> = {};
+    const queueChanges: Record<string, Record<string, string>> = {};
 
-    return {
-        'update-queue': Object.entries(changesByQueue).map(([queuePath, params]) => ({
+    changes.forEach((change) => {
+        if (change.queuePath === '_global') {
+            // Handle global configuration changes
+            globalChanges[change.property] = convertFormValueToYarnValue(change.property, change.newValue);
+        } else {
+            // Handle queue-specific changes
+            if (!queueChanges[change.queuePath]) {
+                queueChanges[change.queuePath] = {};
+            }
+            queueChanges[change.queuePath][change.property] = convertFormValueToYarnValue(change.property, change.newValue);
+        }
+    });
+
+    const result: Record<string, unknown> = {};
+
+    // Add global updates if any
+    if (Object.keys(globalChanges).length > 0) {
+        result['global-updates'] = globalChanges;
+    }
+
+    // Add queue updates if any
+    if (Object.keys(queueChanges).length > 0) {
+        result['update-queue'] = Object.entries(queueChanges).map(([queuePath, params]) => ({
             'queue-name': queuePath,
             params,
-        })),
-    };
+        }));
+    }
+
+    return result;
 }

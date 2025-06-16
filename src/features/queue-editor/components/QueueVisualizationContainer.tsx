@@ -16,7 +16,10 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const canvasRef = useRef<CanvasDisplayRef>(null);
 
     // Zustand stores
-    const { configuration, scheduler, loading, error: apiError } = useDataStore();
+    const configuration = useDataStore((state) => state.configuration);
+    const scheduler = useDataStore((state) => state.scheduler);
+    const loading = useDataStore((state) => state.loading);
+    const errors = useDataStore((state) => state.errors);
     const uiStore = useUIStore();
     const selectedQueueData = useSelectedQueue();
 
@@ -27,16 +30,16 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
 
     // Loading and error states
-    const isLoading = loading || dataLoading;
-    const error = apiError?.message || dataError;
+    const isLoading = loading?.configuration || loading?.scheduler || dataLoading;
+    const error = errors?.configuration?.message || errors?.scheduler?.message || dataError;
 
     // Handle selection events from canvas
     const handleSelectionChange = useCallback(
         (event: SelectionEvent) => {
             if (event.type === 'select' && event.nodeId) {
-                uiStore.selectQueue(event.nodeId);
+                uiStore?.selectQueue(event.nodeId);
             } else if (event.type === 'deselect' || !event.nodeId) {
-                uiStore.selectQueue(undefined);
+                uiStore?.selectQueue(undefined);
             }
         },
         [uiStore]
@@ -54,21 +57,21 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
 
     // Handle info panel close
     const handleInfoPanelClose = useCallback(() => {
-        uiStore.selectQueue(undefined);
+        uiStore?.selectQueue(undefined);
         // Clear selection in canvas
         canvasRef.current?.updateSelection(new Set());
     }, [uiStore]);
 
     // Queue action handlers
     const handleQueueEdit = useCallback(() => {
-        if (uiStore.selectedQueuePath) {
-            uiStore.openPropertyEditor(uiStore.selectedQueuePath, 'edit');
+        if (uiStore?.selectedQueuePath) {
+            uiStore?.openPropertyEditor(uiStore.selectedQueuePath, 'edit');
         }
     }, [uiStore]);
 
     const handleQueueDelete = useCallback(() => {
-        if (uiStore.selectedQueuePath) {
-            uiStore.openConfirmDialog(
+        if (uiStore?.selectedQueuePath) {
+            uiStore?.openConfirmDialog(
                 'Delete Queue',
                 `Are you sure you want to delete queue "${uiStore.selectedQueuePath}"?`,
                 () => {
@@ -81,7 +84,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
 
     const handleQueueStateToggle = useCallback(() => {
         // TODO: Update queue state via API
-        console.log('Toggle queue state:', uiStore.selectedQueuePath);
+        console.log('Toggle queue state:', uiStore?.selectedQueuePath);
     }, [uiStore]);
 
     const handleQueueSelect = useCallback(
@@ -93,7 +96,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
             const nodeToSelect = nodes.find((node) => node.id === queuePath);
 
             if (nodeToSelect) {
-                uiStore.selectQueue(queuePath);
+                uiStore?.selectQueue(queuePath);
 
                 // Update canvas selection
                 canvasRef.current?.updateSelection(new Set([queuePath]));
@@ -168,7 +171,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 panZoomController={canvasRef.current?.panZoomController || null}
                 onZoomToFit={handleZoomToFit}
                 disabled={isLoading}
-                selectedQueue={uiStore.selectedQueuePath}
+                selectedQueue={uiStore?.selectedQueuePath}
                 hoveredQueue={hoveredQueue}
                 nodeCount={nodes.length}
             />
@@ -176,7 +179,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
             {/* Queue Info Panel */}
             <QueueInfoPanel
                 queue={selectedQueueData}
-                open={!!uiStore.selectedQueuePath}
+                open={!!uiStore?.selectedQueuePath}
                 onClose={handleInfoPanelClose}
                 onEdit={handleQueueEdit}
                 onDelete={handleQueueDelete}
@@ -199,9 +202,9 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                         zIndex: 9999,
                     }}
                 >
-                    Selected: {uiStore.selectedQueuePath || 'none'}
+                    Selected: {uiStore?.selectedQueuePath || 'none'}
                     <br />
-                    Panel Open: {uiStore.selectedQueuePath ? 'true' : 'false'}
+                    Panel Open: {uiStore?.selectedQueuePath ? 'true' : 'false'}
                     <br />
                     Queue Data: {selectedQueueData ? 'found' : 'null'}
                     <br />

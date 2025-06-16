@@ -83,8 +83,71 @@ describe('configurationUtils', () => {
 
             const result = convertChangesToApiRequest(changes);
 
+            expect(result).toEqual({});
+        });
+
+        it('should handle global configuration changes', () => {
+            const changes: ChangeSet[] = [
+                {
+                    id: 'change-1',
+                    queuePath: '_global',
+                    property: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
+                    oldValue: 'true',
+                    newValue: 'false',
+                    timestamp: new Date(),
+                },
+                {
+                    id: 'change-2',
+                    queuePath: '_global',
+                    property: 'yarn.scheduler.capacity.maximum-applications',
+                    oldValue: '10000',
+                    newValue: '5000',
+                    timestamp: new Date(),
+                },
+            ];
+
+            const result = convertChangesToApiRequest(changes);
+
             expect(result).toEqual({
-                'update-queue': [],
+                'global-updates': {
+                    'yarn.scheduler.capacity.legacy-queue-mode.enabled': 'false',
+                    'yarn.scheduler.capacity.maximum-applications': '5000',
+                },
+            });
+        });
+
+        it('should handle mixed global and queue changes', () => {
+            const changes: ChangeSet[] = [
+                {
+                    id: 'change-1',
+                    queuePath: '_global',
+                    property: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
+                    oldValue: 'true',
+                    newValue: 'false',
+                    timestamp: new Date(),
+                },
+                {
+                    id: 'change-2',
+                    queuePath: 'root.queue1',
+                    property: 'capacity',
+                    oldValue: '30',
+                    newValue: '50%',
+                    timestamp: new Date(),
+                },
+            ];
+
+            const result = convertChangesToApiRequest(changes);
+
+            expect(result).toEqual({
+                'global-updates': {
+                    'yarn.scheduler.capacity.legacy-queue-mode.enabled': 'false',
+                },
+                'update-queue': [
+                    {
+                        'queue-name': 'root.queue1',
+                        params: { capacity: '50%' },
+                    },
+                ],
             });
         });
     });

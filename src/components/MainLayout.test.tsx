@@ -26,7 +26,7 @@ describe('MainLayout', () => {
 
         // Click Global Settings tab
         fireEvent.click(screen.getByText('Global Settings'));
-        expect(screen.getByText(/System-wide YARN scheduler configuration settings/)).toBeInTheDocument();
+        expect(screen.getByText(/Global Scheduler Settings/)).toBeInTheDocument();
 
         // Click Node Labels tab
         fireEvent.click(screen.getByText('Node Labels'));
