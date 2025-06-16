@@ -30,6 +30,12 @@ export interface Queue {
     autoCreateChildQueueEnabled?: boolean;
 }
 
+// Resource structure
+export interface Resource {
+    memory: number;
+    vCores: number;
+}
+
 // Configuration property
 export interface ConfigProperty {
     name: string;

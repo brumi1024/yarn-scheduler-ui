@@ -6,6 +6,7 @@ import type { Queue } from '../../../../types/Queue';
 import { getPropertyGroups } from '../../../../config';
 import { PropertyFormField } from '../../../../components/forms/PropertyFormField';
 import { AutoQueueCreationSection } from '../../../../components/forms/AutoQueueCreationSection';
+import { NodeLabelsSection } from '../../../../components/forms/NodeLabelsSection';
 
 interface QueueInfoSettingsProps {
     queue: Queue;
@@ -78,6 +79,24 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({ queue, sav
                     <AccordionDetails sx={{ p: 2 }}>{renderPropertyGroup(group)}</AccordionDetails>
                 </Accordion>
             ))}
+            
+            {/* Node Labels Section */}
+            <Accordion
+                key="node-labels"
+                sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
+            >
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
+                >
+                    <Typography variant="subtitle2" fontWeight="medium">
+                        Node Labels
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ p: 2 }}>
+                    <NodeLabelsSection queue={queue} />
+                </AccordionDetails>
+            </Accordion>
             {isDirty && (
                 <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
                     <Button variant="outlined" size="small" onClick={onReset}>
