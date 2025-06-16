@@ -286,7 +286,6 @@ describe('CanvasRenderer', () => {
         });
     });
 
-
     describe('text rendering', () => {
         it('should truncate long text', () => {
             const longNameNode = {

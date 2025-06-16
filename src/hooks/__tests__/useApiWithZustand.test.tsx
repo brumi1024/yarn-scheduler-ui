@@ -163,11 +163,13 @@ describe('useApiWithZustand hooks', () => {
             await waitFor(() => {
                 const activityStore = useActivityStore.getState();
                 expect(activityStore.apiCalls.length).toBeGreaterThanOrEqual(1);
-                const schedulerCall = activityStore.apiCalls.find(call => call.url === '/ws/v1/cluster/scheduler');
+                const schedulerCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler');
                 expect(schedulerCall).toBeDefined();
                 expect(schedulerCall?.method).toBe('GET');
                 expect(activityStore.logs.length).toBeGreaterThanOrEqual(1);
-                const schedulerLog = activityStore.logs.find(log => log.message === 'Successfully loaded scheduler data');
+                const schedulerLog = activityStore.logs.find(
+                    (log) => log.message === 'Successfully loaded scheduler data'
+                );
                 expect(schedulerLog).toBeDefined();
             });
         });
@@ -221,9 +223,7 @@ describe('useApiWithZustand hooks', () => {
 
             await waitFor(() => {
                 const activityStore = useActivityStore.getState();
-                const configCall = activityStore.apiCalls.find(
-                    (call) => call.url === '/ws/v1/cluster/scheduler-conf'
-                );
+                const configCall = activityStore.apiCalls.find((call) => call.url === '/ws/v1/cluster/scheduler-conf');
                 expect(configCall).toBeDefined();
                 expect(configCall?.method).toBe('GET');
             });

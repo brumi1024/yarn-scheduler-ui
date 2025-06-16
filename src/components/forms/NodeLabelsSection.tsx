@@ -16,9 +16,7 @@ import {
     TableRow,
     Tooltip,
 } from '@mui/material';
-import {
-    Info as InfoIcon,
-} from '@mui/icons-material';
+import { Info as InfoIcon } from '@mui/icons-material';
 import { useDataStore } from '../../store/dataStore';
 import { getCapacityMode } from '../../utils/capacity';
 import type { Queue } from '../../types/Queue';
@@ -36,21 +34,21 @@ interface NodeLabelCapacity {
 export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) => {
     const { nodeLabels } = useDataStore();
     const { watch, setValue } = useFormContext();
-    
+
     const availableLabels = useMemo(() => {
-        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map(label => label.name) || [];
+        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map((label) => label.name) || [];
     }, [nodeLabels]);
 
     // Watch the accessible node labels field
     const accessibleNodeLabels = useMemo(() => watch('accessible-node-labels') || [], [watch]);
-    
+
     // Get existing node label capacities from queue configuration
     const existingNodeLabelCapacities = useMemo(() => {
         const capacities: NodeLabelCapacity[] = [];
-        
+
         // Look for properties like yarn.scheduler.capacity.root.default.accessible-node-labels.GPU.capacity
         // Note: queue.queuePath is for future use when integrating with actual config
-        availableLabels.forEach(labelName => {
+        availableLabels.forEach((labelName) => {
             // Check if this queue has capacity defined for this label
             // This would come from the configuration data
             // For now, we'll use default values if the label is in accessibleNodeLabels
@@ -62,7 +60,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                 });
             }
         });
-        
+
         return capacities;
     }, [availableLabels, accessibleNodeLabels, queue.queuePath]);
 
@@ -70,19 +68,21 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
 
     const handleAccessibleLabelsChange = (newLabels: string[]) => {
         setValue('accessible-node-labels', newLabels, { shouldDirty: true });
-        
+
         // Update node label capacities based on selected labels
-        const updatedCapacities = newLabels.map(labelName => {
-            const existing = nodeLabelCapacities.find(cap => cap.label === labelName);
-            return existing || {
-                label: labelName,
-                capacity: '0%',
-                maximumCapacity: '100%',
-            };
+        const updatedCapacities = newLabels.map((labelName) => {
+            const existing = nodeLabelCapacities.find((cap) => cap.label === labelName);
+            return (
+                existing || {
+                    label: labelName,
+                    capacity: '0%',
+                    maximumCapacity: '100%',
+                }
+            );
         });
-        
+
         setNodeLabelCapacities(updatedCapacities);
-        
+
         // Update form values for each label's capacity
         updatedCapacities.forEach(({ label, capacity, maximumCapacity }) => {
             setValue(`accessible-node-labels.${label}.capacity`, capacity, { shouldDirty: true });
@@ -93,18 +93,15 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
     };
 
     const handleCapacityChange = (labelName: string, field: 'capacity' | 'maximumCapacity', value: string) => {
-        setNodeLabelCapacities(prev => 
-            prev.map(cap => 
-                cap.label === labelName 
-                    ? { ...cap, [field]: value }
-                    : cap
-            )
+        setNodeLabelCapacities((prev) =>
+            prev.map((cap) => (cap.label === labelName ? { ...cap, [field]: value } : cap))
         );
-        
+
         // Update form value
-        const formKey = field === 'capacity' 
-            ? `accessible-node-labels.${labelName}.capacity`
-            : `accessible-node-labels.${labelName}.maximum-capacity`;
+        const formKey =
+            field === 'capacity'
+                ? `accessible-node-labels.${labelName}.capacity`
+                : `accessible-node-labels.${labelName}.maximum-capacity`;
         setValue(formKey, value, { shouldDirty: true });
     };
 
@@ -115,7 +112,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
     const renderCapacityInput = (labelCapacity: NodeLabelCapacity, field: 'capacity' | 'maximumCapacity') => {
         const value = field === 'capacity' ? labelCapacity.capacity : labelCapacity.maximumCapacity || '';
         const mode = getCapacityModeForLabel(value);
-        
+
         return (
             <TextField
                 size="small"
@@ -132,8 +129,8 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
         return (
             <Alert severity="info" sx={{ mt: 2 }}>
                 <Typography variant="body2">
-                    No node labels are available in the cluster. 
-                    Node labels must be created and assigned to nodes before they can be used by queues.
+                    No node labels are available in the cluster. Node labels must be created and assigned to nodes
+                    before they can be used by queues.
                 </Typography>
             </Alert>
         );
@@ -154,12 +151,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                     onChange={(_, newValue) => handleAccessibleLabelsChange(newValue)}
                     renderTags={(value, getTagProps) =>
                         value.map((option, index) => (
-                            <Chip
-                                variant="outlined"
-                                label={option}
-                                {...getTagProps({ index })}
-                                key={option}
-                            />
+                            <Chip variant="outlined" label={option} {...getTagProps({ index })} key={option} />
                         ))
                     }
                     renderInput={(params) => (
@@ -182,7 +174,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                             <InfoIcon fontSize="small" color="action" />
                         </Tooltip>
                     </Typography>
-                    
+
                     <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
                         <Table size="small" stickyHeader>
                             <TableHead>
@@ -196,9 +188,9 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                             <TableBody>
                                 {nodeLabelCapacities.map((labelCapacity) => {
                                     const labelInfo = nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.find(
-                                        label => label.name === labelCapacity.label
+                                        (label) => label.name === labelCapacity.label
                                     );
-                                    
+
                                     return (
                                         <TableRow key={labelCapacity.label}>
                                             <TableCell>
@@ -211,16 +203,14 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                                                     )}
                                                 </Box>
                                             </TableCell>
-                                            <TableCell>
-                                                {renderCapacityInput(labelCapacity, 'capacity')}
-                                            </TableCell>
+                                            <TableCell>{renderCapacityInput(labelCapacity, 'capacity')}</TableCell>
                                             <TableCell>
                                                 {renderCapacityInput(labelCapacity, 'maximumCapacity')}
                                             </TableCell>
                                             <TableCell>
                                                 {labelInfo?.partitionInfo && (
                                                     <Typography variant="caption" color="text.secondary">
-                                                        Available: {labelInfo.partitionInfo.resourceAvailable.memory}MB, 
+                                                        Available: {labelInfo.partitionInfo.resourceAvailable.memory}MB,
                                                         {labelInfo.partitionInfo.resourceAvailable.vCores} cores
                                                     </Typography>
                                                 )}

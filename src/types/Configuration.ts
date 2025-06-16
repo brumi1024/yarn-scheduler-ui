@@ -1,5 +1,5 @@
 // Re-export common types from Queue.ts
-export type { SchedulerResponse, ConfigurationResponse, Queue, ParsedQueue } from './Queue';
+export type { SchedulerResponse, ConfigurationResponse, Configuration, Queue, ParsedQueue } from './Queue';
 
 export interface QueueUpdateRequest {
     'queue-name': string;

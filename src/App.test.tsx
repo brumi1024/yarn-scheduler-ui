@@ -47,7 +47,7 @@ describe('App', () => {
     beforeEach(() => {
         // Reset mocks before each test
         vi.clearAllMocks();
-        
+
         // Mock the dataStore hook to return a mock loadAllData function
         mockUseDataStore.mockReturnValue(mockLoadAllData);
     });

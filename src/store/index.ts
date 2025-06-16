@@ -64,19 +64,19 @@ export const useHasStagedChanges = () => {
 
 export const useGlobalProperties = () => {
     const configuration = useDataStore((state) => state.configuration);
-    
+
     return useMemo(() => {
         if (!configuration?.property) return {};
-        
+
         const globalProps: Record<string, string> = {};
-        
+
         // Extract global properties (those not containing .root.)
         for (const prop of configuration.property) {
             if (prop.name && prop.value && !prop.name.includes('.root.')) {
                 globalProps[prop.name] = prop.value;
             }
         }
-        
+
         return globalProps;
     }, [configuration?.property]);
 };

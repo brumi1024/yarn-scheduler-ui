@@ -359,7 +359,6 @@ describe('ConfigParser', () => {
             expect(result.queues).toHaveLength(1);
             expect(result.queues[0].capacity.numericValue).toBe(100);
         });
-
     });
 
     describe('two-pass approach validation', () => {

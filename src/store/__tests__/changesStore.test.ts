@@ -28,7 +28,9 @@ vi.mock('../dataStore', () => ({
 }));
 
 const mockApiService = apiService as jest.Mocked<typeof apiService>;
-const mockConvertChangesToApiRequest = convertChangesToApiRequest as jest.MockedFunction<typeof convertChangesToApiRequest>;
+const mockConvertChangesToApiRequest = convertChangesToApiRequest as jest.MockedFunction<
+    typeof convertChangesToApiRequest
+>;
 const mockDataStore = useDataStore as jest.Mocked<typeof useDataStore>;
 
 describe('changesStore', () => {
@@ -71,7 +73,7 @@ describe('changesStore', () => {
 
         // Reset mocks
         vi.clearAllMocks();
-        
+
         // Reset the mock refresh function
         mockRefresh.mockClear();
     });
@@ -79,7 +81,7 @@ describe('changesStore', () => {
     describe('initial state', () => {
         it('should have correct initial state', () => {
             const state = useChangesStore.getState();
-            
+
             expect(state.stagedChanges).toEqual([]);
             expect(state.applyingChanges).toBe(false);
             expect(state.applyError).toBeNull();
@@ -91,31 +93,31 @@ describe('changesStore', () => {
     describe('stageChange', () => {
         it('should add a new change to staged changes', () => {
             const { stageChange } = useChangesStore.getState();
-            
+
             stageChange(mockChange1);
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange1]);
         });
 
         it('should add multiple changes', () => {
             const { stageChange } = useChangesStore.getState();
-            
+
             stageChange(mockChange1);
             stageChange(mockChange2);
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange1, mockChange2]);
         });
 
         it('should replace existing change for same queue and property', () => {
             const { stageChange } = useChangesStore.getState();
-            
+
             // Stage first change
             stageChange(mockChange1);
             let state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange1]);
-            
+
             // Stage change for same queue and property (should replace)
             stageChange(mockChange3);
             state = useChangesStore.getState();
@@ -125,10 +127,10 @@ describe('changesStore', () => {
 
         it('should keep changes for different queues or properties', () => {
             const { stageChange } = useChangesStore.getState();
-            
+
             stageChange(mockChange1); // root.queue1, capacity
             stageChange(mockChange2); // root.queue2, maxCapacity
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toContain(mockChange1);
             expect(state.stagedChanges).toContain(mockChange2);
@@ -139,14 +141,14 @@ describe('changesStore', () => {
     describe('unstageChange', () => {
         it('should remove a staged change by id', () => {
             const { stageChange, unstageChange } = useChangesStore.getState();
-            
+
             // Stage changes
             stageChange(mockChange1);
             stageChange(mockChange2);
-            
+
             // Unstage one change
             unstageChange(mockChange1.id);
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange2]);
         });
@@ -157,16 +159,16 @@ describe('changesStore', () => {
                 type: 'validation' as const,
                 message: 'Invalid value',
             };
-            
+
             // Set up state with change and conflict
             useChangesStore.setState({
                 stagedChanges: [mockChange1, mockChange2],
                 conflicts: [conflict],
             });
-            
+
             const { unstageChange } = useChangesStore.getState();
             unstageChange(mockChange1.id);
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange2]);
             expect(state.conflicts).toEqual([]);
@@ -174,10 +176,10 @@ describe('changesStore', () => {
 
         it('should do nothing if change id does not exist', () => {
             const { stageChange, unstageChange } = useChangesStore.getState();
-            
+
             stageChange(mockChange1);
             unstageChange('non-existent-id');
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([mockChange1]);
         });
@@ -190,16 +192,16 @@ describe('changesStore', () => {
                 type: 'validation' as const,
                 message: 'Invalid value',
             };
-            
+
             // Set up state with changes and conflicts
             useChangesStore.setState({
                 stagedChanges: [mockChange1, mockChange2],
                 conflicts: [conflict],
             });
-            
+
             const { clearStagedChanges } = useChangesStore.getState();
             clearStagedChanges();
-            
+
             const state = useChangesStore.getState();
             expect(state.stagedChanges).toEqual([]);
             expect(state.conflicts).toEqual([]);
@@ -216,16 +218,15 @@ describe('changesStore', () => {
             ],
         };
 
-
         it('should do nothing if no changes are staged', async () => {
             const { applyChanges } = useChangesStore.getState();
-            
+
             await applyChanges();
-            
+
             // Verify no API calls were made
             expect(mockConvertChangesToApiRequest).not.toHaveBeenCalled();
             expect(mockApiService.updateConfiguration).not.toHaveBeenCalled();
-            
+
             const state = useChangesStore.getState();
             expect(state.applyingChanges).toBe(false);
         });
@@ -239,7 +240,7 @@ describe('changesStore', () => {
 
         it('should return true when changes are staged', () => {
             const { stageChange, hasUnsavedChanges } = useChangesStore.getState();
-            
+
             stageChange(mockChange1);
             expect(hasUnsavedChanges()).toBe(true);
         });
@@ -248,15 +249,15 @@ describe('changesStore', () => {
     describe('getChangesByQueue', () => {
         it('should return changes for a specific queue', () => {
             const { stageChange, getChangesByQueue } = useChangesStore.getState();
-            
+
             stageChange(mockChange1); // root.queue1
             stageChange(mockChange2); // root.queue2
             stageChange(mockChange3); // root.queue1
-            
+
             const queue1Changes = getChangesByQueue('root.queue1');
             const queue2Changes = getChangesByQueue('root.queue2');
             const queue3Changes = getChangesByQueue('root.queue3');
-            
+
             expect(queue1Changes).toEqual([mockChange3]); // Should only have the latest change for queue1
             expect(queue2Changes).toEqual([mockChange2]);
             expect(queue3Changes).toEqual([]);
@@ -264,7 +265,7 @@ describe('changesStore', () => {
 
         it('should return empty array for non-existent queue', () => {
             const { getChangesByQueue } = useChangesStore.getState();
-            
+
             const changes = getChangesByQueue('non.existent.queue');
             expect(changes).toEqual([]);
         });

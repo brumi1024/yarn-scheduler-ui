@@ -108,9 +108,9 @@ describe('ConfigParser Characterization Tests', () => {
             const rootQueue = result.queues[0];
             expect(rootQueue.children).toHaveLength(3);
 
-            const capacityQueue = rootQueue.children.find(q => q.name === 'capacity');
-            const maxCapacityQueue = rootQueue.children.find(q => q.name === 'maximum-capacity');
-            const stateQueue = rootQueue.children.find(q => q.name === 'state');
+            const capacityQueue = rootQueue.children.find((q) => q.name === 'capacity');
+            const maxCapacityQueue = rootQueue.children.find((q) => q.name === 'maximum-capacity');
+            const stateQueue = rootQueue.children.find((q) => q.name === 'state');
 
             expect(capacityQueue?.capacity.numericValue).toBe(30);
             expect(maxCapacityQueue?.capacity.numericValue).toBe(40);
@@ -129,7 +129,7 @@ describe('ConfigParser Characterization Tests', () => {
 
             // Global property should be captured
             expect(result.globalProperties['yarn.scheduler.capacity.root-queue-mapping.enabled']).toBe('true');
-            
+
             // Queue structure should still be correct
             expect(result.queues[0].capacity.numericValue).toBe(100);
             expect(result.queues[0].children[0].name).toBe('test');
@@ -182,7 +182,7 @@ describe('ConfigParser Characterization Tests', () => {
             };
 
             const result = ConfigParser.parse(config);
-            expect(result.errors.some(error => error.includes('invalid capacity'))).toBe(true);
+            expect(result.errors.some((error) => error.includes('invalid capacity'))).toBe(true);
         });
 
         it('should warn about capacity sum mismatches in legacy mode', () => {
@@ -195,7 +195,7 @@ describe('ConfigParser Characterization Tests', () => {
             };
 
             const result = ConfigParser.parse(config);
-            expect(result.warnings.some(warning => warning.includes('capacity sum'))).toBe(true);
+            expect(result.warnings.some((warning) => warning.includes('capacity sum'))).toBe(true);
         });
 
         it('should handle missing root queue gracefully', () => {
@@ -204,7 +204,7 @@ describe('ConfigParser Characterization Tests', () => {
             };
 
             const result = ConfigParser.parse(config);
-            expect(result.errors.some(error => error.includes('No root queue found'))).toBe(true);
+            expect(result.errors.some((error) => error.includes('No root queue found'))).toBe(true);
             expect(result.queues).toHaveLength(0);
         });
     });

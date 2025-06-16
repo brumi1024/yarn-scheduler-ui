@@ -79,7 +79,7 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({ queue, sav
                     <AccordionDetails sx={{ p: 2 }}>{renderPropertyGroup(group)}</AccordionDetails>
                 </Accordion>
             ))}
-            
+
             {/* Node Labels Section */}
             <Accordion
                 key="node-labels"

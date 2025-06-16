@@ -80,7 +80,8 @@ export const globalProperties: Record<string, GlobalPropertyDefinition> = {
         displayName: 'Node Locality Delay',
         type: 'number',
         category: 'locality',
-        description: 'Number of missed scheduling opportunities after which the scheduler attempts to schedule rack-local containers. Set to -1 to disable node-locality constraint.',
+        description:
+            'Number of missed scheduling opportunities after which the scheduler attempts to schedule rack-local containers. Set to -1 to disable node-locality constraint.',
         defaultValue: '40',
         validation: { min: -1, max: 1000 },
     },
@@ -88,7 +89,8 @@ export const globalProperties: Record<string, GlobalPropertyDefinition> = {
         displayName: 'Rack Locality Additional Delay',
         type: 'number',
         category: 'locality',
-        description: 'Number of additional missed scheduling opportunities over node-locality-delay after which the scheduler attempts to schedule off-switch containers.',
+        description:
+            'Number of additional missed scheduling opportunities over node-locality-delay after which the scheduler attempts to schedule off-switch containers.',
         defaultValue: '-1',
         validation: { min: -1, max: 1000 },
     },
@@ -96,7 +98,8 @@ export const globalProperties: Record<string, GlobalPropertyDefinition> = {
         displayName: 'Queue Mappings',
         type: 'string',
         category: 'queue',
-        description: 'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
+        description:
+            'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
         defaultValue: '',
     },
     'yarn.scheduler.capacity.queue-mappings-override.enable': {
@@ -131,7 +134,7 @@ export const globalProperties: Record<string, GlobalPropertyDefinition> = {
 };
 
 export const getGlobalPropertyCategories = () => {
-    const categories = new Set(Object.values(globalProperties).map(prop => prop.category));
+    const categories = new Set(Object.values(globalProperties).map((prop) => prop.category));
     return Array.from(categories).sort();
 };
 

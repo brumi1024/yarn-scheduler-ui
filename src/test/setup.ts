@@ -31,12 +31,12 @@ const mockContext2D = {
     clearRect: vi.fn(),
     fillRect: vi.fn(),
     strokeRect: vi.fn(),
-    
+
     // Text methods
     fillText: vi.fn(),
     strokeText: vi.fn(),
     measureText: vi.fn(() => ({ width: 100 })),
-    
+
     // Transform methods
     save: vi.fn(),
     restore: vi.fn(),
@@ -45,13 +45,13 @@ const mockContext2D = {
     rotate: vi.fn(),
     transform: vi.fn(),
     setTransform: vi.fn(),
-    
+
     // Path methods
     clip: vi.fn(),
-    
+
     // Image methods
     drawImage: vi.fn(),
-    
+
     // Gradient methods
     createLinearGradient: vi.fn(() => ({
         addColorStop: vi.fn(),
@@ -59,7 +59,7 @@ const mockContext2D = {
     createRadialGradient: vi.fn(() => ({
         addColorStop: vi.fn(),
     })),
-    
+
     // Properties
     fillStyle: '#000000',
     strokeStyle: '#000000',
@@ -80,16 +80,16 @@ const mockContext2D = {
     shadowBlur: 0,
     shadowOffsetX: 0,
     shadowOffsetY: 0,
-    
+
     // Line dash methods
     setLineDash: vi.fn(),
     getLineDash: vi.fn(() => []),
-    
+
     // Hit region methods (for accessibility)
     addHitRegion: vi.fn(),
     removeHitRegion: vi.fn(),
     clearHitRegions: vi.fn(),
-    
+
     // Canvas state
     canvas: {
         width: 800,
@@ -209,7 +209,10 @@ if (typeof global !== 'undefined' && global.beforeEach) {
 const originalError = console.error;
 console.error = (...args: any[]) => {
     const errorMessage = args[0];
-    if (typeof errorMessage === 'string' && errorMessage.includes('An update to TestComponent inside a test was not wrapped in act(...)')) {
+    if (
+        typeof errorMessage === 'string' &&
+        errorMessage.includes('An update to TestComponent inside a test was not wrapped in act(...)')
+    ) {
         return; // Suppress the act() warning
     }
     originalError.apply(console, args);

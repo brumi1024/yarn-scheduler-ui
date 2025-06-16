@@ -24,7 +24,11 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { nanoid } from 'nanoid';
 import { useGlobalProperties } from '../store';
 import { useChangesStore } from '../store/changesStore';
-import { globalProperties, getGlobalPropertyCategories, getGlobalPropertiesByCategory } from '../config/globalProperties';
+import {
+    globalProperties,
+    getGlobalPropertyCategories,
+    getGlobalPropertiesByCategory,
+} from '../config/globalProperties';
 import { ConfirmationModal } from '../components/ConfirmationModal';
 import StagedChangesPanel from './queue-editor/components/StagedChangesPanel';
 
@@ -67,9 +71,7 @@ export default function GlobalSettings() {
 
     const getCurrentValue = (key: string) => {
         // Check staged changes first, then global properties, then default
-        const stagedChange = stagedChanges.find(change => 
-            change.queuePath === '_global' && change.property === key
-        );
+        const stagedChange = stagedChanges.find((change) => change.queuePath === '_global' && change.property === key);
         if (stagedChange) {
             return stagedChange.newValue;
         }
@@ -78,12 +80,12 @@ export default function GlobalSettings() {
 
     const handlePropertyChange = (key: string, newValue: string) => {
         const currentValue = globals[key] || globalProperties[key]?.defaultValue || '';
-        
+
         if (newValue === currentValue) {
             // Value reverted to original, unstage any changes
             // Find the staged change and remove it by ID
-            const stagedChange = stagedChanges.find(change => 
-                change.queuePath === '_global' && change.property === key
+            const stagedChange = stagedChanges.find(
+                (change) => change.queuePath === '_global' && change.property === key
             );
             if (stagedChange) {
                 unstageChange(stagedChange.id);
@@ -100,11 +102,9 @@ export default function GlobalSettings() {
         }
     };
 
-    const renderPropertyInput = (key: string, property: typeof globalProperties[string]) => {
+    const renderPropertyInput = (key: string, property: (typeof globalProperties)[string]) => {
         const currentValue = getCurrentValue(key);
-        const hasChanged = stagedChanges.some(change => 
-            change.queuePath === '_global' && change.property === key
-        );
+        const hasChanged = stagedChanges.some((change) => change.queuePath === '_global' && change.property === key);
 
         switch (property.type) {
             case 'boolean':
@@ -197,8 +197,8 @@ export default function GlobalSettings() {
                         Legacy Queue Mode
                     </Typography>
                     <Alert severity="info" sx={{ mb: 2 }}>
-                        This setting affects how capacity allocation works throughout the scheduler.
-                        Changes require careful consideration.
+                        This setting affects how capacity allocation works throughout the scheduler. Changes require
+                        careful consideration.
                     </Alert>
                     <FormGroup>
                         {renderPropertyInput(
@@ -214,28 +214,21 @@ export default function GlobalSettings() {
 
             {/* Categorized Settings */}
             {categories
-                .filter(category => category !== 'core') // Core settings are handled above
+                .filter((category) => category !== 'core') // Core settings are handled above
                 .map((category) => {
                     const categoryProperties = getGlobalPropertiesByCategory(category);
-                    
+
                     return (
                         <Accordion key={category} sx={{ mb: 1 }}>
                             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
                                 <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
                                     {category} Settings
                                 </Typography>
-                                {categoryProperties.some(([key]) => 
-                                    stagedChanges.some(change => 
-                                        change.queuePath === '_global' && change.property === key
+                                {categoryProperties.some(([key]) =>
+                                    stagedChanges.some(
+                                        (change) => change.queuePath === '_global' && change.property === key
                                     )
-                                ) && (
-                                    <Chip 
-                                        label="Has Changes" 
-                                        size="small" 
-                                        color="primary" 
-                                        sx={{ ml: 2 }} 
-                                    />
-                                )}
+                                ) && <Chip label="Has Changes" size="small" color="primary" sx={{ ml: 2 }} />}
                             </AccordionSummary>
                             <AccordionDetails>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

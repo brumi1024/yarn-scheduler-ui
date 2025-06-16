@@ -69,7 +69,7 @@ describe('configurationUtils', () => {
                 'update-queue': [
                     {
                         'queue-name': 'root.queue1',
-                        params: { 
+                        params: {
                             capacity: '50%',
                             state: 'RUNNING',
                         },

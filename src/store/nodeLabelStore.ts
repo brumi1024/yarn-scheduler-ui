@@ -1,11 +1,11 @@
 import { create } from 'zustand';
 import { apiService } from '../api/ApiService';
-import type { 
-    NodeLabel, 
-    ClusterNode, 
+import type {
+    NodeLabel,
+    ClusterNode,
     NodeToLabelsMapping,
     AddNodeLabelsRequest,
-    ReplaceNodeLabelsRequest 
+    ReplaceNodeLabelsRequest,
 } from '../types/NodeLabel';
 
 interface PendingLabelChange {
@@ -80,11 +80,10 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
     stageLabelChange: (nodeId, originalLabels, newLabels) => {
         set((state) => {
             const newPendingChanges = new Map(state.pendingNodeChanges);
-            
+
             // Check if labels are actually different
-            const labelsChanged = JSON.stringify([...originalLabels].sort()) !== 
-                                 JSON.stringify([...newLabels].sort());
-            
+            const labelsChanged = JSON.stringify([...originalLabels].sort()) !== JSON.stringify([...newLabels].sort());
+
             if (labelsChanged) {
                 newPendingChanges.set(nodeId, {
                     nodeId,
@@ -123,7 +122,7 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
     stageNewLabel: (name, exclusivity) => {
         set((state) => {
             // Check if label already exists in pending additions
-            const exists = state.pendingNewLabels.some(label => label.name === name);
+            const exists = state.pendingNewLabels.some((label) => label.name === name);
             if (exists) return state;
 
             return {
@@ -134,7 +133,7 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
 
     unstageNewLabel: (name) => {
         set((state) => ({
-            pendingNewLabels: state.pendingNewLabels.filter(label => label.name !== name),
+            pendingNewLabels: state.pendingNewLabels.filter((label) => label.name !== name),
         }));
     },
 
@@ -149,7 +148,7 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
 
     unstageLabelRemoval: (labelName) => {
         set((state) => ({
-            pendingLabelRemovals: state.pendingLabelRemovals.filter(name => name !== labelName),
+            pendingLabelRemovals: state.pendingLabelRemovals.filter((name) => name !== labelName),
         }));
     },
 
@@ -192,26 +191,26 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
     // Bulk operations (single label per node)
     bulkAssignLabel: (nodeIds, labelName) => {
         const state = get();
-        
-        nodeIds.forEach(nodeId => {
+
+        nodeIds.forEach((nodeId) => {
             // Get current labels for this node (including any pending changes)
             const currentLabels = state.getNodePendingLabels(nodeId, []);
             // Since each node can only have one label, replace with the new label
             const newLabels = [labelName];
-            
+
             state.stageLabelChange(nodeId, currentLabels, newLabels);
         });
     },
 
     bulkRemoveLabels: (nodeIds) => {
         const state = get();
-        
-        nodeIds.forEach(nodeId => {
+
+        nodeIds.forEach((nodeId) => {
             // Get current labels for this node (including any pending changes)
             const currentLabels = state.getNodePendingLabels(nodeId, []);
             // Remove all labels from the node
             const newLabels: string[] = [];
-            
+
             state.stageLabelChange(nodeId, currentLabels, newLabels);
         });
     },
@@ -219,7 +218,7 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
     // Apply changes
     applyChanges: async () => {
         const state = get();
-        
+
         set({ isLoading: true, error: null });
 
         try {
@@ -227,7 +226,7 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
             if (state.pendingNewLabels.length > 0) {
                 const addRequest: AddNodeLabelsRequest = {
                     nodeLabelsInfo: {
-                        nodeLabelInfo: state.pendingNewLabels.map(label => ({
+                        nodeLabelInfo: state.pendingNewLabels.map((label) => ({
                             name: label.name,
                             exclusivity: label.exclusivity,
                         })),
@@ -238,11 +237,12 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
 
             // Apply node label changes
             if (state.pendingNodeChanges.size > 0) {
-                const nodeToLabelsChanges: NodeToLabelsMapping[] = Array.from(state.pendingNodeChanges.values())
-                    .map(change => ({
+                const nodeToLabelsChanges: NodeToLabelsMapping[] = Array.from(state.pendingNodeChanges.values()).map(
+                    (change) => ({
                         nodeId: change.nodeId,
                         nodeLabels: change.newLabels,
-                    }));
+                    })
+                );
 
                 const replaceRequest: ReplaceNodeLabelsRequest = {
                     nodeToLabelsEntryList: {
@@ -264,7 +264,6 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
                 pendingLabelRemovals: [],
                 isLoading: false,
             });
-
         } catch (error) {
             set({
                 isLoading: false,
@@ -283,9 +282,11 @@ export const useNodeLabelStore = create<NodeLabelStore>((set, get) => ({
 
     hasChanges: () => {
         const state = get();
-        return state.pendingNodeChanges.size > 0 || 
-               state.pendingNewLabels.length > 0 || 
-               state.pendingLabelRemovals.length > 0;
+        return (
+            state.pendingNodeChanges.size > 0 ||
+            state.pendingNewLabels.length > 0 ||
+            state.pendingLabelRemovals.length > 0
+        );
     },
 
     getChangesSummary: () => {

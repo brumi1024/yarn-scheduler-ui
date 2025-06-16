@@ -46,35 +46,34 @@ describe('dataStore', () => {
     describe('initial state', () => {
         it('should have correct initial state', () => {
             const state = useDataStore.getState();
-            
+
             expect(state.scheduler).toBeNull();
             expect(state.configuration).toBeNull();
             expect(state.nodeLabels).toBeNull();
             expect(state.nodes).toBeNull();
-            
+
             expect(state.loading).toEqual({
                 scheduler: false,
                 configuration: false,
                 nodeLabels: false,
                 nodes: false,
             });
-            
+
             expect(state.errors).toEqual({
                 scheduler: null,
                 configuration: null,
                 nodeLabels: null,
                 nodes: null,
             });
-            
+
             expect(state.lastUpdated).toEqual({});
         });
     });
 
-
     describe('clearError', () => {
         it('should clear all errors', () => {
             const error = new Error('Test error');
-            
+
             // Set some errors first
             useDataStore.setState({
                 errors: {
@@ -107,14 +106,14 @@ describe('dataStore', () => {
                         maxCapacity: 100,
                         queueName: 'root',
                         queues: {
-                            queue: []
-                        }
-                    }
-                }
+                            queue: [],
+                        },
+                    },
+                },
             };
 
             const error = new Error('Test error');
-            
+
             // Set state with data and errors
             useDataStore.setState({
                 scheduler: mockScheduler,

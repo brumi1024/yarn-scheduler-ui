@@ -110,23 +110,21 @@ const AddLabelDialog: React.FC<AddLabelDialogProps> = ({ open, onClose, onConfir
                         margin="normal"
                     />
                     <FormControlLabel
-                        control={
-                            <Switch
-                                checked={exclusivity}
-                                onChange={(e) => setExclusivity(e.target.checked)}
-                            />
-                        }
+                        control={<Switch checked={exclusivity} onChange={(e) => setExclusivity(e.target.checked)} />}
                         label="Exclusive Label"
                         sx={{ mt: 2 }}
                     />
                     <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                        Exclusive labels ensure that only containers requesting this label can run on nodes with this label.
+                        Exclusive labels ensure that only containers requesting this label can run on nodes with this
+                        label.
                     </Typography>
                 </Box>
             </DialogContent>
             <DialogActions>
                 <Button onClick={handleClose}>Cancel</Button>
-                <Button onClick={handleConfirm} variant="contained">Add Label</Button>
+                <Button onClick={handleConfirm} variant="contained">
+                    Add Label
+                </Button>
             </DialogActions>
         </Dialog>
     );
@@ -152,13 +150,13 @@ const NodeLabelsPanel: React.FC = () => {
         const current = nodeLabels?.nodeLabelsInfo?.nodeLabelInfo || [];
         const pending = pendingNewLabels || [];
         const removing = pendingLabelRemovals || [];
-        
+
         // Combine current and pending new labels, exclude those being removed
         const allLabels = [
-            ...current.filter(label => !removing.includes(label.name)),
-            ...pending.map(label => ({ ...label, isPending: true })),
+            ...current.filter((label) => !removing.includes(label.name)),
+            ...pending.map((label) => ({ ...label, isPending: true })),
         ];
-        
+
         return allLabels;
     }, [nodeLabels, pendingNewLabels, pendingLabelRemovals]);
 
@@ -167,7 +165,7 @@ const NodeLabelsPanel: React.FC = () => {
     };
 
     const handleRemoveLabel = (labelName: string) => {
-        if (pendingNewLabels.some(label => label.name === labelName)) {
+        if (pendingNewLabels.some((label) => label.name === labelName)) {
             unstageNewLabel(labelName);
         } else {
             stageLabelRemoval(labelName);
@@ -187,7 +185,7 @@ const NodeLabelsPanel: React.FC = () => {
     };
 
     const existingLabelNames = useMemo(() => {
-        return labels.map(label => label.name);
+        return labels.map((label) => label.name);
     }, [labels]);
 
     return (
@@ -242,12 +240,8 @@ const NodeLabelsPanel: React.FC = () => {
                                             {label.exclusivity && (
                                                 <Chip label="Exclusive" size="small" color="warning" />
                                             )}
-                                            {isPending && (
-                                                <Chip label="New" size="small" color="success" />
-                                            )}
-                                            {isRemoving && (
-                                                <Chip label="Removing" size="small" color="error" />
-                                            )}
+                                            {isPending && <Chip label="New" size="small" color="success" />}
+                                            {isRemoving && <Chip label="Removing" size="small" color="error" />}
                                         </Box>
                                     }
                                     secondary={
@@ -259,10 +253,7 @@ const NodeLabelsPanel: React.FC = () => {
                                 <ListItemSecondaryAction>
                                     {isRemoving ? (
                                         <Tooltip title="Undo removal">
-                                            <IconButton
-                                                size="small"
-                                                onClick={() => handleUndoRemoval(label.name)}
-                                            >
+                                            <IconButton size="small" onClick={() => handleUndoRemoval(label.name)}>
                                                 <CheckIcon />
                                             </IconButton>
                                         </Tooltip>
@@ -328,7 +319,7 @@ const NodesPanel: React.FC = () => {
             const aVal = a[sortField];
             const bVal = b[sortField];
             const direction = sortDirection === 'asc' ? 1 : -1;
-            
+
             if (typeof aVal === 'string' && typeof bVal === 'string') {
                 return aVal.localeCompare(bVal) * direction;
             }
@@ -385,7 +376,7 @@ const NodesPanel: React.FC = () => {
 
     const availableLabels = useMemo(() => {
         const { nodeLabels } = useDataStore.getState();
-        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map(label => label.name) || [];
+        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map((label) => label.name) || [];
     }, []);
 
     return (
@@ -398,7 +389,9 @@ const NodesPanel: React.FC = () => {
                     </Typography>
                     <Box sx={{ display: 'flex', gap: 1 }}>
                         <Badge badgeContent={selectedNodes.size} color="primary">
-                            <Tooltip title={selectedLabels.size > 1 ? "Only the first selected label will be assigned" : ""}>
+                            <Tooltip
+                                title={selectedLabels.size > 1 ? 'Only the first selected label will be assigned' : ''}
+                            >
                                 <Button
                                     variant="outlined"
                                     size="small"
@@ -428,13 +421,15 @@ const NodesPanel: React.FC = () => {
                             <TableRow>
                                 <TableCell padding="checkbox">
                                     <Checkbox
-                                        indeterminate={selectedNodes.size > 0 && selectedNodes.size < clusterNodes.length}
+                                        indeterminate={
+                                            selectedNodes.size > 0 && selectedNodes.size < clusterNodes.length
+                                        }
                                         checked={clusterNodes.length > 0 && selectedNodes.size === clusterNodes.length}
                                         onChange={(e) => {
                                             if (e.target.checked) {
-                                                clusterNodes.forEach(node => selectNode(node.id));
+                                                clusterNodes.forEach((node) => selectNode(node.id));
                                             } else {
-                                                clusterNodes.forEach(node => deselectNode(node.id));
+                                                clusterNodes.forEach((node) => deselectNode(node.id));
                                             }
                                         }}
                                     />
@@ -483,12 +478,8 @@ const NodesPanel: React.FC = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                                <Typography variant="body2">
-                                                    {node.nodeHostName || node.id}
-                                                </Typography>
-                                                {hasChanges && (
-                                                    <Chip label="Modified" size="small" color="info" />
-                                                )}
+                                                <Typography variant="body2">{node.nodeHostName || node.id}</Typography>
+                                                {hasChanges && <Chip label="Modified" size="small" color="info" />}
                                             </Box>
                                         </TableCell>
                                         <TableCell>
@@ -502,11 +493,13 @@ const NodesPanel: React.FC = () => {
                                             <FormControl size="small" sx={{ minWidth: 120 }}>
                                                 <Select
                                                     value={nodeLabels.length > 0 ? nodeLabels[0] : ''}
-                                                    onChange={(e) => handleLabelChange(
-                                                        node.id,
-                                                        e.target.value as string,
-                                                        node.nodeLabels || []
-                                                    )}
+                                                    onChange={(e) =>
+                                                        handleLabelChange(
+                                                            node.id,
+                                                            e.target.value as string,
+                                                            node.nodeLabels || []
+                                                        )
+                                                    }
                                                     displayEmpty
                                                     variant="outlined"
                                                 >
@@ -528,8 +521,10 @@ const NodesPanel: React.FC = () => {
                                         </TableCell>
                                         <TableCell>
                                             <Typography variant="body2">
-                                                {Math.round(node.usedMemoryMB)}/{Math.round(node.usedMemoryMB + node.availMemoryMB)}MB,{' '}
-                                                {node.usedVirtualCores}/{node.usedVirtualCores + node.availableVirtualCores} cores
+                                                {Math.round(node.usedMemoryMB)}/
+                                                {Math.round(node.usedMemoryMB + node.availMemoryMB)}MB,{' '}
+                                                {node.usedVirtualCores}/
+                                                {node.usedVirtualCores + node.availableVirtualCores} cores
                                             </Typography>
                                         </TableCell>
                                     </TableRow>
@@ -538,9 +533,7 @@ const NodesPanel: React.FC = () => {
                             {clusterNodes.length === 0 && (
                                 <TableRow>
                                     <TableCell colSpan={5} align="center">
-                                        <Typography color="text.secondary">
-                                            No nodes found
-                                        </Typography>
+                                        <Typography color="text.secondary">No nodes found</Typography>
                                     </TableCell>
                                 </TableRow>
                             )}
@@ -554,14 +547,7 @@ const NodesPanel: React.FC = () => {
 
 export const NodeLabels: React.FC = () => {
     const { loading, errors } = useDataStore();
-    const {
-        isLoading,
-        error,
-        hasChanges,
-        getChangesSummary,
-        applyChanges,
-        clearAllChanges,
-    } = useNodeLabelStore();
+    const { isLoading, error, hasChanges, getChangesSummary, applyChanges, clearAllChanges } = useNodeLabelStore();
 
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
@@ -576,7 +562,7 @@ export const NodeLabels: React.FC = () => {
             setSnackbarMessage('Changes applied successfully');
             setSnackbarSeverity('success');
             setSnackbarOpen(true);
-            
+
             // Refresh data to get latest state
             const { refresh } = useDataStore.getState();
             await refresh();
@@ -616,7 +602,8 @@ export const NodeLabels: React.FC = () => {
                 Node Labels Management
             </Typography>
             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                Each node can be assigned to exactly one label. Use the dropdown in the Labels column to assign or change a node's label.
+                Each node can be assigned to exactly one label. Use the dropdown in the Labels column to assign or
+                change a node's label.
             </Typography>
 
             {(error || hasChanges()) && (
@@ -627,8 +614,8 @@ export const NodeLabels: React.FC = () => {
                         </Alert>
                     )}
                     {hasChanges() && (
-                        <Alert 
-                            severity="info" 
+                        <Alert
+                            severity="info"
                             sx={{ mb: 1 }}
                             action={
                                 <Box sx={{ display: 'flex', gap: 1 }}>
@@ -669,16 +656,8 @@ export const NodeLabels: React.FC = () => {
                 </Grid>
             </Grid>
 
-            <Snackbar
-                open={snackbarOpen}
-                autoHideDuration={6000}
-                onClose={() => setSnackbarOpen(false)}
-            >
-                <Alert
-                    onClose={() => setSnackbarOpen(false)}
-                    severity={snackbarSeverity}
-                    sx={{ width: '100%' }}
-                >
+            <Snackbar open={snackbarOpen} autoHideDuration={6000} onClose={() => setSnackbarOpen(false)}>
+                <Alert onClose={() => setSnackbarOpen(false)} severity={snackbarSeverity} sx={{ width: '100%' }}>
                     {snackbarMessage}
                 </Alert>
             </Snackbar>

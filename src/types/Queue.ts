@@ -84,6 +84,11 @@ export interface SchedulerResponse {
     };
 }
 
+// Configuration flat format (used by ConfigParser)
+export interface Configuration {
+    [key: string]: string;
+}
+
 // Configuration response structure
 export interface ConfigurationResponse {
     property: ConfigProperty[];

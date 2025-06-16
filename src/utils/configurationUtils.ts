@@ -15,7 +15,7 @@ function convertFormValueToYarnValue(propertyKey: string, value: unknown): strin
     const queueDefinition = QUEUE_PROPERTIES[propertyKey];
     const globalDefinition = globalProperties[propertyKey];
     const definition = queueDefinition || globalDefinition;
-    
+
     if (value === null || value === undefined) {
         return '';
     }
@@ -111,7 +111,10 @@ export function convertChangesToApiRequest(changes: ChangeSet[]) {
             if (!queueChanges[change.queuePath]) {
                 queueChanges[change.queuePath] = {};
             }
-            queueChanges[change.queuePath][change.property] = convertFormValueToYarnValue(change.property, change.newValue);
+            queueChanges[change.queuePath][change.property] = convertFormValueToYarnValue(
+                change.property,
+                change.newValue
+            );
         }
     });
 

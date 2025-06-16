@@ -76,8 +76,8 @@ export function PropertyFormField({ property, control, name, siblings, onCustomC
                 <Box sx={{ my: 2 }}>
                     <FormControlLabel
                         control={
-                            <Switch 
-                                {...field} 
+                            <Switch
+                                {...field}
                                 checked={field.value || false}
                                 onChange={(e) => {
                                     field.onChange(e.target.checked);

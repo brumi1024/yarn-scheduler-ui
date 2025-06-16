@@ -123,12 +123,13 @@ export const useDataStore = create<DataStore>((set, get) => ({
         await get().loadAllData();
     },
 
-    clearError: () => set((state) => ({
-        errors: {
-            scheduler: null,
-            configuration: null,
-            nodeLabels: null,
-            nodes: null,
-        },
-    })),
+    clearError: () =>
+        set((state) => ({
+            errors: {
+                scheduler: null,
+                configuration: null,
+                nodeLabels: null,
+                nodes: null,
+            },
+        })),
 }));
