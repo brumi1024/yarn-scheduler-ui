@@ -1,66 +1,170 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useCallback } from 'react';
 import { Box, Alert, CircularProgress } from '@mui/material';
-import { CanvasDisplay, type CanvasDisplayRef } from './CanvasDisplay';
-import { VisualizationControls } from './VisualizationControls';
-import { useQueueDataProcessor } from '../hooks/useQueueDataProcessor';
+import { 
+    ReactFlow,
+    Background, 
+    Controls, 
+    MiniMap, 
+    ReactFlowProvider,
+    useReactFlow,
+    type Node,
+    type Edge,
+    type OnNodesChange,
+    type OnEdgesChange,
+    type OnNodeClick,
+    applyNodeChanges,
+    applyEdgeChanges
+} from '@xyflow/react';
+import '@xyflow/react/dist/style.css';
+
+import { useConfigurationQuery, useSchedulerQuery } from '../../../hooks/useYarnApi';
+import { useQueueDataProcessor, type QueueNodeData } from '../hooks/useQueueDataProcessor';
 import { QueueInfoPanel } from './QueueInfoPanel';
-import { useDataStore, useUIStore, useSelectedQueue } from '../../../store';
+import { useUIStore, useSelectedQueue } from '../../../store';
+import QueueCardNode from './QueueCardNode';
+import CustomFlowEdge from './CustomFlowEdge';
 import type { Queue } from '../../../types/Queue';
-import type { SelectionEvent, HoverEvent } from '../utils/canvas';
 
 export interface QueueVisualizationContainerProps {
     className?: string;
 }
 
-export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerProps> = ({ className }) => {
-    const canvasRef = useRef<CanvasDisplayRef>(null);
+// Node and edge types for React Flow
+const nodeTypes = { queueCard: QueueCardNode };
+const edgeTypes = { customFlow: CustomFlowEdge };
 
-    // Zustand stores
-    const configuration = useDataStore((state) => state.configuration);
-    const scheduler = useDataStore((state) => state.scheduler);
-    const loading = useDataStore((state) => state.loading);
-    const errors = useDataStore((state) => state.errors);
+// Inner Flow component that has access to React Flow instance
+const FlowInner: React.FC = () => {
+    const configQuery = useConfigurationQuery();
+    const schedulerQuery = useSchedulerQuery();
+    const { nodes: processedNodes, edges: processedEdges, isLoading, error } = useQueueDataProcessor(configQuery, schedulerQuery);
     const uiStore = useUIStore();
-    const selectedQueueData = useSelectedQueue();
+    const { fitView } = useReactFlow();
 
-    // Process queue data
-    const { nodes, flows, isLoading: dataLoading, error: dataError } = useQueueDataProcessor(configuration, scheduler);
+    // Local state for nodes and edges (React Flow requires this pattern)
+    const [nodes, setNodes] = React.useState<Node<QueueNodeData>[]>([]);
+    const [edges, setEdges] = React.useState<Edge[]>([]);
 
-    // Local state for hover
-    const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
-
-    // Loading and error states
-    const isLoading = loading?.configuration || loading?.scheduler || dataLoading;
-    const error = errors?.configuration?.message || errors?.scheduler?.message || dataError;
-
-    // Handle selection events from canvas
-    const handleSelectionChange = useCallback(
-        (event: SelectionEvent) => {
-            if (event.type === 'select' && event.nodeId) {
-                uiStore?.selectQueue(event.nodeId);
-            } else if (event.type === 'deselect' || !event.nodeId) {
-                uiStore?.selectQueue(undefined);
+    // Update nodes and edges when processed data changes
+    React.useEffect(() => {
+        if (processedNodes && processedEdges) {
+            setNodes(processedNodes);
+            setEdges(processedEdges);
+            
+            // Fit view when data is first loaded
+            if (processedNodes.length > 0 && !isLoading) {
+                setTimeout(() => {
+                    fitView({ padding: 0.1, includeHiddenNodes: false });
+                }, 100);
             }
+        }
+    }, [processedNodes, processedEdges, isLoading, fitView]);
+
+    // Update node selection state when UI store changes
+    React.useEffect(() => {
+        if (uiStore?.selectedQueuePath) {
+            setNodes((nds) =>
+                nds.map((node) => ({
+                    ...node,
+                    selected: node.id === uiStore.selectedQueuePath,
+                }))
+            );
+        } else {
+            setNodes((nds) =>
+                nds.map((node) => ({
+                    ...node,
+                    selected: false,
+                }))
+            );
+        }
+    }, [uiStore?.selectedQueuePath]);
+
+    // Handle node changes (selection, etc.)
+    const onNodesChange: OnNodesChange = useCallback((changes) => {
+        setNodes((nds) => applyNodeChanges(changes, nds));
+    }, []);
+
+    // Handle edge changes
+    const onEdgesChange: OnEdgesChange = useCallback((changes) => {
+        setEdges((eds) => applyEdgeChanges(changes, eds));
+    }, []);
+
+    // Handle node clicks
+    const onNodeClick: OnNodeClick = useCallback(
+        (_, node) => {
+            uiStore?.selectQueue(node.id);
         },
         [uiStore]
     );
 
-    // Handle hover events from canvas
-    const handleHoverChange = useCallback((event: HoverEvent) => {
-        setHoveredQueue(event.nodeId || null);
-    }, []);
+    // Handle loading state
+    if (isLoading) {
+        return (
+            <Box
+                sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    bottom: 0,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    bgcolor: 'background.default',
+                    zIndex: 1000,
+                }}
+            >
+                <CircularProgress />
+            </Box>
+        );
+    }
 
-    // Handle zoom to fit
-    const handleZoomToFit = useCallback(() => {
-        canvasRef.current?.zoomToFit();
-    }, []);
+    // Handle error state
+    if (error) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Alert severity="error">Failed to load scheduler data: {error}</Alert>
+            </Box>
+        );
+    }
 
-    // Handle info panel close
-    const handleInfoPanelClose = useCallback(() => {
-        uiStore?.selectQueue(undefined);
-        // Clear selection in canvas
-        canvasRef.current?.updateSelection(new Set());
-    }, [uiStore]);
+    return (
+        <ReactFlow
+            nodes={nodes}
+            edges={edges}
+            nodeTypes={nodeTypes}
+            edgeTypes={edgeTypes}
+            onNodesChange={onNodesChange}
+            onEdgesChange={onEdgesChange}
+            onNodeClick={onNodeClick}
+            nodesDraggable={false}
+            nodesConnectable={false}
+            elementsSelectable={true}
+            selectNodesOnDrag={false}
+            minZoom={0.1}
+            maxZoom={2}
+            defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            fitView
+            fitViewOptions={{ padding: 0.1, includeHiddenNodes: false }}
+        >
+            <Background />
+            <Controls />
+            <MiniMap
+                nodeColor={(node) => {
+                    if (node.selected) return '#1976d2';
+                    return '#e0e0e0';
+                }}
+                nodeStrokeWidth={2}
+                zoomable
+                pannable
+            />
+        </ReactFlow>
+    );
+};
+
+export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerProps> = ({ className }) => {
+    const uiStore = useUIStore();
+    const selectedQueueData = useSelectedQueue();
 
     // Queue action handlers
     const handleQueueEdit = useCallback(() => {
@@ -91,38 +195,15 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
         (queue: Queue) => {
             // Get the queue path from the queue object
             const queuePath = (queue as any).queuePath || (queue as any).id || queue.queueName;
-
-            // Find the node in the current nodes array that matches this queue path
-            const nodeToSelect = nodes.find((node) => node.id === queuePath);
-
-            if (nodeToSelect) {
-                uiStore?.selectQueue(queuePath);
-
-                // Update canvas selection
-                canvasRef.current?.updateSelection(new Set([queuePath]));
-            }
+            uiStore?.selectQueue(queuePath);
         },
-        [nodes, uiStore]
+        [uiStore]
     );
 
-    // Center on root when data is first loaded
-    useEffect(() => {
-        if (nodes.length > 0 && !isLoading) {
-            // Small delay to ensure canvas is ready
-            setTimeout(() => {
-                canvasRef.current?.centerOnRoot();
-            }, 100);
-        }
-    }, [nodes.length, isLoading]);
-
-    // Handle API error
-    if (error) {
-        return (
-            <Box sx={{ p: 3 }}>
-                <Alert severity="error">Failed to load scheduler data: {error}</Alert>
-            </Box>
-        );
-    }
+    // Handle info panel close
+    const handleInfoPanelClose = useCallback(() => {
+        uiStore?.selectQueue(undefined);
+    }, [uiStore]);
 
     return (
         <Box
@@ -137,44 +218,9 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 bgcolor: 'background.default',
             }}
         >
-            {/* Loading overlay */}
-            {isLoading && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        bgcolor: 'background.default',
-                        zIndex: 1000,
-                    }}
-                >
-                    <CircularProgress />
-                </Box>
-            )}
-
-            {/* Canvas display */}
-            <CanvasDisplay
-                ref={canvasRef}
-                nodes={nodes}
-                flows={flows}
-                onSelectionChange={handleSelectionChange}
-                onHoverChange={handleHoverChange}
-            />
-
-            {/* Controls and overlays */}
-            <VisualizationControls
-                panZoomController={canvasRef.current?.panZoomController || null}
-                onZoomToFit={handleZoomToFit}
-                disabled={isLoading}
-                selectedQueue={uiStore?.selectedQueuePath}
-                hoveredQueue={hoveredQueue}
-                nodeCount={nodes.length}
-            />
+            <ReactFlowProvider>
+                <FlowInner />
+            </ReactFlowProvider>
 
             {/* Queue Info Panel */}
             <QueueInfoPanel
@@ -207,8 +253,6 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                     Panel Open: {uiStore?.selectedQueuePath ? 'true' : 'false'}
                     <br />
                     Queue Data: {selectedQueueData ? 'found' : 'null'}
-                    <br />
-                    Nodes Count: {nodes.length}
                 </div>
             )}
         </Box>

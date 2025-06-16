@@ -3,6 +3,7 @@ import { useDataStore } from './dataStore';
 import { useUIStore } from './uiStore';
 import { useChangesStore } from './changesStore';
 import { useActivityStore } from './activityStore';
+import { useSchedulerQuery } from '../hooks/useYarnApi';
 
 export { useDataStore } from './dataStore';
 export { useUIStore } from './uiStore';
@@ -15,17 +16,28 @@ export type * from './types';
 // Derived selectors
 export const useSelectedQueue = () => {
     const selectedPath = useUIStore((state) => state.selectedQueuePath);
-    const scheduler = useDataStore((state) => state.scheduler);
+    const schedulerQuery = useSchedulerQuery();
 
     return useMemo(() => {
-        if (!selectedPath || !scheduler?.scheduler.schedulerInfo) return null;
+        if (!selectedPath || !schedulerQuery.data?.scheduler.schedulerInfo) {
+            return null;
+        }
 
         const findQueue = (queue: any): any => {
-            // The queuePath property is added during parsing in some versions, but queueName is more reliable
-            const path = queue.queuePath || queue.queueName;
-            if (path === selectedPath) {
-                return queue;
+            // Try multiple possible path formats
+            const possiblePaths = [
+                queue.queuePath,
+                queue.queueName,
+                queue.id,
+                `root.${queue.queueName}` // In case it's missing the root prefix
+            ].filter(Boolean);
+
+            for (const path of possiblePaths) {
+                if (path === selectedPath) {
+                    return queue;
+                }
             }
+
             if (queue.queues?.queue) {
                 for (const child of queue.queues.queue) {
                     const found = findQueue(child);
@@ -35,8 +47,8 @@ export const useSelectedQueue = () => {
             return null;
         };
 
-        return findQueue(scheduler.scheduler.schedulerInfo);
-    }, [selectedPath, scheduler]);
+        return findQueue(schedulerQuery.data.scheduler.schedulerInfo);
+    }, [selectedPath, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error]);
 };
 
 export const useAllQueues = () => {

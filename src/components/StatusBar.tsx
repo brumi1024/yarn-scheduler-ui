@@ -1,12 +1,19 @@
 import { Box, Typography, Chip, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { useAllQueues } from '../store';
-import { useHealthCheck } from '../hooks/useApiWithZustand';
+import { useSchedulerQuery } from '../hooks/useYarnApi';
 
 export default function StatusBar() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
     const allQueues = useAllQueues();
-    const { status: healthStatus } = useHealthCheck();
+    const schedulerQuery = useSchedulerQuery();
+    
+    // Derive health status from scheduler query
+    const healthStatus = schedulerQuery.isLoading 
+        ? 'loading' 
+        : schedulerQuery.isError 
+        ? 'error' 
+        : 'ok';
 
     const totalQueues = allQueues.length;
 
@@ -49,7 +56,7 @@ export default function StatusBar() {
             />
 
             <Chip
-                label={healthStatus === 'ok' ? 'Healthy' : healthStatus === 'error' ? 'Error' : 'Checking'}
+                label={healthStatus === 'ok' ? 'Healthy' : healthStatus === 'error' ? 'Error' : 'Loading'}
                 variant="outlined"
                 size="small"
                 color={healthStatus === 'ok' ? 'success' : healthStatus === 'error' ? 'error' : 'default'}
