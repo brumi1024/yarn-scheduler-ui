@@ -1,7 +1,6 @@
-import { useEffect, useCallback, useRef, useState } from 'react';
+import { useEffect, useCallback, useState } from 'react';
 import { apiService } from '../api/ApiService';
-import { useDataStore } from '../store';
-import { useActivityStore } from '../store/activityStore';
+import { useDataStore, useActivityStore } from '../store';
 
 // Hook for scheduler data with Zustand integration
 export function useScheduler() {

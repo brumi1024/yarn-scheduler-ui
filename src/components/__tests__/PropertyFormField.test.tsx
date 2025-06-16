@@ -18,10 +18,6 @@ vi.mock('../CapacityEditor', () => ({
     ),
 }));
 
-// Mock the schema functions
-vi.mock('../../schemas/propertySchemas', () => ({
-    isCapacityProperty: (key: string) => key.includes('capacity'),
-}));
 
 // Helper component to wrap PropertyFormField with FormProvider
 const PropertyFormFieldWrapper = ({

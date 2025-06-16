@@ -6,7 +6,7 @@ import {
     CenterFocusStrong as ResetIcon,
     FitScreen as FitScreenIcon,
 } from '@mui/icons-material';
-import type { D3ZoomController } from '../utils/canvas/D3ZoomController';
+import type { D3ZoomController } from '../features/queue-editor/utils/canvas/D3ZoomController';
 import { StyledIconButton, ElevatedPaper } from './shared';
 
 export interface ZoomControlsProps {
