@@ -10,12 +10,6 @@ import { entries, filter, map, compact, split, trim, isEmpty } from 'lodash';
 import type { ParsedQueue, Configuration } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
 import { CapacityModeDetector } from './CapacityModeDetector';
-import {
-    parseIntProperty,
-    parseNumericProperty,
-    parseBooleanProperty,
-    parseStringArray,
-} from '../schemas/propertySchemas';
 
 export interface ParsedProperty {
     key: string;
@@ -332,58 +326,17 @@ export class ConfigParser {
     private static createQueueFromProperties(queuePath: string, properties: Map<string, string>): ParsedQueue {
         const queueName = queuePath.split('.').pop() || queuePath;
 
-        // Parse capacity information
         const capacityStr = properties.get('capacity') || '0';
         const maxCapacityStr = properties.get('maximum-capacity') || '100';
-
-        const capacity = CapacityModeDetector.parseCapacityValue(capacityStr);
-        const maxCapacity = CapacityModeDetector.parseCapacityValue(maxCapacityStr);
-
-        // Determine if this is a leaf queue (no children declared)
-        const isLeaf = !properties.has('queues');
 
         const queue: ParsedQueue = {
             name: queueName,
             path: queuePath,
             parent: this.getParentPath(queuePath),
             children: [],
-            isLeaf,
-
-            // Capacity information
-            capacity,
-            maxCapacity,
-
-            // Basic properties with defaults from documentation
+            capacity: capacityStr,
+            maxCapacity: maxCapacityStr,
             state: (properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED',
-
-            // Resource limits
-            maxApplications: parseIntProperty(properties.get('maximum-applications'), -1),
-            maxAMResourcePercent: parseNumericProperty(properties.get('maximum-am-resource-percent')),
-
-            // User limits
-            minimumUserLimitPercent: parseNumericProperty(properties.get('minimum-user-limit-percent'), 100),
-            userLimitFactor: parseNumericProperty(properties.get('user-limit-factor'), 1.0),
-
-            // Application settings
-            maxParallelApps: parseIntProperty(properties.get('max-parallel-apps'), Number.MAX_SAFE_INTEGER),
-            priority: parseIntProperty(properties.get('priority'), 0),
-
-            // Access control
-            submitACL: properties.get('acl_submit_applications') || (queuePath === 'root' ? '*' : ''),
-            adminACL: properties.get('acl_administer_queue') || (queuePath === 'root' ? '*' : ''),
-
-            // Node labels
-            accessibleNodeLabels: parseStringArray(properties.get('accessible-node-labels')),
-            defaultNodeLabelExpression: properties.get('default-node-label-expression'),
-
-            // Preemption
-            preemptionDisabled: parseBooleanProperty(properties.get('disable_preemption'), false),
-            intraQueuePreemptionDisabled: parseBooleanProperty(
-                properties.get('intra-queue-preemption.disable_preemption'),
-                false
-            ),
-
-            // Raw properties for extensibility
             properties: Object.fromEntries(properties),
         };
 

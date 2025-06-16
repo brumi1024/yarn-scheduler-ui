@@ -34,7 +34,7 @@ import type { Queue } from '../types/Queue';
 import { getPropertyGroups, QUEUE_PROPERTIES } from '../config';
 import { PropertyFormField } from './forms/PropertyFormField';
 import { AutoQueueCreationSection } from './forms/AutoQueueCreationSection';
-import { useDataStore } from '../store/zustand';
+import { useChangesStore } from '../store/zustand';
 import { createChangeSetsFromFormData } from '../utils/configurationUtils';
 
 export interface QueueInfoPanelProps {
@@ -60,14 +60,17 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const propertyGroups = getPropertyGroups();
-    const { stageChange } = useDataStore();
+    const { stageChange } = useChangesStore();
 
     // Create validation schema from properties
     const validationSchema = z.object(
-        Object.entries(QUEUE_PROPERTIES).reduce((acc, [key, prop]) => ({
-            ...acc,
-            [key]: prop.validation.optional() // Make all validations optional to allow empty/unchanged fields
-        }), {})
+        Object.entries(QUEUE_PROPERTIES).reduce(
+            (acc, [key, prop]) => ({
+                ...acc,
+                [key]: prop.validation.optional(), // Make all validations optional to allow empty/unchanged fields
+            }),
+            {}
+        )
     );
 
     const form = useForm({
@@ -84,30 +87,10 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
     useEffect(() => {
         if (queue && open) {
-            // Initialize form data with current queue configuration
             const initialData: Record<string, any> = {};
-
-            // Map current queue properties to form data
-            initialData['capacity'] = `${queue.capacity}%`;
-            initialData['maximum-capacity'] = `${queue.maxCapacity}%`;
-            initialData['state'] = queue.state;
-            initialData['user-limit-factor'] = queue.userLimitFactor || 1;
-            initialData['max-parallel-apps'] = queue.maxApplications || 0;
-            initialData['ordering-policy'] = queue.orderingPolicy || 'fifo';
-            initialData['disable_preemption'] = queue.preemptionDisabled || false;
-
-            // Auto-creation properties
-            initialData['auto-create-child-queue.enabled'] = queue.autoCreateChildQueueEnabled || false;
-            initialData['auto-queue-creation-v2.enabled'] = false;
-            initialData['auto-queue-creation-v2.max-queues'] = 1000;
-
-            // Template properties (if auto-creation is enabled) - skip for now to avoid validation issues
-            // if (queue.leafQueueTemplate) {
-            //     Object.entries(queue.leafQueueTemplate).forEach(([key, value]) => {
-            //         initialData[`leaf-queue-template.${key}`] = value;
-            //     });
-            // }
-
+            Object.values(QUEUE_PROPERTIES).forEach((propDef) => {
+                initialData[propDef.key] = propDef.getValueFromQueue(queue);
+            });
             reset(initialData);
             setActiveTab(0);
             setSaveError(null);
@@ -793,36 +776,28 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                         variant="contained"
                                         size="small"
                                         onClick={handleSubmit((data) => {
-                                            
                                             if (!queue?.queueName) return;
 
                                             try {
                                                 setSaveError(null);
 
-                                                // Create ChangeSet objects from form data  
-                                                // Use queuePath if available, otherwise fall back to queueName
                                                 const queuePath = (queue as any).queuePath || queue.queueName;
-                                                
-                                                const changes = createChangeSetsFromFormData(
-                                                    queuePath,
-                                                    data,
-                                                    queue
-                                                );
+                                                const changes = createChangeSetsFromFormData(queuePath, data, queue);
 
                                                 if (changes.length === 0) {
-                                                    return;
+                                                    return; // No actual changes made
                                                 }
 
-                                                // Stage all changes
+                                                // Stage all changes via the new store
                                                 changes.forEach((change) => stageChange(change));
 
-                                                // Call the original onSaveProperties callback for backward compatibility
+                                                // onSaveProperties can be deprecated or kept for other side effects if needed
                                                 if (onSaveProperties) {
                                                     onSaveProperties(queue.queueName, data);
                                                 }
 
-                                                // Reset the form to clear isDirty state
-                                                reset();
+                                                // Reset the form to clear isDirty state and reflect saved values
+                                                reset(data);
                                             } catch (error) {
                                                 setSaveError(
                                                     error instanceof Error ? error.message : 'Failed to save changes'

@@ -4,7 +4,7 @@ import { CanvasDisplay, type CanvasDisplayRef } from './CanvasDisplay';
 import { VisualizationControls } from './VisualizationControls';
 import { useQueueDataProcessor } from './QueueDataProcessor';
 import { QueueInfoPanel } from '../QueueInfoPanel';
-import { useDataStore, useUIStore, useSelectedQueue } from '../../store/zustand';
+import { useDataStore, useUIStore, useChangesStore, useSelectedQueue } from '../../store/zustand';
 import type { Queue } from '../../types/Queue';
 import type { SelectionEvent, HoverEvent } from '../../utils/canvas';
 
@@ -21,12 +21,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     const selectedQueueData = useSelectedQueue();
 
     // Process queue data
-    const {
-        nodes,
-        flows,
-        isLoading: dataLoading,
-        error: dataError,
-    } = useQueueDataProcessor(configuration, scheduler);
+    const { nodes, flows, isLoading: dataLoading, error: dataError } = useQueueDataProcessor(configuration, scheduler);
 
     // Local state for hover
     const [hoveredQueue, setHoveredQueue] = useState<string | null>(null);
@@ -88,11 +83,6 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
         // TODO: Update queue state via API
         console.log('Toggle queue state:', uiStore.selectedQueuePath);
     }, [uiStore]);
-
-    const handleQueueSaveProperties = useCallback((queuePath: string, changes: Record<string, any>) => {
-        // TODO: Save queue properties via API
-        console.log('Save properties for queue:', queuePath, changes);
-    }, []);
 
     const handleQueueSelect = useCallback(
         (queue: Queue) => {
@@ -191,7 +181,6 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 onEdit={handleQueueEdit}
                 onDelete={handleQueueDelete}
                 onToggleState={handleQueueStateToggle}
-                onSaveProperties={handleQueueSaveProperties}
                 onQueueSelect={handleQueueSelect}
             />
 

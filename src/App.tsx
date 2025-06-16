@@ -7,8 +7,8 @@ import { ErrorBoundary } from './components/ErrorBoundary';
 import { useDataStore } from './store/dataStore';
 
 function App() {
-    const loadAllData = useDataStore(state => state.loadAllData);
-    
+    const loadAllData = useDataStore((state) => state.loadAllData);
+
     useEffect(() => {
         loadAllData();
     }, [loadAllData]);

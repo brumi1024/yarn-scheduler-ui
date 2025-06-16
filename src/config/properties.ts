@@ -2,187 +2,173 @@ import { z } from 'zod';
 
 // Single source of truth for all properties
 export interface PropertyDefinition {
-  key: string;
-  label: string;
-  type: 'text' | 'number' | 'boolean' | 'select' | 'capacity';
-  defaultValue: any;
-  description: string;
-  validation: z.ZodType;
-  options?: string[]; // For select type
-  group: 'core' | 'resource' | 'advanced' | 'auto-creation';
+    key: string;
+    label: string;
+    type: 'text' | 'number' | 'boolean' | 'select' | 'capacity';
+    defaultValue: any;
+    description: string;
+    validation: z.ZodType;
+    options?: string[]; // For select type
+    group: 'core' | 'resource' | 'advanced' | 'auto-creation';
+    // Function to get the value from a raw queue object for comparison
+    getValueFromQueue: (queue: any) => any;
 }
 
-// Capacity validation schema
-const capacitySchema = z.string().refine(val => {
-  if (val.endsWith('%')) {
-    const num = parseFloat(val.slice(0, -1));
-    return !isNaN(num) && num >= 0 && num <= 100;
-  }
-  if (val.endsWith('w')) {
-    const num = parseFloat(val.slice(0, -1));
-    return !isNaN(num) && num > 0;
-  }
-  if (val.startsWith('[') && val.endsWith(']')) {
-    return true; // Basic validation for absolute resources
-  }
-  return false;
-}, 'Invalid capacity format');
+// Zod schema for capacity values with custom validation
+export const capacityValueSchema = z
+    .string()
+    .min(1, 'Capacity value is required')
+    .refine(
+        (value) => {
+            const trimmedValue = value.trim();
+
+            // Percentage mode: ends with % or is a raw number
+            if (trimmedValue.endsWith('%')) {
+                const numericPart = trimmedValue.slice(0, -1);
+                const numericValue = parseFloat(numericPart);
+                return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 100;
+            }
+
+            // Weight mode: ends with w
+            if (trimmedValue.endsWith('w')) {
+                const numericPart = trimmedValue.slice(0, -1);
+                const numericValue = parseFloat(numericPart);
+                return !isNaN(numericValue) && numericValue > 0;
+            }
+
+            // Absolute mode: [resource=value,resource=value]
+            if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
+                const resourcePart = trimmedValue.slice(1, -1);
+                if (resourcePart.trim() === '') return false;
+
+                const resourcePairs = resourcePart.split(',');
+                return resourcePairs.every((pair) => {
+                    const [resource, val] = pair.split('=');
+                    return resource && val && !isNaN(parseFloat(val));
+                });
+            }
+
+            // Raw number (assume percentage)
+            const numericValue = parseFloat(trimmedValue);
+            return !isNaN(numericValue) && numericValue >= 0;
+        },
+        {
+            message:
+                'Invalid format. Use percentage (e.g., 10%), weight (e.g., 5w), or absolute ([memory=1024,vcores=2])',
+        }
+    );
 
 // All queue properties in one place
 export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
-  capacity: {
-    key: 'capacity',
-    label: 'Capacity',
-    type: 'capacity',
-    defaultValue: '10%',
-    description: 'Queue guaranteed capacity',
-    validation: capacitySchema,
-    group: 'core',
-  },
-  'maximum-capacity': {
-    key: 'maximum-capacity',
-    label: 'Maximum Capacity',
-    type: 'capacity',
-    defaultValue: '100%',
-    description: 'Maximum capacity queue can use',
-    validation: capacitySchema,
-    group: 'core',
-  },
-  state: {
-    key: 'state',
-    label: 'State',
-    type: 'select',
-    options: ['RUNNING', 'STOPPED'],
-    defaultValue: 'RUNNING',
-    description: 'Queue operational state',
-    validation: z.enum(['RUNNING', 'STOPPED']),
-    group: 'core',
-  },
-  'user-limit-factor': {
-    key: 'user-limit-factor',
-    label: 'User Limit Factor',
-    type: 'number',
-    defaultValue: 1,
-    description: 'Multiplier for per-user resource limits',
-    validation: z.union([z.number(), z.string().transform(val => parseFloat(val))]).refine(val => !isNaN(val) && val >= 0),
-    group: 'resource',
-  },
-  'ordering-policy': {
-    key: 'ordering-policy',
-    label: 'Ordering Policy',
-    type: 'select',
-    options: ['fifo', 'fair'],
-    defaultValue: 'fifo',
-    description: 'How applications are ordered',
-    validation: z.enum(['fifo', 'fair']),
-    group: 'advanced',
-  },
-  'disable_preemption': {
-    key: 'disable_preemption',
-    label: 'Disable Preemption',
-    type: 'boolean',
-    defaultValue: false,
-    description: 'Disable preemption for this queue',
-    validation: z.boolean(),
-    group: 'advanced',
-  },
-  'max-parallel-apps': {
-    key: 'max-parallel-apps',
-    label: 'Maximum Parallel Applications',
-    type: 'number',
-    defaultValue: 0,
-    description: 'Maximum number of parallel applications (0 = unlimited)',
-    validation: z.union([z.number(), z.string().transform(val => parseInt(val) || 0)]).refine(val => !isNaN(val) && val >= 0),
-    group: 'resource',
-  },
-  'maximum-am-resource-percent': {
-    key: 'maximum-am-resource-percent',
-    label: 'Maximum AM Resource Percent',
-    type: 'number',
-    defaultValue: 0.1,
-    description: 'Maximum percentage for Application Masters',
-    validation: z.union([z.number(), z.string().transform(val => parseFloat(val))]).refine(val => !isNaN(val) && val >= 0 && val <= 1),
-    group: 'resource',
-  },
-  'auto-create-child-queue.enabled': {
-    key: 'auto-create-child-queue.enabled',
-    label: 'Auto-Create Child Queues',
-    type: 'boolean',
-    defaultValue: false,
-    description: 'Enable automatic child queue creation',
-    validation: z.boolean(),
-    group: 'auto-creation',
-  },
-  'acl_submit_applications': {
-    key: 'acl_submit_applications',
-    label: 'Submit Applications ACL',
-    type: 'text',
-    defaultValue: '*',
-    description: 'Users/groups allowed to submit applications',
-    validation: z.string(),
-    group: 'advanced',
-  },
-  'acl_administer_queue': {
-    key: 'acl_administer_queue',
-    label: 'Administer Queue ACL',
-    type: 'text',
-    defaultValue: '*',
-    description: 'Users/groups allowed to administer the queue',
-    validation: z.string(),
-    group: 'advanced',
-  },
-  'auto-queue-creation-v2.enabled': {
-    key: 'auto-queue-creation-v2.enabled',
-    label: 'Auto-Queue Creation V2',
-    type: 'boolean',
-    defaultValue: false,
-    description: 'Enable auto-queue creation version 2',
-    validation: z.boolean(),
-    group: 'auto-creation',
-  },
-  'auto-queue-creation-v2.max-queues': {
-    key: 'auto-queue-creation-v2.max-queues',
-    label: 'Max Auto-Created Queues',
-    type: 'number',
-    defaultValue: 1000,
-    description: 'Maximum number of auto-created queues',
-    validation: z.union([z.number(), z.string().transform(val => parseInt(val) || 1000)]).refine(val => !isNaN(val) && val >= 1),
-    group: 'auto-creation',
-  },
+    capacity: {
+        key: 'capacity',
+        label: 'Capacity',
+        type: 'capacity',
+        defaultValue: '10%',
+        description: 'Guaranteed queue capacity. Can be percentage, weight, or absolute.',
+        validation: capacityValueSchema,
+        group: 'core',
+        getValueFromQueue: (q) => `${q.capacity}%`,
+    },
+    'maximum-capacity': {
+        key: 'maximum-capacity',
+        label: 'Maximum Capacity',
+        type: 'capacity',
+        defaultValue: '100%',
+        description: 'Maximum capacity the queue can utilize.',
+        validation: capacityValueSchema,
+        group: 'core',
+        getValueFromQueue: (q) => `${q.maxCapacity}%`,
+    },
+    state: {
+        key: 'state',
+        label: 'State',
+        type: 'select',
+        options: ['RUNNING', 'STOPPED'],
+        defaultValue: 'RUNNING',
+        description: 'The operational state of the queue.',
+        validation: z.enum(['RUNNING', 'STOPPED']),
+        group: 'core',
+        getValueFromQueue: (q) => q.state,
+    },
+    'user-limit-factor': {
+        key: 'user-limit-factor',
+        label: 'User Limit Factor',
+        type: 'number',
+        defaultValue: 1,
+        description: 'Multiplier for per-user resource limits.',
+        validation: z.number().min(0),
+        group: 'resource',
+        getValueFromQueue: (q) => q.userLimitFactor || 1,
+    },
+    'maximum-applications': {
+        key: 'maximum-applications',
+        label: 'Maximum Applications',
+        type: 'number',
+        defaultValue: 10000,
+        description: 'The maximum number of applications that can be active in the queue.',
+        validation: z.number().int().min(0),
+        group: 'resource',
+        getValueFromQueue: (q) => q.maxApplications,
+    },
+    'maximum-am-resource-percent': {
+        key: 'maximum-am-resource-percent',
+        label: 'Max AM Resource %',
+        type: 'number',
+        defaultValue: 0.1,
+        description: 'Max % of resources for Application Masters (0.0 to 1.0).',
+        validation: z.number().min(0).max(1),
+        group: 'resource',
+        getValueFromQueue: (q) => q.maxAMResourcePercent || 0.1,
+    },
+    'ordering-policy': {
+        key: 'ordering-policy',
+        label: 'Ordering Policy',
+        type: 'select',
+        options: ['fifo', 'fair'],
+        defaultValue: 'fifo',
+        description: 'How applications are ordered within the queue.',
+        validation: z.enum(['fifo', 'fair']),
+        group: 'advanced',
+        getValueFromQueue: (q) => q.orderingPolicy || 'fifo',
+    },
+    disable_preemption: {
+        key: 'disable_preemption',
+        label: 'Disable Preemption',
+        type: 'boolean',
+        defaultValue: false,
+        description: 'If true, this queue will not have its resources preempted.',
+        validation: z.boolean(),
+        group: 'advanced',
+        getValueFromQueue: (q) => q.preemptionDisabled || false,
+    },
+    'auto-create-child-queue.enabled': {
+        key: 'auto-create-child-queue.enabled',
+        label: 'Auto-Create Child Queues (Legacy)',
+        type: 'boolean',
+        defaultValue: false,
+        description: 'Enable automatic creation of leaf queues (legacy mode).',
+        validation: z.boolean(),
+        group: 'auto-creation',
+        getValueFromQueue: (q) => q.autoCreateChildQueueEnabled || false,
+    },
+    // Add other properties here following the same pattern...
 };
 
-// Helper functions
+// Helper function to get property groups for the UI
 export function getPropertyGroups() {
-  const groups: Record<string, PropertyDefinition[]> = {
-    core: [],
-    resource: [],
-    advanced: [],
-    'auto-creation': [],
-  };
-  
-  Object.values(QUEUE_PROPERTIES).forEach(prop => {
-    groups[prop.group].push(prop);
-  });
-  
-  return [
-    { name: 'Core Properties', properties: groups.core },
-    { name: 'Resource Management', properties: groups.resource },
-    { name: 'Advanced Settings', properties: groups.advanced },
-    { name: 'Auto-Creation', properties: groups['auto-creation'] },
-  ];
-}
+    const groups: Record<string, { name: string; properties: PropertyDefinition[] }> = {
+        core: { name: 'Core Properties', properties: [] },
+        resource: { name: 'Resource Management', properties: [] },
+        advanced: { name: 'Advanced Settings', properties: [] },
+        'auto-creation': { name: 'Auto-Creation', properties: [] },
+    };
 
-export function validateProperty(key: string, value: any): { valid: boolean; error?: string } {
-  const property = QUEUE_PROPERTIES[key];
-  if (!property) return { valid: false, error: 'Unknown property' };
-  
-  try {
-    property.validation.parse(value);
-    return { valid: true };
-  } catch (error) {
-    if (error instanceof z.ZodError) {
-      return { valid: false, error: error.errors[0].message };
-    }
-    return { valid: false, error: 'Validation failed' };
-  }
+    Object.values(QUEUE_PROPERTIES).forEach((prop) => {
+        if (groups[prop.group]) {
+            groups[prop.group].properties.push(prop);
+        }
+    });
+
+    return Object.values(groups);
 }

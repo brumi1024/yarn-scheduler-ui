@@ -30,7 +30,7 @@ import {
     Edit as EditIcon,
     Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { useDataStore } from '../store/zustand';
+import { useChangesStore } from '../store/zustand';
 import type { ChangeSet } from '../types/Configuration';
 
 interface StagedChangesPanelProps {
@@ -42,7 +42,8 @@ interface GroupedChanges {
 }
 
 export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) {
-    const { stagedChanges, unstageChange, clearStagedChanges, applyChanges, applyingChanges, conflicts } = useDataStore();
+    const { stagedChanges, unstageChange, clearStagedChanges, applyChanges, applyingChanges, conflicts } =
+        useChangesStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
