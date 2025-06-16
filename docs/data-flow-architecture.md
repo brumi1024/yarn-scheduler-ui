@@ -4,654 +4,451 @@
 
 This document describes the complete data flow in the YARN Scheduler UI, from API calls to visualization rendering, and how configuration changes are staged and applied.
 
-## Table of Contents
+## Architecture Overview
 
-1. [Data Sources](#data-sources)
-2. [Data Flow from API to Visualization](#data-flow-from-api-to-visualization)
-3. [Data Transformation Pipeline](#data-transformation-pipeline)
-4. [Change Management System](#change-management-system)
-5. [Examples](#examples)
+The application uses React 19 with TypeScript, Material-UI, and Zustand for state management. The visualization is built with D3.js and HTML5 Canvas for high-performance rendering.
 
-## Data Sources
+### Tech Stack
+- **Frontend**: React 19 + TypeScript + Vite
+- **UI**: Material-UI v6 with Emotion styling
+- **State**: Zustand (4 separate stores)
+- **Visualization**: D3.js + HTML5 Canvas
+- **Forms**: React Hook Form + Zod validation
+- **API Mocking**: MSW (Mock Service Worker)
 
-The YARN Scheduler UI uses two primary data sources:
+## State Management
 
-### 1. Configuration Data (`/ws/v1/cluster/scheduler-conf`)
+The application uses four specialized Zustand stores:
 
-- **Purpose**: Provides the queue configuration (structure, capacity allocations, properties)
-- **Format**: Flat key-value pairs representing hierarchical queue properties
-- **Mock file**: `/mock/ws/v1/cluster/scheduler-conf.json`
-
-### 2. Runtime Data (`/ws/v1/cluster/scheduler`)
-
-- **Purpose**: Provides real-time metrics (usage, applications, resources)
-- **Format**: Hierarchical JSON with nested queue information
-- **Mock file**: `/mock/ws/v1/cluster/scheduler.json`
-
-## Data Flow from API to Visualization
-
-### Step 1: API Calls
-
+### 1. Data Store (`dataStore.ts`)
+Centralized API data management:
 ```typescript
-// In useConfiguration hook
-const { data: configData } = useConfiguration();
-// Fetches from: GET /ws/v1/cluster/scheduler-conf
-
-// In useScheduler hook
-const { data: schedulerData } = useScheduler();
-// Fetches from: GET /ws/v1/cluster/scheduler
+interface DataStore {
+  scheduler: SchedulerInfo | null;
+  configuration: ConfigurationData | null;
+  nodeLabels: NodeLabel[] | null;
+  nodes: NodeInfo[] | null;
+  loading: boolean;
+  error: string | null;
+  loadAllData: () => Promise<void>;
+}
 ```
 
-### Step 2: Configuration Data Parsing
+### 2. UI Store (`uiStore.ts`)
+UI state and interactions:
+```typescript
+interface UIStore {
+  selectedQueue: string | null;
+  hoveredQueue: string | null;
+  expandedQueues: Set<string>;
+  viewSettings: ViewSettings;
+  modals: ModalState;
+  notifications: Notification[];
+  setSelectedQueue: (queueId: string | null) => void;
+  // ... other UI actions
+}
+```
 
-The configuration data arrives as flat properties and needs to be transformed into a hierarchical structure:
+### 3. Changes Store (`changesStore.ts`)
+Change management system:
+```typescript
+interface ChangesStore {
+  stagedChanges: Map<string, ConfigChange>;
+  conflicts: Conflict[];
+  applyChanges: () => Promise<void>;
+  rollbackChanges: () => void;
+  stageChange: (change: ConfigChange) => void;
+}
+```
+
+### 4. Activity Store (`activityStore.ts`)
+Activity logging and monitoring:
+```typescript
+interface ActivityStore {
+  activities: Activity[];
+  logActivity: (activity: Activity) => void;
+  clearActivities: () => void;
+}
+```
+
+## Data Flow Pipeline
+
+### 1. API Layer (`ApiService.ts`)
+
+The ApiService provides YARN REST API integration:
 
 ```typescript
-// Input: scheduler-conf.json
+class ApiService {
+  // Core YARN APIs
+  getScheduler(): Promise<SchedulerInfo>
+  getConfiguration(): Promise<ConfigurationData>
+  updateConfiguration(changes: ConfigurationUpdate): Promise<void>
+  getNodeLabels(): Promise<NodeLabel[]>
+  getNodes(): Promise<NodeInfo[]>
+  
+  // Health checking
+  healthCheck(): Promise<boolean>
+}
+```
+
+**API Endpoints:**
+- `GET /ws/v1/cluster/scheduler` - Queue hierarchy and runtime metrics
+- `GET /ws/v1/cluster/scheduler-conf` - Configuration properties
+- `PUT /ws/v1/cluster/scheduler-conf` - Apply configuration changes
+- `GET /ws/v1/cluster/nodes` - Node information
+- `GET /ws/v1/cluster/get-node-labels` - Node labels
+
+### 2. Data Processing
+
+#### Configuration Parsing (`ConfigParser.ts`)
+
+Transforms YARN's flat property structure into hierarchical queues:
+
+```typescript
+// Input: Flat YARN properties
 {
   "property": [
-    {"name": "yarn.scheduler.capacity.root.queues", "value": "default,production,development"},
-    {"name": "yarn.scheduler.capacity.root.default.capacity", "value": "20"},
-    {"name": "yarn.scheduler.capacity.root.production.capacity", "value": "60"},
-    {"name": "yarn.scheduler.capacity.root.development.capacity", "value": "20"}
+    {"name": "yarn.scheduler.capacity.root.queues", "value": "default,production"},
+    {"name": "yarn.scheduler.capacity.root.default.capacity", "value": "30"},
+    {"name": "yarn.scheduler.capacity.root.production.capacity", "value": "70"}
   ]
 }
 
-// ConfigParser.parse() transforms this into:
-const rootQueue: LayoutQueue = {
-  id: "root",
-  queueName: "root",
-  queuePath: "root",
-  capacity: 100,
-  maxCapacity: 100,
-  children: [
-    {
-      id: "root.default",
-      queueName: "default",
-      queuePath: "root.default",
-      capacity: 20,
-      maxCapacity: 100,
-      children: []
-    },
-    // ... production, development
-  ]
+// Output: Hierarchical queue structure
+interface ParsedQueue {
+  id: string;
+  queueName: string;
+  queuePath: string;
+  capacity: number;
+  maxCapacity: number;
+  children: ParsedQueue[];
+  properties: Record<string, any>;
 }
 ```
 
-### Step 3: Tree Layout Calculation
+#### Tree Building (`TreeBuilder.ts`)
 
-The hierarchical queue structure is processed by D3TreeLayout:
+Converts parsed configuration into visualization-ready data structures:
 
 ```typescript
-const layoutData = treeLayout.computeLayout(rootQueue);
-
-// Result: Array of positioned nodes
-[
-    {
-        id: 'root',
-        x: 0,
-        y: 200,
-        width: 280,
-        height: 180,
-        data: {
-            /* queue data */
-        },
-    },
-    {
-        id: 'root.default',
-        x: 380,
-        y: 50,
-        width: 280,
-        height: 180,
-        data: {
-            /* queue data */
-        },
-    },
-    // ... more nodes
-];
+interface LayoutQueue extends ParsedQueue {
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  level: number;
+  absoluteCapacity: number;
+  usedCapacity?: number;
+  numApplications?: number;
+  resourcesUsed?: ResourceInfo;
+}
 ```
 
-### Step 4: Runtime Data Merge
+### 3. Data Integration Hooks (`useApiWithZustand.ts`)
 
-Runtime metrics from scheduler.json are merged with configuration data by matching the **queuePath** field:
+React hooks that connect API data to Zustand stores:
 
 ```typescript
-// scheduler.json provides runtime metrics with partition support
-{
-  "scheduler": {
-    "schedulerInfo": {
-      "queueName": "root",
-      "queuePath": "root",  // ← This field is used for matching
-      "numApplications": 25,
-      "resourcesUsed": {"memory": 12288, "vCores": 12},
-      "capacities": {
-        "queueCapacitiesByPartition": [
-          {
-            "partitionName": "",  // Default partition (empty string)
-            "capacity": 100.0,
-            "usedCapacity": 42.5,
-            "maxCapacity": 100.0,
-            "absoluteCapacity": 100.0,
-            "absoluteUsedCapacity": 42.5,
-            "absoluteMaxCapacity": 100.0
-          },
-          {
-            "partitionName": "gpu",  // GPU partition
-            "capacity": 100.0,
-            "usedCapacity": 25.8,
-            "maxCapacity": 100.0,
-            // ... more partition data
-          }
-        ]
-      },
-      "queues": {
-        "queue": [
-          {
-            "queueName": "default",
-            "queuePath": "root.default",  // ← Matches with node.id
-            "numApplications": 2,
-            "resourcesUsed": {"memory": 2048, "vCores": 2},
-            "capacities": {
-              "queueCapacitiesByPartition": [
-                {
-                  "partitionName": "",
-                  "capacity": 20.0,
-                  "usedCapacity": 5.3,
-                  "maxCapacity": 100.0
-                }
-              ]
-            }
-          }
-        ]
-      }
-    }
-  }
-}
+// Primary data hooks
+const useScheduler = () => useQuery(['scheduler'], apiService.getScheduler);
+const useConfiguration = () => useQuery(['configuration'], apiService.getConfiguration);
+const useNodeLabels = () => useQuery(['nodeLabels'], apiService.getNodeLabels);
+const useNodes = () => useQuery(['nodes'], apiService.getNodes);
 
-// Merge process in QueueVisualization.tsx
-layoutData.nodes.forEach(node => {
-  // node.id contains the queue path (e.g., "root.default")
-  const runtimeData = findQueueInSchedulerData(node.id, schedulerData);
-  if (runtimeData) {
-    node.data = mergeQueueData(node.data, runtimeData);
-  }
-});
+// Mutation hooks
+const useUpdateConfiguration = () => useMutation(apiService.updateConfiguration);
+const useHealthCheck = () => useQuery(['health'], apiService.healthCheck);
+```
 
-// The mergeQueueData function handles partition data:
-const mergeQueueData = (layoutQueue, runtimeQueue) => {
-  // Extract default partition data (partitionName: "" or undefined)
-  const defaultPartition = runtimeQueue?.capacities?.queueCapacitiesByPartition?.find(
-    partition => !partition.partitionName || partition.partitionName === ""
-  );
+### 4. Data Processing Hook (`useQueueDataProcessor.ts`)
 
-  return {
-    ...layoutQueue,
-    // Use default partition data for backward compatibility
-    usedCapacity: defaultPartition?.usedCapacity || 0,
-    absoluteCapacity: defaultPartition?.absoluteCapacity || layoutQueue.absoluteCapacity,
-    absoluteUsedCapacity: defaultPartition?.absoluteUsedCapacity || 0,
-    absoluteMaxCapacity: defaultPartition?.absoluteMaxCapacity || layoutQueue.absoluteMaxCapacity,
-    // Direct queue-level properties
-    numApplications: runtimeQueue?.numApplications || 0,
-    resourcesUsed: runtimeQueue?.resourcesUsed || { memory: 0, vCores: 0 },
-    // Store ALL partition data for future partition selector
-    capacities: runtimeQueue?.capacities || undefined
-  };
+Processes and merges API data for visualization:
+
+```typescript
+const useQueueDataProcessor = () => {
+  const { scheduler, configuration } = useDataStore();
+  
+  return useMemo(() => {
+    if (!scheduler || !configuration) return null;
+    
+    // Parse configuration into queue hierarchy
+    const parsedQueues = ConfigParser.parse(configuration);
+    
+    // Merge with runtime data from scheduler
+    const enrichedQueues = mergeRuntimeData(parsedQueues, scheduler);
+    
+    // Calculate layout positions
+    const layoutQueues = TreeBuilder.buildLayout(enrichedQueues);
+    
+    return layoutQueues;
+  }, [scheduler, configuration]);
 };
-
-// Result: Complete queue data with config and runtime info
-{
-  id: "root.default",
-  queueName: "default",
-  capacity: 20,              // from config (for queue cards)
-  maxCapacity: 100,          // from config (for queue cards)
-  usedCapacity: 5.3,         // from default partition (for usage display)
-  absoluteUsedCapacity: 1.2, // from default partition
-  numApplications: 2,        // from runtime
-  resourcesUsed: {...},      // from runtime
-  capacities: {              // ALL partition data stored here (for info panel)
-    queueCapacitiesByPartition: [
-      {
-        partitionName: "",
-        capacity: 20.0,        // live capacity (may differ from config)
-        usedCapacity: 5.3,
-        maxCapacity: 100.0,    // live max capacity
-        // ... more partition fields
-      },
-      {
-        partitionName: "gpu",
-        capacity: 15.0,
-        usedCapacity: 8.2,
-        // ... GPU partition data
-      }
-    ]
-  }
-}
-
-// Data Usage:
-// - Queue Cards: Use queue.capacity/maxCapacity (config values)
-// - Info Panel: Use capacities.queueCapacitiesByPartition[] (live values)
-
-// Capacity Types Explained:
-// - capacity: % of parent queue's capacity
-// - absoluteCapacity: % of total cluster capacity (root = 100%)
-// - usedCapacity: % of this queue's allocated capacity currently in use
-// - absoluteUsedCapacity: % of total cluster capacity currently used by this queue
-
-// Example:
-// root (100% of cluster)
-// ├── production (60% of root = 60% absolute capacity)
-// │   └── analytics (25% of production = 15% absolute capacity)
-// └── development (40% of root = 40% absolute capacity)
 ```
 
-### Step 5: Flow Path Calculation
+## Visualization Pipeline
 
-The SankeyFlowCalculator creates visual flow paths between queues:
+### 1. Queue Visualization Container (`QueueVisualizationContainer.tsx`)
+
+Main visualization component that orchestrates the rendering:
 
 ```typescript
-const flowPaths = sankeyCalculator.calculateFlows(layoutData.nodes);
-
-// Result: SVG path strings showing capacity flow
-[
-    {
-        source: rootNode,
-        target: defaultNode,
-        path: 'M 280,200 C 330,200 330,140 380,140',
-        width: 20, // Based on capacity percentage
-    },
-];
+const QueueVisualizationContainer = () => {
+  const queueData = useQueueDataProcessor();
+  const { selectedQueue, hoveredQueue } = useUIStore();
+  
+  return (
+    <CanvasDisplay 
+      queues={queueData}
+      selectedQueue={selectedQueue}
+      hoveredQueue={hoveredQueue}
+      onQueueSelect={handleQueueSelect}
+      onQueueHover={handleQueueHover}
+    />
+  );
+};
 ```
 
-### Step 6: Canvas Rendering
+### 2. Canvas Display (`CanvasDisplay.tsx`)
 
-The CanvasRenderer draws the final visualization:
+D3.js-powered canvas rendering with interaction handling:
 
 ```typescript
-renderer.render(nodes, flows, transform);
-// Draws queue cards, capacity bars, flow paths, etc.
-```
-
-## Data Transformation Pipeline
-
-```
-API Response → Parser → Layout Engine → Data Merger → Renderer
-     ↓            ↓           ↓              ↓           ↓
-Flat Props → Queue Tree → Positioned → Complete Data → Visual
+const CanvasDisplay = ({ queues, selectedQueue, hoveredQueue, onQueueSelect, onQueueHover }) => {
+  useEffect(() => {
+    const canvas = d3.select(canvasRef.current);
+    
+    // Set up zoom behavior
+    const zoom = d3.zoom()
+      .scaleExtent([0.1, 4])
+      .on('zoom', handleZoom);
+    
+    canvas.call(zoom);
+    
+    // Render queue hierarchy
+    renderQueues(queues, selectedQueue, hoveredQueue);
+    
+    // Handle interactions
+    canvas.on('click', handleCanvasClick);
+    canvas.on('mousemove', handleCanvasHover);
+  }, [queues, selectedQueue, hoveredQueue]);
+};
 ```
 
 ## Change Management System
 
-### Stage 1: User Edits Queue Properties
+### 1. Staging Changes
 
-When a user modifies a queue property:
+When users modify queue properties:
 
 ```typescript
-// User changes default queue capacity from 20% to 30%
-const change: ConfigChange = {
-    id: 'change-001',
-    timestamp: Date.now(),
-    queuePath: 'root.default',
+const { stageChange } = useChangesStore();
+
+const handleCapacityChange = (queuePath: string, newCapacity: number) => {
+  const change: ConfigChange = {
+    id: generateId(),
+    queuePath,
     property: 'capacity',
-    oldValue: '20',
-    newValue: '30',
+    oldValue: currentCapacity.toString(),
+    newValue: newCapacity.toString(),
     changeType: 'update',
+    timestamp: Date.now()
+  };
+  
+  stageChange(change);
 };
-
-// Stage the change using Zustand store
-const { stageChange } = useStagedChangesState();
-stageChange(change);
 ```
 
-### Stage 2: Validation
+### 2. Validation
 
-Changes are validated before being staged:
-
-```typescript
-// Validation checks:
-1. Capacity sum of siblings = 100%
-2. Max capacity >= capacity
-3. No invalid characters in queue names
-4. Resource limits are positive
-
-// Example validation error:
-{
-  queuePath: "root",
-  property: "capacity",
-  error: "Child queue capacities must sum to 100%. Current: 110%"
-}
-```
-
-### Stage 3: Preview Changes
-
-Staged changes are shown in the UI with visual indicators:
+Changes are validated before staging:
 
 ```typescript
-// Visual states for queues:
-- Normal: Default blue border
-- Modified: Orange border + "MODIFIED" badge
-- New: Green border + "NEW" badge
-- Deleted: Red border + "DELETED" badge
-- Error: Red border + error icon
-```
-
-### Stage 4: Generate Configuration Diff
-
-When ready to apply changes:
-
-```typescript
-// Generate diff using Zustand store
-const { changes, generateDiff } = useStagedChangesState();
-const configDiff = generateDiff();
-
-// Result: XML mutation format for YARN
-<configuration>
-  <property>
-    <name>yarn.scheduler.capacity.root.default.capacity</name>
-    <value>30</value>
-  </property>
-  <property>
-    <name>yarn.scheduler.capacity.root.production.capacity</name>
-    <value>50</value>
-  </property>
-</configuration>
-```
-
-### Stage 5: Submit Changes to API
-
-```typescript
-// PUT request to /ws/v1/cluster/scheduler-conf
-const response = await apiClient.put('/ws/v1/cluster/scheduler-conf', {
-    headers: { 'Content-Type': 'application/xml' },
-    body: configDiff,
-});
-
-// Success: Changes are applied to cluster
-// Failure: Rollback staged changes, show error
-```
-
-## Examples
-
-### Example 1: Creating a New Queue
-
-```typescript
-// 1. User action: Add queue "analytics" under "production"
-const newQueue = {
-    queueName: 'analytics',
-    capacity: 20,
-    maxCapacity: 50,
-    state: 'RUNNING',
+const validateChange = (change: ConfigChange): ValidationResult => {
+  switch (change.property) {
+    case 'capacity':
+      return validateCapacity(change.queuePath, change.newValue);
+    case 'maximum-capacity':
+      return validateMaxCapacity(change.queuePath, change.newValue);
+    default:
+      return { valid: true };
+  }
 };
-
-// 2. Stage changes using Zustand store
-const { stageChange } = useStagedChangesState();
-
-stageChange({
-    id: generateId(),
-    changeType: 'create',
-    queuePath: 'root.production.analytics',
-    property: 'capacity',
-    oldValue: '',
-    newValue: '20',
-    timestamp: Date.now(),
-});
-
-stageChange({
-    id: generateId(),
-    changeType: 'create',
-    queuePath: 'root.production.analytics',
-    property: 'maximum-capacity',
-    oldValue: '',
-    newValue: '50',
-    timestamp: Date.now(),
-});
-
-// 3. Update parent's child list
-stageChange({
-    id: generateId(),
-    changeType: 'update',
-    queuePath: 'root.production',
-    property: 'queues',
-    oldValue: 'frontend,backend',
-    newValue: 'frontend,backend,analytics',
-    timestamp: Date.now(),
-});
-
-// 4. Rebalance sibling capacities
-// (Automatic or manual adjustment to ensure sum = 100%)
 ```
 
-### Example 2: Modifying Queue Capacity
+### 3. Applying Changes
+
+Staged changes are converted to YARN configuration format:
 
 ```typescript
-// 1. Current state
-{
-  "root.default": { capacity: 20 },
-  "root.production": { capacity: 60 },
-  "root.development": { capacity: 20 }
-}
+const { applyChanges } = useChangesStore();
 
-// 2. User changes default from 20% to 10%
-const { stageChange } = useStagedChangesState();
-stageChange({
-  id: generateId(),
-  queuePath: "root.default",
-  property: "capacity",
-  oldValue: "20",
-  newValue: "10",
-  changeType: 'update',
-  timestamp: Date.now()
-});
-
-// 3. System suggests rebalancing
-suggestions = [
-  { queue: "root.production", newCapacity: 70 },  // +10%
-  { queue: "root.development", newCapacity: 20 }  // unchanged
-];
-
-// 4. Final configuration
-<configuration>
-  <property>
-    <name>yarn.scheduler.capacity.root.default.capacity</name>
-    <value>10</value>
-  </property>
-  <property>
-    <name>yarn.scheduler.capacity.root.production.capacity</name>
-    <value>70</value>
-  </property>
-</configuration>
+const applyChanges = async () => {
+  // Convert staged changes to YARN XML format
+  const configUpdate = generateConfigurationUpdate(stagedChanges);
+  
+  // Apply via API
+  await apiService.updateConfiguration(configUpdate);
+  
+  // Refresh data
+  await loadAllData();
+  
+  // Clear staged changes
+  clearStagedChanges();
+};
 ```
 
-### Example 3: Deleting a Queue
+## Component Architecture
+
+### Main Layout (`MainLayout.tsx`)
+
+Tab-based navigation with feature-specific sections:
 
 ```typescript
-// 1. Mark queue for deletion
-const { stageChange } = useStagedChangesState();
-stageChange({
-    id: generateId(),
-    changeType: 'delete',
-    queuePath: 'root.development.experimental',
-    property: '',
-    oldValue: '',
-    newValue: '',
-    timestamp: Date.now(),
-});
-
-// 2. Validation (handled by Zustand store)
-// - Check: No running applications
-// - Check: No child queues
-// - Check: Capacity can be redistributed
-
-// 3. Update parent
-stageChange({
-    id: generateId(),
-    queuePath: 'root.development',
-    property: 'queues',
-    oldValue: 'team1,team2,experimental',
-    newValue: 'team1,team2',
-    changeType: 'update',
-    timestamp: Date.now(),
-});
-
-// 4. Redistribute capacity
-// experimental had 10%, redistribute to siblings
+const MainLayout = () => {
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
+      <TabPanel value={activeTab} index={0}>
+        <QueueEditor />
+      </TabPanel>
+      <TabPanel value={activeTab} index={1}>
+        <GlobalSettings />
+      </TabPanel>
+      <TabPanel value={activeTab} index={2}>
+        <NodeLabels />
+      </TabPanel>
+      <TabPanel value={activeTab} index={3}>
+        <Diagnostics />
+      </TabPanel>
+      <StatusBar />
+    </Box>
+  );
+};
 ```
+
+### Queue Editor (`features/queue-editor/`)
+
+The main queue management interface:
+
+- **QueueVisualization.tsx** - Layout and state management
+- **QueueVisualizationContainer.tsx** - Data processing and event handling
+- **CanvasDisplay.tsx** - D3.js rendering and interactions
+- **PropertyEditor.tsx** - Queue property editing forms
+- **StagedChangesPanel.tsx** - Change review and management
 
 ## Error Handling
 
 ### API Errors
 
 ```typescript
-try {
-    const response = await apiClient.put('/scheduler-conf', changes);
-} catch (error) {
-    if (error.status === 400) {
-        // Validation error from YARN
-        showError('Invalid configuration: ' + error.message);
-    } else if (error.status === 403) {
-        // Permission denied
-        showError("You don't have permission to modify scheduler configuration");
-    }
-}
+const handleApiError = (error: ApiError) => {
+  const { addNotification } = useUIStore();
+  
+  switch (error.status) {
+    case 400:
+      addNotification({
+        type: 'error',
+        message: `Invalid configuration: ${error.message}`
+      });
+      break;
+    case 403:
+      addNotification({
+        type: 'error',
+        message: 'Permission denied'
+      });
+      break;
+    default:
+      addNotification({
+        type: 'error',
+        message: 'An unexpected error occurred'
+      });
+  }
+};
 ```
 
 ### Validation Errors
 
 ```typescript
-const validationResult = validator.validateChanges(stagedChanges);
-if (!validationResult.isValid) {
-    validationResult.errors.forEach((error) => {
-        highlightQueue(error.queuePath, 'error');
-        showTooltip(error.queuePath, error.message);
-    });
-}
-```
-
-## State Management and Configuration
-
-The application uses **Zustand** for state management and a **simplified configuration system** that replaced the previous complex metadata-driven approach.
-
-### Zustand Stores
-
-1. **UIState**: Visual interface state (selection, hover, expanded nodes)
-2. **ConfigurationState**: Queue configuration data and parsing
-3. **StagedChangesState**: Change tracking and validation
-4. **ActivityState**: Loading states and user activity
-
-### Simplified Configuration System
-
-The configuration system was simplified in January 2025, replacing complex metadata files with direct TypeScript definitions:
-
-#### New Configuration Structure
-
-- **`property-definitions.ts`**: Direct property definitions with TypeScript interfaces
-- **`property-validation.ts`**: Simple validation functions
-- **`simple-config.ts`**: Straightforward API for configuration operations
-
-#### Key Improvements
-
-- **78% code reduction** (1656+ lines → ~362 lines) while maintaining all functionality
-- **Direct property access** instead of runtime property resolution
-- **Clear TypeScript interfaces** with full type safety
-- **Simple validation functions** instead of complex validation layers
-
-#### Configuration API Usage
-
-```typescript
-// New simplified configuration API (after migration)
-import { getQueuePropertyGroups, validateSingleProperty, buildYarnPropertyKey } from '../config/simple-config';
-
-const propertyGroups = getQueuePropertyGroups();
-const validation = validateSingleProperty(key, value);
-const yarnKey = buildYarnPropertyKey(queuePath, propertyKey);
-```
-
-```typescript
-// UIState store
-interface UIState {
-    selectedQueue: string | null;
-    hoveredQueue: string | null;
-    expandedQueues: Set<string>;
-    setSelectedQueue: (queueId: string | null) => void;
-    setHoveredQueue: (queueId: string | null) => void;
-    toggleExpanded: (queueId: string) => void;
-}
-
-// ConfigurationState store
-interface ConfigurationState {
-    originalConfig: QueueConfiguration | null;
-    parsedQueues: LayoutQueue[];
-    setConfiguration: (config: QueueConfiguration) => void;
-    parseConfiguration: () => void;
-}
-
-// StagedChangesState store
-interface StagedChangesState {
-    changes: Map<string, ConfigChange>;
-    validationErrors: ValidationError[];
-    stageChange: (change: ConfigChange) => void;
-    unstageChange: (changeId: string) => void;
-    validateChanges: () => void;
-    clearChanges: () => void;
-}
-
-// ActivityState store
-interface ActivityState {
-    isLoading: boolean;
-    lastActivity: number;
-    setLoading: (loading: boolean) => void;
-    updateActivity: () => void;
-}
-```
-
-### Usage Example
-
-```typescript
-// Component usage with Zustand stores and simplified config
-const { selectedQueue, setSelectedQueue } = useUIState();
-const { stageChange } = useStagedChangesState();
-
-// Use simplified config API for property definitions
-const propertyGroups = getQueuePropertyGroups();
-const propertyDef = getPropertyDefinition('capacity');
-
-// Stage a capacity change
-const handleCapacityChange = (queuePath: string, newCapacity: number, oldCapacity: number) => {
-    // Validate using simplified validation
-    const validation = validateSingleProperty('capacity', newCapacity);
-    if (!validation.valid) {
-        showError(validation.error);
-        return;
-    }
-
-    stageChange({
-        id: generateId(),
-        queuePath,
-        property: 'capacity',
-        oldValue: oldCapacity.toString(),
-        newValue: newCapacity.toString(),
-        changeType: 'update',
-        timestamp: Date.now(),
-    });
+const handleValidationError = (error: ValidationError) => {
+  const { setSelectedQueue, addNotification } = useUIStore();
+  
+  // Highlight problematic queue
+  setSelectedQueue(error.queuePath);
+  
+  // Show error notification
+  addNotification({
+    type: 'error',
+    message: error.message
+  });
 };
-
-// Access UI state
-const isSelected = selectedQueue === 'root.default';
-setSelectedQueue('root.production');
 ```
 
-## Performance Considerations
+## Performance Optimizations
 
-1. **Debounced Updates**: Property changes are debounced (300ms) before validation
-2. **Incremental Rendering**: Only affected queues are re-rendered
-3. **Virtual Scrolling**: Large queue hierarchies use viewport culling
-4. **Memoized Calculations**: Layout calculations are cached until structure changes
-5. **Optimized State Updates**: Zustand with Immer provides efficient immutable updates
-6. **Selective Re-renders**: Individual stores prevent unnecessary component re-renders
+1. **Memoized Data Processing**: Queue data processing is memoized to prevent unnecessary recalculations
+2. **Canvas Rendering**: Uses HTML5 Canvas with D3.js for high-performance visualization
+3. **Selective Updates**: Only affected components re-render when store state changes
+4. **Debounced Interactions**: User interactions are debounced to prevent excessive API calls
+5. **Efficient State Management**: Zustand provides minimal re-renders with precise subscriptions
 
-## Security
+## Data Types
 
-1. **CSRF Protection**: All PUT requests include CSRF tokens
-2. **Input Validation**: Queue names and values are sanitized
-3. **Permission Checks**: UI respects user's YARN ACLs
-4. **Audit Logging**: All configuration changes are logged with user info
+### Core Interfaces
+
+```typescript
+interface Queue {
+  id: string;
+  queueName: string;
+  queuePath: string;
+  capacity: number;
+  maxCapacity: number;
+  absoluteCapacity: number;
+  usedCapacity: number;
+  numApplications: number;
+  resourcesUsed: ResourceInfo;
+  children: Queue[];
+  properties: Record<string, any>;
+}
+
+interface ConfigChange {
+  id: string;
+  queuePath: string;
+  property: string;
+  oldValue: string;
+  newValue: string;
+  changeType: 'create' | 'update' | 'delete';
+  timestamp: number;
+}
+
+interface ValidationError {
+  queuePath: string;
+  property: string;
+  message: string;
+  severity: 'error' | 'warning';
+}
+```
+
+## Activity Logging
+
+All user actions and system events are logged:
+
+```typescript
+interface Activity {
+  id: string;
+  timestamp: number;
+  type: 'user_action' | 'api_call' | 'error' | 'info';
+  message: string;
+  details?: any;
+}
+
+const { logActivity } = useActivityStore();
+
+logActivity({
+  id: generateId(),
+  timestamp: Date.now(),
+  type: 'user_action',
+  message: 'Queue capacity changed',
+  details: { queuePath: 'root.default', newCapacity: 30 }
+});
+```
+
+This architecture provides a robust, scalable foundation for the YARN Scheduler UI with clear separation of concerns, efficient state management, and high-performance visualization capabilities.

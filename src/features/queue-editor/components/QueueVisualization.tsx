@@ -1,5 +1,5 @@
 import React from 'react';
-import { QueueVisualizationContainer } from './visualization/QueueVisualizationContainer';
+import { QueueVisualizationContainer } from './QueueVisualizationContainer';
 
 export interface QueueVisualizationProps {
     width?: number;

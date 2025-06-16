@@ -1,6 +1,6 @@
 import React from 'react';
 import { Box } from '@mui/material';
-import { ZoomControls } from '../ZoomControls';
+import { ZoomControls } from '../../../components/ZoomControls';
 import type { D3ZoomController } from '../../utils/canvas';
 
 export interface VisualizationControlsProps {

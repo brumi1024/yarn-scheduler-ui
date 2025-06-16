@@ -2,7 +2,7 @@ import { Box, AppBar, Toolbar, Typography } from '@mui/material';
 import { useState } from 'react';
 import TabNavigation from './TabNavigation';
 import StatusBar from './StatusBar';
-import QueueEditor from '../features/QueueEditor';
+import QueueEditor from '../features/queue-editor/QueueEditor';
 import GlobalSettings from '../features/GlobalSettings';
 import NodeLabels from '../features/NodeLabels';
 import Diagnostics from '../features/Diagnostics';

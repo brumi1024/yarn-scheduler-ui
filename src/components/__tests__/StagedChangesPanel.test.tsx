@@ -3,12 +3,12 @@ import { render, screen, fireEvent, waitFor, act } from '@testing-library/react'
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { ThemeProvider, createTheme } from '@mui/material/styles';
 import { StagedChangesPanel } from '../StagedChangesPanel';
-import { useStagedChangesStore } from '../../store/zustand/stagedChangesStore';
+import { useChangesStore } from '../../store';
 import type { ChangeSet } from '../../types/Configuration';
 
 // Mock the store
-vi.mock('../../store/zustand/stagedChangesStore', () => ({
-    useStagedChangesStore: vi.fn(),
+vi.mock('../../store', () => ({
+    useChangesStore: vi.fn(),
 }));
 
 const mockStore = {
@@ -62,7 +62,7 @@ describe('StagedChangesPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         // Reset to default mock store state
-        (useStagedChangesStore as any).mockReturnValue({
+        (useChangesStore as any).mockReturnValue({
             ...mockStore,
             changes: [],
             hasUnsavedChanges: () => false,
@@ -84,7 +84,7 @@ describe('StagedChangesPanel', () => {
 
     describe('when changes are staged', () => {
         beforeEach(() => {
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: mockChanges,
                 hasUnsavedChanges: () => true,
@@ -174,7 +174,7 @@ describe('StagedChangesPanel', () => {
 
         it('should remove individual changes', async () => {
             const mockUnstageChange = vi.fn();
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: mockChanges,
                 unstageChange: mockUnstageChange,
@@ -199,7 +199,7 @@ describe('StagedChangesPanel', () => {
 
         it('should clear all changes', async () => {
             const mockClearAllChanges = vi.fn();
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: mockChanges,
                 clearAllChanges: mockClearAllChanges,
@@ -260,7 +260,7 @@ describe('StagedChangesPanel', () => {
 
     describe('when conflicts exist', () => {
         beforeEach(() => {
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: mockChanges,
                 conflicts: [
@@ -318,7 +318,7 @@ describe('StagedChangesPanel', () => {
 
     describe('accessibility', () => {
         beforeEach(() => {
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: mockChanges,
                 hasUnsavedChanges: () => true,
@@ -362,7 +362,7 @@ describe('StagedChangesPanel', () => {
 
     describe('time formatting', () => {
         beforeEach(() => {
-            (useStagedChangesStore as any).mockReturnValue({
+            (useChangesStore as any).mockReturnValue({
                 ...mockStore,
                 changes: [mockChanges[0]], // Only one change for simpler testing
                 hasUnsavedChanges: () => true,

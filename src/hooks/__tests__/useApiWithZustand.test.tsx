@@ -10,7 +10,8 @@ import {
     useHealthCheck,
     useApiMutation,
 } from '../useApiWithZustand';
-import { useConfigurationStore, useActivityStore } from '../../store/zustand';
+import { useDataStore } from '../../store/dataStore';
+import { useActivityStore } from '../../store/activityStore';
 
 // Mock data
 const mockSchedulerData = {
@@ -63,7 +64,7 @@ const server = setupServer(
 
 // Helper to reset all stores
 const resetStores = () => {
-    useConfigurationStore.setState({
+    useDataStore.setState({
         scheduler: null,
         configuration: null,
         nodeLabels: null,
@@ -122,7 +123,7 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeNull();
 
             // Check store state
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.scheduler).toEqual(mockSchedulerData);
             expect(store.loading.scheduler).toBe(false);
             expect(store.errors.scheduler).toBeNull();
@@ -148,7 +149,7 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeInstanceOf(Error);
 
             // Check store state
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.scheduler).toBeNull();
             expect(store.errors.scheduler).toBeInstanceOf(Error);
         });
@@ -208,7 +209,7 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeNull();
 
             // Check store state
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.configuration).toEqual(mockConfigurationData);
             expect(store.loading.configuration).toBe(false);
         });
@@ -262,7 +263,7 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeNull();
 
             // Check store state
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.nodeLabels).toEqual(mockNodeLabelsData);
         });
 
@@ -299,7 +300,7 @@ describe('useApiWithZustand hooks', () => {
             expect(result.current.error).toBeNull();
 
             // Check store state
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.nodes).toEqual(mockNodesData);
         });
 
@@ -497,7 +498,7 @@ describe('useApiWithZustand hooks', () => {
             expect(nodeLabels.result.current.data).toEqual(mockNodeLabelsData);
 
             // Check store has all data
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.scheduler).toEqual(mockSchedulerData);
             expect(store.configuration).toEqual(mockConfigurationData);
             expect(store.nodeLabels).toEqual(mockNodeLabelsData);
@@ -516,7 +517,7 @@ describe('useApiWithZustand hooks', () => {
             unmount();
 
             // Store should still have data
-            const store = useConfigurationStore.getState();
+            const store = useDataStore.getState();
             expect(store.scheduler).toEqual(mockSchedulerData);
         });
     });

@@ -1,6 +1,6 @@
 import { Box, Typography, Chip, Divider } from '@mui/material';
 import { useState, useEffect } from 'react';
-import { useAllQueues } from '../store/zustand';
+import { useAllQueues } from '../store';
 import { useHealthCheck } from '../hooks/useApiWithZustand';
 
 export default function StatusBar() {

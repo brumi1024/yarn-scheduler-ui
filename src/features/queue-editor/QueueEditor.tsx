@@ -1,7 +1,7 @@
 import { Box, Typography } from '@mui/material';
-import { QueueVisualization } from '../components/QueueVisualization';
-import { ComponentErrorBoundary } from '../components/ErrorBoundary';
-import { StagedChangesPanel } from '../components/StagedChangesPanel';
+import { QueueVisualization } from './components/QueueVisualization';
+import { ComponentErrorBoundary } from '../../components/ErrorBoundary';
+import { StagedChangesPanel } from './components/StagedChangesPanel';
 
 export default function QueueEditor() {
     return (

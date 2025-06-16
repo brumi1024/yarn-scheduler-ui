@@ -6,8 +6,8 @@ import {
     QueueSelectionController,
     type SelectionEvent,
     type HoverEvent,
-} from '../../utils/canvas';
-import type { LayoutNode, FlowPath } from '../../utils/d3';
+} from '../utils/canvas';
+import type { LayoutNode, FlowPath } from '../utils/d3';
 
 export interface CanvasDisplayProps {
     nodes: LayoutNode[];

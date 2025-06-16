@@ -10,7 +10,7 @@ vi.mock('../../hooks/useApiWithZustand', () => ({
 }));
 
 // Mock Zustand stores
-vi.mock('../../store/zustand', () => ({
+vi.mock('../../store', () => ({
     useConfigurationStore: vi.fn(() => ({
         scheduler: null,
         configuration: null,
@@ -28,7 +28,7 @@ vi.mock('../../store/zustand', () => ({
 
 // Import after mocking
 import { useScheduler, useConfiguration } from '../../hooks/useApiWithZustand';
-import { useConfigurationStore, useUIStore, useSelectedQueue } from '../../store/zustand';
+import { useConfigurationStore, useUIStore, useSelectedQueue } from '../../store';
 
 const mockUseScheduler = vi.mocked(useScheduler);
 const mockUseConfiguration = vi.mocked(useConfiguration);

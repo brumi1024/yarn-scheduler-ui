@@ -30,8 +30,8 @@ import {
     Edit as EditIcon,
     Schedule as ScheduleIcon,
 } from '@mui/icons-material';
-import { useChangesStore } from '../store/zustand';
-import type { ChangeSet } from '../types/Configuration';
+import { useChangesStore } from '../../../store';
+import type { ChangeSet } from '../../../types/Configuration';
 
 interface StagedChangesPanelProps {
     onApplyChanges?: () => void;

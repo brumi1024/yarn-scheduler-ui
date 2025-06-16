@@ -1,11 +1,11 @@
 import { useMemo } from 'react';
-import { useDataStore } from '../dataStore';
+import { useDataStore } from './dataStore';
 import { useUIStore } from './uiStore';
-import { useChangesStore } from '../changesStore';
+import { useChangesStore } from './changesStore';
 
-export { useDataStore } from '../dataStore';
+export { useDataStore } from './dataStore';
 export { useUIStore } from './uiStore';
-export { useChangesStore } from '../changesStore';
+export { useChangesStore } from './changesStore';
 
 // Re-export types
 export type * from './types';

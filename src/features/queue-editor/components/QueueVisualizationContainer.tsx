@@ -2,11 +2,11 @@ import React, { useState, useCallback, useRef, useEffect } from 'react';
 import { Box, Alert, CircularProgress } from '@mui/material';
 import { CanvasDisplay, type CanvasDisplayRef } from './CanvasDisplay';
 import { VisualizationControls } from './VisualizationControls';
-import { useQueueDataProcessor } from './QueueDataProcessor';
-import { QueueInfoPanel } from '../QueueInfoPanel';
-import { useDataStore, useUIStore, useChangesStore, useSelectedQueue } from '../../store/zustand';
-import type { Queue } from '../../types/Queue';
-import type { SelectionEvent, HoverEvent } from '../../utils/canvas';
+import { useQueueDataProcessor } from '../hooks/useQueueDataProcessor';
+import { QueueInfoPanel } from './QueueInfoPanel';
+import { useDataStore, useUIStore, useSelectedQueue } from '../../../store';
+import type { Queue } from '../../../types/Queue';
+import type { SelectionEvent, HoverEvent } from '../utils/canvas';
 
 export interface QueueVisualizationContainerProps {
     className?: string;

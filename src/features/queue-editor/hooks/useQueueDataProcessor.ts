@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from 'react';
-import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../../utils/d3';
-import { ConfigParser } from '../../utils/ConfigParser';
+import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
+import { ConfigParser } from '../../../utils/ConfigParser';
+import { CapacityModeDetector } from '../../../utils/CapacityModeDetector';
 
 export interface QueueDataProcessorProps {
     configData: unknown;
@@ -98,13 +99,17 @@ export function useQueueDataProcessor(configData: unknown, schedulerData: unknow
 
         // Convert ParsedQueue to LayoutQueue
         const convertParsedQueue = (parsedQueue: any): LayoutQueue => {
+            // Parse capacity strings to get numeric values
+            const capacityValue = CapacityModeDetector.parseCapacityValue(parsedQueue.capacity);
+            const maxCapacityValue = CapacityModeDetector.parseCapacityValue(parsedQueue.maxCapacity);
+            
             return {
                 id: parsedQueue.path,
                 queueName: parsedQueue.name,
                 queuePath: parsedQueue.path,
-                capacity: parsedQueue.capacity.numericValue || 0,
+                capacity: capacityValue.numericValue || 0,
                 usedCapacity: 0,
-                maxCapacity: parsedQueue.maxCapacity.numericValue || 100,
+                maxCapacity: maxCapacityValue.numericValue || 100,
                 absoluteCapacity: 0,
                 absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 100,
