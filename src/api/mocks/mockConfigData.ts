@@ -1,4 +1,12 @@
-import type { ConfigurationResponse } from '../../types/Configuration';
+import type { ConfigurationResponse, Configuration } from '../../types/Configuration';
+
+export const mockSimpleConfig: Configuration = {
+    'yarn.scheduler.capacity.root.queues': 'default',
+    'yarn.scheduler.capacity.root.capacity': '100',
+    'yarn.scheduler.capacity.root.default.capacity': '100',
+    'yarn.scheduler.capacity.root.default.maximum-capacity': '100',
+    'yarn.scheduler.capacity.root.default.state': 'RUNNING',
+};
 
 export const mockConfigurationData: ConfigurationResponse = {
     property: [

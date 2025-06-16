@@ -13,8 +13,7 @@ import {
     Alert,
     Chip,
 } from '@mui/material';
-import { parseCapacityValue, type ParsedCapacityValue, type CapacityMode } from '../utils/capacityUtils';
-
+import { parseCapacityValue, type ParsedCapacityValue, type CapacityMode } from '../utils/capacity';
 
 interface CapacityEditorProps {
     label: string;
@@ -35,8 +34,10 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
         setCapacityValue(parsed);
     }, [value]);
 
-
-    const formatCapacityValue = (mode: CapacityMode, parsed: any): string => {
+    const formatCapacityValue = (
+        mode: CapacityMode,
+        parsed: { percentage?: number; weight?: number; memory?: number; vcores?: number }
+    ): string => {
         switch (mode) {
             case 'percentage':
                 return `${parsed.percentage || 10}%`;
@@ -50,7 +51,7 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
     };
 
     const handleModeChange = (newMode: CapacityMode) => {
-        let newParsed: any = {};
+        let newParsed: { percentage?: number; weight?: number; memory?: number; vcores?: number } = {};
 
         switch (newMode) {
             case 'percentage':

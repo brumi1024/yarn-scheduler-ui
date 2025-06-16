@@ -1,6 +1,6 @@
-import { capacityValueSchema } from '../config/properties';
+// src/utils/capacity.ts
 
-export type CapacityMode = 'percentage' | 'weight' | 'absolute';
+export type CapacityMode = 'percentage' | 'weight' | 'absolute' | 'unknown';
 
 export interface ParsedCapacityValue {
     mode: CapacityMode;
@@ -13,28 +13,28 @@ export interface ParsedCapacityValue {
     };
 }
 
-/**
- * Parses a capacity string value into a structured object.
- * This function centralizes the logic for handling different capacity formats.
- * @param input The capacity string (e.g., "10%", "5w", "[memory=1024,vcores=2]").
- * @returns A ParsedCapacityValue object.
- */
+export function getCapacityMode(value: string): CapacityMode {
+    if (value.startsWith('[')) {
+        return 'absolute';
+    }
+    if (value.endsWith('w')) {
+        return 'weight';
+    }
+    if (!isNaN(parseFloat(value))) {
+        return 'percentage';
+    }
+    return 'unknown';
+}
+
+export function parseCapacity(value: string) {
+    const mode = getCapacityMode(value);
+    return { mode, value };
+}
+
 export function parseCapacityValue(input: string): ParsedCapacityValue {
     const trimmed = input.trim();
 
-    // First, ensure the input is valid according to our central schema
-    try {
-        capacityValueSchema.parse(trimmed);
-    } catch {
-        // If validation fails, return a default, safe value
-        return {
-            mode: 'percentage',
-            value: '0%',
-            parsed: { percentage: 0 },
-        };
-    }
-
-    // Percentage mode: "10%" or "10.5%"
+    // Percentage mode: "10%" or "10.5%" or raw numbers
     if (trimmed.endsWith('%')) {
         const percentage = parseFloat(trimmed.slice(0, -1));
         return {
@@ -87,10 +87,25 @@ export function parseCapacityValue(input: string): ParsedCapacityValue {
         };
     }
 
-    // Fallback for any other invalid format that might have slipped through
+    // Fallback for any other invalid format
     return {
         mode: 'percentage',
         value: '0%',
         parsed: { percentage: 0 },
     };
+}
+
+export function toDisplayPercentage(capacityValue: ParsedCapacityValue): number {
+    switch (capacityValue.mode) {
+        case 'percentage':
+            return capacityValue.parsed?.percentage ?? 0;
+        case 'weight':
+            // Weight values are displayed as-is (they're relative within siblings)
+            return capacityValue.parsed?.weight ?? 0;
+        case 'absolute':
+            // Absolute values cannot be converted to percentage without parent context
+            return 0;
+        default:
+            return 0;
+    }
 }

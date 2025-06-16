@@ -1,11 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { TreeBuilder } from '../TreeBuilder';
 import type { ParsedQueue } from '../../types/Queue';
-import { CapacityModeDetector } from '../CapacityModeDetector';
+import { parseCapacityValue } from '../capacity';
 
 // Helper function to create test queues
 function createTestQueue(name: string, path: string, capacity: string, children: ParsedQueue[] = []): ParsedQueue {
-    const capacityValue = CapacityModeDetector.parseCapacityValue(capacity);
+    const capacityValue = parseCapacityValue(capacity);
 
     return {
         name,
@@ -14,7 +14,7 @@ function createTestQueue(name: string, path: string, capacity: string, children:
         children,
         isLeaf: children.length === 0,
         capacity: capacityValue,
-        maxCapacity: CapacityModeDetector.parseCapacityValue('100'),
+        maxCapacity: parseCapacityValue('100'),
         state: 'RUNNING',
         maxApplications: -1,
         minimumUserLimitPercent: 100,

@@ -7,9 +7,7 @@
  */
 
 import { entries, filter, map, compact, split, trim, isEmpty } from 'lodash';
-import type { ParsedQueue, Configuration } from '../types/Queue';
-// import type { CapacityValue } from './CapacityModeDetector';
-import { CapacityModeDetector } from './CapacityModeDetector';
+import type { ParsedQueue, Configuration, CapacityValue } from '../types/Queue';
 
 export interface ParsedProperty {
     key: string;
@@ -300,6 +298,7 @@ export class ConfigParser {
                     if (childQueue) {
                         childQueue.parent = queue.path;
                         queue.children.push(childQueue);
+                        queue.isLeaf = false; // Parent queues are not leaves
                     } else {
                         // This should not happen with our two-pass approach
                         result.warnings.push(
@@ -329,18 +328,95 @@ export class ConfigParser {
         const capacityStr = properties.get('capacity') || '0';
         const maxCapacityStr = properties.get('maximum-capacity') || '100';
 
+        const capacity = this.parseCapacityValue(capacityStr);
+        const maxCapacity = this.parseCapacityValue(maxCapacityStr);
+
+        // Parse additional properties
+        const maxApplications = properties.get('maximum-applications');
+        const maxAMResourcePercent = properties.get('maximum-am-resource-percent');
+        const minimumUserLimitPercent = properties.get('minimum-user-limit-percent');
+        const userLimitFactor = properties.get('user-limit-factor');
+        const priority = properties.get('priority');
+        const submitACL = properties.get('acl_submit_applications');
+        const adminACL = properties.get('acl_administer_queue');
+        const preemptionDisabled = properties.get('disable_preemption');
+        const accessibleNodeLabels = properties.get('accessible-node-labels');
+        const defaultNodeLabelExpression = properties.get('default-node-label-expression');
+
         const queue: ParsedQueue = {
             name: queueName,
             path: queuePath,
             parent: this.getParentPath(queuePath),
             children: [],
-            capacity: capacityStr,
-            maxCapacity: maxCapacityStr,
+            capacity,
+            maxCapacity,
             state: (properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED',
             properties: Object.fromEntries(properties),
+            isLeaf: true, // Will be updated when children are added
+            maxApplications: maxApplications
+                ? isNaN(parseInt(maxApplications, 10))
+                    ? -1
+                    : parseInt(maxApplications, 10)
+                : -1,
+            maxAMResourcePercent: maxAMResourcePercent ? parseFloat(maxAMResourcePercent) : undefined,
+            minimumUserLimitPercent: minimumUserLimitPercent ? parseInt(minimumUserLimitPercent, 10) : undefined,
+            userLimitFactor: userLimitFactor ? parseFloat(userLimitFactor) : undefined,
+            priority: priority ? parseInt(priority, 10) : undefined,
+            submitACL,
+            adminACL,
+            preemptionDisabled: preemptionDisabled === 'true',
+            accessibleNodeLabels: accessibleNodeLabels
+                ? accessibleNodeLabels.split(',').map((s) => s.trim())
+                : undefined,
+            defaultNodeLabelExpression,
         };
 
         return queue;
+    }
+
+    /**
+     * Parse capacity value into structured format
+     */
+    private static parseCapacityValue(value: string): CapacityValue {
+        const trimmed = value.trim();
+
+        // Weight mode: "2w" or "1.5w"
+        if (trimmed.endsWith('w')) {
+            const weight = parseFloat(trimmed.slice(0, -1));
+            return {
+                mode: 'weight',
+                value: trimmed,
+                numericValue: isNaN(weight) ? 0 : weight,
+            };
+        }
+
+        // Absolute mode: "[memory=2048,vcores=2]"
+        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+            const resourceStr = trimmed.slice(1, -1);
+            const resources = resourceStr.split(',').reduce(
+                (acc, pair) => {
+                    const [key, val] = pair.split('=');
+                    if (key && val) {
+                        acc[key.trim()] = val.trim();
+                    }
+                    return acc;
+                },
+                {} as Record<string, string>
+            );
+            return {
+                mode: 'absolute',
+                value: trimmed,
+                resources,
+            };
+        }
+
+        // Percentage mode (default)
+        const percentage = parseFloat(trimmed);
+        return {
+            mode: 'percentage',
+            value: trimmed,
+            numericValue: isNaN(percentage) ? 0 : percentage,
+        };
     }
 
     /**

@@ -7,7 +7,7 @@
 import { filter, some, entries, split, slice, join } from 'lodash';
 import type { ParsedQueue } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
-import { CapacityModeDetector } from './CapacityModeDetector';
+import { parseCapacityValue, toDisplayPercentage } from './capacity';
 
 export interface TreeMetrics {
     totalQueues: number;
@@ -140,7 +140,8 @@ export class TreeBuilder {
 
             // Check capacity range filters
             if (options.minCapacity !== undefined || options.maxCapacity !== undefined) {
-                const capacity = CapacityModeDetector.toDisplayPercentage(queue.capacity);
+                const capacityValue = parseCapacityValue(queue.capacity);
+                const capacity = toDisplayPercentage(capacityValue);
 
                 if (options.minCapacity !== undefined && capacity < options.minCapacity) {
                     return false;

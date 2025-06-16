@@ -18,7 +18,6 @@ vi.mock('../CapacityEditor', () => ({
     ),
 }));
 
-
 // Helper component to wrap PropertyFormField with FormProvider
 const PropertyFormFieldWrapper = ({
     property,

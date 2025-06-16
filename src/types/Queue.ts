@@ -36,16 +36,37 @@ export interface ConfigProperty {
     value: string;
 }
 
+// Capacity value structure
+export interface CapacityValue {
+    mode: 'percentage' | 'weight' | 'absolute';
+    value: string;
+    numericValue?: number;
+    resources?: Record<string, string>;
+}
+
 // Parsed queue for internal use
 export interface ParsedQueue {
     name: string;
     path: string;
     parent?: string;
     children: ParsedQueue[];
-    capacity: string; // Raw capacity value like "50%", "2w", "[memory=1024,vcores=2]"
-    maxCapacity: string;
+    capacity: CapacityValue;
+    maxCapacity: CapacityValue;
     state: 'RUNNING' | 'STOPPED';
     properties: Record<string, string>; // All raw properties
+
+    // Additional properties that tests expect
+    isLeaf?: boolean;
+    maxApplications?: number;
+    maxAMResourcePercent?: number;
+    minimumUserLimitPercent?: number;
+    userLimitFactor?: number;
+    priority?: number;
+    submitACL?: string;
+    adminACL?: string;
+    preemptionDisabled?: boolean;
+    accessibleNodeLabels?: string[];
+    defaultNodeLabelExpression?: string;
 }
 
 // Scheduler response structure

@@ -2,16 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import {
-    Box,
-    Paper,
-    Typography,
-    IconButton,
-    Tooltip,
-    Card,
-    CardContent,
-    Button,
-} from '@mui/material';
+import { Box, Paper, Typography, IconButton, Tooltip, Card, CardContent, Button } from '@mui/material';
 import {
     Close as CloseIcon,
     Dashboard as OverviewIcon,
@@ -79,7 +70,6 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
             setSaveError(null);
         }
     }, [queue, open, reset]);
-
 
     if (!queue || !open) {
         return null;
@@ -244,7 +234,9 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                             queue={queue}
                             onQueueSelect={onQueueSelect!}
                             onDelete={() => onDelete?.(queue.queueName)}
-                            onToggleState={() => onToggleState?.(queue.queueName, queue.state === 'RUNNING' ? 'STOPPED' : 'RUNNING')}
+                            onToggleState={() =>
+                                onToggleState?.(queue.queueName, queue.state === 'RUNNING' ? 'STOPPED' : 'RUNNING')
+                            }
                         />
                     )}
                     {activeTab === 1 && (

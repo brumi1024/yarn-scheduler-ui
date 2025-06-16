@@ -117,6 +117,8 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
     const renderChangeItem = (change: ChangeSet) => (
         <ListItem key={change.id} divider>
             <ListItemText
+                primaryTypographyProps={{ component: 'div' }}
+                secondaryTypographyProps={{ component: 'div' }}
                 primary={
                     <Box display="flex" alignItems="center" gap={1}>
                         <Chip

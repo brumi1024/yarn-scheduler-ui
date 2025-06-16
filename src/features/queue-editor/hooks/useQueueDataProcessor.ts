@@ -1,7 +1,7 @@
 import { useCallback, useMemo } from 'react';
 import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
-import { ConfigParser } from '../../../utils/ConfigParser';
-import { CapacityModeDetector } from '../../../utils/CapacityModeDetector';
+import { ConfigParser } from '../../../yarn-parser/ConfigParser';
+// parseCapacityValue import removed - using pre-parsed capacity values from ConfigParser
 
 export interface QueueDataProcessorProps {
     configData: unknown;
@@ -99,17 +99,17 @@ export function useQueueDataProcessor(configData: unknown, schedulerData: unknow
 
         // Convert ParsedQueue to LayoutQueue
         const convertParsedQueue = (parsedQueue: any): LayoutQueue => {
-            // Parse capacity strings to get numeric values
-            const capacityValue = CapacityModeDetector.parseCapacityValue(parsedQueue.capacity);
-            const maxCapacityValue = CapacityModeDetector.parseCapacityValue(parsedQueue.maxCapacity);
-            
+            // parsedQueue.capacity and maxCapacity are already CapacityValue objects from ConfigParser
+            const capacity = parsedQueue.capacity.numericValue || 0;
+            const maxCapacity = parsedQueue.maxCapacity.numericValue || 100;
+
             return {
                 id: parsedQueue.path,
                 queueName: parsedQueue.name,
                 queuePath: parsedQueue.path,
-                capacity: capacityValue.numericValue || 0,
+                capacity,
                 usedCapacity: 0,
-                maxCapacity: maxCapacityValue.numericValue || 100,
+                maxCapacity,
                 absoluteCapacity: 0,
                 absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 100,
