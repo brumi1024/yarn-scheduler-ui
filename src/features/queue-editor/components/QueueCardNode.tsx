@@ -4,7 +4,7 @@ import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListI
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
-import { useChangesStore } from '../../../store';
+import { useChangesStore, useUIStore } from '../../../store';
 
 const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -22,25 +22,12 @@ export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const { stageChange } = useChangesStore();
+    const { openAddQueueModal } = useUIStore();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
 
     const handleAddChildQueue = (event: React.MouseEvent) => {
         event.preventDefault();
-        const newQueueName = `${data.queueName}_child_${Date.now()}`;
-        const newQueuePath = `${data.queuePath || data.queueName}.${newQueueName}`;
-        stageChange({
-            id: `add-${newQueueName}-${Date.now()}`,
-            type: 'ADD_QUEUE',
-            queuePath: data.queuePath || data.queueName, // Parent queue path
-            property: newQueuePath, // Full path for new queue
-            oldValue: null,
-            newValue: {
-                capacity: 10,
-                maxCapacity: 100,
-                state: 'RUNNING'
-            },
-            timestamp: new Date()
-        });
+        openAddQueueModal(data.queuePath || data.queueName);
         popupState.close();
     };
 

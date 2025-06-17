@@ -29,6 +29,10 @@ export interface UIState {
             message: string;
             onConfirm: () => void;
         };
+        addQueueModal?: {
+            open: boolean;
+            parentQueuePath: string;
+        };
     };
 }
 

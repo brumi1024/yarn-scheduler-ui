@@ -19,6 +19,8 @@ interface UIStore extends UIState {
     closePropertyEditor: () => void;
     openConfirmDialog: (title: string, message: string, onConfirm: () => void) => void;
     closeConfirmDialog: () => void;
+    openAddQueueModal: (parentQueuePath: string) => void;
+    closeAddQueueModal: () => void;
 
     // Notification actions
     addNotification: (notification: Omit<NotificationState, 'id' | 'timestamp'>) => void;
@@ -108,6 +110,25 @@ export const useUIStore = create<UIStore>()(
                     modals: {
                         ...state.modals,
                         confirmDialog: undefined,
+                    },
+                })),
+
+            openAddQueueModal: (parentQueuePath) =>
+                set((state) => ({
+                    modals: {
+                        ...state.modals,
+                        addQueueModal: {
+                            open: true,
+                            parentQueuePath,
+                        },
+                    },
+                })),
+
+            closeAddQueueModal: () =>
+                set((state) => ({
+                    modals: {
+                        ...state.modals,
+                        addQueueModal: undefined,
                     },
                 })),
 

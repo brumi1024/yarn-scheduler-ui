@@ -16,6 +16,7 @@ import '@xyflow/react/dist/style.css';
 import { useConfigurationQuery, useSchedulerQuery } from '../../../hooks/useYarnApi';
 import { useQueueDataProcessor, type QueueNodeData } from '../hooks/useQueueDataProcessor';
 import { QueueInfoPanel } from './QueueInfoPanel';
+import { AddQueueModal } from './AddQueueModal';
 import { useUIStore, useSelectedQueue } from '../../../store';
 import QueueCardNode from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
@@ -232,6 +233,9 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                     Queue Data: {selectedQueueData ? 'found' : 'null'}
                 </div>
             )}
+
+            {/* Add Queue Modal */}
+            <AddQueueModal />
         </Box>
     );
 };
