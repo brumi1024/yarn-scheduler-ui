@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
-import { ConfigParser } from '../../../yarn-parser/ConfigParser';
+import { useConfigParser } from '../../../yarn-parser/useConfigParser';
 // TODO: Re-enable these imports in Phase 2 when implementing search/changes features
 // import { useUIStore, useChangesStore } from '../../../store';
 import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue } from '../../../types/Configuration';
@@ -40,6 +40,9 @@ export function useQueueDataProcessor(
     configQuery: { data?: ConfigurationResponse | null; isLoading?: boolean; error?: Error | null },
     schedulerQuery: { data?: SchedulerResponse | null; isLoading?: boolean; error?: Error | null }
 ): ProcessedFlowData {
+    // Use the new async parser hook
+    const { data: parseResult, isLoading: isParsing, error: parseError } = useConfigParser(configQuery.data);
+
     // TODO: Phase 2 - Consume state from stores for search/changes features
     // const { searchQuery, sortOptions } = useUIStore(state => ({ searchQuery: state.searchQuery, sortOptions: state.sortOptions }));
     // const stagedChanges = useChangesStore(state => state.stagedChanges);
@@ -56,14 +59,12 @@ export function useQueueDataProcessor(
 
     // Process data and return React Flow compatible format
     const processedData = useMemo((): ProcessedFlowData => {
-        const configData = configQuery.data;
         const schedulerData = schedulerQuery.data;
-        const isConfigLoading = configQuery.isLoading ?? false;
         const isSchedulerLoading = schedulerQuery.isLoading ?? false;
-        const configError = configQuery.error;
         const schedulerError = schedulerQuery.error;
 
-        if (isConfigLoading || isSchedulerLoading) {
+        // Update loading state to include parsing
+        if (configQuery.isLoading || isSchedulerLoading || isParsing) {
             return {
                 nodes: [],
                 edges: [],
@@ -72,8 +73,12 @@ export function useQueueDataProcessor(
             };
         }
 
-        if (configError || schedulerError) {
-            const errorMessage = configError?.message || schedulerError?.message || 'Unknown error';
+        // Update error state to include parsing errors
+        if (configQuery.error || schedulerError || parseError) {
+            const errorMessage = configQuery.error?.message || 
+                                schedulerError?.message || 
+                                parseError?.message || 
+                                'Unknown data loading error';
             return {
                 nodes: [],
                 edges: [],
@@ -82,23 +87,14 @@ export function useQueueDataProcessor(
             };
         }
 
-        if (!configData) {
-            return {
-                nodes: [],
-                edges: [],
-                isLoading: false,
-                error: 'No configuration data available',
-            };
+        // The parseResult is now available directly from the useConfigParser hook
+        if (!parseResult) {
+            return { nodes: [], edges: [], isLoading: false, error: 'Configuration parsing did not complete.' };
         }
 
         try {
             // --- Pipeline Step 1: Parse Base Configuration ---
-            const configuration: Record<string, string> = {};
-            configData.property.forEach((prop) => {
-                configuration[prop.name] = prop.value;
-            });
-            
-            const parseResult = ConfigParser.parse(configuration);
+            // Parsing is now handled by the Web Worker via useConfigParser hook
             if (parseResult.errors.length > 0) {
                 console.error('Configuration parsing errors:', parseResult.errors);
                 return { nodes: [], edges: [], isLoading: false, error: 'Configuration parsing failed.' };
@@ -135,7 +131,7 @@ export function useQueueDataProcessor(
             // TODO: Phase 2 - Apply ADD_QUEUE, DELETE_QUEUE, and PROPERTY_UPDATE changes
             // This will modify processedHierarchy based on stagedChanges
             // processedHierarchy = applyChangesToHierarchy(processedHierarchy, stagedChanges);
-            // For now, processedHierarchy remains unchanged
+            // Note: Using 'let' for future modification in Phase 2
 
             // --- Pipeline Step 3: Apply Search Filter ---
             // TODO: Phase 2 - Filter hierarchy based on searchQuery
@@ -230,7 +226,7 @@ export function useQueueDataProcessor(
                 error: 'Failed to process queue data',
             };
         }
-    }, [configQuery.data, configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, treeLayout]);
+    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout]);
 
     return processedData;
 }
