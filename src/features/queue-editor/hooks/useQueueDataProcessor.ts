@@ -1,9 +1,8 @@
 import { useMemo } from 'react';
 import { DagreLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/layout/DagreLayout';
 import { useConfigParser } from '../../../yarn-parser/useConfigParser';
-// TODO: Re-enable these imports in Phase 2 when implementing search/changes features
-// import { useUIStore, useChangesStore } from '../../../store';
-import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue } from '../../../types/Configuration';
+import { useChangesStore } from '../../../store';
+import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue, ChangeSet } from '../../../types/Configuration';
 import type { Node, Edge } from '@xyflow/react';
 
 // Runtime queue data from YARN API (extends base Queue with additional properties)
@@ -36,6 +35,88 @@ export interface ProcessedFlowData {
     error: string | null;
 }
 
+// Helper function to apply staged changes to queue hierarchy
+function applyChangesToHierarchy(hierarchy: LayoutQueue, changes: ChangeSet[]): LayoutQueue {
+    // Deep clone the hierarchy to avoid mutations
+    const cloneQueue = (queue: LayoutQueue): LayoutQueue => ({
+        ...queue,
+        children: queue.children.map(cloneQueue)
+    });
+
+    let modifiedHierarchy = cloneQueue(hierarchy);
+
+    // Apply changes in chronological order
+    const sortedChanges = [...changes].sort((a, b) => a.timestamp.getTime() - b.timestamp.getTime());
+
+    for (const change of sortedChanges) {
+        if (change.type === 'ADD_QUEUE') {
+            modifiedHierarchy = applyAddQueueChange(modifiedHierarchy, change);
+        } else if (change.type === 'DELETE_QUEUE') {
+            modifiedHierarchy = applyDeleteQueueChange(modifiedHierarchy, change);
+        }
+        // TODO: Handle PROPERTY_UPDATE changes in future iterations
+    }
+
+    return modifiedHierarchy;
+}
+
+// Helper to add a new queue to the hierarchy
+function applyAddQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQueue {
+    const findAndAddToParent = (queue: LayoutQueue): LayoutQueue => {
+        if (queue.queuePath === change.queuePath) {
+            // This is the parent queue, add the new child
+            const newQueue: LayoutQueue = {
+                id: change.property,
+                queueName: change.property.split('.').pop() || change.property,
+                queuePath: change.property,
+                capacity: change.newValue?.capacity || 10,
+                usedCapacity: 0,
+                maxCapacity: change.newValue?.maxCapacity || 100,
+                absoluteCapacity: 0,
+                absoluteUsedCapacity: 0,
+                absoluteMaxCapacity: 100,
+                state: change.newValue?.state || 'RUNNING',
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
+                children: [],
+                stagedStatus: 'new' // Mark as staged
+            };
+
+            return {
+                ...queue,
+                children: [...queue.children, newQueue]
+            };
+        }
+
+        return {
+            ...queue,
+            children: queue.children.map(findAndAddToParent)
+        };
+    };
+
+    return findAndAddToParent(hierarchy);
+}
+
+// Helper to mark a queue as deleted in the hierarchy
+function applyDeleteQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQueue {
+    const markAsDeleted = (queue: LayoutQueue): LayoutQueue => {
+        if (queue.queuePath === change.queuePath) {
+            // Mark this queue as deleted
+            return {
+                ...queue,
+                stagedStatus: 'deleted'
+            };
+        }
+
+        return {
+            ...queue,
+            children: queue.children.map(markAsDeleted)
+        };
+    };
+
+    return markAsDeleted(hierarchy);
+}
+
 export function useQueueDataProcessor(
     configQuery: { data?: ConfigurationResponse | null; isLoading?: boolean; error?: Error | null },
     schedulerQuery: { data?: SchedulerResponse | null; isLoading?: boolean; error?: Error | null }
@@ -43,9 +124,8 @@ export function useQueueDataProcessor(
     // Use the new async parser hook
     const { data: parseResult, isLoading: isParsing, error: parseError } = useConfigParser(configQuery.data);
 
-    // TODO: Phase 2 - Consume state from stores for search/changes features
-    // const { searchQuery, sortOptions } = useUIStore(state => ({ searchQuery: state.searchQuery, sortOptions: state.sortOptions }));
-    // const stagedChanges = useChangesStore(state => state.stagedChanges);
+    // Get staged changes from store
+    const stagedChanges = useChangesStore(state => state.stagedChanges) || [];
     // Initialize Dagre layout (replaces D3 tree layout)
     const treeLayout = useMemo(() => {
         return new DagreLayout({
@@ -128,10 +208,10 @@ export function useQueueDataProcessor(
             let processedHierarchy = convertParsedQueue(parseResult.queues[0]);
 
             // --- Pipeline Step 2: Apply Staged Changes ---
-            // TODO: Phase 2 - Apply ADD_QUEUE, DELETE_QUEUE, and PROPERTY_UPDATE changes
-            // This will modify processedHierarchy based on stagedChanges
-            // processedHierarchy = applyChangesToHierarchy(processedHierarchy, stagedChanges);
-            // Note: Using 'let' for future modification in Phase 2
+            // Apply ADD_QUEUE, DELETE_QUEUE, and PROPERTY_UPDATE changes
+            if (stagedChanges.length > 0) {
+                processedHierarchy = applyChangesToHierarchy(processedHierarchy, stagedChanges);
+            }
 
             // --- Pipeline Step 3: Apply Search Filter ---
             // TODO: Phase 2 - Filter hierarchy based on searchQuery
@@ -226,7 +306,7 @@ export function useQueueDataProcessor(
                 error: 'Failed to process queue data',
             };
         }
-    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout]);
+    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges]);
 
     return processedData;
 }

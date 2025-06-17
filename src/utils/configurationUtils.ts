@@ -81,6 +81,7 @@ export function createChangeSetsFromFormData(
         if (String(newValue) !== String(oldValue)) {
             changes.push({
                 id: nanoid(),
+                type: 'PROPERTY_UPDATE',
                 timestamp,
                 queuePath: queuePath,
                 property: key,
@@ -101,20 +102,41 @@ export function createChangeSetsFromFormData(
 export function convertChangesToApiRequest(changes: ChangeSet[]) {
     const globalChanges: Record<string, string> = {};
     const queueChanges: Record<string, Record<string, string>> = {};
+    const addQueues: Array<{ 'queue-name': string; params: Record<string, string> }> = [];
+    const removeQueues: string[] = [];
 
     changes.forEach((change) => {
-        if (change.queuePath === '_global') {
-            // Handle global configuration changes
-            globalChanges[change.property] = convertFormValueToYarnValue(change.property, change.newValue);
-        } else {
-            // Handle queue-specific changes
-            if (!queueChanges[change.queuePath]) {
-                queueChanges[change.queuePath] = {};
+        if (change.type === 'ADD_QUEUE') {
+            // Handle queue addition
+            const newQueueParams: Record<string, string> = {};
+            if (change.newValue) {
+                Object.entries(change.newValue).forEach(([key, value]) => {
+                    newQueueParams[key] = convertFormValueToYarnValue(key, value);
+                });
             }
-            queueChanges[change.queuePath][change.property] = convertFormValueToYarnValue(
-                change.property,
-                change.newValue
-            );
+            
+            addQueues.push({
+                'queue-name': change.property, // Queue name is stored in property field
+                params: newQueueParams,
+            });
+        } else if (change.type === 'DELETE_QUEUE') {
+            // Handle queue deletion
+            removeQueues.push(change.queuePath);
+        } else if (change.type === 'PROPERTY_UPDATE') {
+            // Handle property updates (existing logic)
+            if (change.queuePath === '_global') {
+                // Handle global configuration changes
+                globalChanges[change.property] = convertFormValueToYarnValue(change.property, change.newValue);
+            } else {
+                // Handle queue-specific changes
+                if (!queueChanges[change.queuePath]) {
+                    queueChanges[change.queuePath] = {};
+                }
+                queueChanges[change.queuePath][change.property] = convertFormValueToYarnValue(
+                    change.property,
+                    change.newValue
+                );
+            }
         }
     });
 
@@ -131,6 +153,16 @@ export function convertChangesToApiRequest(changes: ChangeSet[]) {
             'queue-name': queuePath,
             params,
         }));
+    }
+
+    // Add queue additions if any
+    if (addQueues.length > 0) {
+        result['add-queue'] = addQueues;
+    }
+
+    // Add queue removals if any
+    if (removeQueues.length > 0) {
+        result['remove-queue'] = removeQueues;
     }
 
     return result;

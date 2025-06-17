@@ -1,8 +1,8 @@
-import type { SchedulerResponse, ConfigurationResponse, ChangeSet } from '../../types/Configuration';
+import type { SchedulerResponse, ConfigurationResponse, ChangeSet, ChangeType } from '../../types/Configuration';
 import type { NodeLabelsResponse, NodesResponse } from '../../types/NodeLabel';
 
 // Re-export types used by stores
-export type { ChangeSet } from '../../types/Configuration';
+export type { ChangeSet, ChangeType } from '../../types/Configuration';
 
 // UI State
 export interface UIState {

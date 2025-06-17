@@ -1,7 +1,10 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Card, CardContent, Typography, Box } from '@mui/material';
+import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
+import { useChangesStore } from '../../../store';
 
 const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -11,9 +14,54 @@ const formatBytes = (bytes: number): string => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export type QueueNodeData = LayoutQueue;
+export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
+    stagedStatus?: 'new' | 'deleted' | 'modified';
+    isMatch?: boolean;
+    isAncestorOfMatch?: boolean;
+};
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
+    const { stageChange } = useChangesStore();
+    const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
+
+    const handleAddChildQueue = (event: React.MouseEvent) => {
+        event.preventDefault();
+        const newQueueName = `${data.queueName}_child_${Date.now()}`;
+        stageChange({
+            id: `add-${newQueueName}-${Date.now()}`,
+            type: 'ADD_QUEUE',
+            queuePath: data.queueName,
+            property: newQueueName,
+            oldValue: null,
+            newValue: {
+                capacity: 10,
+                maxCapacity: 100,
+                state: 'RUNNING'
+            },
+            timestamp: new Date()
+        });
+        popupState.close();
+    };
+
+    const handleDeleteQueue = (event: React.MouseEvent) => {
+        event.preventDefault();
+        // Don't allow deleting root queue
+        if (data.queueName === 'root') {
+            popupState.close();
+            return;
+        }
+
+        stageChange({
+            id: `delete-${data.queueName}-${Date.now()}`,
+            type: 'DELETE_QUEUE',
+            queuePath: data.queueName,
+            property: data.queueName,
+            oldValue: data, // Store full queue definition for undo
+            newValue: null,
+            timestamp: new Date()
+        });
+        popupState.close();
+    };
     const liveCapacityData = {
         capacity: data.capacity || 0,
         usedCapacity: data.usedCapacity || 0,
@@ -34,27 +82,42 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
         return '#84cc16';
     };
 
+    // Get border color based on staged status
+    const getBorderColor = () => {
+        if (data.stagedStatus === 'new') return '#22c55e'; // Green for new
+        if (data.stagedStatus === 'deleted') return '#ef4444'; // Red for deleted
+        if (data.stagedStatus === 'modified') return '#f59e0b'; // Orange for modified
+        return '#e0e0e0'; // Default
+    };
+
+    const getBorderWidth = () => data.stagedStatus ? '2px' : '1px';
+
     return (
-        <Card
-            sx={{
-                width: 280,
-                height: 220,
-                border: '1px solid #e0e0e0',
-                borderRadius: '12px',
-                boxShadow: selected 
-                    ? '0 15px 30px rgba(0, 0, 0, 0.5)' 
-                    : '0 2px 4px rgba(0, 0, 0, 0.15)',
-                transform: selected ? 'scale(1.02)' : 'scale(1)',
-                transition: 'all 0.2s ease-in-out',
-                backgroundColor: selected ? '#f0f8ff' : '#ffffff',
-                '&:hover': {
-                    boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
-                    transform: 'scale(1.02)',
-                },
-                overflow: 'hidden',
-                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-            }}
-        >
+        <>
+            <Card
+                {...bindContextMenu(popupState)}
+                sx={{
+                    width: 280,
+                    height: 220,
+                    border: `${getBorderWidth()} solid ${getBorderColor()}`,
+                    borderRadius: '12px',
+                    boxShadow: selected 
+                        ? '0 15px 30px rgba(0, 0, 0, 0.5)' 
+                        : '0 2px 4px rgba(0, 0, 0, 0.15)',
+                    transform: selected ? 'scale(1.02)' : 'scale(1)',
+                    transition: 'all 0.2s ease-in-out',
+                    backgroundColor: selected ? '#f0f8ff' : '#ffffff',
+                    opacity: data.stagedStatus === 'deleted' ? 0.6 : 1,
+                    textDecoration: data.stagedStatus === 'deleted' ? 'line-through' : 'none',
+                    '&:hover': {
+                        boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
+                        transform: 'scale(1.02)',
+                    },
+                    overflow: 'hidden',
+                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                    cursor: 'pointer',
+                }}
+            >
             {/* React Flow Handles */}
             <Handle 
                 type="target" 
@@ -317,6 +380,35 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                 )}
             </CardContent>
         </Card>
+
+        {/* Context Menu */}
+        <Menu
+            {...bindMenu(popupState)}
+            anchorOrigin={{
+                vertical: 'bottom',
+                horizontal: 'left',
+            }}
+            transformOrigin={{
+                vertical: 'top',
+                horizontal: 'left',
+            }}
+        >
+            <MenuItem onClick={handleAddChildQueue}>
+                <ListItemIcon>
+                    <AddIcon fontSize="small" />
+                </ListItemIcon>
+                <ListItemText>Add Child Queue</ListItemText>
+            </MenuItem>
+            {data.queueName !== 'root' && (
+                <MenuItem onClick={handleDeleteQueue}>
+                    <ListItemIcon>
+                        <DeleteIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Delete Queue</ListItemText>
+                </MenuItem>
+            )}
+        </Menu>
+    </>
     );
 }
 

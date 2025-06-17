@@ -17,12 +17,15 @@ export interface ConfigurationUpdateResponse {
     response: string;
 }
 
+export type ChangeType = 'PROPERTY_UPDATE' | 'ADD_QUEUE' | 'DELETE_QUEUE';
+
 export interface ChangeSet {
     id: string;
-    queuePath: string;
-    property: string;
-    oldValue: string;
-    newValue: string;
+    type: ChangeType;
+    queuePath: string; // Parent path for ADD_QUEUE, target path for DELETE_QUEUE
+    property: string; // Queue name for ADD/DELETE operations
+    oldValue: unknown; // Full queue definition for DELETE (undo support)
+    newValue: unknown; // New queue properties for ADD
     timestamp: Date;
 }
 
