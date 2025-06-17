@@ -7,13 +7,9 @@ import {
     MiniMap, 
     ReactFlowProvider,
     useReactFlow,
-    type Node,
-    type Edge,
     type OnNodesChange,
     type OnEdgesChange,
-    type OnNodeClick,
-    applyNodeChanges,
-    applyEdgeChanges
+    type OnNodeClick
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -37,56 +33,37 @@ const edgeTypes = { customFlow: CustomFlowEdge };
 const FlowInner: React.FC = () => {
     const configQuery = useConfigurationQuery();
     const schedulerQuery = useSchedulerQuery();
-    const { nodes: processedNodes, edges: processedEdges, isLoading, error } = useQueueDataProcessor(configQuery, schedulerQuery);
+    // The hook now contains all the complex logic - we just consume the final result
+    const { nodes, edges, isLoading, error } = useQueueDataProcessor(configQuery, schedulerQuery);
     const uiStore = useUIStore();
     const { fitView } = useReactFlow();
 
-    // Local state for nodes and edges (React Flow requires this pattern)
-    const [nodes, setNodes] = React.useState<Node<QueueNodeData>[]>([]);
-    const [edges, setEdges] = React.useState<Edge[]>([]);
+    // Apply selection state to nodes based on UI store
+    const finalNodes = React.useMemo(() => 
+        nodes.map((node) => ({
+            ...node,
+            selected: node.id === uiStore?.selectedQueuePath,
+        }))
+    , [nodes, uiStore?.selectedQueuePath]);
 
-    // Update nodes and edges when processed data changes
+    // Auto-fit view when data loads
     React.useEffect(() => {
-        if (processedNodes && processedEdges) {
-            setNodes(processedNodes);
-            setEdges(processedEdges);
-            
-            // Fit view when data is first loaded
-            if (processedNodes.length > 0 && !isLoading) {
-                setTimeout(() => {
-                    fitView({ padding: 0.1, includeHiddenNodes: false });
-                }, 100);
-            }
+        if (finalNodes.length > 0 && !isLoading) {
+            setTimeout(() => {
+                fitView({ padding: 0.1, includeHiddenNodes: false });
+            }, 100);
         }
-    }, [processedNodes, processedEdges, isLoading, fitView]);
+    }, [finalNodes.length, isLoading, fitView]);
 
-    // Update node selection state when UI store changes
-    React.useEffect(() => {
-        if (uiStore?.selectedQueuePath) {
-            setNodes((nds) =>
-                nds.map((node) => ({
-                    ...node,
-                    selected: node.id === uiStore.selectedQueuePath,
-                }))
-            );
-        } else {
-            setNodes((nds) =>
-                nds.map((node) => ({
-                    ...node,
-                    selected: false,
-                }))
-            );
-        }
-    }, [uiStore?.selectedQueuePath]);
-
-    // Handle node changes (selection, etc.)
-    const onNodesChange: OnNodesChange = useCallback((changes) => {
-        setNodes((nds) => applyNodeChanges(changes, nds));
+    // Handle node changes (for React Flow's internal state management)
+    const onNodesChange: OnNodesChange = useCallback(() => {
+        // We don't need to do anything here since the hook manages the data
+        // React Flow needs this for its internal operations (drag, select, etc.)
     }, []);
 
-    // Handle edge changes
-    const onEdgesChange: OnEdgesChange = useCallback((changes) => {
-        setEdges((eds) => applyEdgeChanges(changes, eds));
+    // Handle edge changes (for React Flow's internal state management)
+    const onEdgesChange: OnEdgesChange = useCallback(() => {
+        // We don't need to do anything here since the hook manages the data
     }, []);
 
     // Handle node clicks
@@ -130,7 +107,7 @@ const FlowInner: React.FC = () => {
 
     return (
         <ReactFlow
-            nodes={nodes}
+            nodes={finalNodes}
             edges={edges}
             nodeTypes={nodeTypes}
             edgeTypes={edgeTypes}

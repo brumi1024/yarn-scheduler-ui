@@ -1,6 +1,8 @@
 import { useMemo } from 'react';
 import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
 import { ConfigParser } from '../../../yarn-parser/ConfigParser';
+// TODO: Re-enable these imports in Phase 2 when implementing search/changes features
+// import { useUIStore, useChangesStore } from '../../../store';
 import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue } from '../../../types/Configuration';
 import type { Node, Edge } from '@xyflow/react';
 
@@ -20,8 +22,12 @@ interface RuntimeQueue extends Queue {
     };
 }
 
-// React Flow compatible node data type
-export type QueueNodeData = LayoutQueue & Record<string, unknown>;
+// React Flow compatible node data type with staging support
+export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
+    stagedStatus?: 'new' | 'deleted' | 'modified';
+    isMatch?: boolean;
+    isAncestorOfMatch?: boolean;
+};
 
 export interface ProcessedFlowData {
     nodes: Node<QueueNodeData>[];
@@ -34,6 +40,9 @@ export function useQueueDataProcessor(
     configQuery: { data?: ConfigurationResponse | null; isLoading?: boolean; error?: Error | null },
     schedulerQuery: { data?: SchedulerResponse | null; isLoading?: boolean; error?: Error | null }
 ): ProcessedFlowData {
+    // TODO: Phase 2 - Consume state from stores for search/changes features
+    // const { searchQuery, sortOptions } = useUIStore(state => ({ searchQuery: state.searchQuery, sortOptions: state.sortOptions }));
+    // const stagedChanges = useChangesStore(state => state.stagedChanges);
     // Initialize D3 tree layout
     const treeLayout = useMemo(() => {
         return new D3TreeLayout({
@@ -83,32 +92,19 @@ export function useQueueDataProcessor(
         }
 
         try {
-            // Convert property array to configuration object for ConfigParser
+            // --- Pipeline Step 1: Parse Base Configuration ---
             const configuration: Record<string, string> = {};
             configData.property.forEach((prop) => {
                 configuration[prop.name] = prop.value;
             });
-
-            // Parse the configuration using ConfigParser
+            
             const parseResult = ConfigParser.parse(configuration);
-
             if (parseResult.errors.length > 0) {
                 console.error('Configuration parsing errors:', parseResult.errors);
-                return {
-                    nodes: [],
-                    edges: [],
-                    isLoading: false,
-                    error: 'Configuration parsing failed',
-                };
+                return { nodes: [], edges: [], isLoading: false, error: 'Configuration parsing failed.' };
             }
-
             if (parseResult.queues.length === 0) {
-                return {
-                    nodes: [],
-                    edges: [],
-                    isLoading: false,
-                    error: 'No queues found in configuration',
-                };
+                return { nodes: [], edges: [], isLoading: false, error: 'No queues found in configuration.' };
             }
 
             // Convert ParsedQueue to LayoutQueue
@@ -133,12 +129,25 @@ export function useQueueDataProcessor(
                 };
             };
 
-            const rootQueue = convertParsedQueue(parseResult.queues[0]);
+            let processedHierarchy = convertParsedQueue(parseResult.queues[0]);
 
-            // Calculate tree layout using D3
-            const layoutData = treeLayout.computeLayout(rootQueue);
+            // --- Pipeline Step 2: Apply Staged Changes ---
+            // TODO: Phase 2 - Apply ADD_QUEUE, DELETE_QUEUE, and PROPERTY_UPDATE changes
+            // This will modify processedHierarchy based on stagedChanges
+            // processedHierarchy = applyChangesToHierarchy(processedHierarchy, stagedChanges);
+            // For now, processedHierarchy remains unchanged
 
-            // Find queue in scheduler data for runtime metrics
+            // --- Pipeline Step 3: Apply Search Filter ---
+            // TODO: Phase 2 - Filter hierarchy based on searchQuery
+            // This will filter out non-matching queues while preserving parent context
+            // For now, no filtering is applied
+
+            // --- Pipeline Step 4: Apply Sorting ---
+            // TODO: Phase 2 - Sort queues based on sortOptions
+            // This will reorder children arrays according to user preferences
+            // For now, original order is maintained
+
+            // --- Pipeline Step 5: Merge Live Scheduler Data ---
             const findQueueInSchedulerData = (queuePath: string, schedulerData: SchedulerResponse): RuntimeQueue | null => {
                 if (!schedulerData?.scheduler?.schedulerInfo) return null;
 
@@ -146,19 +155,20 @@ export function useQueueDataProcessor(
                     if (queue.queuePath === queuePath) {
                         return queue;
                     }
-
                     if (queue.queues?.queue) {
                         for (const child of queue.queues.queue) {
                             const found = findInQueue(child);
                             if (found) return found;
                         }
                     }
-
                     return null;
                 };
 
                 return findInQueue(schedulerData.scheduler.schedulerInfo as RuntimeQueue);
             };
+
+            // --- Pipeline Step 6: Calculate Layout with D3 ---
+            const layoutData = treeLayout.computeLayout(processedHierarchy);
 
             // Merge scheduler data into layout nodes
             if (schedulerData) {
@@ -182,12 +192,12 @@ export function useQueueDataProcessor(
                 });
             }
 
-            // Convert to React Flow format
+            // --- Pipeline Step 7: Format for React Flow ---
             const flowNodes: Node<QueueNodeData>[] = layoutData.nodes.map((node) => ({
                 id: node.id,
                 type: 'queueCard',
                 position: { x: node.x, y: node.y },
-                data: node.data,
+                data: node.data as QueueNodeData,
                 draggable: false,
                 selectable: true,
             }));
@@ -210,12 +220,7 @@ export function useQueueDataProcessor(
                 },
             }));
 
-            return {
-                nodes: flowNodes,
-                edges: flowEdges,
-                isLoading: false,
-                error: null,
-            };
+            return { nodes: flowNodes, edges: flowEdges, isLoading: false, error: null };
         } catch (error) {
             console.error('Error processing queue data:', error);
             return {
