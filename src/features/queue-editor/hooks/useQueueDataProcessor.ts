@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { D3TreeLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/d3';
+import { DagreLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/layout/DagreLayout';
 import { useConfigParser } from '../../../yarn-parser/useConfigParser';
 // TODO: Re-enable these imports in Phase 2 when implementing search/changes features
 // import { useUIStore, useChangesStore } from '../../../store';
@@ -46,9 +46,9 @@ export function useQueueDataProcessor(
     // TODO: Phase 2 - Consume state from stores for search/changes features
     // const { searchQuery, sortOptions } = useUIStore(state => ({ searchQuery: state.searchQuery, sortOptions: state.sortOptions }));
     // const stagedChanges = useChangesStore(state => state.stagedChanges);
-    // Initialize D3 tree layout
+    // Initialize Dagre layout (replaces D3 tree layout)
     const treeLayout = useMemo(() => {
-        return new D3TreeLayout({
+        return new DagreLayout({
             nodeWidth: 280,
             nodeHeight: 220, // Updated to match actual queue card height
             horizontalSpacing: 100,
@@ -163,7 +163,7 @@ export function useQueueDataProcessor(
                 return findInQueue(schedulerData.scheduler.schedulerInfo as RuntimeQueue);
             };
 
-            // --- Pipeline Step 6: Calculate Layout with D3 ---
+            // --- Pipeline Step 6: Calculate Layout with Dagre ---
             const layoutData = treeLayout.computeLayout(processedHierarchy);
 
             // Merge scheduler data into layout nodes

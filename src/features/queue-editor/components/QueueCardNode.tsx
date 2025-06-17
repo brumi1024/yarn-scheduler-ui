@@ -1,7 +1,7 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Card, CardContent, Typography, Box } from '@mui/material';
-import type { LayoutQueue } from '../utils/d3/D3TreeLayout';
+import type { LayoutQueue } from '../utils/layout/DagreLayout';
 
 const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';

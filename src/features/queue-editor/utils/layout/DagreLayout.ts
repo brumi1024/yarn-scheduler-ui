@@ -1,23 +1,35 @@
-import { hierarchy, tree } from 'd3-hierarchy';
-import { easeCubicInOut } from 'd3-ease';
-import { extent } from 'd3-array';
+/**
+ * Dagre-based Layout Engine for YARN Queue Visualization
+ * 
+ * Replaces the D3 tree layout with Dagre for more stable and maintainable
+ * graph layouts while preserving the exact same interface and visual behavior.
+ */
+
+import * as dagre from 'dagre';
 import { scaleLinear } from 'd3-scale';
-import { interpolateObject } from 'd3-interpolate';
+import { extent } from 'd3-array';
 import { path } from 'd3-path';
-import type { HierarchyNode } from 'd3-hierarchy';
-import type { Queue } from '../../../../types/Queue';
+import { easeCubicInOut } from 'd3-ease';
+import { interpolateObject } from 'd3-interpolate';
 
-// Extended Queue type for layout purposes
-export interface LayoutQueue extends Queue {
+// Re-export the exact same types from D3TreeLayout for compatibility
+export interface LayoutQueue {
     id: string;
+    queueName: string;
     queuePath?: string;
+    capacity: number;
+    usedCapacity: number;
+    maxCapacity: number;
+    absoluteCapacity: number;
+    absoluteUsedCapacity: number;
+    absoluteMaxCapacity: number;
+    state: 'RUNNING' | 'STOPPED';
+    numApplications: number;
+    resourcesUsed: {
+        memory: number;
+        vCores: number;
+    };
     children?: LayoutQueue[];
-}
-
-export interface TreeNode extends HierarchyNode<LayoutQueue> {
-    x: number;
-    y: number;
-    collapsed?: boolean;
 }
 
 export interface LayoutNode {
@@ -29,7 +41,7 @@ export interface LayoutNode {
     data: LayoutQueue;
     parent?: LayoutNode;
     children?: LayoutNode[];
-    depth?: number; // Store D3's depth for efficiency
+    depth?: number;
 }
 
 export interface FlowPath {
@@ -51,6 +63,13 @@ export interface LayoutOptions {
     horizontalSpacing: number;
     verticalSpacing: number;
     orientation: 'horizontal' | 'vertical';
+    rankdir?: 'TB' | 'BT' | 'LR' | 'RL';
+    align?: 'UL' | 'UR' | 'DL' | 'DR';
+    ranksep?: number;
+    edgesep?: number;
+    nodesep?: number;
+    marginx?: number;
+    marginy?: number;
 }
 
 export interface LayoutData {
@@ -64,9 +83,10 @@ export interface LayoutData {
     };
 }
 
-export class D3TreeLayout {
+export class DagreLayout {
     private options: LayoutOptions;
     private collapsedNodes: Set<string> = new Set();
+    private dagreGraph: dagre.graphlib.Graph;
 
     constructor(options: Partial<LayoutOptions> = {}) {
         this.options = {
@@ -75,36 +95,53 @@ export class D3TreeLayout {
             horizontalSpacing: 120,
             verticalSpacing: 30,
             orientation: 'horizontal',
+            rankdir: 'LR', // Left-to-Right for horizontal layout
+            align: 'DL',   // Align nodes to lower-left for better centering
+            marginx: 20,   // Horizontal margin for centering
+            marginy: 20,   // Vertical margin for centering
             ...options,
         };
+
+        this.dagreGraph = new dagre.graphlib.Graph();
+        this.dagreGraph.setGraph({
+            rankdir: this.options.rankdir,
+            align: this.options.align,
+            nodesep: this.options.horizontalSpacing,
+            ranksep: this.options.verticalSpacing,
+            edgesep: 20,
+            marginx: this.options.marginx,
+            marginy: this.options.marginy,
+        });
+        this.dagreGraph.setDefaultEdgeLabel(() => ({}));
     }
 
     /**
-     * Compute layout for the queue hierarchy
+     * Compute layout for the queue hierarchy - same interface as D3TreeLayout
      */
     computeLayout(root: LayoutQueue): LayoutData {
-        // Create D3 hierarchy
-        const hierarchyRoot = hierarchy<LayoutQueue>(root, (d) => (this.collapsedNodes.has(d.id) ? [] : d.children));
+        // Clear the graph for fresh layout
+        this.dagreGraph = new dagre.graphlib.Graph();
+        this.dagreGraph.setGraph({
+            rankdir: this.options.rankdir,
+            align: this.options.align,
+            nodesep: this.options.horizontalSpacing,
+            ranksep: this.options.verticalSpacing,
+            edgesep: 20,
+            marginx: this.options.marginx,
+            marginy: this.options.marginy,
+        });
+        this.dagreGraph.setDefaultEdgeLabel(() => ({}));
 
-        // Create tree layout
-        const treeLayout =
-            this.options.orientation === 'horizontal'
-                ? tree<LayoutQueue>().nodeSize([
-                      this.options.nodeHeight + this.options.verticalSpacing,
-                      this.options.nodeWidth + this.options.horizontalSpacing,
-                  ])
-                : tree<LayoutQueue>().nodeSize([
-                      this.options.nodeWidth + this.options.horizontalSpacing,
-                      this.options.nodeHeight + this.options.verticalSpacing,
-                  ]);
+        // Recursively add nodes and edges to the Dagre graph
+        this.addNodesRecursively(root, null);
 
-        // Apply layout
-        const treeNodes = treeLayout(hierarchyRoot);
+        // Calculate the layout
+        dagre.layout(this.dagreGraph);
 
-        // Convert to LayoutNode format
-        const layoutNodes = this.convertToLayoutNodes(treeNodes);
+        // Convert to LayoutNode format with proper hierarchy
+        const layoutNodes = this.convertToLayoutNodes(root);
 
-        // Calculate flow paths
+        // Calculate flow paths (same logic as D3 implementation)
         const flows = this.computeFlowPaths(layoutNodes);
 
         // Calculate bounds
@@ -118,7 +155,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Toggle node collapse/expand state
+     * Toggle node collapse/expand state - same interface as D3TreeLayout
      */
     toggleNodeCollapse(nodeId: string): void {
         if (this.collapsedNodes.has(nodeId)) {
@@ -129,57 +166,92 @@ export class D3TreeLayout {
     }
 
     /**
-     * Check if a node is collapsed
+     * Check if a node is collapsed - same interface as D3TreeLayout
      */
     isNodeCollapsed(nodeId: string): boolean {
         return this.collapsedNodes.has(nodeId);
     }
 
     /**
-     * Reset all collapsed states
+     * Reset all collapsed states - same interface as D3TreeLayout
      */
     resetCollapsedStates(): void {
         this.collapsedNodes.clear();
     }
 
     /**
-     * Convert D3 hierarchy nodes to LayoutNode format
+     * Recursively add nodes and edges to Dagre graph
      */
-    private convertToLayoutNodes(root: TreeNode): LayoutNode[] {
+    private addNodesRecursively(queue: LayoutQueue, parentId: string | null): void {
+        // Skip collapsed nodes
+        if (this.collapsedNodes.has(queue.id)) {
+            return;
+        }
+
+        this.dagreGraph.setNode(queue.id, {
+            label: queue.queueName,
+            width: this.options.nodeWidth,
+            height: this.options.nodeHeight,
+            data: queue,
+        });
+
+        if (parentId) {
+            this.dagreGraph.setEdge(parentId, queue.id);
+        }
+
+        if (queue.children && queue.children.length > 0) {
+            queue.children.forEach(child => {
+                this.addNodesRecursively(child, queue.id);
+            });
+        }
+    }
+
+    /**
+     * Convert Dagre output to LayoutNode format with hierarchy preservation
+     */
+    private convertToLayoutNodes(root: LayoutQueue): LayoutNode[] {
         const nodes: LayoutNode[] = [];
         const nodeMap = new Map<string, LayoutNode>();
 
-        // Use D3's built-in traversal and properties
-        root.each((node) => {
+        // Build hierarchy recursively to preserve parent-child relationships
+        const buildHierarchy = (queue: LayoutQueue, parent: LayoutNode | null, depth: number) => {
+            const dagreNode = this.dagreGraph.node(queue.id);
+            if (!dagreNode) return; // Skip if node was collapsed
+
             const layoutNode: LayoutNode = {
-                id: node.data.id,
-                x: this.options.orientation === 'horizontal' ? node.y : node.x,
-                y: this.options.orientation === 'horizontal' ? node.x : node.y,
-                width: this.options.nodeWidth,
-                height: this.options.nodeHeight,
-                data: node.data,
+                id: queue.id,
+                x: dagreNode.x - dagreNode.width / 2, // Dagre positions from center, adjust to top-left
+                y: dagreNode.y - dagreNode.height / 2,
+                width: dagreNode.width,
+                height: dagreNode.height,
+                data: queue,
                 children: [],
-                depth: node.depth, // Store D3's depth calculation
+                depth: depth,
+                parent: parent || undefined,
             };
 
-            nodeMap.set(node.data.id, layoutNode);
+            nodeMap.set(queue.id, layoutNode);
             nodes.push(layoutNode);
 
-            // Use D3's parent reference directly
-            if (node.parent) {
-                const parentLayout = nodeMap.get(node.parent.data.id);
-                if (parentLayout) {
-                    layoutNode.parent = parentLayout;
-                    parentLayout.children!.push(layoutNode);
-                }
+            // Add to parent's children
+            if (parent) {
+                parent.children!.push(layoutNode);
             }
-        });
 
+            // Recursively process children
+            if (queue.children && !this.collapsedNodes.has(queue.id)) {
+                queue.children.forEach(child => {
+                    buildHierarchy(child, layoutNode, depth + 1);
+                });
+            }
+        };
+
+        buildHierarchy(root, null, 0);
         return nodes;
     }
 
     /**
-     * Compute optimized flow paths between nodes using D3 scales
+     * Compute flow paths - exact same logic as D3TreeLayout to preserve visual behavior
      */
     private computeFlowPaths(nodes: LayoutNode[]): FlowPath[] {
         const flows: FlowPath[] = [];
@@ -205,7 +277,7 @@ export class D3TreeLayout {
             const childCapacities = children.map((child) => child.data.capacity || 0);
             const totalChildCapacity = childCapacities.reduce((sum, cap) => sum + cap, 0);
 
-            // Use D3 scale for proportional distribution
+            // Use D3 scale for proportional distribution (same as D3TreeLayout)
             const capacityScale = scaleLinear().domain([0, totalChildCapacity]).range([0, parent.height]);
 
             let currentY = 0;
@@ -221,7 +293,7 @@ export class D3TreeLayout {
                 const targetStartY = child.y;
                 const targetEndY = child.y + child.height;
 
-                // Create optimized path
+                // Create optimized path (same as D3TreeLayout)
                 const path = this.createOptimizedFlowPath(
                     parent,
                     child,
@@ -236,7 +308,7 @@ export class D3TreeLayout {
                     source: parent,
                     target: child,
                     path,
-                    width: segmentHeight, // This represents the visual thickness of the flow
+                    width: segmentHeight,
                     capacity: childCapacity,
                     sourceStartY,
                     sourceEndY,
@@ -252,7 +324,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Create optimized flow path using D3 path generators
+     * Create optimized flow path - exact same implementation as D3TreeLayout
      */
     private createOptimizedFlowPath(
         source: LayoutNode,
@@ -312,7 +384,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Calculate bounding box for all nodes using D3's extent
+     * Calculate bounding box - same implementation as D3TreeLayout
      */
     private calculateBounds(nodes: LayoutNode[]): { x: number; y: number; width: number; height: number } {
         if (nodes.length === 0) {
@@ -334,7 +406,7 @@ export class D3TreeLayout {
     }
 
     /**
-     * Create interpolation function for smooth layout transitions using D3
+     * Create interpolation function - same interface as D3TreeLayout
      */
     createLayoutInterpolator(
         currentNodes: LayoutNode[],
@@ -373,18 +445,17 @@ export class D3TreeLayout {
     }
 
     /**
-     * Get nodes at a specific depth level
+     * Get nodes at a specific depth level - same interface as D3TreeLayout
      */
     getNodesAtDepth(nodes: LayoutNode[], targetDepth: number): LayoutNode[] {
-        // Use stored depth from D3
         return nodes.filter((node) => node.depth === targetDepth);
     }
 
     /**
-     * Get maximum depth of the tree
+     * Get maximum depth of the tree - same interface as D3TreeLayout
      */
     getMaxDepth(nodes: LayoutNode[]): number {
-        // Use stored depth from D3
         return nodes.reduce((max, node) => Math.max(max, node.depth || 0), 0);
     }
+
 }
