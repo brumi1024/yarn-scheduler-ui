@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import { DagreLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/layout/DagreLayout';
 import { useConfigParser } from '../../../yarn-parser/useConfigParser';
-import { useChangesStore } from '../../../store';
+import { useChangesStore, useUIStore } from '../../../store';
 import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue, ChangeSet } from '../../../types/Configuration';
 import type { Node, Edge } from '@xyflow/react';
 
@@ -163,6 +163,48 @@ function applyPropertyUpdateChange(hierarchy: LayoutQueue, change: ChangeSet): L
     return updateProperty(hierarchy);
 }
 
+// Helper function to apply search filter to queue hierarchy
+function applySearchFilter(hierarchy: LayoutQueue, searchQuery?: string): LayoutQueue | null {
+    // If no search query, return the original hierarchy
+    if (!searchQuery || searchQuery.trim() === '') {
+        return hierarchy;
+    }
+
+    const query = searchQuery.toLowerCase().trim();
+
+    // Check if a queue matches the search query
+    const queueMatches = (queue: LayoutQueue): boolean => {
+        return queue.queueName.toLowerCase().includes(query) || 
+               queue.queuePath.toLowerCase().includes(query);
+    };
+
+    // Recursively filter the hierarchy
+    const filterQueue = (queue: LayoutQueue): LayoutQueue | null => {
+        const matches = queueMatches(queue);
+        
+        // Process children first
+        const filteredChildren = queue.children
+            ?.map(child => filterQueue(child))
+            .filter((child): child is LayoutQueue => child !== null) || [];
+
+        // If this queue matches OR has matching children, include it
+        if (matches || filteredChildren.length > 0) {
+            return {
+                ...queue,
+                children: filteredChildren,
+                // Mark nodes for visual feedback
+                isMatch: matches,
+                isAncestorOfMatch: !matches && filteredChildren.length > 0,
+            };
+        }
+
+        // This queue doesn't match and has no matching children
+        return null;
+    };
+
+    return filterQueue(hierarchy);
+}
+
 export function useQueueDataProcessor(
     configQuery: { data?: ConfigurationResponse | null; isLoading?: boolean; error?: Error | null },
     schedulerQuery: { data?: SchedulerResponse | null; isLoading?: boolean; error?: Error | null }
@@ -170,8 +212,9 @@ export function useQueueDataProcessor(
     // Use the new async parser hook
     const { data: parseResult, isLoading: isParsing, error: parseError } = useConfigParser(configQuery.data);
 
-    // Get staged changes from store
+    // Get staged changes and search query from stores
     const stagedChanges = useChangesStore(state => state.stagedChanges) || [];
+    const searchQuery = useUIStore(state => state.searchQuery);
     // Initialize Dagre layout (replaces D3 tree layout)
     const treeLayout = useMemo(() => {
         return new DagreLayout({
@@ -260,9 +303,13 @@ export function useQueueDataProcessor(
             }
 
             // --- Pipeline Step 3: Apply Search Filter ---
-            // TODO: Phase 2 - Filter hierarchy based on searchQuery
-            // This will filter out non-matching queues while preserving parent context
-            // For now, no filtering is applied
+            // Filter hierarchy based on searchQuery, preserving parent context
+            const filteredHierarchy = applySearchFilter(processedHierarchy, searchQuery);
+            if (!filteredHierarchy) {
+                // No matches found, return empty result
+                return { nodes: [], edges: [], isLoading: false, error: 'No queues match the search criteria.' };
+            }
+            processedHierarchy = filteredHierarchy;
 
             // --- Pipeline Step 4: Apply Sorting ---
             // TODO: Phase 2 - Sort queues based on sortOptions
@@ -352,7 +399,7 @@ export function useQueueDataProcessor(
                 error: 'Failed to process queue data',
             };
         }
-    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges]);
+    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges, searchQuery]);
 
     return processedData;
 }

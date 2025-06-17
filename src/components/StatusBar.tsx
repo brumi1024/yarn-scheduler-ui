@@ -5,6 +5,7 @@ import { useSchedulerQuery } from '../hooks/useYarnApi';
 
 export default function StatusBar() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
+    
     const allQueues = useAllQueues();
     const schedulerQuery = useSchedulerQuery();
     

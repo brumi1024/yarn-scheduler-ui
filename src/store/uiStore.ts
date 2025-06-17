@@ -11,6 +11,9 @@ interface UIStore extends UIState {
     toggleQueueExpanded: (queuePath: string) => void;
     setExpandedQueues: (queuePaths: string[]) => void;
 
+    // Search actions
+    setSearchQuery: (query: string) => void;
+
     // View settings actions
     updateViewSettings: (settings: Partial<UIState['viewSettings']>) => void;
 
@@ -35,6 +38,7 @@ export const useUIStore = create<UIStore>()(
             selectedQueuePath: undefined,
             hoveredQueuePath: null,
             expandedQueues: new Set<string>(),
+            searchQuery: undefined,
             viewSettings: {
                 showCapacityBars: true,
                 showUsageMetrics: true,
@@ -66,6 +70,8 @@ export const useUIStore = create<UIStore>()(
                 }),
 
             setExpandedQueues: (queuePaths) => set({ expandedQueues: new Set(queuePaths) }),
+
+            setSearchQuery: (query) => set({ searchQuery: query || undefined }),
 
             updateViewSettings: (settings) =>
                 set((state) => ({
