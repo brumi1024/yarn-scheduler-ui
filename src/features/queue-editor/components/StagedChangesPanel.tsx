@@ -29,6 +29,7 @@ import {
     Info as InfoIcon,
     Edit as EditIcon,
     Schedule as ScheduleIcon,
+    Add as AddIcon,
 } from '@mui/icons-material';
 import { useChangesStore } from '../../../store';
 import type { ChangeSet } from '../../../types/Configuration';
@@ -106,12 +107,22 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         }).format(timestamp);
     };
 
-    const getChangeTypeColor = () => {
-        return 'info'; // All changes are property updates for now
+    const getChangeTypeColor = (changeType: ChangeSet['type']) => {
+        switch (changeType) {
+            case 'ADD_QUEUE': return 'success';
+            case 'DELETE_QUEUE': return 'error';
+            case 'PROPERTY_UPDATE': return 'info';
+            default: return 'default';
+        }
     };
 
-    const getChangeTypeIcon = () => {
-        return <EditIcon fontSize="small" />; // All changes are edits for now
+    const getChangeTypeIcon = (changeType: ChangeSet['type']) => {
+        switch (changeType) {
+            case 'ADD_QUEUE': return <AddIcon fontSize="small" />;
+            case 'DELETE_QUEUE': return <DeleteIcon fontSize="small" />;
+            case 'PROPERTY_UPDATE': return <EditIcon fontSize="small" />;
+            default: return <EditIcon fontSize="small" />;
+        }
     };
 
     const renderChangeItem = (change: ChangeSet) => (
@@ -122,10 +133,15 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                 primary={
                     <Box display="flex" alignItems="center" gap={1}>
                         <Chip
-                            icon={getChangeTypeIcon()}
-                            label="Property Update"
+                            icon={getChangeTypeIcon(change.type)}
+                            label={
+                                change.type === 'ADD_QUEUE' ? 'Add Queue' :
+                                change.type === 'DELETE_QUEUE' ? 'Delete Queue' :
+                                change.type === 'PROPERTY_UPDATE' ? 'Property Update' :
+                                'Unknown'
+                            }
                             size="small"
-                            color={getChangeTypeColor() as any}
+                            color={getChangeTypeColor(change.type) as any}
                             variant="outlined"
                         />
                         <Typography variant="body2" fontWeight="medium">

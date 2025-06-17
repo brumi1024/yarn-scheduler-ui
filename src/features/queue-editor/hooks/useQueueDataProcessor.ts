@@ -53,8 +53,9 @@ function applyChangesToHierarchy(hierarchy: LayoutQueue, changes: ChangeSet[]): 
             modifiedHierarchy = applyAddQueueChange(modifiedHierarchy, change);
         } else if (change.type === 'DELETE_QUEUE') {
             modifiedHierarchy = applyDeleteQueueChange(modifiedHierarchy, change);
+        } else if (change.type === 'PROPERTY_UPDATE') {
+            modifiedHierarchy = applyPropertyUpdateChange(modifiedHierarchy, change);
         }
-        // TODO: Handle PROPERTY_UPDATE changes in future iterations
     }
 
     return modifiedHierarchy;
@@ -65,17 +66,21 @@ function applyAddQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQ
     const findAndAddToParent = (queue: LayoutQueue): LayoutQueue => {
         if (queue.queuePath === change.queuePath) {
             // This is the parent queue, add the new child
+            const newValueObj = (change.newValue as Record<string, unknown>) || {};
+            const newQueuePath = change.property; // Full path of new queue
+            const newQueueName = newQueuePath.split('.').pop() || newQueuePath;
+            
             const newQueue: LayoutQueue = {
-                id: change.property,
-                queueName: change.property.split('.').pop() || change.property,
-                queuePath: change.property,
-                capacity: change.newValue?.capacity || 10,
+                id: newQueuePath,
+                queueName: newQueueName,
+                queuePath: newQueuePath,
+                capacity: parseFloat(String(newValueObj.capacity)) || 10,
                 usedCapacity: 0,
-                maxCapacity: change.newValue?.maxCapacity || 100,
+                maxCapacity: parseFloat(String(newValueObj.maxCapacity)) || 100,
                 absoluteCapacity: 0,
                 absoluteUsedCapacity: 0,
                 absoluteMaxCapacity: 100,
-                state: change.newValue?.state || 'RUNNING',
+                state: String(newValueObj.state) || 'RUNNING',
                 numApplications: 0,
                 resourcesUsed: { memory: 0, vCores: 0 },
                 children: [],
@@ -84,13 +89,13 @@ function applyAddQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQ
 
             return {
                 ...queue,
-                children: [...queue.children, newQueue]
+                children: [...(queue.children || []), newQueue]
             };
         }
 
         return {
             ...queue,
-            children: queue.children.map(findAndAddToParent)
+            children: queue.children?.map(findAndAddToParent) || []
         };
     };
 
@@ -110,11 +115,52 @@ function applyDeleteQueueChange(hierarchy: LayoutQueue, change: ChangeSet): Layo
 
         return {
             ...queue,
-            children: queue.children.map(markAsDeleted)
+            children: queue.children?.map(markAsDeleted) || []
         };
     };
 
     return markAsDeleted(hierarchy);
+}
+
+// Helper to apply property updates to the hierarchy
+function applyPropertyUpdateChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQueue {
+    const updateProperty = (queue: LayoutQueue): LayoutQueue => {
+        if (queue.queuePath === change.queuePath) {
+            // Apply the property update to this queue
+            const updatedQueue = { ...queue };
+            
+            // Handle different property types
+            switch (change.property) {
+                case 'capacity':
+                    updatedQueue.capacity = parseFloat(String(change.newValue)) || 0;
+                    break;
+                case 'maxCapacity':
+                    updatedQueue.maxCapacity = parseFloat(String(change.newValue)) || 100;
+                    break;
+                case 'state':
+                    updatedQueue.state = String(change.newValue);
+                    break;
+                default:
+                    // For other properties, add them as additional data
+                    updatedQueue[change.property] = change.newValue;
+                    break;
+            }
+            
+            // Mark queue as modified if it doesn't already have a staged status
+            if (!updatedQueue.stagedStatus) {
+                updatedQueue.stagedStatus = 'modified';
+            }
+            
+            return updatedQueue;
+        }
+
+        return {
+            ...queue,
+            children: queue.children?.map(updateProperty) || []
+        };
+    };
+
+    return updateProperty(hierarchy);
 }
 
 export function useQueueDataProcessor(

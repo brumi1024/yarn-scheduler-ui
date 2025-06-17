@@ -23,13 +23,15 @@ export interface LayoutQueue {
     absoluteCapacity: number;
     absoluteUsedCapacity: number;
     absoluteMaxCapacity: number;
-    state: 'RUNNING' | 'STOPPED';
+    state: string; // Changed from 'RUNNING' | 'STOPPED' to allow for more states
     numApplications: number;
     resourcesUsed: {
         memory: number;
         vCores: number;
     };
     children?: LayoutQueue[];
+    stagedStatus?: 'new' | 'deleted' | 'modified'; // Added staged status
+    [key: string]: unknown; // Allow additional properties for staged changes
 }
 
 export interface LayoutNode {

@@ -27,11 +27,12 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const handleAddChildQueue = (event: React.MouseEvent) => {
         event.preventDefault();
         const newQueueName = `${data.queueName}_child_${Date.now()}`;
+        const newQueuePath = `${data.queuePath || data.queueName}.${newQueueName}`;
         stageChange({
             id: `add-${newQueueName}-${Date.now()}`,
             type: 'ADD_QUEUE',
-            queuePath: data.queueName,
-            property: newQueueName,
+            queuePath: data.queuePath || data.queueName, // Parent queue path
+            property: newQueuePath, // Full path for new queue
             oldValue: null,
             newValue: {
                 capacity: 10,
@@ -54,7 +55,7 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
         stageChange({
             id: `delete-${data.queueName}-${Date.now()}`,
             type: 'DELETE_QUEUE',
-            queuePath: data.queueName,
+            queuePath: data.queuePath || data.queueName, // Use full queue path
             property: data.queueName,
             oldValue: data, // Store full queue definition for undo
             newValue: null,
@@ -244,6 +245,46 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                                     }}
                                 >
                                     AUTO
+                                </Typography>
+                            </Box>
+                        )}
+
+                        {/* Staged status badge */}
+                        {data.stagedStatus && (
+                            <Box
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    px: 1,
+                                    py: 0.25,
+                                    backgroundColor: 
+                                        data.stagedStatus === 'new' ? '#dcfce7' :
+                                        data.stagedStatus === 'deleted' ? '#fee2e2' :
+                                        data.stagedStatus === 'modified' ? '#fef3c7' : '#f3f4f6',
+                                    border: `1px solid ${
+                                        data.stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.2)' :
+                                        data.stagedStatus === 'deleted' ? 'rgba(239, 68, 68, 0.2)' :
+                                        data.stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(156, 163, 175, 0.2)'
+                                    }`,
+                                    borderRadius: '6px',
+                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                                }}
+                            >
+                                <Typography
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        fontSize: '10px',
+                                        color: 
+                                            data.stagedStatus === 'new' ? '#22c55e' :
+                                            data.stagedStatus === 'deleted' ? '#ef4444' :
+                                            data.stagedStatus === 'modified' ? '#f59e0b' : '#6b7280',
+                                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                        textTransform: 'uppercase',
+                                    }}
+                                >
+                                    {data.stagedStatus === 'new' ? 'NEW' :
+                                     data.stagedStatus === 'deleted' ? 'DELETED' :
+                                     data.stagedStatus === 'modified' ? 'MODIFIED' : data.stagedStatus}
                                 </Typography>
                             </Box>
                         )}
