@@ -9,6 +9,7 @@
 *.swo
 *~
 *.iml
+dev-docs
 
 # Dependencies
 node_modules/

@@ -14,6 +14,10 @@ interface UIStore extends UIState {
     // Search actions
     setSearchQuery: (query: string) => void;
 
+    // Comparison actions
+    toggleComparisonQueue: (queuePath: string) => void;
+    clearComparison: () => void;
+
     // View settings actions
     updateViewSettings: (settings: Partial<UIState['viewSettings']>) => void;
 
@@ -39,6 +43,7 @@ export const useUIStore = create<UIStore>()(
             hoveredQueuePath: null,
             expandedQueues: new Set<string>(),
             searchQuery: undefined,
+            comparisonQueueNames: [],
             viewSettings: {
                 showCapacityBars: true,
                 showUsageMetrics: true,
@@ -72,6 +77,20 @@ export const useUIStore = create<UIStore>()(
             setExpandedQueues: (queuePaths) => set({ expandedQueues: new Set(queuePaths) }),
 
             setSearchQuery: (query) => set({ searchQuery: query || undefined }),
+
+            toggleComparisonQueue: (queuePath) =>
+                set((state) => {
+                    const comparisonQueueNames = [...state.comparisonQueueNames];
+                    const index = comparisonQueueNames.indexOf(queuePath);
+                    if (index === -1) {
+                        comparisonQueueNames.push(queuePath);
+                    } else {
+                        comparisonQueueNames.splice(index, 1);
+                    }
+                    return { comparisonQueueNames };
+                }),
+
+            clearComparison: () => set({ comparisonQueueNames: [] }),
 
             updateViewSettings: (settings) =>
                 set((state) => ({

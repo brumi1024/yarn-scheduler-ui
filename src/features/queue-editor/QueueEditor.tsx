@@ -1,17 +1,20 @@
-import { Box, Typography, TextField, InputAdornment } from '@mui/material';
+import { Box, Typography, TextField, InputAdornment, Button } from '@mui/material';
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
 import { QueueVisualization } from './components/QueueVisualization';
 import { ComponentErrorBoundary } from '../../components/ErrorBoundary';
 import { StagedChangesPanel } from './components/StagedChangesPanel';
+import MultiQueueComparisonView from './components/MultiQueueComparisonView';
 import { useUIStore } from '../../store';
 
 export default function QueueEditor() {
     const [localSearchQuery, setLocalSearchQuery] = useState<string>('');
+    const [showComparisonDialog, setShowComparisonDialog] = useState<boolean>(false);
     
-    // Use store selector to avoid reference issues
+    // Use store selectors to avoid reference issues
     const setSearchQuery = useUIStore((state) => state.setSearchQuery);
+    const comparisonQueueNames = useUIStore((state) => state.comparisonQueueNames);
     
     // Debounce the search query to avoid excessive filtering
     const [debouncedSearchQuery] = useDebounce(localSearchQuery, 300);
@@ -20,6 +23,16 @@ export default function QueueEditor() {
     useEffect(() => {
         setSearchQuery(debouncedSearchQuery);
     }, [debouncedSearchQuery, setSearchQuery]);
+
+    const showCompareButton = comparisonQueueNames.length >= 2;
+
+    const handleCompare = () => {
+        setShowComparisonDialog(true);
+    };
+
+    const handleCloseComparison = () => {
+        setShowComparisonDialog(false);
+    };
 
     return (
         <Box
@@ -39,11 +52,10 @@ export default function QueueEditor() {
                     backgroundColor: 'background.paper',
                     display: 'flex',
                     alignItems: 'center',
-                    justifyContent: 'space-between',
                     gap: 3,
                 }}
             >
-                <Box>
+                <Box sx={{ flex: 1 }}>
                     <Typography variant="h5" component="h1">
                         Queue Management
                     </Typography>
@@ -51,6 +63,18 @@ export default function QueueEditor() {
                         Interactive queue tree with search, modification, and staging
                     </Typography>
                 </Box>
+                
+                {showCompareButton && (
+                    <Button
+                        variant="contained"
+                        onClick={handleCompare}
+                        sx={{
+                            textTransform: 'none',
+                        }}
+                    >
+                        Compare {comparisonQueueNames.length} Queues
+                    </Button>
+                )}
                 
                 <TextField
                     size="small"
@@ -93,6 +117,12 @@ export default function QueueEditor() {
                     }}
                 />
             </Box>
+
+            {/* Comparison Dialog */}
+            <MultiQueueComparisonView
+                open={showComparisonDialog}
+                onClose={handleCloseComparison}
+            />
         </Box>
     );
 }

@@ -10,6 +10,7 @@ export interface UIState {
     hoveredQueuePath?: string | null;
     expandedQueues: Set<string>;
     searchQuery?: string;
+    comparisonQueueNames: string[];
     viewSettings: {
         showCapacityBars: boolean;
         showUsageMetrics: boolean;

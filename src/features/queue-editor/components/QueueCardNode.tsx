@@ -1,6 +1,6 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText } from '@mui/material';
+import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
@@ -22,8 +22,11 @@ export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const { stageChange } = useChangesStore();
-    const { openAddQueueModal } = useUIStore();
+    const { openAddQueueModal, comparisonQueueNames, toggleComparisonQueue } = useUIStore();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
+    
+    const queuePath = data.queuePath || data.queueName;
+    const isSelectedForComparison = comparisonQueueNames.includes(queuePath);
 
     const handleAddChildQueue = (event: React.MouseEvent) => {
         event.preventDefault();
@@ -50,6 +53,12 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
         });
         popupState.close();
     };
+
+    const handleComparisonCheck = (event: React.MouseEvent<HTMLButtonElement>) => {
+        event.stopPropagation(); // Prevent card selection
+        toggleComparisonQueue(queuePath);
+    };
+
     const liveCapacityData = {
         capacity: data.capacity || 0,
         usedCapacity: data.usedCapacity || 0,
@@ -137,6 +146,7 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                     height: 40,
                     display: 'flex',
                     alignItems: 'center',
+                    justifyContent: 'space-between',
                 }}
             >
                 <Typography
@@ -148,10 +158,25 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                         overflow: 'hidden',
                         textOverflow: 'ellipsis',
                         whiteSpace: 'nowrap',
+                        flex: 1,
                     }}
                 >
                     {data.queueName}
                 </Typography>
+                
+                {/* Comparison checkbox */}
+                <Checkbox
+                    checked={isSelectedForComparison}
+                    onChange={() => {}} // Handled by onClick
+                    onClick={handleComparisonCheck}
+                    size="small"
+                    sx={{
+                        padding: '2px',
+                        '& .MuiSvgIcon-root': {
+                            fontSize: '16px',
+                        },
+                    }}
+                />
             </Box>
 
             <CardContent sx={{ p: 0, height: 'calc(100% - 40px)' }}>
