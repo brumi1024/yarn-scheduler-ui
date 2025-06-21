@@ -2,8 +2,8 @@ import React from 'react';
 import { useFormContext } from 'react-hook-form';
 import { Box, Typography, Accordion, AccordionSummary, AccordionDetails, Button, Alert } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon } from '@mui/icons-material';
-import type { Queue } from '../../../../types/Queue';
 import { getPropertyGroups } from '../../../../config';
+import type { Queue, QueueChild, PropertyGroup } from '../../types';
 import { PropertyFormField } from '../../../../components/forms/PropertyFormField';
 import { AutoQueueCreationSection } from '../../../../components/forms/AutoQueueCreationSection';
 import { NodeLabelsSection } from '../../../../components/forms/NodeLabelsSection';
@@ -23,13 +23,12 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({ queue, sav
     } = useFormContext();
     const propertyGroups = getPropertyGroups();
 
-    const renderPropertyGroup = (group: any) => {
-        const siblings =
-            queue && (queue as any).parent
-                ? ((queue as any).parent.children || [])
-                      .filter((child: any) => child.queueName !== queue.queueName)
-                      .map((child: any) => ({ name: child.queueName, capacity: `${child.capacity}%` }))
-                : [];
+    const renderPropertyGroup = (group: PropertyGroup) => {
+        const siblings = queue?.queues?.queue
+            ? queue.queues.queue
+                  .filter((child: Queue) => child.queueName !== queue.queueName)
+                  .map((child: Queue) => ({ name: child.queueName, capacity: `${child.capacity}%` }))
+            : [];
 
         if (group.name === 'Auto-Creation') {
             return <AutoQueueCreationSection key={group.name} properties={group.properties} siblings={siblings} />;
@@ -37,7 +36,7 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({ queue, sav
 
         return (
             <Box key={group.name}>
-                {group.properties.map((property: any) => (
+                {group.properties.map((property: PropertyDefinition) => (
                     <PropertyFormField
                         key={property.key}
                         property={property}
@@ -62,7 +61,7 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({ queue, sav
                     {saveError}
                 </Alert>
             )}
-            {propertyGroups.map((group: any, index: number) => (
+            {propertyGroups.map((group: PropertyGroup, index: number) => (
                 <Accordion
                     key={group.name}
                     defaultExpanded={index === 0}

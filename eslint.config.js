@@ -23,7 +23,7 @@ export default tseslint.config(
         rules: {
             ...reactHooks.configs.recommended.rules,
             'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
-            'no-console': 'warn',
+            'no-console': ['warn', { allow: ['warn', 'error'] }],
             'no-debugger': 'warn',
             curly: ['error', 'all'],
             'prefer-const': ['warn', { destructuring: 'all' }],
@@ -32,7 +32,17 @@ export default tseslint.config(
                 {
                     vars: 'local',
                     args: 'after-used',
+                    argsIgnorePattern: '^_',
                     varsIgnorePattern: '^_|^[A-Z_][A-Z0-9_]*$|^[A-Z][a-zA-Z0-9]*$',
+                },
+            ],
+            // Type safety rules
+            '@typescript-eslint/no-explicit-any': 'error',
+            '@typescript-eslint/explicit-function-return-type': [
+                'warn',
+                {
+                    allowExpressions: true,
+                    allowTypedFunctionExpressions: true,
                 },
             ],
         },

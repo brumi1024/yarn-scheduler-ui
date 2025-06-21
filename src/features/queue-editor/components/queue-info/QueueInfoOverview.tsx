@@ -50,7 +50,7 @@ export const QueueInfoOverview: React.FC<QueueInfoOverviewProps> = ({
         absoluteUsedCapacity: queue.absoluteUsedCapacity || 0,
         absoluteMaxCapacity: queue.absoluteMaxCapacity || 100,
     };
-    const childQueues = (queue as any).children || queue.queues?.queue;
+    const childQueues = queue.queues?.queue || [];
 
     return (
         <Box sx={{ p: 1.5 }}>
@@ -86,7 +86,7 @@ export const QueueInfoOverview: React.FC<QueueInfoOverviewProps> = ({
                                 fontWeight="medium"
                                 sx={{ wordBreak: 'break-all', fontSize: '0.75rem' }}
                             >
-                                {(queue as any).queuePath || queue.queueName}
+                                {queue.queuePath || queue.queueName}
                             </Typography>
                         </Grid>
                     </Grid>
@@ -194,7 +194,7 @@ export const QueueInfoOverview: React.FC<QueueInfoOverviewProps> = ({
                         <Typography variant="subtitle2" component="h3" sx={{ mb: 1.5 }}>
                             Child Queues ({childQueues.length})
                         </Typography>
-                        {childQueues.map((child: any, index: number) => (
+                        {childQueues.map((child: Queue, index: number) => (
                             <Box
                                 key={child.queueName}
                                 onClick={() => onQueueSelect(child)}
