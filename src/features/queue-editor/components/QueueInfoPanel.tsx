@@ -10,6 +10,7 @@ import {
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { Queue } from '../../../types/Queue';
+import type { ChangeSet } from '../../../types/Configuration';
 import { QUEUE_PROPERTIES } from '../../../config';
 import { QueueInfoOverview } from './queue-info/QueueInfoOverview';
 import { QueueInfoSettings } from './queue-info/QueueInfoSettings';
@@ -39,7 +40,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const [activeTab, setActiveTab] = useState(0);
     const [saveError, setSaveError] = useState<string | null>(null);
 
-    const { stageChange } = useChangesStore();
+    const { stageChange, stagedChanges } = useChangesStore();
     const selectedNodeLabel = useUIStore((state) => state.selectedNodeLabel);
     const propertyEditorModal = useUIStore((state) => state.modals?.propertyEditor);
 
@@ -55,7 +56,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         Object.entries(QUEUE_PROPERTIES).reduce(
             (acc, [key, prop]) => ({
                 ...acc,
-                [key]: prop.validation.optional(), // Make all validations optional to allow empty/unchanged fields
+                [key]: prop.validation.nullable().optional(), // Make all validations optional and nullable
             }),
             {}
         )
@@ -64,22 +65,42 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const form = useForm({
         resolver: zodResolver(validationSchema),
         defaultValues: {},
-        mode: 'onChange',
+        mode: 'onBlur',
     });
 
     const { reset } = form;
+
+    // Helper function to get form value with staged priority
+    const getFormValueWithStagedPriority = useCallback((propertyKey: string, queue: Queue, stagedChanges: ChangeSet[]) => {
+        const queuePath = (queue as any).queuePath || queue.queueName;
+        
+        // Check for staged change first
+        const stagedChange = stagedChanges.find(
+            change => change.queuePath === queuePath && 
+                     change.property === propertyKey && 
+                     change.type === 'PROPERTY_UPDATE'
+        );
+        
+        if (stagedChange) {
+            return stagedChange.newValue; // Return raw staged value
+        }
+        
+        // Fallback to original logic
+        const propDef = QUEUE_PROPERTIES[propertyKey];
+        return propDef.getValueFromQueue(queue);
+    }, []);
 
     useEffect(() => {
         if (queue && open) {
             const initialData: Record<string, any> = {};
             Object.values(QUEUE_PROPERTIES).forEach((propDef) => {
-                initialData[propDef.key] = propDef.getValueFromQueue(queue);
+                initialData[propDef.key] = getFormValueWithStagedPriority(propDef.key, queue, stagedChanges || []);
             });
             reset(initialData);
             setActiveTab(0);
             setSaveError(null);
         }
-    }, [queue, open, reset]);
+    }, [queue, open, reset, stagedChanges, getFormValueWithStagedPriority]);
 
     if (!queue || !open) {
         return null;

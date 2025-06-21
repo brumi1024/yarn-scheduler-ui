@@ -29,16 +29,3 @@ export interface ChangeSet {
     timestamp: Date;
 }
 
-export interface ValidationError {
-    code: string;
-    message: string;
-    property?: string;
-    queueName?: string;
-    severity: 'error' | 'warning';
-}
-
-export interface ValidationResult {
-    valid: boolean;
-    errors: ValidationError[];
-    warnings: ValidationError[];
-}

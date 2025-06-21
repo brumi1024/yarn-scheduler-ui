@@ -1,7 +1,7 @@
 import React from 'react';
 import { useController } from 'react-hook-form';
 import type { Control } from 'react-hook-form';
-import type { PropertyDefinition } from '../../config/properties';
+import type { PropertyDefinition } from '../../config';
 import {
     TextField,
     Select,

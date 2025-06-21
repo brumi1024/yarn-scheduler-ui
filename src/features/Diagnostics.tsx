@@ -32,7 +32,7 @@ import { Download, Clear, BugReport, CheckCircle, Warning, Error } from '@mui/ic
 import { useActivityStore } from '../store/activityStore';
 import { useDataStore } from '../store/dataStore';
 import { useChangesStore } from '../store/changesStore';
-import { validateConfiguration, type ValidationResult } from '../utils/validation';
+import { ValidationEngine, type ValidationResult } from '../validation';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -76,7 +76,14 @@ export default function Diagnostics() {
     const validationResult: ValidationResult | null = useMemo(() => {
         if (!configuration) return null;
         try {
-            return validateConfiguration(configuration);
+            // Convert to flat format for ValidationEngine
+            const flatConfig: Record<string, string> = {};
+            configuration.property.forEach((prop) => {
+                flatConfig[prop.name] = prop.value;
+            });
+            
+            const validationEngine = new ValidationEngine();
+            return validationEngine.validate(flatConfig);
         } catch (error) {
             return {
                 errors: [
@@ -84,6 +91,7 @@ export default function Diagnostics() {
                         path: 'configuration',
                         message: `Validation failed: ${error instanceof Error ? error.message : String(error)}`,
                         severity: 'error' as const,
+                        rule: 'system',
                     },
                 ],
                 warnings: [],

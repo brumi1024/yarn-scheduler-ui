@@ -131,6 +131,82 @@ export const globalProperties: Record<string, GlobalPropertyDefinition> = {
         description: 'Enable workflow priority mappings override.',
         defaultValue: 'false',
     },
+
+    // === CONTAINER ASSIGNMENT ===
+    'yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled': {
+        displayName: 'Enable Multiple Container Assignments',
+        type: 'boolean',
+        category: 'advanced',
+        description: 'Allow multiple container assignments per node heartbeat',
+        defaultValue: 'true',
+    },
+
+    'yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments': {
+        displayName: 'Max Container Assignments per Heartbeat',
+        type: 'number',
+        category: 'advanced',
+        description: 'Maximum containers assigned per heartbeat (-1 = unlimited)',
+        defaultValue: '100',
+        validation: { min: -1, max: 1000 },
+    },
+
+    // === USER LIMITS ===
+    'yarn.scheduler.capacity.user.max-parallel-apps': {
+        displayName: 'Default Max Parallel Apps per User',
+        type: 'number',
+        category: 'resource',
+        description: 'Default maximum parallel applications per user',
+        defaultValue: '2147483647',
+        validation: { min: 1, max: 2147483647 },
+    },
+
+    // === RESERVATION PROPERTIES ===
+    'yarn.scheduler.capacity.reservations-continue-look-all-nodes': {
+        displayName: 'Continue Looking All Nodes for Reservations',
+        type: 'boolean',
+        category: 'advanced',
+        description: 'Continue looking at all nodes even after reservation limit hit',
+        defaultValue: 'true',
+    },
+
+    // === MAPPING RULES ===
+    'yarn.scheduler.capacity.mapping-rule-format': {
+        displayName: 'Mapping Rule Format',
+        type: 'select',
+        category: 'queue',
+        description: 'Format for queue mapping rules',
+        defaultValue: 'legacy',
+        options: [
+            { value: 'legacy', label: 'Legacy Format' },
+            { value: 'json', label: 'JSON Format' },
+        ],
+    },
+
+    'yarn.scheduler.capacity.mapping-rule-json': {
+        displayName: 'JSON Mapping Rules',
+        type: 'string',
+        category: 'queue',
+        description: 'Queue mapping rules in JSON format',
+        defaultValue: '',
+    },
+
+    // === ASYNCHRONOUS SCHEDULING ===
+    'yarn.scheduler.capacity.schedule-asynchronously.enable': {
+        displayName: 'Enable Asynchronous Scheduling',
+        type: 'boolean',
+        category: 'advanced',
+        description: 'Enable asynchronous scheduling for better performance',
+        defaultValue: 'false',
+    },
+
+    'yarn.scheduler.capacity.schedule-asynchronously.scheduling-interval-ms': {
+        displayName: 'Async Scheduling Interval (ms)',
+        type: 'number',
+        category: 'advanced',
+        description: 'Scheduling interval for async scheduling',
+        defaultValue: '5',
+        validation: { min: 1, max: 1000 },
+    },
 };
 
 export const getGlobalPropertyCategories = () => {

@@ -1,7 +1,7 @@
 import { nanoid } from 'nanoid';
 import type { ChangeSet } from '../types/Configuration';
 import type { Queue } from '../types/Queue';
-import { QUEUE_PROPERTIES } from '../config/properties';
+import { QUEUE_PROPERTIES } from '../config';
 import { globalProperties } from '../config/globalProperties';
 
 /**
@@ -166,4 +166,41 @@ export function convertChangesToApiRequest(changes: ChangeSet[]) {
     }
 
     return result;
+}
+
+/**
+ * Merges a queue's original data with any staged changes for that queue.
+ * This is used to show the current "working state" of a queue in forms and displays.
+ * @param queue The original queue data
+ * @param stagedChanges Array of all staged changes
+ * @returns Queue data with staged changes applied
+ */
+export function mergeQueueWithStagedChanges(
+    queue: Queue,
+    stagedChanges: ChangeSet[]
+): Queue {
+    if (!queue || !stagedChanges || stagedChanges.length === 0) {
+        return queue;
+    }
+
+    const queuePath = (queue as Record<string, unknown>).queuePath as string || queue.queueName;
+    
+    // Find all changes that apply to this queue
+    const relevantChanges = stagedChanges.filter(
+        change => change.queuePath === queuePath && change.type === 'PROPERTY_UPDATE'
+    );
+
+    if (relevantChanges.length === 0) {
+        return queue;
+    }
+
+    // Apply changes to a copy of the queue
+    const modifiedQueue = { ...queue };
+    
+    relevantChanges.forEach(change => {
+        // Apply the staged value to the queue copy
+        (modifiedQueue as Record<string, unknown>)[change.property] = change.newValue;
+    });
+
+    return modifiedQueue;
 }

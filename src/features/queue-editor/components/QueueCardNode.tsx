@@ -7,6 +7,7 @@ import type { LayoutQueue } from '../utils/layout/DagreLayout';
 import type { Queue } from '../../../types/Queue';
 import { useChangesStore, useUIStore } from '../../../store';
 import { getInheritanceTooltip } from '../../../utils/nodeLabelUtils';
+import { parseCapacityValue } from '../../../utils/capacity';
 
 const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -23,7 +24,7 @@ export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
 };
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
-    const { stageChange } = useChangesStore();
+    const { stageChange, stagedChanges } = useChangesStore();
     const { openAddQueueModal, comparisonQueueNames, toggleComparisonQueue, selectedNodeLabel, selectQueue, openPropertyEditor } = useUIStore();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
     
@@ -76,6 +77,35 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
         absoluteUsedCapacity: data.absoluteUsedCapacity || 0,
         absoluteMaxCapacity: data.absoluteMaxCapacity || 100,
     };
+
+    // Determine the capacity mode for display
+    const getCapacityModeInfo = () => {
+        // Check if there are staged changes that affect capacity for this queue
+        const capacityChange = stagedChanges?.find(
+            change => change.queuePath === queuePath && 
+                     change.type === 'PROPERTY_UPDATE' && 
+                     change.property === 'capacity'
+        );
+        
+        // Use staged capacity value if available, otherwise fall back to current data
+        const capacityValue = capacityChange ? 
+            capacityChange.newValue : 
+            `${liveCapacityData.capacity}%`;
+        
+        const parsed = parseCapacityValue(String(capacityValue));
+        
+        switch (parsed.mode) {
+            case 'weight':
+                return { label: 'WEIGHT', color: '#10b981' };
+            case 'absolute':
+                return { label: 'ABSOLUTE', color: '#f59e0b' };
+            case 'percentage':
+            default:
+                return { label: 'PERCENTAGE', color: '#3b82f6' };
+        }
+    };
+
+    const capacityModeInfo = getCapacityModeInfo();
 
 
     // Get usage color using same logic as canvas renderer
@@ -227,15 +257,17 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                 {/* Badges section - exactly like canvas */}
                 <Box sx={{ p: '8px 16px 0 16px' }}>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        {/* Percentage mode badge */}
+                        {/* Capacity mode badge */}
                         <Box
                             sx={{
                                 display: 'inline-flex',
                                 alignItems: 'center',
                                 px: 1,
                                 py: 0.25,
-                                backgroundColor: '#dbeafe',
-                                border: '1px solid rgba(59, 130, 246, 0.2)',
+                                backgroundColor: capacityModeInfo.label === 'WEIGHT' ? '#dcfce7' : 
+                                                capacityModeInfo.label === 'ABSOLUTE' ? '#fef3c7' : '#dbeafe',
+                                border: `1px solid ${capacityModeInfo.label === 'WEIGHT' ? 'rgba(16, 185, 129, 0.2)' : 
+                                                     capacityModeInfo.label === 'ABSOLUTE' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
                                 borderRadius: '6px',
                                 boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                             }}
@@ -244,12 +276,12 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                                 sx={{
                                     fontWeight: 'bold',
                                     fontSize: '10px',
-                                    color: '#3b82f6',
+                                    color: capacityModeInfo.color,
                                     fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     textTransform: 'uppercase',
                                 }}
                             >
-                                PERCENTAGE
+                                {capacityModeInfo.label}
                             </Typography>
                         </Box>
 
@@ -424,10 +456,35 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                             }}
                         >
-                            Capacity: {liveCapacityData.capacity}%
-                            {liveCapacityData.maxCapacity !== 100 && (
-                                <> / {liveCapacityData.maxCapacity}%</>
-                            )}
+                            {(() => {
+                                // Check for staged capacity changes
+                                const capacityChange = stagedChanges?.find(
+                                    change => change.queuePath === queuePath && 
+                                             change.type === 'PROPERTY_UPDATE' && 
+                                             change.property === 'capacity'
+                                );
+                                const maxCapacityChange = stagedChanges?.find(
+                                    change => change.queuePath === queuePath && 
+                                             change.type === 'PROPERTY_UPDATE' && 
+                                             change.property === 'maximum-capacity'
+                                );
+                                
+                                const currentCapacity = capacityChange ? capacityChange.newValue : `${liveCapacityData.capacity}%`;
+                                const currentMaxCapacity = maxCapacityChange ? maxCapacityChange.newValue : `${liveCapacityData.maxCapacity}%`;
+                                
+                                const capacityParsed = parseCapacityValue(String(currentCapacity));
+                                const maxCapacityParsed = parseCapacityValue(String(currentMaxCapacity));
+                                
+                                // Format display based on mode
+                                if (capacityParsed.mode === 'weight') {
+                                    return `Weight: ${capacityParsed.value}${maxCapacityParsed.value !== currentMaxCapacity ? ` / ${maxCapacityParsed.value}` : ''}`;
+                                } else if (capacityParsed.mode === 'absolute') {
+                                    return `Absolute: ${capacityParsed.value}`;
+                                } else {
+                                    // Percentage mode - show max capacity if different
+                                    return `Capacity: ${capacityParsed.value}${String(currentMaxCapacity) !== String(currentCapacity) ? ` / ${maxCapacityParsed.value}` : ''}`;
+                                }
+                            })()}
                         </Typography>
                         {selectedNodeLabel && hasLabelAccess && (isLabelCapacityConfigured || isLabelMaxCapacityConfigured) && (
                             <Tooltip 
