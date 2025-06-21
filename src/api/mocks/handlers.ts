@@ -35,39 +35,21 @@ export const handlers = [
 
     // Node labels endpoints
     http.get('/ws/v1/cluster/get-node-labels', async () => {
-        // For now, return a simple mock for node labels
-        return HttpResponse.json({
-            nodeLabels: {
-                nodeLabel: [
-                    { name: 'gpu', numActiveNMs: 2, numInactiveNMs: 0, resourceType: 'EXCLUSIVE' },
-                    { name: 'fpga', numActiveNMs: 1, numInactiveNMs: 0, resourceType: 'EXCLUSIVE' },
-                ],
-            },
-        });
+        const response = await fetch('/mock/ws/v1/cluster/get-node-labels.json');
+        const data = await response.json();
+        return HttpResponse.json(data);
     }),
 
-    http.get('/ws/v1/cluster/nodes/get-node-to-labels', () => {
-        return HttpResponse.json({
-            nodeToLabelsInfo: {
-                nodeToLabels: [
-                    { nodeId: 'worker1.example.com:8041', nodeLabels: ['gpu', 'high-memory'] },
-                    { nodeId: 'worker2.example.com:8041', nodeLabels: ['ssd'] },
-                    { nodeId: 'worker3.example.com:8041', nodeLabels: [] },
-                ],
-            },
-        });
+    http.get('/ws/v1/cluster/nodes/get-node-to-labels', async () => {
+        const response = await fetch('/mock/ws/v1/cluster/get-node-to-labels.json');
+        const data = await response.json();
+        return HttpResponse.json(data);
     }),
 
-    http.get('/ws/v1/cluster/nodes/get-labels-to-nodes', () => {
-        return HttpResponse.json({
-            labelsToNodesInfo: {
-                labelsToNodes: [
-                    { nodeLabels: ['gpu'], nodeId: ['worker1.example.com:8041'] },
-                    { nodeLabels: ['high-memory'], nodeId: ['worker1.example.com:8041'] },
-                    { nodeLabels: ['ssd'], nodeId: ['worker2.example.com:8041'] },
-                ],
-            },
-        });
+    http.get('/ws/v1/cluster/nodes/get-labels-to-nodes', async () => {
+        const response = await fetch('/mock/ws/v1/cluster/get-labels-to-nodes.json');
+        const data = await response.json();
+        return HttpResponse.json(data);
     }),
 
     http.post('/ws/v1/cluster/add-node-labels', async ({ request }) => {

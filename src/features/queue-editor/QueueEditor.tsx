@@ -6,6 +6,7 @@ import { QueueVisualization } from './components/QueueVisualization';
 import { ComponentErrorBoundary } from '../../components/ErrorBoundary';
 import { StagedChangesPanel } from './components/StagedChangesPanel';
 import MultiQueueComparisonView from './components/MultiQueueComparisonView';
+import { NodeLabelSelector } from './components/NodeLabelSelector';
 import { useUIStore } from '../../store';
 
 export default function QueueEditor() {
@@ -63,7 +64,7 @@ export default function QueueEditor() {
                         Interactive queue tree with search, modification, and staging
                     </Typography>
                 </Box>
-                
+
                 {showCompareButton && (
                     <Button
                         variant="contained"
@@ -75,6 +76,8 @@ export default function QueueEditor() {
                         Compare {comparisonQueueNames.length} Queues
                     </Button>
                 )}
+
+                <NodeLabelSelector />
                 
                 <TextField
                     size="small"

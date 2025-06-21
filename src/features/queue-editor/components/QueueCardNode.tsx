@@ -1,10 +1,12 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox } from '@mui/material';
-import { Add as AddIcon, Delete as DeleteIcon } from '@mui/icons-material';
+import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox, Tooltip, IconButton } from '@mui/material';
+import { Add as AddIcon, Delete as DeleteIcon, Label } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
+import type { Queue } from '../../../types/Queue';
 import { useChangesStore, useUIStore } from '../../../store';
+import { getInheritanceTooltip } from '../../../utils/nodeLabelUtils';
 
 const formatBytes = (bytes: number): string => {
     if (bytes === 0) return '0 B';
@@ -22,11 +24,18 @@ export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const { stageChange } = useChangesStore();
-    const { openAddQueueModal, comparisonQueueNames, toggleComparisonQueue } = useUIStore();
+    const { openAddQueueModal, comparisonQueueNames, toggleComparisonQueue, selectedNodeLabel, selectQueue, openPropertyEditor } = useUIStore();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
     
     const queuePath = data.queuePath || data.queueName;
     const isSelectedForComparison = comparisonQueueNames.includes(queuePath);
+    
+    // Node label filtering properties are now available directly from data
+    const hasLabelAccess = data.hasLabelAccess ?? true;
+    const effectiveCapacity = data.effectiveCapacity ?? data.capacity;
+    const effectiveMaxCapacity = data.effectiveMaxCapacity ?? data.maxCapacity;
+    const isLabelCapacityConfigured = data.isLabelCapacityConfigured ?? false;
+    const isLabelMaxCapacityConfigured = data.isLabelMaxCapacityConfigured ?? false;
 
     const handleAddChildQueue = (event: React.MouseEvent) => {
         event.preventDefault();
@@ -60,9 +69,9 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     };
 
     const liveCapacityData = {
-        capacity: data.capacity || 0,
+        capacity: effectiveCapacity || 0,
         usedCapacity: data.usedCapacity || 0,
-        maxCapacity: data.maxCapacity || 100,
+        maxCapacity: effectiveMaxCapacity || 100,
         absoluteCapacity: data.absoluteCapacity || 0,
         absoluteUsedCapacity: data.absoluteUsedCapacity || 0,
         absoluteMaxCapacity: data.absoluteMaxCapacity || 100,
@@ -104,7 +113,8 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                     transform: selected ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease-in-out',
                     backgroundColor: selected ? '#f0f8ff' : '#ffffff',
-                    opacity: data.stagedStatus === 'deleted' ? 0.6 : 1,
+                    opacity: hasLabelAccess ? (data.stagedStatus === 'deleted' ? 0.6 : 1) : 0.5,
+                    filter: hasLabelAccess ? 'none' : 'grayscale(50%)',
                     textDecoration: data.stagedStatus === 'deleted' ? 'line-through' : 'none',
                     '&:hover': {
                         boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
@@ -163,6 +173,40 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                 >
                     {data.queueName}
                 </Typography>
+                
+                {/* Label indicators */}
+                {selectedNodeLabel && hasLabelAccess && isLabelCapacityConfigured && (
+                    <Tooltip title={`Capacity configured for ${selectedNodeLabel} label`}>
+                        <Label 
+                            sx={{ 
+                                fontSize: 16,
+                                color: 'primary.main',
+                                mr: 1
+                            }} 
+                        />
+                    </Tooltip>
+                )}
+                {selectedNodeLabel && !hasLabelAccess && (
+                    <Tooltip title={`Click to grant access to ${selectedNodeLabel} label`}>
+                        <IconButton
+                            size="small"
+                            sx={{ 
+                                mr: 1,
+                                backgroundColor: 'action.hover',
+                                '&:hover': {
+                                    backgroundColor: 'action.selected',
+                                }
+                            }}
+                            onClick={(e) => {
+                                e.stopPropagation();
+                                selectQueue(data.queuePath);
+                                openPropertyEditor(data.queuePath, 'edit', 'node-labels');
+                            }}
+                        >
+                            <AddIcon fontSize="small" />
+                        </IconButton>
+                    </Tooltip>
+                )}
                 
                 {/* Comparison checkbox */}
                 <Checkbox
@@ -370,37 +414,52 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                         )}
                     </Box>
 
-                    {/* Capacity text - exactly like canvas */}
-                    <Typography
-                        sx={{
-                            fontWeight: 'bold',
-                            fontSize: '14px',
-                            color: '#374151',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                            mb: 0.25,
-                        }}
-                    >
-                        Capacity: {liveCapacityData.capacity}%
-                    </Typography>
+                    {/* Capacity text with label support */}
+                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.25 }}>
+                        <Typography
+                            sx={{
+                                fontWeight: 'bold',
+                                fontSize: '14px',
+                                color: '#374151',
+                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            }}
+                        >
+                            Capacity: {liveCapacityData.capacity}%
+                            {liveCapacityData.maxCapacity !== 100 && (
+                                <> / {liveCapacityData.maxCapacity}%</>
+                            )}
+                        </Typography>
+                        {selectedNodeLabel && hasLabelAccess && (isLabelCapacityConfigured || isLabelMaxCapacityConfigured) && (
+                            <Tooltip 
+                                title={
+                                    <Box component="div" sx={{ whiteSpace: 'pre-line' }}>
+                                        {getInheritanceTooltip(
+                                            data as Queue, 
+                                            selectedNodeLabel,
+                                            data.capacity,
+                                            data.maxCapacity
+                                            // Note: allQueues parameter omitted for now, will use fallback logic
+                                        )}
+                                    </Box>
+                                }
+                            >
+                                <Label 
+                                    sx={{ 
+                                        fontSize: 14,
+                                        color: 'primary.main'
+                                    }} 
+                                />
+                            </Tooltip>
+                        )}
+                    </Box>
                     <Typography
                         sx={{
                             fontSize: '12px',
                             color: '#6b7280',
                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                            mb: 0.25,
                         }}
                     >
                         {liveCapacityData.usedCapacity.toFixed(1)}% in use
-                    </Typography>
-                    <Typography
-                        sx={{
-                            fontWeight: 'bold',
-                            fontSize: '12px',
-                            color: '#4b5563',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        }}
-                    >
-                        Max Capacity: {liveCapacityData.maxCapacity}%
                     </Typography>
                 </Box>
 

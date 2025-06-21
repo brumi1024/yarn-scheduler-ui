@@ -1,6 +1,6 @@
 // This file consolidates all queue-editor specific types
 
-import { Queue } from '../../../types/Queue';
+import type { Queue } from '../../../types/Queue';
 import { PropertyDefinition } from '../../../config/properties';
 
 export interface QueueChild {

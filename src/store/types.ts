@@ -10,6 +10,7 @@ export interface UIState {
     hoveredQueuePath?: string | null;
     expandedQueues: Set<string>;
     searchQuery?: string;
+    selectedNodeLabel: string | null;
     comparisonQueueNames: string[];
     viewSettings: {
         showCapacityBars: boolean;
@@ -24,6 +25,7 @@ export interface UIState {
             open: boolean;
             queuePath?: string;
             mode: 'create' | 'edit';
+            expandedSection?: string;
         };
         confirmDialog?: {
             open: boolean;

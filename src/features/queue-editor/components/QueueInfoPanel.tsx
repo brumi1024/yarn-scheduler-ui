@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -14,6 +14,7 @@ import { QUEUE_PROPERTIES } from '../../../config';
 import { QueueInfoOverview } from './queue-info/QueueInfoOverview';
 import { QueueInfoSettings } from './queue-info/QueueInfoSettings';
 import { useChangesStore } from '../../../store';
+import { useUIStore } from '../../../store/uiStore';
 import { createChangeSetsFromFormData } from '../../../utils/configurationUtils';
 
 export interface QueueInfoPanelProps {
@@ -39,6 +40,15 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const [saveError, setSaveError] = useState<string | null>(null);
 
     const { stageChange } = useChangesStore();
+    const selectedNodeLabel = useUIStore((state) => state.selectedNodeLabel);
+    const propertyEditorModal = useUIStore((state) => state.modals?.propertyEditor);
+
+    // Switch to Settings tab when expandedSection is provided
+    useEffect(() => {
+        if (propertyEditorModal?.expandedSection) {
+            setActiveTab(2); // Settings tab is index 2
+        }
+    }, [propertyEditorModal?.expandedSection]);
 
     // Create validation schema from properties
     const validationSchema = z.object(
@@ -247,9 +257,11 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                     {activeTab === 2 && (
                         <QueueInfoSettings
                             queue={queue}
+                            selectedNodeLabel={selectedNodeLabel}
                             saveError={saveError}
                             onSave={handleSave}
                             onReset={handleReset}
+                            expandedSection={propertyEditorModal?.expandedSection}
                         />
                     )}
                 </Box>

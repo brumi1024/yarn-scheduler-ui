@@ -4,6 +4,7 @@ import { useConfigParser } from '../../../yarn-parser/useConfigParser';
 import { useChangesStore, useUIStore } from '../../../store';
 import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue, ChangeSet } from '../../../types/Configuration';
 import type { Node, Edge } from '@xyflow/react';
+import { useNodeLabelFilteredQueues, type FilteredQueue } from './useNodeLabelFilteredQueues';
 
 // Runtime queue data from YARN API (extends base Queue with additional properties)
 interface RuntimeQueue extends Queue {
@@ -26,6 +27,14 @@ export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
     stagedStatus?: 'new' | 'deleted' | 'modified';
     isMatch?: boolean;
     isAncestorOfMatch?: boolean;
+    // Node label filtering properties
+    hasLabelAccess?: boolean;
+    labelCapacity?: number;
+    labelMaxCapacity?: number;
+    isLabelCapacityConfigured?: boolean;
+    isLabelMaxCapacityConfigured?: boolean;
+    effectiveCapacity?: number;
+    effectiveMaxCapacity?: number;
 };
 
 export interface ProcessedFlowData {
@@ -215,6 +224,50 @@ export function useQueueDataProcessor(
     // Get staged changes and search query from stores
     const stagedChanges = useChangesStore(state => state.stagedChanges) || [];
     const searchQuery = useUIStore(state => state.searchQuery);
+
+    // Extract all queues for node label filtering
+    const allQueues = useMemo(() => {
+        if (!parseResult?.queues?.[0]) return [];
+        
+        const getAllQueues = (parsedQueue: ParsedQueue): Queue[] => {
+            const queue: Queue = {
+                queueName: parsedQueue.name,
+                queuePath: parsedQueue.path,
+                capacity: parsedQueue.capacity.numericValue || 0,
+                maxCapacity: parsedQueue.maxCapacity.numericValue || 100,
+                state: parsedQueue.state,
+                usedCapacity: 0, // Will be updated from scheduler data
+                absoluteCapacity: 0,
+                absoluteUsedCapacity: 0,
+                absoluteMaxCapacity: 100,
+                numApplications: 0,
+                resourcesUsed: { memory: 0, vCores: 0 },
+                // Add any properties from parsed queue that might contain node label info
+                ...parsedQueue.properties,
+            } as Queue;
+            
+            const result: Queue[] = [queue];
+            parsedQueue.children?.forEach(child => {
+                result.push(...getAllQueues(child));
+            });
+            return result;
+        };
+        
+        return getAllQueues(parseResult.queues[0]);
+    }, [parseResult]);
+
+    // Apply node label filtering to all queues
+    const filteredQueues = useNodeLabelFilteredQueues(allQueues);
+    
+    // Create a mapping from queue path to filtered queue data
+    const filteredQueueMap = useMemo(() => {
+        const map = new Map<string, FilteredQueue>();
+        filteredQueues.forEach(queue => {
+            map.set(queue.queuePath, queue);
+        });
+        return map;
+    }, [filteredQueues]);
+
     // Initialize Dagre layout (replaces D3 tree layout)
     const treeLayout = useMemo(() => {
         return new DagreLayout({
@@ -272,10 +325,13 @@ export function useQueueDataProcessor(
                 return { nodes: [], edges: [], isLoading: false, error: 'No queues found in configuration.' };
             }
 
-            // Convert ParsedQueue to LayoutQueue
+            // Convert ParsedQueue to LayoutQueue with node label filtering applied
             const convertParsedQueue = (parsedQueue: ParsedQueue): LayoutQueue => {
                 const capacity = parsedQueue.capacity.numericValue || 0;
                 const maxCapacity = parsedQueue.maxCapacity.numericValue || 100;
+                
+                // Get filtered queue data if available
+                const filteredQueue = filteredQueueMap.get(parsedQueue.path);
 
                 return {
                     id: parsedQueue.path,
@@ -291,6 +347,14 @@ export function useQueueDataProcessor(
                     numApplications: 0,
                     resourcesUsed: { memory: 0, vCores: 0 },
                     children: parsedQueue.children?.map(convertParsedQueue) || [],
+                    // Add node label filtering properties
+                    hasLabelAccess: filteredQueue?.hasLabelAccess,
+                    labelCapacity: filteredQueue?.labelCapacity,
+                    labelMaxCapacity: filteredQueue?.labelMaxCapacity,
+                    isLabelCapacityConfigured: filteredQueue?.isLabelCapacityConfigured,
+                    isLabelMaxCapacityConfigured: filteredQueue?.isLabelMaxCapacityConfigured,
+                    effectiveCapacity: filteredQueue?.effectiveCapacity ?? capacity,
+                    effectiveMaxCapacity: filteredQueue?.effectiveMaxCapacity ?? maxCapacity,
                 };
             };
 
@@ -399,7 +463,7 @@ export function useQueueDataProcessor(
                 error: 'Failed to process queue data',
             };
         }
-    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges, searchQuery]);
+    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges, searchQuery, filteredQueueMap]);
 
     return processedData;
 }

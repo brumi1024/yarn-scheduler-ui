@@ -246,6 +246,170 @@
                     }
                 },
                 "nodeAttributesInfo": {}
+            },
+            {
+                "rack": "/default",
+                "state": "RUNNING",
+                "id": "ccycloud-4.nightly7x-us-sq.root.comops.site:8041",
+                "nodeHostName": "ccycloud-4.nightly7x-us-sq.root.comops.site",
+                "nodeHTTPAddress": "ccycloud-4.nightly7x-us-sq.root.comops.site:8042",
+                "lastHealthUpdate": 1749246180123,
+                "version": "3.1.1.7.2.18.0-641",
+                "healthReport": "",
+                "numContainers": 2,
+                "usedMemoryMB": 4096,
+                "availMemoryMB": 12288,
+                "usedVirtualCores": 2,
+                "availableVirtualCores": 6,
+                "numRunningOpportContainers": 0,
+                "usedMemoryOpportGB": 0,
+                "usedVirtualCoresOpport": 0,
+                "numQueuedContainers": 0,
+                "nodeLabels": ["default"],
+                "allocationTags": {},
+                "resourceUtilization": {
+                    "nodePhysicalMemoryMB": 96201,
+                    "nodeVirtualMemoryMB": 104567,
+                    "nodeCPUUsage": 12.5,
+                    "aggregatedContainersPhysicalMemoryMB": 4096,
+                    "aggregatedContainersVirtualMemoryMB": 4096,
+                    "containersCPUUsage": 8.5
+                },
+                "usedResource": {
+                    "memory": 4096,
+                    "vCores": 2,
+                    "resourceInformations": {
+                        "resourceInformation": [
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "memory-mb",
+                                "resourceType": "COUNTABLE",
+                                "units": "Mi",
+                                "value": 4096
+                            },
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "vcores",
+                                "resourceType": "COUNTABLE",
+                                "units": "",
+                                "value": 2
+                            }
+                        ]
+                    }
+                },
+                "availableResource": {
+                    "memory": 12288,
+                    "vCores": 6,
+                    "resourceInformations": {
+                        "resourceInformation": [
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "memory-mb",
+                                "resourceType": "COUNTABLE",
+                                "units": "Mi",
+                                "value": 12288
+                            },
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "vcores",
+                                "resourceType": "COUNTABLE",
+                                "units": "",
+                                "value": 6
+                            }
+                        ]
+                    }
+                },
+                "nodeAttributesInfo": {}
+            },
+            {
+                "rack": "/default",
+                "state": "RUNNING",
+                "id": "ccycloud-5.nightly7x-us-sq.root.comops.site:8041",
+                "nodeHostName": "ccycloud-5.nightly7x-us-sq.root.comops.site",
+                "nodeHTTPAddress": "ccycloud-5.nightly7x-us-sq.root.comops.site:8042",
+                "lastHealthUpdate": 1749246181895,
+                "version": "3.1.1.7.2.18.0-641",
+                "healthReport": "",
+                "numContainers": 1,
+                "usedMemoryMB": 2048,
+                "availMemoryMB": 14336,
+                "usedVirtualCores": 1,
+                "availableVirtualCores": 7,
+                "numRunningOpportContainers": 0,
+                "usedMemoryOpportGB": 0,
+                "usedVirtualCoresOpport": 0,
+                "numQueuedContainers": 0,
+                "nodeLabels": ["default", "fpga"],
+                "allocationTags": {},
+                "resourceUtilization": {
+                    "nodePhysicalMemoryMB": 82134,
+                    "nodeVirtualMemoryMB": 89567,
+                    "nodeCPUUsage": 6.75,
+                    "aggregatedContainersPhysicalMemoryMB": 2048,
+                    "aggregatedContainersVirtualMemoryMB": 2048,
+                    "containersCPUUsage": 4.2
+                },
+                "usedResource": {
+                    "memory": 2048,
+                    "vCores": 1,
+                    "resourceInformations": {
+                        "resourceInformation": [
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "memory-mb",
+                                "resourceType": "COUNTABLE",
+                                "units": "Mi",
+                                "value": 2048
+                            },
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "vcores",
+                                "resourceType": "COUNTABLE",
+                                "units": "",
+                                "value": 1
+                            }
+                        ]
+                    }
+                },
+                "availableResource": {
+                    "memory": 14336,
+                    "vCores": 7,
+                    "resourceInformations": {
+                        "resourceInformation": [
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "memory-mb",
+                                "resourceType": "COUNTABLE",
+                                "units": "Mi",
+                                "value": 14336
+                            },
+                            {
+                                "attributes": {},
+                                "maximumAllocation": 9223372036854775807,
+                                "minimumAllocation": 0,
+                                "name": "vcores",
+                                "resourceType": "COUNTABLE",
+                                "units": "",
+                                "value": 7
+                            }
+                        ]
+                    }
+                },
+                "nodeAttributesInfo": {}
             }
         ]
     }

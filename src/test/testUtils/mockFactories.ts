@@ -1,4 +1,4 @@
-import { ParsedQueue, Queue, ConfigurationResponse, ConfigProperty } from '../../types/Queue';
+import type { ParsedQueue, Queue, ConfigurationResponse, ConfigProperty } from '../../types/Queue';
 import { PropertyDefinition } from '../../config/properties';
 
 export function createMockQueue(overrides: Partial<Queue> = {}): Queue {

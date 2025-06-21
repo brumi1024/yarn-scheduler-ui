@@ -205,7 +205,6 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
                 queue={selectedQueueData}
                 open={!!uiStore?.selectedQueuePath}
                 onClose={handleInfoPanelClose}
-                onEdit={handleQueueEdit}
                 onDelete={handleQueueDelete}
                 onToggleState={handleQueueStateToggle}
                 onQueueSelect={handleQueueSelect}

@@ -152,6 +152,16 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'auto-creation',
         getValueFromQueue: (q) => q.autoCreateChildQueueEnabled || false,
     },
+    'accessible-node-labels': {
+        key: 'accessible-node-labels',
+        label: 'Accessible Node Labels',
+        type: 'text',
+        defaultValue: [],
+        description: 'Node labels that this queue can access.',
+        validation: z.array(z.string()).optional(),
+        group: 'resource',
+        getValueFromQueue: (q) => q.nodeLabels || q.accessibleNodeLabels || [],
+    },
     // Add other properties here following the same pattern...
 };
 

@@ -14,6 +14,9 @@ interface UIStore extends UIState {
     // Search actions
     setSearchQuery: (query: string) => void;
 
+    // Node label actions
+    setSelectedNodeLabel: (label: string | null) => void;
+
     // Comparison actions
     toggleComparisonQueue: (queuePath: string) => void;
     clearComparison: () => void;
@@ -22,7 +25,7 @@ interface UIStore extends UIState {
     updateViewSettings: (settings: Partial<UIState['viewSettings']>) => void;
 
     // Modal actions
-    openPropertyEditor: (queuePath?: string, mode?: 'create' | 'edit') => void;
+    openPropertyEditor: (queuePath?: string, mode?: 'create' | 'edit', expandedSection?: string) => void;
     closePropertyEditor: () => void;
     openConfirmDialog: (title: string, message: string, onConfirm: () => void) => void;
     closeConfirmDialog: () => void;
@@ -43,6 +46,7 @@ export const useUIStore = create<UIStore>()(
             hoveredQueuePath: null,
             expandedQueues: new Set<string>(),
             searchQuery: undefined,
+            selectedNodeLabel: null,
             comparisonQueueNames: [],
             viewSettings: {
                 showCapacityBars: true,
@@ -78,6 +82,8 @@ export const useUIStore = create<UIStore>()(
 
             setSearchQuery: (query) => set({ searchQuery: query || undefined }),
 
+            setSelectedNodeLabel: (label) => set({ selectedNodeLabel: label }),
+
             toggleComparisonQueue: (queuePath) =>
                 set((state) => {
                     const comparisonQueueNames = [...state.comparisonQueueNames];
@@ -97,7 +103,7 @@ export const useUIStore = create<UIStore>()(
                     viewSettings: { ...state.viewSettings, ...settings },
                 })),
 
-            openPropertyEditor: (queuePath, mode = 'edit') =>
+            openPropertyEditor: (queuePath, mode = 'edit', expandedSection) =>
                 set({
                     modals: {
                         ...get().modals,
@@ -105,6 +111,7 @@ export const useUIStore = create<UIStore>()(
                             open: true,
                             queuePath,
                             mode,
+                            expandedSection,
                         },
                     },
                 }),
