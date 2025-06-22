@@ -8,7 +8,7 @@ export class ResourceLimitRule implements ValidationRule {
 
     validate(context: ValidationContext): ValidationIssue[] {
         const issues: ValidationIssue[] = [];
-        
+
         // Check global max applications
         const maxApps = context.configuration['yarn.scheduler.capacity.maximum-applications'];
         if (maxApps) {
@@ -22,11 +22,11 @@ export class ResourceLimitRule implements ValidationRule {
                 });
             }
         }
-        
+
         // Check queue-specific limits
         const checkQueue = (queue: ParsedQueue) => {
             const path = queue.path;
-            
+
             // Maximum AM resource percent
             const amPercent = context.configuration[`yarn.scheduler.capacity.${path}.maximum-am-resource-percent`];
             if (amPercent) {
@@ -45,7 +45,7 @@ export class ResourceLimitRule implements ValidationRule {
             const userLimitFactor = context.configuration[`yarn.scheduler.capacity.${path}.user-limit-factor`];
             if (userLimitFactor) {
                 const num = parseFloat(userLimitFactor);
-                if (isNaN(num) || num <= 0 || num != -1) {
+                if (isNaN(num) || (num <= 0 && num !== -1)) {
                     issues.push({
                         path: `${path}.user-limit-factor`,
                         message: `User limit factor must be positive or disabled (-1): ${userLimitFactor}`,
@@ -68,10 +68,10 @@ export class ResourceLimitRule implements ValidationRule {
                     });
                 }
             }
-            
+
             queue.children.forEach(checkQueue);
         };
-        
+
         context.queues.forEach(checkQueue);
         return issues;
     }

@@ -25,13 +25,7 @@ export function FormTextField({
     control,
 }: TextFieldProps) {
     return (
-        <FormFieldWrapper
-            name={name}
-            label={label}
-            description={description}
-            required={required}
-            control={control}
-        >
+        <FormFieldWrapper name={name} label={label} description={description} required={required} control={control}>
             {(field) => (
                 <TextField
                     {...field}
@@ -56,22 +50,9 @@ interface SelectFieldProps {
     control?: Control<FieldValues>;
 }
 
-export function FormSelectField({
-    name,
-    label,
-    description,
-    required,
-    options,
-    control,
-}: SelectFieldProps) {
+export function FormSelectField({ name, label, description, required, options, control }: SelectFieldProps) {
     return (
-        <FormFieldWrapper
-            name={name}
-            label={label}
-            description={description}
-            required={required}
-            control={control}
-        >
+        <FormFieldWrapper name={name} label={label} description={description} required={required} control={control}>
             {(field) => (
                 <Select {...field} id={name} variant="outlined">
                     {options.map((option) => (
@@ -92,31 +73,11 @@ interface SwitchFieldProps {
     control?: Control<FieldValues>;
 }
 
-export function FormSwitchField({
-    name,
-    label,
-    description,
-    control,
-}: SwitchFieldProps) {
+export function FormSwitchField({ name, label, description, control }: SwitchFieldProps) {
     return (
-        <FormFieldWrapper
-            name={name}
-            label={label}
-            description={description}
-            fullWidth={false}
-            control={control}
-        >
+        <FormFieldWrapper name={name} label={label} description={description} fullWidth={false} control={control}>
             {(field) => (
-                <FormControlLabel
-                    control={
-                        <Switch
-                            {...field}
-                            checked={field.value || false}
-                            id={name}
-                        />
-                    }
-                    label=""
-                />
+                <FormControlLabel control={<Switch {...field} checked={field.value || false} id={name} />} label="" />
             )}
         </FormFieldWrapper>
     );

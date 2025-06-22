@@ -7,7 +7,7 @@
 import { filter, some, entries, split, slice, join } from 'lodash';
 import type { ParsedQueue } from '../types/Queue';
 // import type { CapacityValue } from './CapacityModeDetector';
-import { parseCapacityValue, toDisplayPercentage } from './capacity';
+import { toDisplayPercentage } from './capacity';
 
 export interface TreeMetrics {
     totalQueues: number;

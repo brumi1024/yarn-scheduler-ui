@@ -29,7 +29,7 @@ export const useSelectedQueue = () => {
                 queue.queuePath,
                 queue.queueName,
                 queue.id,
-                `root.${queue.queueName}` // In case it's missing the root prefix
+                `root.${queue.queueName}`, // In case it's missing the root prefix
             ].filter(Boolean);
 
             for (const path of possiblePaths) {
@@ -52,35 +52,32 @@ export const useSelectedQueue = () => {
 };
 
 export const useAllQueues = () => {
-                 const scheduler = useDataStore((state) => state.scheduler);
-                 return useMemo(() => {
-                     if (!scheduler?.scheduler?.schedulerInfo) return [];
-             
-                     const flatten = (queue: any, parentPath = ''): any[] => {
-                         // Build the queue path properly
-                         const queuePath = parentPath ? `${parentPath}.${queue.queueName}` : queue.queueName;
-                         
-                         // Ensure queuePath is set on the queue object
-                         const queueWithPath = {
-                             ...queue,
-                             queuePath
-                         };
-                         
-                         const result = [queueWithPath];
-                         if (queue.queues?.queue) {
-                             queue.queues.queue.forEach((child: any) => {
-                                 result.push(...flatten(child, queuePath));
-                             });
-                         }
-                         return result;
-                     };
-             
-                     return flatten(scheduler.scheduler.schedulerInfo);
-                 }, [scheduler]);
-             };
-;
-;
+    const scheduler = useDataStore((state) => state.scheduler);
+    return useMemo(() => {
+        if (!scheduler?.scheduler?.schedulerInfo) return [];
 
+        const flatten = (queue: any, parentPath = ''): any[] => {
+            // Build the queue path properly
+            const queuePath = parentPath ? `${parentPath}.${queue.queueName}` : queue.queueName;
+
+            // Ensure queuePath is set on the queue object
+            const queueWithPath = {
+                ...queue,
+                queuePath,
+            };
+
+            const result = [queueWithPath];
+            if (queue.queues?.queue) {
+                queue.queues.queue.forEach((child: any) => {
+                    result.push(...flatten(child, queuePath));
+                });
+            }
+            return result;
+        };
+
+        return flatten(scheduler.scheduler.schedulerInfo);
+    }, [scheduler]);
+};
 export const useHasStagedChanges = () => {
     return useChangesStore((state) => state.stagedChanges.length > 0);
 };

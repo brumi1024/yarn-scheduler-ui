@@ -71,24 +71,28 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     const { reset } = form;
 
     // Helper function to get form value with staged priority
-    const getFormValueWithStagedPriority = useCallback((propertyKey: string, queue: Queue, stagedChanges: ChangeSet[]) => {
-        const queuePath = (queue as any).queuePath || queue.queueName;
-        
-        // Check for staged change first
-        const stagedChange = stagedChanges.find(
-            change => change.queuePath === queuePath && 
-                     change.property === propertyKey && 
-                     change.type === 'PROPERTY_UPDATE'
-        );
-        
-        if (stagedChange) {
-            return stagedChange.newValue; // Return raw staged value
-        }
-        
-        // Fallback to original logic
-        const propDef = QUEUE_PROPERTIES[propertyKey];
-        return propDef.getValueFromQueue(queue);
-    }, []);
+    const getFormValueWithStagedPriority = useCallback(
+        (propertyKey: string, queue: Queue, stagedChanges: ChangeSet[]) => {
+            const queuePath = (queue as any).queuePath || queue.queueName;
+
+            // Check for staged change first
+            const stagedChange = stagedChanges.find(
+                (change) =>
+                    change.queuePath === queuePath &&
+                    change.property === propertyKey &&
+                    change.type === 'PROPERTY_UPDATE'
+            );
+
+            if (stagedChange) {
+                return stagedChange.newValue; // Return raw staged value
+            }
+
+            // Fallback to original logic
+            const propDef = QUEUE_PROPERTIES[propertyKey];
+            return propDef.getValueFromQueue(queue);
+        },
+        []
+    );
 
     useEffect(() => {
         if (queue && open) {

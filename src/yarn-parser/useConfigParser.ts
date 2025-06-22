@@ -1,6 +1,6 @@
 /**
  * useConfigParser Hook
- * 
+ *
  * React Query hook for asynchronous configuration parsing using Web Workers.
  * Provides loading states, error handling, and caching for parsed configurations.
  */

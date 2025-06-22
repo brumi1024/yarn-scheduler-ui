@@ -1,15 +1,15 @@
 import React, { useCallback } from 'react';
 import { Box, Alert, CircularProgress } from '@mui/material';
-import { 
+import {
     ReactFlow,
-    Background, 
-    Controls, 
-    MiniMap, 
+    Background,
+    Controls,
+    MiniMap,
     ReactFlowProvider,
     useReactFlow,
     type OnNodesChange,
     type OnEdgesChange,
-    type OnNodeClick
+    type OnNodeClick,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
@@ -40,12 +40,14 @@ const FlowInner: React.FC = () => {
     const { fitView } = useReactFlow();
 
     // Apply selection state to nodes based on UI store
-    const finalNodes = React.useMemo(() => 
-        nodes.map((node) => ({
-            ...node,
-            selected: node.id === uiStore?.selectedQueuePath,
-        }))
-    , [nodes, uiStore?.selectedQueuePath]);
+    const finalNodes = React.useMemo(
+        () =>
+            nodes.map((node) => ({
+                ...node,
+                selected: node.id === uiStore?.selectedQueuePath,
+            })),
+        [nodes, uiStore?.selectedQueuePath]
+    );
 
     // Auto-fit view when data loads
     React.useEffect(() => {

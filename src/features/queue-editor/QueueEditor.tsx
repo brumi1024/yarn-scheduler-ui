@@ -12,11 +12,11 @@ import { useUIStore } from '../../store';
 export default function QueueEditor() {
     const [localSearchQuery, setLocalSearchQuery] = useState<string>('');
     const [showComparisonDialog, setShowComparisonDialog] = useState<boolean>(false);
-    
+
     // Use store selectors to avoid reference issues
     const setSearchQuery = useUIStore((state) => state.setSearchQuery);
     const comparisonQueueNames = useUIStore((state) => state.comparisonQueueNames);
-    
+
     // Debounce the search query to avoid excessive filtering
     const [debouncedSearchQuery] = useDebounce(localSearchQuery, 300);
 
@@ -78,7 +78,7 @@ export default function QueueEditor() {
                 )}
 
                 <NodeLabelSelector />
-                
+
                 <TextField
                     size="small"
                     placeholder="Search queues..."
@@ -122,10 +122,7 @@ export default function QueueEditor() {
             </Box>
 
             {/* Comparison Dialog */}
-            <MultiQueueComparisonView
-                open={showComparisonDialog}
-                onClose={handleCloseComparison}
-            />
+            <MultiQueueComparisonView open={showComparisonDialog} onClose={handleCloseComparison} />
         </Box>
     );
 }

@@ -82,12 +82,7 @@ describe('MultiQueueComparisonView', () => {
             clearComparison: vi.fn(),
         });
 
-        render(
-            <MultiQueueComparisonView
-                open={true}
-                onClose={vi.fn()}
-            />
-        );
+        render(<MultiQueueComparisonView open={true} onClose={vi.fn()} />);
 
         // Should find both queues and display comparison table
         expect(screen.getByText('Queue Comparison (2 queues)')).toBeInTheDocument();
@@ -98,22 +93,17 @@ describe('MultiQueueComparisonView', () => {
     it('should handle ambiguous queue name matching', () => {
         // Mock console.warn to verify it's called for ambiguous matches
         const consoleSpy = vi.spyOn(console, 'warn').mockImplementation(() => {});
-        
+
         mockUseUIStore.mockReturnValue({
             comparisonQueueNames: ['nonexistent', 'team1'], // team1 exists but is ambiguous if there were multiple
             clearComparison: vi.fn(),
         });
 
-        render(
-            <MultiQueueComparisonView
-                open={true}
-                onClose={vi.fn()}
-            />
-        );
+        render(<MultiQueueComparisonView open={true} onClose={vi.fn()} />);
 
         // Should show warning about missing queues
         expect(screen.getByText(/could not be found/i)).toBeInTheDocument();
-        
+
         // Should still find the unambiguous queue
         expect(screen.getByText('team1')).toBeInTheDocument();
 
@@ -126,12 +116,7 @@ describe('MultiQueueComparisonView', () => {
             clearComparison: vi.fn(),
         });
 
-        render(
-            <MultiQueueComparisonView
-                open={true}
-                onClose={vi.fn()}
-            />
-        );
+        render(<MultiQueueComparisonView open={true} onClose={vi.fn()} />);
 
         // Should show error message
         expect(screen.getByText(/could not find any of the selected queues/i)).toBeInTheDocument();
@@ -144,12 +129,7 @@ describe('MultiQueueComparisonView', () => {
             clearComparison: vi.fn(),
         });
 
-        render(
-            <MultiQueueComparisonView
-                open={true}
-                onClose={vi.fn()}
-            />
-        );
+        render(<MultiQueueComparisonView open={true} onClose={vi.fn()} />);
 
         expect(screen.getByText('No queues selected for comparison')).toBeInTheDocument();
     });

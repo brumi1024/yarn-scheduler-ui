@@ -5,16 +5,12 @@ import { useSchedulerQuery } from '../hooks/useYarnApi';
 
 export default function StatusBar() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
-    
+
     const allQueues = useAllQueues();
     const schedulerQuery = useSchedulerQuery();
-    
+
     // Derive health status from scheduler query
-    const healthStatus = schedulerQuery.isLoading 
-        ? 'loading' 
-        : schedulerQuery.isError 
-        ? 'error' 
-        : 'ok';
+    const healthStatus = schedulerQuery.isLoading ? 'loading' : schedulerQuery.isError ? 'error' : 'ok';
 
     const totalQueues = allQueues.length;
 

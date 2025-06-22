@@ -1,6 +1,18 @@
 import React from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Card, CardContent, Typography, Box, Menu, MenuItem, ListItemIcon, ListItemText, Checkbox, Tooltip, IconButton } from '@mui/material';
+import {
+    Card,
+    CardContent,
+    Typography,
+    Box,
+    Menu,
+    MenuItem,
+    ListItemIcon,
+    ListItemText,
+    Checkbox,
+    Tooltip,
+    IconButton,
+} from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Label } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
@@ -17,20 +29,28 @@ const formatBytes = (bytes: number): string => {
     return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
 };
 
-export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
-    stagedStatus?: 'new' | 'deleted' | 'modified';
-    isMatch?: boolean;
-    isAncestorOfMatch?: boolean;
-};
+export type QueueNodeData = LayoutQueue &
+    Record<string, unknown> & {
+        stagedStatus?: 'new' | 'deleted' | 'modified';
+        isMatch?: boolean;
+        isAncestorOfMatch?: boolean;
+    };
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const { stageChange, stagedChanges } = useChangesStore();
-    const { openAddQueueModal, comparisonQueueNames, toggleComparisonQueue, selectedNodeLabel, selectQueue, openPropertyEditor } = useUIStore();
+    const {
+        openAddQueueModal,
+        comparisonQueueNames,
+        toggleComparisonQueue,
+        selectedNodeLabel,
+        selectQueue,
+        openPropertyEditor,
+    } = useUIStore();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
-    
+
     const queuePath = data.queuePath || data.queueName;
     const isSelectedForComparison = comparisonQueueNames.includes(queuePath);
-    
+
     // Node label filtering properties are now available directly from data
     const hasLabelAccess = data.hasLabelAccess ?? true;
     const effectiveCapacity = data.effectiveCapacity ?? data.capacity;
@@ -59,7 +79,7 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
             property: data.queueName,
             oldValue: data, // Store full queue definition for undo
             newValue: null,
-            timestamp: new Date()
+            timestamp: new Date(),
         });
         popupState.close();
     };
@@ -82,18 +102,15 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     const getCapacityModeInfo = () => {
         // Check if there are staged changes that affect capacity for this queue
         const capacityChange = stagedChanges?.find(
-            change => change.queuePath === queuePath && 
-                     change.type === 'PROPERTY_UPDATE' && 
-                     change.property === 'capacity'
+            (change) =>
+                change.queuePath === queuePath && change.type === 'PROPERTY_UPDATE' && change.property === 'capacity'
         );
-        
+
         // Use staged capacity value if available, otherwise fall back to current data
-        const capacityValue = capacityChange ? 
-            capacityChange.newValue : 
-            `${liveCapacityData.capacity}%`;
-        
+        const capacityValue = capacityChange ? capacityChange.newValue : `${liveCapacityData.capacity}%`;
+
         const parsed = parseCapacityValue(String(capacityValue));
-        
+
         switch (parsed.mode) {
             case 'weight':
                 return { label: 'WEIGHT', color: '#10b981' };
@@ -106,7 +123,6 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     };
 
     const capacityModeInfo = getCapacityModeInfo();
-
 
     // Get usage color using same logic as canvas renderer
     const getCanvasUsageColor = (used: number, total: number): string => {
@@ -126,7 +142,7 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
         return '#e0e0e0'; // Default
     };
 
-    const getBorderWidth = () => data.stagedStatus ? '2px' : '1px';
+    const getBorderWidth = () => (data.stagedStatus ? '2px' : '1px');
 
     return (
         <>
@@ -137,9 +153,7 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                     height: 220,
                     border: `${getBorderWidth()} solid ${getBorderColor()}`,
                     borderRadius: '12px',
-                    boxShadow: selected 
-                        ? '0 15px 30px rgba(0, 0, 0, 0.5)' 
-                        : '0 2px 4px rgba(0, 0, 0, 0.15)',
+                    boxShadow: selected ? '0 15px 30px rgba(0, 0, 0, 0.5)' : '0 2px 4px rgba(0, 0, 0, 0.15)',
                     transform: selected ? 'scale(1.02)' : 'scale(1)',
                     transition: 'all 0.2s ease-in-out',
                     backgroundColor: selected ? '#f0f8ff' : '#ffffff',
@@ -155,204 +169,127 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                     cursor: 'pointer',
                 }}
             >
-            {/* React Flow Handles */}
-            <Handle 
-                type="target" 
-                position={Position.Left} 
-                style={{ 
-                    background: '#555',
-                    width: 8,
-                    height: 8,
-                    border: '2px solid #fff',
-                }} 
-            />
-            <Handle 
-                type="source" 
-                position={Position.Right} 
-                style={{ 
-                    background: '#555',
-                    width: 8,
-                    height: 8,
-                    border: '2px solid #fff',
-                }} 
-            />
-
-            {/* Header with queue name - exactly like canvas */}
-            <Box
-                sx={{
-                    padding: '8px 16px',
-                    backgroundColor: '#f8fafc',
-                    borderBottom: '1px solid #e5e7eb',
-                    height: 40,
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                }}
-            >
-                <Typography
-                    sx={{
-                        fontWeight: 'bold',
-                        fontSize: '16px',
-                        color: '#333333',
-                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        flex: 1,
-                    }}
-                >
-                    {data.queueName}
-                </Typography>
-                
-                {/* Label indicators */}
-                {selectedNodeLabel && hasLabelAccess && isLabelCapacityConfigured && (
-                    <Tooltip title={`Capacity configured for ${selectedNodeLabel} label`}>
-                        <Label 
-                            sx={{ 
-                                fontSize: 16,
-                                color: 'primary.main',
-                                mr: 1
-                            }} 
-                        />
-                    </Tooltip>
-                )}
-                {selectedNodeLabel && !hasLabelAccess && (
-                    <Tooltip title={`Click to grant access to ${selectedNodeLabel} label`}>
-                        <IconButton
-                            size="small"
-                            sx={{ 
-                                mr: 1,
-                                backgroundColor: 'action.hover',
-                                '&:hover': {
-                                    backgroundColor: 'action.selected',
-                                }
-                            }}
-                            onClick={(e) => {
-                                e.stopPropagation();
-                                selectQueue(data.queuePath);
-                                openPropertyEditor(data.queuePath, 'edit', 'node-labels');
-                            }}
-                        >
-                            <AddIcon fontSize="small" />
-                        </IconButton>
-                    </Tooltip>
-                )}
-                
-                {/* Comparison checkbox */}
-                <Checkbox
-                    checked={isSelectedForComparison}
-                    onChange={() => {}} // Handled by onClick
-                    onClick={handleComparisonCheck}
-                    size="small"
-                    sx={{
-                        padding: '2px',
-                        '& .MuiSvgIcon-root': {
-                            fontSize: '16px',
-                        },
+                {/* React Flow Handles */}
+                <Handle
+                    type="target"
+                    position={Position.Left}
+                    style={{
+                        background: '#555',
+                        width: 8,
+                        height: 8,
+                        border: '2px solid #fff',
                     }}
                 />
-            </Box>
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    style={{
+                        background: '#555',
+                        width: 8,
+                        height: 8,
+                        border: '2px solid #fff',
+                    }}
+                />
 
-            <CardContent sx={{ p: 0, height: 'calc(100% - 40px)' }}>
-                {/* Badges section - exactly like canvas */}
-                <Box sx={{ p: '8px 16px 0 16px' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                        {/* Capacity mode badge */}
-                        <Box
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                px: 1,
-                                py: 0.25,
-                                backgroundColor: capacityModeInfo.label === 'WEIGHT' ? '#dcfce7' : 
-                                                capacityModeInfo.label === 'ABSOLUTE' ? '#fef3c7' : '#dbeafe',
-                                border: `1px solid ${capacityModeInfo.label === 'WEIGHT' ? 'rgba(16, 185, 129, 0.2)' : 
-                                                     capacityModeInfo.label === 'ABSOLUTE' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(59, 130, 246, 0.2)'}`,
-                                borderRadius: '6px',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-                            }}
-                        >
-                            <Typography
+                {/* Header with queue name - exactly like canvas */}
+                <Box
+                    sx={{
+                        padding: '8px 16px',
+                        backgroundColor: '#f8fafc',
+                        borderBottom: '1px solid #e5e7eb',
+                        height: 40,
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                    }}
+                >
+                    <Typography
+                        sx={{
+                            fontWeight: 'bold',
+                            fontSize: '16px',
+                            color: '#333333',
+                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
+                            whiteSpace: 'nowrap',
+                            flex: 1,
+                        }}
+                    >
+                        {data.queueName}
+                    </Typography>
+
+                    {/* Label indicators */}
+                    {selectedNodeLabel && hasLabelAccess && isLabelCapacityConfigured && (
+                        <Tooltip title={`Capacity configured for ${selectedNodeLabel} label`}>
+                            <Label
                                 sx={{
-                                    fontWeight: 'bold',
-                                    fontSize: '10px',
-                                    color: capacityModeInfo.color,
-                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                                    textTransform: 'uppercase',
+                                    fontSize: 16,
+                                    color: 'primary.main',
+                                    mr: 1,
+                                }}
+                            />
+                        </Tooltip>
+                    )}
+                    {selectedNodeLabel && !hasLabelAccess && (
+                        <Tooltip title={`Click to grant access to ${selectedNodeLabel} label`}>
+                            <IconButton
+                                size="small"
+                                sx={{
+                                    mr: 1,
+                                    backgroundColor: 'action.hover',
+                                    '&:hover': {
+                                        backgroundColor: 'action.selected',
+                                    },
+                                }}
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    selectQueue(data.queuePath);
+                                    openPropertyEditor(data.queuePath, 'edit', 'node-labels');
                                 }}
                             >
-                                {capacityModeInfo.label}
-                            </Typography>
-                        </Box>
+                                <AddIcon fontSize="small" />
+                            </IconButton>
+                        </Tooltip>
+                    )}
 
-                        {/* State badge */}
-                        <Box
-                            sx={{
-                                display: 'inline-flex',
-                                alignItems: 'center',
-                                px: 1,
-                                py: 0.25,
-                                backgroundColor: data.state === 'RUNNING' ? '#d1fae5' : '#fee2e2',
-                                border: `1px solid ${data.state === 'RUNNING' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
-                                borderRadius: '6px',
-                                boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-                            }}
-                        >
-                            <Typography
-                                sx={{
-                                    fontWeight: 'bold',
-                                    fontSize: '10px',
-                                    color: data.state === 'RUNNING' ? '#10b981' : '#ef4444',
-                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                                }}
-                            >
-                                {data.state}
-                            </Typography>
-                        </Box>
+                    {/* Comparison checkbox */}
+                    <Checkbox
+                        checked={isSelectedForComparison}
+                        onChange={() => {}} // Handled by onClick
+                        onClick={handleComparisonCheck}
+                        size="small"
+                        sx={{
+                            padding: '2px',
+                            '& .MuiSvgIcon-root': {
+                                fontSize: '16px',
+                            },
+                        }}
+                    />
+                </Box>
 
-                        {/* Auto creation badge if enabled */}
-                        {data.autoCreateChildQueueEnabled && (
+                <CardContent sx={{ p: 0, height: 'calc(100% - 40px)' }}>
+                    {/* Badges section - exactly like canvas */}
+                    <Box sx={{ p: '8px 16px 0 16px' }}>
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                            {/* Capacity mode badge */}
                             <Box
                                 sx={{
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     px: 1,
                                     py: 0.25,
-                                    backgroundColor: '#fef3c7',
-                                    border: '1px solid rgba(245, 158, 11, 0.2)',
-                                    borderRadius: '6px',
-                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
-                                }}
-                            >
-                                <Typography
-                                    sx={{
-                                        fontWeight: 'bold',
-                                        fontSize: '10px',
-                                        color: '#f59e0b',
-                                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                                    }}
-                                >
-                                    AUTO
-                                </Typography>
-                            </Box>
-                        )}
-
-                        {/* Staged status badge */}
-                        {data.stagedStatus && (
-                            <Box
-                                sx={{
-                                    display: 'inline-flex',
-                                    alignItems: 'center',
-                                    px: 1,
-                                    py: 0.25,
-                                    backgroundColor: 
-                                        data.stagedStatus === 'new' ? '#dcfce7' :
-                                        data.stagedStatus === 'deleted' ? '#fee2e2' :
-                                        data.stagedStatus === 'modified' ? '#fef3c7' : '#f3f4f6',
+                                    backgroundColor:
+                                        capacityModeInfo.label === 'WEIGHT'
+                                            ? '#dcfce7'
+                                            : capacityModeInfo.label === 'ABSOLUTE'
+                                              ? '#fef3c7'
+                                              : '#dbeafe',
                                     border: `1px solid ${
-                                        data.stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.2)' :
-                                        data.stagedStatus === 'deleted' ? 'rgba(239, 68, 68, 0.2)' :
-                                        data.stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.2)' : 'rgba(156, 163, 175, 0.2)'
+                                        capacityModeInfo.label === 'WEIGHT'
+                                            ? 'rgba(16, 185, 129, 0.2)'
+                                            : capacityModeInfo.label === 'ABSOLUTE'
+                                              ? 'rgba(245, 158, 11, 0.2)'
+                                              : 'rgba(59, 130, 246, 0.2)'
                                     }`,
                                     borderRadius: '6px',
                                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
@@ -362,176 +299,268 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                                     sx={{
                                         fontWeight: 'bold',
                                         fontSize: '10px',
-                                        color: 
-                                            data.stagedStatus === 'new' ? '#22c55e' :
-                                            data.stagedStatus === 'deleted' ? '#ef4444' :
-                                            data.stagedStatus === 'modified' ? '#f59e0b' : '#6b7280',
+                                        color: capacityModeInfo.color,
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                         textTransform: 'uppercase',
                                     }}
                                 >
-                                    {data.stagedStatus === 'new' ? 'NEW' :
-                                     data.stagedStatus === 'deleted' ? 'DELETED' :
-                                     data.stagedStatus === 'modified' ? 'MODIFIED' : data.stagedStatus}
+                                    {capacityModeInfo.label}
                                 </Typography>
                             </Box>
-                        )}
+
+                            {/* State badge */}
+                            <Box
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    px: 1,
+                                    py: 0.25,
+                                    backgroundColor: data.state === 'RUNNING' ? '#d1fae5' : '#fee2e2',
+                                    border: `1px solid ${data.state === 'RUNNING' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                    borderRadius: '6px',
+                                    boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                                }}
+                            >
+                                <Typography
+                                    sx={{
+                                        fontWeight: 'bold',
+                                        fontSize: '10px',
+                                        color: data.state === 'RUNNING' ? '#10b981' : '#ef4444',
+                                        fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                    }}
+                                >
+                                    {data.state}
+                                </Typography>
+                            </Box>
+
+                            {/* Auto creation badge if enabled */}
+                            {data.autoCreateChildQueueEnabled && (
+                                <Box
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        px: 1,
+                                        py: 0.25,
+                                        backgroundColor: '#fef3c7',
+                                        border: '1px solid rgba(245, 158, 11, 0.2)',
+                                        borderRadius: '6px',
+                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                                    }}
+                                >
+                                    <Typography
+                                        sx={{
+                                            fontWeight: 'bold',
+                                            fontSize: '10px',
+                                            color: '#f59e0b',
+                                            fontFamily:
+                                                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                        }}
+                                    >
+                                        AUTO
+                                    </Typography>
+                                </Box>
+                            )}
+
+                            {/* Staged status badge */}
+                            {data.stagedStatus && (
+                                <Box
+                                    sx={{
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        px: 1,
+                                        py: 0.25,
+                                        backgroundColor:
+                                            data.stagedStatus === 'new'
+                                                ? '#dcfce7'
+                                                : data.stagedStatus === 'deleted'
+                                                  ? '#fee2e2'
+                                                  : data.stagedStatus === 'modified'
+                                                    ? '#fef3c7'
+                                                    : '#f3f4f6',
+                                        border: `1px solid ${
+                                            data.stagedStatus === 'new'
+                                                ? 'rgba(34, 197, 94, 0.2)'
+                                                : data.stagedStatus === 'deleted'
+                                                  ? 'rgba(239, 68, 68, 0.2)'
+                                                  : data.stagedStatus === 'modified'
+                                                    ? 'rgba(245, 158, 11, 0.2)'
+                                                    : 'rgba(156, 163, 175, 0.2)'
+                                        }`,
+                                        borderRadius: '6px',
+                                        boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
+                                    }}
+                                >
+                                    <Typography
+                                        sx={{
+                                            fontWeight: 'bold',
+                                            fontSize: '10px',
+                                            color:
+                                                data.stagedStatus === 'new'
+                                                    ? '#22c55e'
+                                                    : data.stagedStatus === 'deleted'
+                                                      ? '#ef4444'
+                                                      : data.stagedStatus === 'modified'
+                                                        ? '#f59e0b'
+                                                        : '#6b7280',
+                                            fontFamily:
+                                                '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                            textTransform: 'uppercase',
+                                        }}
+                                    >
+                                        {data.stagedStatus === 'new'
+                                            ? 'NEW'
+                                            : data.stagedStatus === 'deleted'
+                                              ? 'DELETED'
+                                              : data.stagedStatus === 'modified'
+                                                ? 'MODIFIED'
+                                                : data.stagedStatus}
+                                    </Typography>
+                                </Box>
+                            )}
+                        </Box>
                     </Box>
-                </Box>
 
-                {/* Section divider - exactly like canvas */}
-                <Box
-                    sx={{
-                        mx: 2,
-                        height: '1px',
-                        backgroundColor: '#e5e7eb',
-                        mb: 1.5,
-                    }}
-                />
-
-                {/* Capacity section */}
-                <Box sx={{ px: 2, mb: 1.5 }}>
-                    {/* Capacity bar - exactly like canvas */}
+                    {/* Section divider - exactly like canvas */}
                     <Box
                         sx={{
-                            position: 'relative',
-                            height: 6,
-                            backgroundColor: '#f0f0f0',
-                            borderRadius: 3,
-                            mb: 1.25,
-                            overflow: 'hidden',
+                            mx: 2,
+                            height: '1px',
+                            backgroundColor: '#e5e7eb',
+                            mb: 1.5,
                         }}
-                    >
-                        {/* Max capacity background */}
-                        {liveCapacityData.maxCapacity > liveCapacityData.capacity && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    height: '100%',
-                                    width: `${Math.min(liveCapacityData.maxCapacity, 100)}%`,
-                                    backgroundColor: '#e8f4ff',
-                                    borderRadius: 3,
-                                }}
-                            />
-                        )}
-                        
-                        {/* Current capacity */}
+                    />
+
+                    {/* Capacity section */}
+                    <Box sx={{ px: 2, mb: 1.5 }}>
+                        {/* Capacity bar - exactly like canvas */}
                         <Box
                             sx={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                height: '100%',
-                                width: `${Math.min(liveCapacityData.capacity, 100)}%`,
-                                backgroundColor: '#bfdbfe',
+                                position: 'relative',
+                                height: 6,
+                                backgroundColor: '#f0f0f0',
                                 borderRadius: 3,
-                            }}
-                        />
-                        
-                        {/* Used capacity */}
-                        {liveCapacityData.usedCapacity > 0 && liveCapacityData.capacity > 0 && (
-                            <Box
-                                sx={{
-                                    position: 'absolute',
-                                    left: 0,
-                                    top: 0,
-                                    height: '100%',
-                                    width: `${Math.min((liveCapacityData.usedCapacity / 100) * liveCapacityData.capacity, 100)}%`,
-                                    backgroundColor: getCanvasUsageColor(liveCapacityData.usedCapacity, liveCapacityData.capacity),
-                                    borderRadius: 3,
-                                }}
-                            />
-                        )}
-                    </Box>
-
-                    {/* Capacity text with label support */}
-                    <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.25 }}>
-                        <Typography
-                            sx={{
-                                fontWeight: 'bold',
-                                fontSize: '14px',
-                                color: '#374151',
-                                fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                mb: 1.25,
+                                overflow: 'hidden',
                             }}
                         >
-                            {(() => {
-                                // Check for staged capacity changes
-                                const capacityChange = stagedChanges?.find(
-                                    change => change.queuePath === queuePath && 
-                                             change.type === 'PROPERTY_UPDATE' && 
-                                             change.property === 'capacity'
-                                );
-                                const maxCapacityChange = stagedChanges?.find(
-                                    change => change.queuePath === queuePath && 
-                                             change.type === 'PROPERTY_UPDATE' && 
-                                             change.property === 'maximum-capacity'
-                                );
-                                
-                                const currentCapacity = capacityChange ? capacityChange.newValue : `${liveCapacityData.capacity}%`;
-                                const currentMaxCapacity = maxCapacityChange ? maxCapacityChange.newValue : `${liveCapacityData.maxCapacity}%`;
-                                
-                                const capacityParsed = parseCapacityValue(String(currentCapacity));
-                                const maxCapacityParsed = parseCapacityValue(String(currentMaxCapacity));
-                                
-                                // Format display based on mode
-                                if (capacityParsed.mode === 'weight') {
-                                    return `Weight: ${capacityParsed.value}${maxCapacityParsed.value !== currentMaxCapacity ? ` / ${maxCapacityParsed.value}` : ''}`;
-                                } else if (capacityParsed.mode === 'absolute') {
-                                    return `Absolute: ${capacityParsed.value}`;
-                                } else {
-                                    // Percentage mode - show max capacity if different
-                                    return `Capacity: ${capacityParsed.value}${String(currentMaxCapacity) !== String(currentCapacity) ? ` / ${maxCapacityParsed.value}` : ''}`;
-                                }
-                            })()}
-                        </Typography>
-                        {selectedNodeLabel && hasLabelAccess && (isLabelCapacityConfigured || isLabelMaxCapacityConfigured) && (
-                            <Tooltip 
-                                title={
-                                    <Box component="div" sx={{ whiteSpace: 'pre-line' }}>
-                                        {getInheritanceTooltip(
-                                            data as Queue, 
-                                            selectedNodeLabel,
-                                            data.capacity,
-                                            data.maxCapacity
-                                            // Note: allQueues parameter omitted for now, will use fallback logic
-                                        )}
-                                    </Box>
-                                }
-                            >
-                                <Label 
-                                    sx={{ 
-                                        fontSize: 14,
-                                        color: 'primary.main'
-                                    }} 
+                            {/* Max capacity background */}
+                            {liveCapacityData.maxCapacity > liveCapacityData.capacity && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        height: '100%',
+                                        width: `${Math.min(liveCapacityData.maxCapacity, 100)}%`,
+                                        backgroundColor: '#e8f4ff',
+                                        borderRadius: 3,
+                                    }}
                                 />
-                            </Tooltip>
-                        )}
-                    </Box>
-                    <Typography
-                        sx={{
-                            fontSize: '12px',
-                            color: '#6b7280',
-                            fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
-                        }}
-                    >
-                        {liveCapacityData.usedCapacity.toFixed(1)}% in use
-                    </Typography>
-                </Box>
+                            )}
 
-                {/* Resources section - exactly like canvas */}
-                {data.resourcesUsed && (data.resourcesUsed.memory > 0 || data.resourcesUsed.vCores > 0) && (
-                    <Box sx={{ px: 2 }}>
-                        {/* Section divider */}
-                        <Box
-                            sx={{
-                                height: '1px',
-                                backgroundColor: '#e5e7eb',
-                                mb: 1,
-                            }}
-                        />
-                        
+                            {/* Current capacity */}
+                            <Box
+                                sx={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    height: '100%',
+                                    width: `${Math.min(liveCapacityData.capacity, 100)}%`,
+                                    backgroundColor: '#bfdbfe',
+                                    borderRadius: 3,
+                                }}
+                            />
+
+                            {/* Used capacity */}
+                            {liveCapacityData.usedCapacity > 0 && liveCapacityData.capacity > 0 && (
+                                <Box
+                                    sx={{
+                                        position: 'absolute',
+                                        left: 0,
+                                        top: 0,
+                                        height: '100%',
+                                        width: `${Math.min((liveCapacityData.usedCapacity / 100) * liveCapacityData.capacity, 100)}%`,
+                                        backgroundColor: getCanvasUsageColor(
+                                            liveCapacityData.usedCapacity,
+                                            liveCapacityData.capacity
+                                        ),
+                                        borderRadius: 3,
+                                    }}
+                                />
+                            )}
+                        </Box>
+
+                        {/* Capacity text with label support */}
+                        <Box sx={{ display: 'flex', gap: 1, alignItems: 'center', mb: 0.25 }}>
+                            <Typography
+                                sx={{
+                                    fontWeight: 'bold',
+                                    fontSize: '14px',
+                                    color: '#374151',
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                }}
+                            >
+                                {(() => {
+                                    // Check for staged capacity changes
+                                    const capacityChange = stagedChanges?.find(
+                                        (change) =>
+                                            change.queuePath === queuePath &&
+                                            change.type === 'PROPERTY_UPDATE' &&
+                                            change.property === 'capacity'
+                                    );
+                                    const maxCapacityChange = stagedChanges?.find(
+                                        (change) =>
+                                            change.queuePath === queuePath &&
+                                            change.type === 'PROPERTY_UPDATE' &&
+                                            change.property === 'maximum-capacity'
+                                    );
+
+                                    const currentCapacity = capacityChange
+                                        ? capacityChange.newValue
+                                        : `${liveCapacityData.capacity}%`;
+                                    const currentMaxCapacity = maxCapacityChange
+                                        ? maxCapacityChange.newValue
+                                        : `${liveCapacityData.maxCapacity}%`;
+
+                                    const capacityParsed = parseCapacityValue(String(currentCapacity));
+                                    const maxCapacityParsed = parseCapacityValue(String(currentMaxCapacity));
+
+                                    // Format display based on mode
+                                    if (capacityParsed.mode === 'weight') {
+                                        return `Weight: ${capacityParsed.value}${maxCapacityParsed.value !== currentMaxCapacity ? ` / ${maxCapacityParsed.value}` : ''}`;
+                                    } else if (capacityParsed.mode === 'absolute') {
+                                        return `Absolute: ${capacityParsed.value}`;
+                                    } else {
+                                        // Percentage mode - show max capacity if different
+                                        return `Capacity: ${capacityParsed.value}${String(currentMaxCapacity) !== String(currentCapacity) ? ` / ${maxCapacityParsed.value}` : ''}`;
+                                    }
+                                })()}
+                            </Typography>
+                            {selectedNodeLabel &&
+                                hasLabelAccess &&
+                                (isLabelCapacityConfigured || isLabelMaxCapacityConfigured) && (
+                                    <Tooltip
+                                        title={
+                                            <Box component="div" sx={{ whiteSpace: 'pre-line' }}>
+                                                {getInheritanceTooltip(
+                                                    data as Queue,
+                                                    selectedNodeLabel,
+                                                    data.capacity,
+                                                    data.maxCapacity
+                                                    // Note: allQueues parameter omitted for now, will use fallback logic
+                                                )}
+                                            </Box>
+                                        }
+                                    >
+                                        <Label
+                                            sx={{
+                                                fontSize: 14,
+                                                color: 'primary.main',
+                                            }}
+                                        />
+                                    </Tooltip>
+                                )}
+                        </Box>
                         <Typography
                             sx={{
                                 fontSize: '12px',
@@ -539,45 +568,72 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                                 fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                             }}
                         >
-                            {[
-                                data.resourcesUsed.memory > 0 ? `Memory: ${formatBytes(data.resourcesUsed.memory * 1024 * 1024)}` : null,
-                                data.resourcesUsed.vCores > 0 ? `vCores: ${data.resourcesUsed.vCores}` : null,
-                                data.numApplications > 0 ? `Apps: ${data.numApplications}` : null
-                            ].filter(Boolean).join(' • ')}
+                            {liveCapacityData.usedCapacity.toFixed(1)}% in use
                         </Typography>
                     </Box>
-                )}
-            </CardContent>
-        </Card>
 
-        {/* Context Menu */}
-        <Menu
-            {...bindMenu(popupState)}
-            anchorOrigin={{
-                vertical: 'bottom',
-                horizontal: 'left',
-            }}
-            transformOrigin={{
-                vertical: 'top',
-                horizontal: 'left',
-            }}
-        >
-            <MenuItem onClick={handleAddChildQueue}>
-                <ListItemIcon>
-                    <AddIcon fontSize="small" />
-                </ListItemIcon>
-                <ListItemText>Add Child Queue</ListItemText>
-            </MenuItem>
-            {data.queueName !== 'root' && (
-                <MenuItem onClick={handleDeleteQueue}>
+                    {/* Resources section - exactly like canvas */}
+                    {data.resourcesUsed && (data.resourcesUsed.memory > 0 || data.resourcesUsed.vCores > 0) && (
+                        <Box sx={{ px: 2 }}>
+                            {/* Section divider */}
+                            <Box
+                                sx={{
+                                    height: '1px',
+                                    backgroundColor: '#e5e7eb',
+                                    mb: 1,
+                                }}
+                            />
+
+                            <Typography
+                                sx={{
+                                    fontSize: '12px',
+                                    color: '#6b7280',
+                                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                }}
+                            >
+                                {[
+                                    data.resourcesUsed.memory > 0
+                                        ? `Memory: ${formatBytes(data.resourcesUsed.memory * 1024 * 1024)}`
+                                        : null,
+                                    data.resourcesUsed.vCores > 0 ? `vCores: ${data.resourcesUsed.vCores}` : null,
+                                    data.numApplications > 0 ? `Apps: ${data.numApplications}` : null,
+                                ]
+                                    .filter(Boolean)
+                                    .join(' • ')}
+                            </Typography>
+                        </Box>
+                    )}
+                </CardContent>
+            </Card>
+
+            {/* Context Menu */}
+            <Menu
+                {...bindMenu(popupState)}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'left',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'left',
+                }}
+            >
+                <MenuItem onClick={handleAddChildQueue}>
                     <ListItemIcon>
-                        <DeleteIcon fontSize="small" />
+                        <AddIcon fontSize="small" />
                     </ListItemIcon>
-                    <ListItemText>Delete Queue</ListItemText>
+                    <ListItemText>Add Child Queue</ListItemText>
                 </MenuItem>
-            )}
-        </Menu>
-    </>
+                {data.queueName !== 'root' && (
+                    <MenuItem onClick={handleDeleteQueue}>
+                        <ListItemIcon>
+                            <DeleteIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Delete Queue</ListItemText>
+                    </MenuItem>
+                )}
+            </Menu>
+        </>
     );
 }
 

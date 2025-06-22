@@ -1,5 +1,13 @@
-import type { ParsedQueue, Queue, ConfigurationResponse, ConfigProperty } from '../../types/Queue';
+import type { ParsedQueue, Queue, ConfigurationResponse, ConfigProperty, Configuration } from '../../types/Queue';
 import { PropertyDefinition } from '../../config';
+
+export const mockSimpleConfig: Configuration = {
+    'yarn.scheduler.capacity.root.queues': 'default',
+    'yarn.scheduler.capacity.root.capacity': '100',
+    'yarn.scheduler.capacity.root.default.capacity': '100',
+    'yarn.scheduler.capacity.root.default.maximum-capacity': '100',
+    'yarn.scheduler.capacity.root.default.state': 'RUNNING',
+};
 
 export function createMockQueue(overrides: Partial<Queue> = {}): Queue {
     return {
@@ -46,9 +54,7 @@ export function createMockParsedQueue(overrides: Partial<ParsedQueue> = {}): Par
     };
 }
 
-export function createMockConfiguration(
-    overrides: Partial<ConfigurationResponse> = {}
-): ConfigurationResponse {
+export function createMockConfiguration(overrides: Partial<ConfigurationResponse> = {}): ConfigurationResponse {
     return {
         property: [
             { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
@@ -83,11 +89,7 @@ export function createMockPropertyDefinition(overrides: Partial<PropertyDefiniti
     };
 }
 
-export function createMockChildQueue(
-    parent: string,
-    name: string,
-    capacity: number
-): Queue {
+export function createMockChildQueue(parent: string, name: string, capacity: number): Queue {
     return createMockQueue({
         queueName: name,
         queuePath: `${parent}.${name}`,
@@ -98,11 +100,7 @@ export function createMockChildQueue(
     });
 }
 
-export function createMockParsedChildQueue(
-    parent: string,
-    name: string,
-    capacity: number
-): ParsedQueue {
+export function createMockParsedChildQueue(parent: string, name: string, capacity: number): ParsedQueue {
     return createMockParsedQueue({
         name,
         path: `${parent}.${name}`,
@@ -124,14 +122,14 @@ export function createMockParsedChildQueue(
 export function createMockQueueHierarchy(): Queue {
     const production = createMockChildQueue('root', 'production', 70);
     const development = createMockChildQueue('root', 'development', 30);
-    
+
     const prodTeam1 = createMockChildQueue('root.production', 'team1', 40);
     const prodTeam2 = createMockChildQueue('root.production', 'team2', 30);
-    
+
     production.queues = {
         queue: [prodTeam1, prodTeam2],
     };
-    
+
     return createMockQueue({
         queueName: 'root',
         queues: {
@@ -143,12 +141,12 @@ export function createMockQueueHierarchy(): Queue {
 export function createMockParsedQueueHierarchy(): ParsedQueue {
     const production = createMockParsedChildQueue('root', 'production', 70);
     const development = createMockParsedChildQueue('root', 'development', 30);
-    
+
     const prodTeam1 = createMockParsedChildQueue('root.production', 'team1', 40);
     const prodTeam2 = createMockParsedChildQueue('root.production', 'team2', 30);
-    
+
     production.children = [prodTeam1, prodTeam2];
-    
+
     return createMockParsedQueue({
         name: 'root',
         children: [production, development],

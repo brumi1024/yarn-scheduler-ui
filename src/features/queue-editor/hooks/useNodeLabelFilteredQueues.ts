@@ -50,12 +50,16 @@ export function useNodeLabelFilteredQueues(queues: Queue[]): FilteredQueue[] {
                 labelMaxCapacity: isLabelMaxCapacityConfigured ? parseFloat(labelMaxCapacity as string) : undefined,
                 isLabelCapacityConfigured,
                 isLabelMaxCapacityConfigured,
-                effectiveCapacity: isLabelCapacityConfigured 
+                effectiveCapacity: isLabelCapacityConfigured
                     ? parseFloat(labelCapacity as string)
-                    : (hasLabelAccess ? queue.capacity || 0 : 0),
-                effectiveMaxCapacity: isLabelMaxCapacityConfigured 
+                    : hasLabelAccess
+                      ? queue.capacity || 0
+                      : 0,
+                effectiveMaxCapacity: isLabelMaxCapacityConfigured
                     ? parseFloat(labelMaxCapacity as string)
-                    : (hasLabelAccess ? queue.maxCapacity || 100 : 0),
+                    : hasLabelAccess
+                      ? queue.maxCapacity || 100
+                      : 0,
             };
         });
     }, [queues, selectedNodeLabel]);

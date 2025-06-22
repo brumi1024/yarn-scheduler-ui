@@ -114,7 +114,7 @@ export function convertChangesToApiRequest(changes: ChangeSet[]) {
                     newQueueParams[key] = convertFormValueToYarnValue(key, value);
                 });
             }
-            
+
             addQueues.push({
                 'queue-name': change.property, // Queue name is stored in property field
                 params: newQueueParams,
@@ -175,19 +175,16 @@ export function convertChangesToApiRequest(changes: ChangeSet[]) {
  * @param stagedChanges Array of all staged changes
  * @returns Queue data with staged changes applied
  */
-export function mergeQueueWithStagedChanges(
-    queue: Queue,
-    stagedChanges: ChangeSet[]
-): Queue {
+export function mergeQueueWithStagedChanges(queue: Queue, stagedChanges: ChangeSet[]): Queue {
     if (!queue || !stagedChanges || stagedChanges.length === 0) {
         return queue;
     }
 
-    const queuePath = (queue as Record<string, unknown>).queuePath as string || queue.queueName;
-    
+    const queuePath = ((queue as Record<string, unknown>).queuePath as string) || queue.queueName;
+
     // Find all changes that apply to this queue
     const relevantChanges = stagedChanges.filter(
-        change => change.queuePath === queuePath && change.type === 'PROPERTY_UPDATE'
+        (change) => change.queuePath === queuePath && change.type === 'PROPERTY_UPDATE'
     );
 
     if (relevantChanges.length === 0) {
@@ -196,8 +193,8 @@ export function mergeQueueWithStagedChanges(
 
     // Apply changes to a copy of the queue
     const modifiedQueue = { ...queue };
-    
-    relevantChanges.forEach(change => {
+
+    relevantChanges.forEach((change) => {
         // Apply the staged value to the queue copy
         (modifiedQueue as Record<string, unknown>)[change.property] = change.newValue;
     });

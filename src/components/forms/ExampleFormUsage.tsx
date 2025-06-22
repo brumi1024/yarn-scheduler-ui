@@ -42,7 +42,7 @@ export function ExampleFormWithProvider() {
             <Typography variant="h6" sx={{ mb: 2 }}>
                 Example: Form with Provider Pattern
             </Typography>
-            
+
             <FormProvider {...methods}>
                 <form onSubmit={methods.handleSubmit(onSubmit)}>
                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
@@ -52,7 +52,7 @@ export function ExampleFormWithProvider() {
                             description="Enter a unique name for the queue"
                             required
                         />
-                        
+
                         <FormTextField
                             name="capacity"
                             label="Capacity (%)"
@@ -60,7 +60,7 @@ export function ExampleFormWithProvider() {
                             type="number"
                             required
                         />
-                        
+
                         <FormSelectField
                             name="state"
                             label="Queue State"
@@ -71,18 +71,14 @@ export function ExampleFormWithProvider() {
                                 { value: 'STOPPED', label: 'Stopped' },
                             ]}
                         />
-                        
+
                         <FormSwitchField
                             name="autoCreate"
                             label="Enable Auto-Creation"
                             description="Allow automatic creation of child queues"
                         />
-                        
-                        <Button
-                            type="submit"
-                            variant="contained"
-                            disabled={!methods.formState.isValid}
-                        >
+
+                        <Button type="submit" variant="contained" disabled={!methods.formState.isValid}>
                             Create Queue
                         </Button>
                     </Box>
@@ -113,7 +109,7 @@ export function ExampleFormWithControl() {
             <Typography variant="h6" sx={{ mb: 2 }}>
                 Example: Form with Control Prop Pattern
             </Typography>
-            
+
             <form onSubmit={handleSubmit(onSubmit)}>
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                     <FormTextField
@@ -123,7 +119,7 @@ export function ExampleFormWithControl() {
                         required
                         control={control}
                     />
-                    
+
                     <FormTextField
                         name="capacity"
                         label="Capacity (%)"
@@ -132,7 +128,7 @@ export function ExampleFormWithControl() {
                         required
                         control={control}
                     />
-                    
+
                     <FormSelectField
                         name="state"
                         label="Queue State"
@@ -144,19 +140,15 @@ export function ExampleFormWithControl() {
                             { value: 'STOPPED', label: 'Stopped' },
                         ]}
                     />
-                    
+
                     <FormSwitchField
                         name="autoCreate"
                         label="Enable Auto-Creation"
                         description="Allow automatic creation of child queues"
                         control={control}
                     />
-                    
-                    <Button
-                        type="submit"
-                        variant="contained"
-                        disabled={!formState.isValid}
-                    >
+
+                    <Button type="submit" variant="contained" disabled={!formState.isValid}>
                         Create Queue
                     </Button>
                 </Box>

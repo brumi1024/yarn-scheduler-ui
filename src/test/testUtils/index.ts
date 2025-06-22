@@ -1,6 +1,6 @@
 /**
  * Centralized test utilities - Phase 3: Test Utility Consolidation
- * 
+ *
  * This module provides a single import point for all test utilities,
  * mock factories, and render helpers.
  */
@@ -34,16 +34,7 @@ export {
 } from './mockFactories';
 
 // Re-export testing framework utilities
-export {
-    describe,
-    it,
-    expect,
-    vi,
-    beforeEach,
-    afterEach,
-    beforeAll,
-    afterAll,
-} from 'vitest';
+export { describe, it, expect, vi, beforeEach, afterEach, beforeAll, afterAll } from 'vitest';
 
 // Re-export user event for interactions
 export { default as userEvent } from '@testing-library/user-event';
@@ -70,7 +61,7 @@ export const testHelpers = {
     /**
      * Helper for testing async operations
      */
-    waitForNextTick: () => new Promise(resolve => setTimeout(resolve, 0)),
+    waitForNextTick: () => new Promise((resolve) => setTimeout(resolve, 0)),
 
     /**
      * Helper for testing error boundaries
@@ -186,15 +177,11 @@ export const testScenarios = {
     /**
      * Accessibility test pattern
      */
-    accessibilityTest: (
-        componentName: string,
-        renderComponent: () => React.ReactElement,
-        expectedLabels: string[]
-    ) => {
+    accessibilityTest: (componentName: string, renderComponent: () => React.ReactElement, expectedLabels: string[]) => {
         return it(`${componentName} has proper accessibility attributes`, () => {
             renderWithTheme(renderComponent());
 
-            expectedLabels.forEach(label => {
+            expectedLabels.forEach((label) => {
                 expect(screen.getByLabelText(label)).toBeInTheDocument();
             });
         });

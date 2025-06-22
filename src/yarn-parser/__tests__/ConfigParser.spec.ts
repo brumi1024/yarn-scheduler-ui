@@ -1,7 +1,7 @@
 // src/yarn-parser/__tests__/ConfigParser.spec.ts
 
 import { ConfigParser } from '../ConfigParser';
-import { mockSimpleConfig } from '../../api/mocks/mockConfigData';
+import { mockSimpleConfig } from '../../test/testUtils/mockFactories';
 import type { Configuration } from '../../types/Queue';
 
 describe('ConfigParser Characterization Tests', () => {

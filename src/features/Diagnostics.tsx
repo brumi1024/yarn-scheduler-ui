@@ -81,7 +81,7 @@ export default function Diagnostics() {
             configuration.property.forEach((prop) => {
                 flatConfig[prop.name] = prop.value;
             });
-            
+
             const validationEngine = new ValidationEngine();
             return validationEngine.validate(flatConfig);
         } catch (error) {

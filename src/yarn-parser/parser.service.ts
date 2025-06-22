@@ -1,6 +1,6 @@
 /**
  * Parser Service - Web Worker Wrapper
- * 
+ *
  * Provides a clean, modern async/await interface for interacting with the
  * configuration parsing Web Worker. Handles worker lifecycle and message
  * communication.

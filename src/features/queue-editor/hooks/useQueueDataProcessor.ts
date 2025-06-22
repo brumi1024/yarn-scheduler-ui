@@ -2,7 +2,13 @@ import { useMemo } from 'react';
 import { DagreLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/layout/DagreLayout';
 import { useConfigParser } from '../../../yarn-parser/useConfigParser';
 import { useChangesStore, useUIStore } from '../../../store';
-import type { ConfigurationResponse, SchedulerResponse, ParsedQueue, Queue, ChangeSet } from '../../../types/Configuration';
+import type {
+    ConfigurationResponse,
+    SchedulerResponse,
+    ParsedQueue,
+    Queue,
+    ChangeSet,
+} from '../../../types/Configuration';
 import type { Node, Edge } from '@xyflow/react';
 import { useNodeLabelFilteredQueues, type FilteredQueue } from './useNodeLabelFilteredQueues';
 
@@ -23,19 +29,20 @@ interface RuntimeQueue extends Queue {
 }
 
 // React Flow compatible node data type with staging support
-export type QueueNodeData = LayoutQueue & Record<string, unknown> & {
-    stagedStatus?: 'new' | 'deleted' | 'modified';
-    isMatch?: boolean;
-    isAncestorOfMatch?: boolean;
-    // Node label filtering properties
-    hasLabelAccess?: boolean;
-    labelCapacity?: number;
-    labelMaxCapacity?: number;
-    isLabelCapacityConfigured?: boolean;
-    isLabelMaxCapacityConfigured?: boolean;
-    effectiveCapacity?: number;
-    effectiveMaxCapacity?: number;
-};
+export type QueueNodeData = LayoutQueue &
+    Record<string, unknown> & {
+        stagedStatus?: 'new' | 'deleted' | 'modified';
+        isMatch?: boolean;
+        isAncestorOfMatch?: boolean;
+        // Node label filtering properties
+        hasLabelAccess?: boolean;
+        labelCapacity?: number;
+        labelMaxCapacity?: number;
+        isLabelCapacityConfigured?: boolean;
+        isLabelMaxCapacityConfigured?: boolean;
+        effectiveCapacity?: number;
+        effectiveMaxCapacity?: number;
+    };
 
 export interface ProcessedFlowData {
     nodes: Node<QueueNodeData>[];
@@ -49,7 +56,7 @@ function applyChangesToHierarchy(hierarchy: LayoutQueue, changes: ChangeSet[]): 
     // Deep clone the hierarchy to avoid mutations
     const cloneQueue = (queue: LayoutQueue): LayoutQueue => ({
         ...queue,
-        children: queue.children.map(cloneQueue)
+        children: queue.children.map(cloneQueue),
     });
 
     let modifiedHierarchy = cloneQueue(hierarchy);
@@ -78,7 +85,7 @@ function applyAddQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQ
             const newValueObj = (change.newValue as Record<string, unknown>) || {};
             const newQueuePath = change.property; // Full path of new queue
             const newQueueName = newQueuePath.split('.').pop() || newQueuePath;
-            
+
             const newQueue: LayoutQueue = {
                 id: newQueuePath,
                 queueName: newQueueName,
@@ -93,18 +100,18 @@ function applyAddQueueChange(hierarchy: LayoutQueue, change: ChangeSet): LayoutQ
                 numApplications: 0,
                 resourcesUsed: { memory: 0, vCores: 0 },
                 children: [],
-                stagedStatus: 'new' // Mark as staged
+                stagedStatus: 'new', // Mark as staged
             };
 
             return {
                 ...queue,
-                children: [...(queue.children || []), newQueue]
+                children: [...(queue.children || []), newQueue],
             };
         }
 
         return {
             ...queue,
-            children: queue.children?.map(findAndAddToParent) || []
+            children: queue.children?.map(findAndAddToParent) || [],
         };
     };
 
@@ -118,13 +125,13 @@ function applyDeleteQueueChange(hierarchy: LayoutQueue, change: ChangeSet): Layo
             // Mark this queue as deleted
             return {
                 ...queue,
-                stagedStatus: 'deleted'
+                stagedStatus: 'deleted',
             };
         }
 
         return {
             ...queue,
-            children: queue.children?.map(markAsDeleted) || []
+            children: queue.children?.map(markAsDeleted) || [],
         };
     };
 
@@ -137,7 +144,7 @@ function applyPropertyUpdateChange(hierarchy: LayoutQueue, change: ChangeSet): L
         if (queue.queuePath === change.queuePath) {
             // Apply the property update to this queue
             const updatedQueue = { ...queue };
-            
+
             // Handle different property types
             switch (change.property) {
                 case 'capacity':
@@ -154,18 +161,18 @@ function applyPropertyUpdateChange(hierarchy: LayoutQueue, change: ChangeSet): L
                     updatedQueue[change.property] = change.newValue;
                     break;
             }
-            
+
             // Mark queue as modified if it doesn't already have a staged status
             if (!updatedQueue.stagedStatus) {
                 updatedQueue.stagedStatus = 'modified';
             }
-            
+
             return updatedQueue;
         }
 
         return {
             ...queue,
-            children: queue.children?.map(updateProperty) || []
+            children: queue.children?.map(updateProperty) || [],
         };
     };
 
@@ -183,18 +190,18 @@ function applySearchFilter(hierarchy: LayoutQueue, searchQuery?: string): Layout
 
     // Check if a queue matches the search query
     const queueMatches = (queue: LayoutQueue): boolean => {
-        return queue.queueName.toLowerCase().includes(query) || 
-               queue.queuePath.toLowerCase().includes(query);
+        return queue.queueName.toLowerCase().includes(query) || queue.queuePath.toLowerCase().includes(query);
     };
 
     // Recursively filter the hierarchy
     const filterQueue = (queue: LayoutQueue): LayoutQueue | null => {
         const matches = queueMatches(queue);
-        
+
         // Process children first
-        const filteredChildren = queue.children
-            ?.map(child => filterQueue(child))
-            .filter((child): child is LayoutQueue => child !== null) || [];
+        const filteredChildren =
+            queue.children
+                ?.map((child) => filterQueue(child))
+                .filter((child): child is LayoutQueue => child !== null) || [];
 
         // If this queue matches OR has matching children, include it
         if (matches || filteredChildren.length > 0) {
@@ -222,13 +229,13 @@ export function useQueueDataProcessor(
     const { data: parseResult, isLoading: isParsing, error: parseError } = useConfigParser(configQuery.data);
 
     // Get staged changes and search query from stores
-    const stagedChanges = useChangesStore(state => state.stagedChanges) || [];
-    const searchQuery = useUIStore(state => state.searchQuery);
+    const stagedChanges = useChangesStore((state) => state.stagedChanges) || [];
+    const searchQuery = useUIStore((state) => state.searchQuery);
 
     // Extract all queues for node label filtering
     const allQueues = useMemo(() => {
         if (!parseResult?.queues?.[0]) return [];
-        
+
         const getAllQueues = (parsedQueue: ParsedQueue): Queue[] => {
             const queue: Queue = {
                 queueName: parsedQueue.name,
@@ -245,24 +252,24 @@ export function useQueueDataProcessor(
                 // Add any properties from parsed queue that might contain node label info
                 ...parsedQueue.properties,
             } as Queue;
-            
+
             const result: Queue[] = [queue];
-            parsedQueue.children?.forEach(child => {
+            parsedQueue.children?.forEach((child) => {
                 result.push(...getAllQueues(child));
             });
             return result;
         };
-        
+
         return getAllQueues(parseResult.queues[0]);
     }, [parseResult]);
 
     // Apply node label filtering to all queues
     const filteredQueues = useNodeLabelFilteredQueues(allQueues);
-    
+
     // Create a mapping from queue path to filtered queue data
     const filteredQueueMap = useMemo(() => {
         const map = new Map<string, FilteredQueue>();
-        filteredQueues.forEach(queue => {
+        filteredQueues.forEach((queue) => {
             map.set(queue.queuePath, queue);
         });
         return map;
@@ -297,10 +304,11 @@ export function useQueueDataProcessor(
 
         // Update error state to include parsing errors
         if (configQuery.error || schedulerError || parseError) {
-            const errorMessage = configQuery.error?.message || 
-                                schedulerError?.message || 
-                                parseError?.message || 
-                                'Unknown data loading error';
+            const errorMessage =
+                configQuery.error?.message ||
+                schedulerError?.message ||
+                parseError?.message ||
+                'Unknown data loading error';
             return {
                 nodes: [],
                 edges: [],
@@ -329,7 +337,7 @@ export function useQueueDataProcessor(
             const convertParsedQueue = (parsedQueue: ParsedQueue): LayoutQueue => {
                 const capacity = parsedQueue.capacity.numericValue || 0;
                 const maxCapacity = parsedQueue.maxCapacity.numericValue || 100;
-                
+
                 // Get filtered queue data if available
                 const filteredQueue = filteredQueueMap.get(parsedQueue.path);
 
@@ -381,7 +389,10 @@ export function useQueueDataProcessor(
             // For now, original order is maintained
 
             // --- Pipeline Step 5: Merge Live Scheduler Data ---
-            const findQueueInSchedulerData = (queuePath: string, schedulerData: SchedulerResponse): RuntimeQueue | null => {
+            const findQueueInSchedulerData = (
+                queuePath: string,
+                schedulerData: SchedulerResponse
+            ): RuntimeQueue | null => {
                 if (!schedulerData?.scheduler?.schedulerInfo) return null;
 
                 const findInQueue = (queue: RuntimeQueue): RuntimeQueue | null => {
@@ -463,7 +474,20 @@ export function useQueueDataProcessor(
                 error: 'Failed to process queue data',
             };
         }
-    }, [configQuery.isLoading, configQuery.error, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error, parseResult, isParsing, parseError, treeLayout, stagedChanges, searchQuery, filteredQueueMap]);
+    }, [
+        configQuery.isLoading,
+        configQuery.error,
+        schedulerQuery.data,
+        schedulerQuery.isLoading,
+        schedulerQuery.error,
+        parseResult,
+        isParsing,
+        parseError,
+        treeLayout,
+        stagedChanges,
+        searchQuery,
+        filteredQueueMap,
+    ]);
 
     return processedData;
 }

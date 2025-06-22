@@ -10,7 +10,7 @@ export interface ParsedCapacity {
 export class CapacityParser {
     static parse(value: string): ParsedCapacity {
         const trimmed = value.trim();
-        
+
         // Percentage: "50" or "50%" or "50.5%"
         if (trimmed.endsWith('%')) {
             const numeric = parseFloat(trimmed.slice(0, -1));
@@ -20,7 +20,7 @@ export class CapacityParser {
                 numericValue: numeric,
             };
         }
-        
+
         // Weight: "2w" or "10.5w"
         if (trimmed.endsWith('w')) {
             const numeric = parseFloat(trimmed.slice(0, -1));
@@ -30,26 +30,26 @@ export class CapacityParser {
                 numericValue: numeric,
             };
         }
-        
+
         // Absolute: "[memory=1024,vcores=2]"
         if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
             const resources: Record<string, number> = {};
             const content = trimmed.slice(1, -1);
-            
-            content.split(',').forEach(pair => {
+
+            content.split(',').forEach((pair) => {
                 const [key, value] = pair.split('=');
                 if (key && value) {
                     resources[key.trim()] = parseFloat(value.trim());
                 }
             });
-            
+
             return {
                 mode: 'absolute',
                 rawValue: trimmed,
                 resources,
             };
         }
-        
+
         // Default: assume percentage without % sign
         const numeric = parseFloat(trimmed);
         if (!isNaN(numeric)) {
@@ -59,11 +59,11 @@ export class CapacityParser {
                 numericValue: numeric,
             };
         }
-        
+
         // Invalid format
         throw new Error(`Invalid capacity format: ${value}`);
     }
-    
+
     static format(capacity: ParsedCapacity): string {
         switch (capacity.mode) {
             case 'percentage':

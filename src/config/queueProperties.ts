@@ -67,7 +67,7 @@ export const aclSchema = z.string().regex(/^([\w,]+)?(\s+([\w,]+)?)?$/, 'Invalid
 // Define ALL queue properties from CS_config_guide.md
 export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
     // === CORE PROPERTIES ===
-    'capacity': {
+    capacity: {
         key: 'capacity',
         label: 'Capacity',
         type: 'capacity',
@@ -77,7 +77,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'core',
         getValueFromQueue: (q) => `${q.capacity}%`,
     },
-    
+
     'maximum-capacity': {
         key: 'maximum-capacity',
         label: 'Maximum Capacity',
@@ -88,8 +88,8 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'core',
         getValueFromQueue: (q) => `${q.maxCapacity}%`,
     },
-    
-    'state': {
+
+    state: {
         key: 'state',
         label: 'State',
         type: 'select',
@@ -100,8 +100,8 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'core',
         getValueFromQueue: (q) => q.state,
     },
-    
-    'queues': {
+
+    queues: {
         key: 'queues',
         label: 'Child Queues',
         type: 'text',
@@ -134,7 +134,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'resource',
         getValueFromQueue: (q) => q.userLimitFactor || 1,
     },
-    
+
     'maximum-applications': {
         key: 'maximum-applications',
         label: 'Maximum Applications',
@@ -145,7 +145,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'resource',
         getValueFromQueue: (q) => q.maxApplications,
     },
-    
+
     'maximum-am-resource-percent': {
         key: 'maximum-am-resource-percent',
         label: 'Max AM Resource %',
@@ -156,7 +156,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'resource',
         getValueFromQueue: (q) => q.maxAMResourcePercent || 0.1,
     },
-    
+
     'maximum-allocation-mb': {
         key: 'maximum-allocation-mb',
         label: 'Max Allocation Memory (MB)',
@@ -171,7 +171,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
     'maximum-allocation-vcores': {
         key: 'maximum-allocation-vcores',
         label: 'Max Allocation vCores',
-        type: 'number', 
+        type: 'number',
         defaultValue: -1,
         description: 'Maximum vCores per container (-1 inherits from cluster)',
         validation: z.number().int().min(-1),
@@ -191,8 +191,8 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'advanced',
         getValueFromQueue: (q) => q.orderingPolicy || 'fifo',
     },
-    
-    'disable_preemption': {
+
+    disable_preemption: {
         key: 'disable_preemption',
         label: 'Disable Preemption',
         type: 'boolean',
@@ -202,7 +202,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'advanced',
         getValueFromQueue: (q) => q.preemptionDisabled || false,
     },
-    
+
     'intra-queue-preemption.disable_preemption': {
         key: 'intra-queue-preemption.disable_preemption',
         label: 'Disable Intra-Queue Preemption',
@@ -214,7 +214,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         getValueFromQueue: (q) => q.intraQueuePreemptionDisabled || false,
     },
 
-    'priority': {
+    priority: {
         key: 'priority',
         label: 'Queue Priority',
         type: 'number',
@@ -248,7 +248,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
     },
 
     // === ACLs ===
-    'acl_submit_applications': {
+    acl_submit_applications: {
         key: 'acl_submit_applications',
         label: 'Submit Applications ACL',
         type: 'text',
@@ -259,7 +259,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         getValueFromQueue: (q) => q.aclSubmitApps || '*',
     },
 
-    'acl_administer_queue': {
+    acl_administer_queue: {
         key: 'acl_administer_queue',
         label: 'Administer Queue ACL',
         type: 'text',
@@ -281,7 +281,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'resource',
         getValueFromQueue: (q) => q.nodeLabels || q.accessibleNodeLabels || [],
     },
-    
+
     'default-node-label-expression': {
         key: 'default-node-label-expression',
         label: 'Default Node Label',
@@ -304,7 +304,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'auto-creation',
         getValueFromQueue: (q) => q.autoCreateChildQueueEnabled || false,
     },
-    
+
     'auto-queue-creation-v2.enabled': {
         key: 'auto-queue-creation-v2.enabled',
         label: 'Enable Flexible Auto-Creation',

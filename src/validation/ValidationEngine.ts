@@ -18,16 +18,16 @@ export class ValidationEngine {
     validate(configuration: Record<string, string>): ValidationResult {
         // Parse configuration first
         const parseResult = ConfigParser.parse(configuration);
-        
+
         const context: ValidationContext = {
             configuration,
             queues: parseResult.queues,
             isLegacyMode: parseResult.isLegacyMode,
         };
-        
+
         // Run all validation rules
         const allIssues: ValidationIssue[] = [];
-        
+
         for (const rule of this.rules) {
             try {
                 const issues = rule.validate(context);
@@ -36,11 +36,11 @@ export class ValidationEngine {
                 console.error(`Rule ${rule.name} failed:`, error);
             }
         }
-        
+
         // Separate errors and warnings
-        const errors = allIssues.filter(i => i.severity === 'error');
-        const warnings = allIssues.filter(i => i.severity === 'warning');
-        
+        const errors = allIssues.filter((i) => i.severity === 'error');
+        const warnings = allIssues.filter((i) => i.severity === 'warning');
+
         return {
             errors,
             warnings,
@@ -56,12 +56,11 @@ export class ValidationEngine {
     ): ValidationIssue[] {
         // Create updated configuration
         const updatedConfig = { ...configuration, [propertyKey]: newValue };
-        
+
         // Run validation
         const result = this.validate(updatedConfig);
-        
+
         // Filter to issues related to this property
-        return [...result.errors, ...result.warnings]
-            .filter(issue => issue.path.includes(propertyKey));
+        return [...result.errors, ...result.warnings].filter((issue) => issue.path.includes(propertyKey));
     }
 }

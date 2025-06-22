@@ -37,7 +37,7 @@ describe('useQueueDataProcessor - PROPERTY_UPDATE integration', () => {
         // Since the function is internal, we'll test the integration through mock scenario
         const mockQueue = createMockLayoutQueue();
         const capacityChange = createMockPropertyUpdateChange('capacity', 75);
-        
+
         // Test data structure expectations
         expect(mockQueue.capacity).toBe(50);
         expect(capacityChange.type).toBe('PROPERTY_UPDATE');
@@ -48,7 +48,7 @@ describe('useQueueDataProcessor - PROPERTY_UPDATE integration', () => {
     it('should apply state property update correctly', () => {
         const mockQueue = createMockLayoutQueue();
         const stateChange = createMockPropertyUpdateChange('state', 'STOPPED');
-        
+
         // Test data structure expectations
         expect(mockQueue.state).toBe('RUNNING');
         expect(stateChange.type).toBe('PROPERTY_UPDATE');
@@ -63,11 +63,11 @@ describe('useQueueDataProcessor - PROPERTY_UPDATE integration', () => {
             createMockPropertyUpdateChange('maxCapacity', 90),
             createMockPropertyUpdateChange('state', 'STOPPED'),
         ];
-        
+
         // Verify all changes have correct structure
         expect(changes).toHaveLength(3);
-        expect(changes.every(change => change.type === 'PROPERTY_UPDATE')).toBe(true);
-        expect(changes.every(change => change.queuePath === 'root.test')).toBe(true);
+        expect(changes.every((change) => change.type === 'PROPERTY_UPDATE')).toBe(true);
+        expect(changes.every((change) => change.queuePath === 'root.test')).toBe(true);
     });
 
     it('should set staged status to modified for property updates', () => {

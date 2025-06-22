@@ -1,6 +1,6 @@
 /**
  * Dagre-based Layout Engine for YARN Queue Visualization
- * 
+ *
  * Replaces the D3 tree layout with Dagre for more stable and maintainable
  * graph layouts while preserving the exact same interface and visual behavior.
  */
@@ -98,9 +98,9 @@ export class DagreLayout {
             verticalSpacing: 30,
             orientation: 'horizontal',
             rankdir: 'LR', // Left-to-Right for horizontal layout
-            align: 'DL',   // Align nodes to lower-left for better centering
-            marginx: 20,   // Horizontal margin for centering
-            marginy: 20,   // Vertical margin for centering
+            align: 'DL', // Align nodes to lower-left for better centering
+            marginx: 20, // Horizontal margin for centering
+            marginy: 20, // Vertical margin for centering
             ...options,
         };
 
@@ -202,7 +202,7 @@ export class DagreLayout {
         }
 
         if (queue.children && queue.children.length > 0) {
-            queue.children.forEach(child => {
+            queue.children.forEach((child) => {
                 this.addNodesRecursively(child, queue.id);
             });
         }
@@ -242,7 +242,7 @@ export class DagreLayout {
 
             // Recursively process children
             if (queue.children && !this.collapsedNodes.has(queue.id)) {
-                queue.children.forEach(child => {
+                queue.children.forEach((child) => {
                     buildHierarchy(child, layoutNode, depth + 1);
                 });
             }
@@ -459,5 +459,4 @@ export class DagreLayout {
     getMaxDepth(nodes: LayoutNode[]): number {
         return nodes.reduce((max, node) => Math.max(max, node.depth || 0), 0);
     }
-
 }

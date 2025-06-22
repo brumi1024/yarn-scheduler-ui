@@ -34,10 +34,10 @@ export const NodeLabelSelector: React.FC = () => {
                     onChange={handleChange}
                     renderValue={(value) => (
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                            <Chip 
-                                label={value || 'default'} 
-                                size="small" 
-                                color={(value === 'default' || !value) ? 'default' : 'primary'} 
+                            <Chip
+                                label={value || 'default'}
+                                size="small"
+                                color={value === 'default' || !value ? 'default' : 'primary'}
                                 variant="outlined"
                             />
                         </Box>
@@ -45,10 +45,10 @@ export const NodeLabelSelector: React.FC = () => {
                 >
                     {availableLabels.map((label) => (
                         <MenuItem key={label} value={label}>
-                            <Chip 
-                                label={label} 
-                                size="small" 
-                                color={label === 'default' ? 'default' : 'primary'} 
+                            <Chip
+                                label={label}
+                                size="small"
+                                color={label === 'default' ? 'default' : 'primary'}
                                 variant="outlined"
                             />
                         </MenuItem>

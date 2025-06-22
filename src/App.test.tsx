@@ -6,34 +6,34 @@ import App from './App';
 
 // Mock the TanStack Query hooks
 vi.mock('./hooks/useYarnApi', () => ({
-    useSchedulerQuery: vi.fn(() => ({ 
-        data: null, 
-        isLoading: false, 
-        error: null, 
-        refetch: vi.fn() 
+    useSchedulerQuery: vi.fn(() => ({
+        data: null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
     })),
-    useConfigurationQuery: vi.fn(() => ({ 
-        data: null, 
-        isLoading: false, 
-        error: null, 
-        refetch: vi.fn() 
+    useConfigurationQuery: vi.fn(() => ({
+        data: null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
     })),
-    useNodeLabelsQuery: vi.fn(() => ({ 
-        data: null, 
-        isLoading: false, 
-        error: null, 
-        refetch: vi.fn() 
+    useNodeLabelsQuery: vi.fn(() => ({
+        data: null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
     })),
-    useNodesQuery: vi.fn(() => ({ 
-        data: null, 
-        isLoading: false, 
-        error: null, 
-        refetch: vi.fn() 
+    useNodesQuery: vi.fn(() => ({
+        data: null,
+        isLoading: false,
+        error: null,
+        refetch: vi.fn(),
     })),
-    useUpdateConfigurationMutation: vi.fn(() => ({ 
-        mutate: vi.fn(), 
-        isPending: false, 
-        error: null 
+    useUpdateConfigurationMutation: vi.fn(() => ({
+        mutate: vi.fn(),
+        isPending: false,
+        error: null,
     })),
 }));
 
@@ -72,12 +72,8 @@ function renderWithQueryClient(component: React.ReactElement) {
             },
         },
     });
-    
-    return render(
-        <QueryClientProvider client={queryClient}>
-            {component}
-        </QueryClientProvider>
-    );
+
+    return render(<QueryClientProvider client={queryClient}>{component}</QueryClientProvider>);
 }
 
 describe('App', () => {

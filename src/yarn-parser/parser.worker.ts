@@ -1,6 +1,6 @@
 /**
  * Web Worker for YARN Configuration Parsing
- * 
+ *
  * This worker performs CPU-intensive configuration parsing in the background
  * to keep the main UI thread responsive. It receives configuration data
  * via postMessage and returns parsed results or errors.
@@ -38,7 +38,7 @@ self.addEventListener('message', (event: MessageEvent<ParseMessage>) => {
         // Send the successful result back to the main thread
         const response: SuccessResponse = {
             type: 'SUCCESS',
-            payload: parseResult
+            payload: parseResult,
         };
         self.postMessage(response);
     } catch (error) {
@@ -46,7 +46,7 @@ self.addEventListener('message', (event: MessageEvent<ParseMessage>) => {
         const errorMessage = error instanceof Error ? error.message : 'Unknown worker error';
         const response: ErrorResponse = {
             type: 'ERROR',
-            payload: { message: errorMessage }
+            payload: { message: errorMessage },
         };
         self.postMessage(response);
     }

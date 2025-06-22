@@ -109,19 +109,27 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
 
     const getChangeTypeColor = (changeType: ChangeSet['type']) => {
         switch (changeType) {
-            case 'ADD_QUEUE': return 'success';
-            case 'DELETE_QUEUE': return 'error';
-            case 'PROPERTY_UPDATE': return 'info';
-            default: return 'default';
+            case 'ADD_QUEUE':
+                return 'success';
+            case 'DELETE_QUEUE':
+                return 'error';
+            case 'PROPERTY_UPDATE':
+                return 'info';
+            default:
+                return 'default';
         }
     };
 
     const getChangeTypeIcon = (changeType: ChangeSet['type']) => {
         switch (changeType) {
-            case 'ADD_QUEUE': return <AddIcon fontSize="small" />;
-            case 'DELETE_QUEUE': return <DeleteIcon fontSize="small" />;
-            case 'PROPERTY_UPDATE': return <EditIcon fontSize="small" />;
-            default: return <EditIcon fontSize="small" />;
+            case 'ADD_QUEUE':
+                return <AddIcon fontSize="small" />;
+            case 'DELETE_QUEUE':
+                return <DeleteIcon fontSize="small" />;
+            case 'PROPERTY_UPDATE':
+                return <EditIcon fontSize="small" />;
+            default:
+                return <EditIcon fontSize="small" />;
         }
     };
 
@@ -135,10 +143,13 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                         <Chip
                             icon={getChangeTypeIcon(change.type)}
                             label={
-                                change.type === 'ADD_QUEUE' ? 'Add Queue' :
-                                change.type === 'DELETE_QUEUE' ? 'Delete Queue' :
-                                change.type === 'PROPERTY_UPDATE' ? 'Property Update' :
-                                'Unknown'
+                                change.type === 'ADD_QUEUE'
+                                    ? 'Add Queue'
+                                    : change.type === 'DELETE_QUEUE'
+                                      ? 'Delete Queue'
+                                      : change.type === 'PROPERTY_UPDATE'
+                                        ? 'Property Update'
+                                        : 'Unknown'
                             }
                             size="small"
                             color={getChangeTypeColor(change.type) as any}
