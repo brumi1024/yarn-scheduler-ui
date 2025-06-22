@@ -33,11 +33,7 @@ interface ValidationPreviewProps {
     onProceed?: () => void;
 }
 
-export const ValidationPreview: React.FC<ValidationPreviewProps> = ({
-    open,
-    onClose,
-    onProceed,
-}) => {
+export const ValidationPreview: React.FC<ValidationPreviewProps> = ({ open, onClose, onProceed }) => {
     const { configuration } = useDataStore();
     const { stagedChanges } = useChangesStore();
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
@@ -79,24 +75,24 @@ export const ValidationPreview: React.FC<ValidationPreviewProps> = ({
 
     const groupIssuesByQueue = (issues: ValidationIssue[]) => {
         const grouped: Record<string, ValidationIssue[]> = {};
-        
+
         issues.forEach((issue) => {
             // Extract queue path from issue path
             const match = issue.path.match(/^(root(?:\.[^.]+)*)/);
             const queuePath = match ? match[1] : 'global';
-            
+
             if (!grouped[queuePath]) {
                 grouped[queuePath] = [];
             }
             grouped[queuePath].push(issue);
         });
-        
+
         return grouped;
     };
 
     const renderIssueGroup = (queuePath: string, issues: ValidationIssue[]) => {
-        const errors = issues.filter(i => i.severity === 'error');
-        const warnings = issues.filter(i => i.severity === 'warning');
+        const errors = issues.filter((i) => i.severity === 'error');
+        const warnings = issues.filter((i) => i.severity === 'warning');
 
         return (
             <Accordion key={queuePath} defaultExpanded={errors.length > 0}>
@@ -180,7 +176,7 @@ export const ValidationPreview: React.FC<ValidationPreviewProps> = ({
                                 <Typography variant="h6" sx={{ mb: 2 }}>
                                     Issues by Queue
                                 </Typography>
-                                
+
                                 {/* Errors */}
                                 {validationResult.errors.length > 0 && (
                                     <Box sx={{ mb: 3 }}>

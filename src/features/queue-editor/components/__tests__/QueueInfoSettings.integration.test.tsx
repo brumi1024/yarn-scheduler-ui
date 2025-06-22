@@ -16,20 +16,16 @@ const mockQueueWithNodeLabels = {
         'accessible-node-labels': 'gpu,ssd',
         'accessible-node-labels.gpu.capacity': '100',
         'accessible-node-labels.ssd.capacity': '50',
-    }
+    },
 };
 
 describe('QueueInfoSettings Integration', () => {
     it('should display node label properties when queue has labels', async () => {
         const user = userEvent.setup();
-        
+
         render(
             <TestWrapper>
-                <QueueInfoSettings 
-                    queue={mockQueueWithNodeLabels}
-                    queuePath="root.test"
-                    siblings={[]}
-                />
+                <QueueInfoSettings queue={mockQueueWithNodeLabels} queuePath="root.test" siblings={[]} />
             </TestWrapper>
         );
 
@@ -49,16 +45,12 @@ describe('QueueInfoSettings Integration', () => {
             rawConfig: {
                 ...mockQueueWithNodeLabels.rawConfig,
                 'auto-queue-creation-v2.enabled': 'true',
-            }
+            },
         };
 
         render(
             <TestWrapper>
-                <QueueInfoSettings 
-                    queue={queueWithAutoCreation}
-                    queuePath="root.test"
-                    siblings={[]}
-                />
+                <QueueInfoSettings queue={queueWithAutoCreation} queuePath="root.test" siblings={[]} />
             </TestWrapper>
         );
 

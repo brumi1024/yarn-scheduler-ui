@@ -11,7 +11,7 @@ describe('DynamicPropertyResolver', () => {
 
             // Should create 2 properties per label (capacity and max-capacity)
             expect(Object.keys(properties)).toHaveLength(4);
-            
+
             expect(properties['accessible-node-labels.gpu.capacity']).toBeDefined();
             expect(properties['accessible-node-labels.gpu.maximum-capacity']).toBeDefined();
             expect(properties['accessible-node-labels.ssd.capacity']).toBeDefined();
@@ -32,11 +32,11 @@ describe('DynamicPropertyResolver', () => {
     describe('resolveTemplateProperties', () => {
         it('should create template versions of queue properties', () => {
             const properties = DynamicPropertyResolver.resolveTemplateProperties('root.parent', 'template');
-            
+
             // Should create template versions of most properties
             const templateKeys = Object.keys(properties);
             expect(templateKeys.length).toBeGreaterThan(10);
-            
+
             // Check a specific property
             expect(properties['auto-queue-creation-v2.template.capacity']).toBeDefined();
             expect(properties['auto-queue-creation-v2.template.capacity'].group).toBe('auto-creation');
@@ -44,7 +44,7 @@ describe('DynamicPropertyResolver', () => {
 
         it('should skip properties that dont make sense for templates', () => {
             const properties = DynamicPropertyResolver.resolveTemplateProperties('root.parent', 'template');
-            
+
             // Should not include 'queues' or 'state'
             expect(properties['auto-queue-creation-v2.template.queues']).toBeUndefined();
             expect(properties['auto-queue-creation-v2.template.state']).toBeUndefined();
@@ -58,19 +58,19 @@ describe('DynamicPropertyResolver', () => {
                 name: 'test',
                 accessibleNodeLabels: ['gpu'],
                 rawConfig: {
-                    'auto-queue-creation-v2.enabled': 'true'
+                    'auto-queue-creation-v2.enabled': 'true',
                 },
-                children: []
+                children: [],
             };
 
             const properties = DynamicPropertyResolver.getAllPropertiesForQueue(queue);
-            
+
             // Should include static properties
             expect(properties['capacity']).toBeDefined();
-            
+
             // Should include node label properties
             expect(properties['accessible-node-labels.gpu.capacity']).toBeDefined();
-            
+
             // Should include template properties
             expect(properties['auto-queue-creation-v2.template.capacity']).toBeDefined();
         });

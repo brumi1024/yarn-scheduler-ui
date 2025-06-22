@@ -3,7 +3,6 @@ import { useDataStore } from './dataStore';
 import { useUIStore } from './uiStore';
 import { useChangesStore } from './changesStore';
 import { useActivityStore } from './activityStore';
-import { useSchedulerQuery } from '../hooks/useYarnApi';
 
 export { useDataStore } from './dataStore';
 export { useUIStore } from './uiStore';
@@ -14,42 +13,6 @@ export { useActivityStore } from './activityStore';
 export type * from './types';
 
 // Derived selectors
-export const useSelectedQueue = () => {
-    const selectedPath = useUIStore((state) => state.selectedQueuePath);
-    const schedulerQuery = useSchedulerQuery();
-
-    return useMemo(() => {
-        if (!selectedPath || !schedulerQuery.data?.scheduler.schedulerInfo) {
-            return null;
-        }
-
-        const findQueue = (queue: any): any => {
-            // Try multiple possible path formats
-            const possiblePaths = [
-                queue.queuePath,
-                queue.queueName,
-                queue.id,
-                `root.${queue.queueName}`, // In case it's missing the root prefix
-            ].filter(Boolean);
-
-            for (const path of possiblePaths) {
-                if (path === selectedPath) {
-                    return queue;
-                }
-            }
-
-            if (queue.queues?.queue) {
-                for (const child of queue.queues.queue) {
-                    const found = findQueue(child);
-                    if (found) return found;
-                }
-            }
-            return null;
-        };
-
-        return findQueue(schedulerQuery.data.scheduler.schedulerInfo);
-    }, [selectedPath, schedulerQuery.data, schedulerQuery.isLoading, schedulerQuery.error]);
-};
 
 export const useAllQueues = () => {
     const scheduler = useDataStore((state) => state.scheduler);

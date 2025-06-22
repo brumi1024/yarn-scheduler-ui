@@ -345,7 +345,7 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                     </Button>
                 </Stack>
             </Box>
-            
+
             {/* Validation Preview */}
             <ValidationPreview
                 open={showValidationPreview}

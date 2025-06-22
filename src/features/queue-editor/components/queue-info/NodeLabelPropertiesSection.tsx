@@ -12,10 +12,7 @@ interface NodeLabelPropertiesSectionProps {
     queuePath: string;
 }
 
-export const NodeLabelPropertiesSection: React.FC<NodeLabelPropertiesSectionProps> = ({
-    queue,
-    queuePath,
-}) => {
+export const NodeLabelPropertiesSection: React.FC<NodeLabelPropertiesSectionProps> = ({ queue, queuePath }) => {
     const { control } = useFormContext();
     const { getNodeLabelProperties } = useQueueProperties(queue);
 
@@ -40,10 +37,10 @@ export const NodeLabelPropertiesSection: React.FC<NodeLabelPropertiesSectionProp
             <Typography variant="subtitle2" sx={{ mb: 2 }}>
                 Configure capacity for each node label
             </Typography>
-            
+
             {nodeLabels.map((label) => {
                 const properties = getNodeLabelProperties(label);
-                
+
                 return (
                     <Accordion key={label} defaultExpanded={nodeLabels.length === 1}>
                         <AccordionSummary expandIcon={<ExpandMoreIcon />}>
@@ -69,7 +66,7 @@ export const NodeLabelPropertiesSection: React.FC<NodeLabelPropertiesSectionProp
                     </Accordion>
                 );
             })}
-            
+
             <Typography variant="caption" color="text.secondary" sx={{ mt: 2, display: 'block' }}>
                 Note: In legacy mode, the sum of child queue capacities for each label must equal 100%.
             </Typography>

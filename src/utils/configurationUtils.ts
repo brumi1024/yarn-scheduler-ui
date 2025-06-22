@@ -81,7 +81,7 @@ export function createChangeSetsFromFormData(
         // Convert sanitized key back to original property key
         const propertyKey = convertSanitizedKeyToPropertyKey(sanitizedKey);
         const definition = QUEUE_PROPERTIES[propertyKey];
-        
+
         if (!definition || !currentQueue) {
             continue; // Skip properties not defined in our master list or if no queue is selected
         }

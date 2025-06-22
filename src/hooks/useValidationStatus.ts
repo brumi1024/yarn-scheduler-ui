@@ -36,7 +36,7 @@ export function useValidationStatus() {
             // Run validation
             const engine = new ValidationEngine();
             const result = engine.validate(flatConfig);
-            
+
             setErrors(result.errors.length);
             setWarnings(result.warnings.length);
         } catch (error) {

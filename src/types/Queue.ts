@@ -73,13 +73,12 @@ export interface ParsedQueue {
     preemptionDisabled?: boolean;
     accessibleNodeLabels?: string[];
     defaultNodeLabelExpression?: string;
-    
+
     // Add these new fields for dynamic properties
     rawConfig?: Record<string, string>; // Store raw configuration for dynamic lookups
     nodeLabelCapacities?: Record<string, string>;
     nodeLabelMaxCapacities?: Record<string, string>;
 }
-
 
 // Scheduler response structure
 export interface SchedulerResponse {

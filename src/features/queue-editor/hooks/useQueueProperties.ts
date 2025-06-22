@@ -21,14 +21,14 @@ export function useQueueProperties(queue: ParsedQueue | null) {
     // Group properties by their group field
     const groupedProperties = useMemo(() => {
         const groups: Record<string, PropertyDefinition[]> = {
-            'core': [],
-            'resource': [],
-            'security': [],
-            'advanced': [],
+            core: [],
+            resource: [],
+            security: [],
+            advanced: [],
             'auto-creation': [],
         };
 
-        Object.values(properties).forEach(prop => {
+        Object.values(properties).forEach((prop) => {
             if (groups[prop.group]) {
                 groups[prop.group].push(prop);
             }

@@ -1,14 +1,6 @@
 // src/features/queue-editor/components/queue-info/AutoQueueTemplatesSection.tsx
 import React, { useState } from 'react';
-import { 
-    Box, 
-    Typography, 
-    Tabs, 
-    Tab, 
-    Paper,
-    Alert,
-    Divider
-} from '@mui/material';
+import { Box, Typography, Tabs, Tab, Paper, Alert, Divider } from '@mui/material';
 import { useFormContext } from 'react-hook-form';
 import { PropertyFormField } from '../../../../components/forms/PropertyFormField';
 import { useQueueProperties } from '../../hooks/useQueueProperties';
@@ -40,10 +32,7 @@ interface AutoQueueTemplatesSectionProps {
     queuePath: string;
 }
 
-export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps> = ({
-    queue,
-    queuePath,
-}) => {
+export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps> = ({ queue, queuePath }) => {
     const { control } = useFormContext();
     const { getTemplateProperties } = useQueueProperties(queue);
     const [selectedTab, setSelectedTab] = useState(0);
@@ -51,7 +40,11 @@ export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps>
     const templateTypes = [
         { key: 'template', label: 'All Queues', description: 'Properties applied to all auto-created queues' },
         { key: 'leaf-template', label: 'Leaf Queues', description: 'Properties specific to auto-created leaf queues' },
-        { key: 'parent-template', label: 'Parent Queues', description: 'Properties specific to auto-created parent queues' },
+        {
+            key: 'parent-template',
+            label: 'Parent Queues',
+            description: 'Properties specific to auto-created parent queues',
+        },
     ] as const;
 
     return (
@@ -61,8 +54,8 @@ export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps>
             </Alert>
 
             <Paper sx={{ borderRadius: 1 }}>
-                <Tabs 
-                    value={selectedTab} 
+                <Tabs
+                    value={selectedTab}
                     onChange={(_, newValue) => setSelectedTab(newValue)}
                     sx={{ borderBottom: 1, borderColor: 'divider' }}
                 >
@@ -73,14 +66,14 @@ export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps>
 
                 {templateTypes.map((type, index) => {
                     const properties = getTemplateProperties(type.key);
-                    
+
                     return (
                         <TabPanel key={type.key} value={selectedTab} index={index}>
                             <Box sx={{ px: 2, pb: 2 }}>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                                     {type.description}
                                 </Typography>
-                                
+
                                 {properties.length === 0 ? (
                                     <Typography variant="body2" color="text.secondary" align="center" sx={{ py: 4 }}>
                                         No template properties available
@@ -88,12 +81,14 @@ export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps>
                                 ) : (
                                     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                         {/* Group properties by category */}
-                                        {['capacity', 'resource', 'advanced'].map(group => {
-                                            const groupProps = properties.filter(p => {
+                                        {['capacity', 'resource', 'advanced'].map((group) => {
+                                            const groupProps = properties.filter((p) => {
                                                 // Special handling for capacity properties
                                                 if (group === 'capacity') {
-                                                    return p.key.endsWith('.capacity') || 
-                                                           p.key.endsWith('.maximum-capacity');
+                                                    return (
+                                                        p.key.endsWith('.capacity') ||
+                                                        p.key.endsWith('.maximum-capacity')
+                                                    );
                                                 }
                                                 return p.group === group;
                                             });
@@ -102,15 +97,15 @@ export const AutoQueueTemplatesSection: React.FC<AutoQueueTemplatesSectionProps>
 
                                             return (
                                                 <Box key={group}>
-                                                    <Typography 
-                                                        variant="overline" 
+                                                    <Typography
+                                                        variant="overline"
                                                         color="text.secondary"
                                                         sx={{ mb: 1, display: 'block' }}
                                                     >
                                                         {group.charAt(0).toUpperCase() + group.slice(1)} Settings
                                                     </Typography>
                                                     <Divider sx={{ mb: 2 }} />
-                                                    {groupProps.map(property => (
+                                                    {groupProps.map((property) => (
                                                         <PropertyFormField
                                                             key={property.key}
                                                             property={property}

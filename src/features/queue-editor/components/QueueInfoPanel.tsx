@@ -9,7 +9,7 @@ import {
     TrendingUp as StatisticsIcon,
     Settings as SettingsIcon,
 } from '@mui/icons-material';
-import type { Queue } from '../../../types/Queue';
+import type { ParsedQueue } from '../../../types/Queue';
 import type { ChangeSet } from '../../../types/Configuration';
 import { QUEUE_PROPERTIES } from '../../../config';
 import { QueueInfoOverview } from './queue-info/QueueInfoOverview';
@@ -19,13 +19,13 @@ import { useUIStore } from '../../../store/uiStore';
 import { createChangeSetsFromFormData } from '../../../utils/configurationUtils';
 
 export interface QueueInfoPanelProps {
-    queue: Queue | null;
+    queue: ParsedQueue | null;
     open: boolean;
     onClose: () => void;
     onDelete?: (queuePath: string) => void;
     onToggleState?: (queuePath: string, newState: 'RUNNING' | 'STOPPED') => void;
     onSaveProperties?: (queuePath: string, changes: Record<string, any>) => void;
-    onQueueSelect?: (queue: Queue) => void;
+    onQueueSelect?: (queue: ParsedQueue) => void;
 }
 
 export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
@@ -70,60 +70,43 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
 
     const { reset } = form;
 
-    // Helper function to get form value with staged priority
-    const getFormValueWithStagedPriority = useCallback(
-        (propertyKey: string, queue: Queue, stagedChanges: ChangeSet[]) => {
-            const queuePath = (queue as any).queuePath || queue.queueName;
-
-            // Check for staged change first
-            const stagedChange = stagedChanges.find(
-                (change) =>
-                    change.queuePath === queuePath &&
-                    change.property === propertyKey &&
-                    change.type === 'PROPERTY_UPDATE'
-            );
-
-            if (stagedChange) {
-                return stagedChange.newValue; // Return raw staged value
-            }
-
-            // Fallback to original logic
-            const propDef = QUEUE_PROPERTIES[propertyKey];
-            return propDef.getValueFromQueue(queue);
-        },
-        []
-    );
-
     useEffect(() => {
         if (queue && open) {
             const initialData: Record<string, any> = {};
+
+            // SIMPLIFIED: Queue from useQueueConfiguration already includes staged changes
             Object.values(QUEUE_PROPERTIES).forEach((propDef) => {
-                // Use sanitized key for form field registration (consistent with PropertyFormField)
                 const sanitizedKey = propDef.key.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '_');
-                initialData[sanitizedKey] = getFormValueWithStagedPriority(propDef.key, queue, stagedChanges || []);
+                // Direct property access - no need to check staged changes separately
+                initialData[sanitizedKey] = propDef.getValueFromQueue(queue);
             });
+
             reset(initialData);
-            setActiveTab(0);
+            if (propertyEditorModal?.expandedSection) {
+                setActiveTab(2); // Settings tab
+            } else {
+                setActiveTab(0); // Overview tab
+            }
             setSaveError(null);
         }
-    }, [queue, open, reset, stagedChanges, getFormValueWithStagedPriority]);
+    }, [queue, open, reset, propertyEditorModal?.expandedSection]);
 
     if (!queue || !open) {
         return null;
     }
 
     const handleSave = (data: Record<string, any>) => {
-        if (!queue?.queueName) return;
+        if (!queue?.name) return;
         try {
             setSaveError(null);
-            const queuePath = (queue as any).queuePath || queue.queueName;
-            const changes = createChangeSetsFromFormData(queuePath, data, queue);
+            const queuePath = queue.path;
+            const changes = createChangeSetsFromFormData(queuePath, data, queue as any);
             if (changes.length === 0) {
                 return; // No actual changes made
             }
             changes.forEach((change) => stageChange(change));
             if (onSaveProperties) {
-                onSaveProperties(queue.queueName, data);
+                onSaveProperties(queue.name, data);
             }
             reset(data);
         } catch (error) {
@@ -170,7 +153,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                     }}
                 >
                     <Typography variant="subtitle1" component="h2" color="text.primary" sx={{ fontWeight: 600 }}>
-                        {queue?.queueName}
+                        {queue?.name}
                     </Typography>
                     <IconButton
                         onClick={onClose}

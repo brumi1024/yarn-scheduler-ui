@@ -12,11 +12,11 @@ export class ApplicationLifetimeRule implements ValidationRule {
 
         const checkQueue = (queue: ParsedQueue) => {
             const queuePath = queue.path;
-            
+
             // Get lifetime values
             const maxLifetimeKey = `yarn.scheduler.capacity.${queuePath}.maximum-application-lifetime`;
             const defaultLifetimeKey = `yarn.scheduler.capacity.${queuePath}.default-application-lifetime`;
-            
+
             const maxLifetime = this.parseLifetime(context.configuration[maxLifetimeKey]);
             const defaultLifetime = this.parseLifetime(context.configuration[defaultLifetimeKey]);
 
@@ -44,7 +44,7 @@ export class ApplicationLifetimeRule implements ValidationRule {
             if (queue.parent) {
                 const parentMaxKey = `yarn.scheduler.capacity.${queue.parent}.maximum-application-lifetime`;
                 const parentMax = this.parseLifetime(context.configuration[parentMaxKey]);
-                
+
                 if (parentMax > 0 && maxLifetime > 0 && maxLifetime > parentMax) {
                     issues.push({
                         path: `${queuePath}.maximum-application-lifetime`,

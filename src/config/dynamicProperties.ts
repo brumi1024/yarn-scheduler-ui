@@ -13,12 +13,10 @@ export class DynamicPropertyResolver {
      * @param nodeLabels Array of node label names
      * @returns Record of dynamic property definitions
      */
-    static resolveNodeLabelProperties(
-        nodeLabels: string[]
-    ): Record<string, PropertyDefinition> {
+    static resolveNodeLabelProperties(nodeLabels: string[]): Record<string, PropertyDefinition> {
         const properties: Record<string, PropertyDefinition> = {};
 
-        nodeLabels.forEach(label => {
+        nodeLabels.forEach((label) => {
             // Capacity property for this label
             const capacityKey = `accessible-node-labels.${label}.capacity`;
             properties[capacityKey] = {
@@ -102,28 +100,16 @@ export class DynamicPropertyResolver {
 
         // Add node label properties if queue has accessible labels
         if (queue.accessibleNodeLabels && queue.accessibleNodeLabels.length > 0) {
-            Object.assign(
-                dynamicProps,
-                this.resolveNodeLabelProperties(queue.accessibleNodeLabels)
-            );
+            Object.assign(dynamicProps, this.resolveNodeLabelProperties(queue.accessibleNodeLabels));
         }
 
         // Add template properties if auto-creation v2 is enabled
         const autoCreationEnabled = queue.rawConfig?.['auto-queue-creation-v2.enabled'] === 'true';
         if (autoCreationEnabled) {
             // Add all three template types
-            Object.assign(
-                dynamicProps,
-                this.resolveTemplateProperties(queue.path, 'template')
-            );
-            Object.assign(
-                dynamicProps,
-                this.resolveTemplateProperties(queue.path, 'leaf-template')
-            );
-            Object.assign(
-                dynamicProps,
-                this.resolveTemplateProperties(queue.path, 'parent-template')
-            );
+            Object.assign(dynamicProps, this.resolveTemplateProperties(queue.path, 'template'));
+            Object.assign(dynamicProps, this.resolveTemplateProperties(queue.path, 'leaf-template'));
+            Object.assign(dynamicProps, this.resolveTemplateProperties(queue.path, 'parent-template'));
         }
 
         // Combine with static properties

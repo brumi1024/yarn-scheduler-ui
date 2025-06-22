@@ -36,38 +36,37 @@ export class ConfigParser {
      * 2. Second pass: Parse all properties with knowledge of valid queue paths
      */
     static parse(config: Configuration): ParseResult {
-            const result: ParseResult = {
-                queues: [],
-                globalProperties: {},
-                isLegacyMode: true, // Default assumption
-                errors: [],
-                warnings: [],
-            };
-    
-            try {
-                // Phase 1: Discover all valid queue paths
-                const validQueuePaths = this.discoverQueuePaths(config);
-    
-                // Phase 2: Parse properties with queue path knowledge
-                const parsedProperties = this.parseProperties(config, validQueuePaths);
-    
-                // Extract global properties first (needed for legacy mode detection)
-                this.extractGlobalProperties(parsedProperties, result);
-    
-                // Build queue hierarchy
-                this.buildQueueHierarchy(parsedProperties, result, config);
-    
-                // Validate the configuration
-                this.validateConfiguration(result);
-            } catch (error) {
-                result.errors.push(
-                    `Configuration parsing failed: ${error instanceof Error ? error.message : String(error)}`
-                );
-            }
-    
-            return result;
+        const result: ParseResult = {
+            queues: [],
+            globalProperties: {},
+            isLegacyMode: true, // Default assumption
+            errors: [],
+            warnings: [],
+        };
+
+        try {
+            // Phase 1: Discover all valid queue paths
+            const validQueuePaths = this.discoverQueuePaths(config);
+
+            // Phase 2: Parse properties with queue path knowledge
+            const parsedProperties = this.parseProperties(config, validQueuePaths);
+
+            // Extract global properties first (needed for legacy mode detection)
+            this.extractGlobalProperties(parsedProperties, result);
+
+            // Build queue hierarchy
+            this.buildQueueHierarchy(parsedProperties, result, config);
+
+            // Validate the configuration
+            this.validateConfiguration(result);
+        } catch (error) {
+            result.errors.push(
+                `Configuration parsing failed: ${error instanceof Error ? error.message : String(error)}`
+            );
         }
 
+        return result;
+    }
 
     /**
      * Phase 1: Discover all valid queue paths by examining .queues properties
@@ -228,182 +227,188 @@ export class ConfigParser {
     /**
      * Build queue hierarchy from parsed properties
      */
-    private static buildQueueHierarchy(properties: ParsedProperty[], result: ParseResult, originalConfig?: Configuration): void {
-            // Collect all queue-specific properties
-            const queueProperties = filter(properties, (p) => !p.isGlobal);
-            const queuePropertyMap = new Map<string, Map<string, string>>();
-            const allQueuePaths = new Set<string>();
-    
-            // Organize properties by queue path and collect all queue paths
-            for (const prop of queueProperties) {
-                if (!prop.queuePath || !prop.property) continue;
-    
-                allQueuePaths.add(prop.queuePath);
-    
-                if (!queuePropertyMap.has(prop.queuePath)) {
-                    queuePropertyMap.set(prop.queuePath, new Map());
+    private static buildQueueHierarchy(
+        properties: ParsedProperty[],
+        result: ParseResult,
+        originalConfig?: Configuration
+    ): void {
+        // Collect all queue-specific properties
+        const queueProperties = filter(properties, (p) => !p.isGlobal);
+        const queuePropertyMap = new Map<string, Map<string, string>>();
+        const allQueuePaths = new Set<string>();
+
+        // Organize properties by queue path and collect all queue paths
+        for (const prop of queueProperties) {
+            if (!prop.queuePath || !prop.property) continue;
+
+            allQueuePaths.add(prop.queuePath);
+
+            if (!queuePropertyMap.has(prop.queuePath)) {
+                queuePropertyMap.set(prop.queuePath, new Map());
+            }
+
+            queuePropertyMap.get(prop.queuePath)!.set(prop.property, prop.value);
+        }
+
+        // Ensure root queue is included if it has properties or children
+        if (
+            queuePropertyMap.has(this.ROOT_QUEUE) ||
+            [...queueProperties].some((p) => p.property === 'queues' && p.queuePath === this.ROOT_QUEUE)
+        ) {
+            allQueuePaths.add(this.ROOT_QUEUE);
+        }
+
+        // Also ensure we create queues that are declared in .queues properties
+        // but might not have any properties themselves
+        for (const prop of queueProperties) {
+            if (prop.property === 'queues' && prop.value) {
+                const parentPath = prop.queuePath!;
+                const childNames = prop.value
+                    .split(',')
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s.length > 0);
+                for (const childName of childNames) {
+                    const childPath = `${parentPath}.${childName}`;
+                    allQueuePaths.add(childPath);
                 }
-    
-                queuePropertyMap.get(prop.queuePath)!.set(prop.property, prop.value);
-            }
-    
-            // Ensure root queue is included if it has properties or children
-            if (
-                queuePropertyMap.has(this.ROOT_QUEUE) ||
-                [...queueProperties].some((p) => p.property === 'queues' && p.queuePath === this.ROOT_QUEUE)
-            ) {
-                allQueuePaths.add(this.ROOT_QUEUE);
-            }
-    
-            // Also ensure we create queues that are declared in .queues properties
-            // but might not have any properties themselves
-            for (const prop of queueProperties) {
-                if (prop.property === 'queues' && prop.value) {
-                    const parentPath = prop.queuePath!;
-                    const childNames = prop.value
-                        .split(',')
-                        .map((s: string) => s.trim())
-                        .filter((s: string) => s.length > 0);
-                    for (const childName of childNames) {
-                        const childPath = `${parentPath}.${childName}`;
-                        allQueuePaths.add(childPath);
-                    }
-                }
-            }
-    
-            // Build queue objects
-            const queueMap = new Map<string, ParsedQueue>();
-    
-            // Create all queue objects (including those without explicit properties)
-            for (const queuePath of allQueuePaths) {
-                const properties = queuePropertyMap.get(queuePath) || new Map();
-                const queue = this.createQueueFromProperties(queuePath, properties, originalConfig);
-                queueMap.set(queuePath, queue);
-            }
-    
-            // Build parent-child relationships
-            for (const queue of queueMap.values()) {
-                const properties = queuePropertyMap.get(queue.path);
-                const queuesProperty = properties?.get('queues');
-    
-                if (queuesProperty) {
-                    const childNames = queuesProperty
-                        .split(',')
-                        .map((s: string) => s.trim())
-                        .filter((s: string) => s.length > 0);
-    
-                    for (const childName of childNames) {
-                        const childPath = `${queue.path}.${childName}`;
-                        const childQueue = queueMap.get(childPath);
-    
-                        if (childQueue) {
-                            childQueue.parent = queue.path;
-                            queue.children.push(childQueue);
-                            queue.isLeaf = false; // Parent queues are not leaves
-                        } else {
-                            // This should not happen with our two-pass approach
-                            result.warnings.push(
-                                `Child queue '${childName}' declared in '${queue.path}' but not found in configuration`
-                            );
-                        }
-                    }
-                }
-            }
-    
-            // Find root queues (should only be 'root')
-            result.queues = Array.from(queueMap.values()).filter((q) => q.path === this.ROOT_QUEUE);
-    
-            if (result.queues.length === 0) {
-                result.errors.push('No root queue found in configuration');
-            } else if (result.queues.length > 1) {
-                result.errors.push('Multiple root queues found in configuration');
             }
         }
 
+        // Build queue objects
+        const queueMap = new Map<string, ParsedQueue>();
+
+        // Create all queue objects (including those without explicit properties)
+        for (const queuePath of allQueuePaths) {
+            const properties = queuePropertyMap.get(queuePath) || new Map();
+            const queue = this.createQueueFromProperties(queuePath, properties, originalConfig);
+            queueMap.set(queuePath, queue);
+        }
+
+        // Build parent-child relationships
+        for (const queue of queueMap.values()) {
+            const properties = queuePropertyMap.get(queue.path);
+            const queuesProperty = properties?.get('queues');
+
+            if (queuesProperty) {
+                const childNames = queuesProperty
+                    .split(',')
+                    .map((s: string) => s.trim())
+                    .filter((s: string) => s.length > 0);
+
+                for (const childName of childNames) {
+                    const childPath = `${queue.path}.${childName}`;
+                    const childQueue = queueMap.get(childPath);
+
+                    if (childQueue) {
+                        childQueue.parent = queue.path;
+                        queue.children.push(childQueue);
+                        queue.isLeaf = false; // Parent queues are not leaves
+                    } else {
+                        // This should not happen with our two-pass approach
+                        result.warnings.push(
+                            `Child queue '${childName}' declared in '${queue.path}' but not found in configuration`
+                        );
+                    }
+                }
+            }
+        }
+
+        // Find root queues (should only be 'root')
+        result.queues = Array.from(queueMap.values()).filter((q) => q.path === this.ROOT_QUEUE);
+
+        if (result.queues.length === 0) {
+            result.errors.push('No root queue found in configuration');
+        } else if (result.queues.length > 1) {
+            result.errors.push('Multiple root queues found in configuration');
+        }
+    }
 
     /**
      * Create a Queue object from properties
      */
-    private static createQueueFromProperties(queuePath: string, properties: Map<string, string>, originalConfig?: Configuration): ParsedQueue {
-            const queueName = queuePath.split('.').pop() || queuePath;
-    
-            const capacityStr = properties.get('capacity') || '0';
-            const maxCapacityStr = properties.get('maximum-capacity') || '100';
-    
-            const capacity = this.parseCapacityValue(capacityStr);
-            const maxCapacity = this.parseCapacityValue(maxCapacityStr);
-    
-            // Parse additional properties
-            const maxApplications = properties.get('maximum-applications');
-            const maxAMResourcePercent = properties.get('maximum-am-resource-percent');
-            const minimumUserLimitPercent = properties.get('minimum-user-limit-percent');
-            const userLimitFactor = properties.get('user-limit-factor');
-            const priority = properties.get('priority');
-            const submitACL = properties.get('acl_submit_applications');
-            const adminACL = properties.get('acl_administer_queue');
-            const preemptionDisabled = properties.get('disable_preemption');
-            const accessibleNodeLabels = properties.get('accessible-node-labels');
-            const defaultNodeLabelExpression = properties.get('default-node-label-expression');
-    
-            // Store raw configuration for dynamic property lookup
-            const rawConfig: Record<string, string> = {};
-            if (originalConfig) {
-                const queuePrefix = `yarn.scheduler.capacity.${queuePath}`;
-                
-                // Collect all properties for this queue
-                Object.entries(originalConfig).forEach(([key, value]) => {
-                    if (key.startsWith(queuePrefix)) {
-                        const propertyName = key.substring(queuePrefix.length + 1); // +1 for the dot
-                        rawConfig[propertyName] = value;
-                    }
-                });
-            }
-    
-            // Parse accessible node labels
-            let parsedAccessibleNodeLabels: string[] | undefined;
-            if (originalConfig) {
-                const nodeLabelsKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
-                if (originalConfig[nodeLabelsKey]) {
-                    parsedAccessibleNodeLabels = originalConfig[nodeLabelsKey]
-                        .split(',')
-                        .map(s => s.trim())
-                        .filter(s => s);
+    private static createQueueFromProperties(
+        queuePath: string,
+        properties: Map<string, string>,
+        originalConfig?: Configuration
+    ): ParsedQueue {
+        const queueName = queuePath.split('.').pop() || queuePath;
+
+        const capacityStr = properties.get('capacity') || '0';
+        const maxCapacityStr = properties.get('maximum-capacity') || '100';
+
+        const capacity = this.parseCapacityValue(capacityStr);
+        const maxCapacity = this.parseCapacityValue(maxCapacityStr);
+
+        // Parse additional properties
+        const maxApplications = properties.get('maximum-applications');
+        const maxAMResourcePercent = properties.get('maximum-am-resource-percent');
+        const minimumUserLimitPercent = properties.get('minimum-user-limit-percent');
+        const userLimitFactor = properties.get('user-limit-factor');
+        const priority = properties.get('priority');
+        const submitACL = properties.get('acl_submit_applications');
+        const adminACL = properties.get('acl_administer_queue');
+        const preemptionDisabled = properties.get('disable_preemption');
+        const accessibleNodeLabels = properties.get('accessible-node-labels');
+        const defaultNodeLabelExpression = properties.get('default-node-label-expression');
+
+        // Store raw configuration for dynamic property lookup
+        const rawConfig: Record<string, string> = {};
+        if (originalConfig) {
+            const queuePrefix = `yarn.scheduler.capacity.${queuePath}`;
+
+            // Collect all properties for this queue
+            Object.entries(originalConfig).forEach(([key, value]) => {
+                if (key.startsWith(queuePrefix)) {
+                    const propertyName = key.substring(queuePrefix.length + 1); // +1 for the dot
+                    rawConfig[propertyName] = value;
                 }
-            }
-    
-            const queue: ParsedQueue = {
-                name: queueName,
-                path: queuePath,
-                parent: this.getParentPath(queuePath),
-                children: [],
-                capacity,
-                maxCapacity,
-                state: (properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED',
-                properties: Object.fromEntries(properties),
-                isLeaf: true, // Will be updated when children are added
-                maxApplications: maxApplications
-                    ? isNaN(parseInt(maxApplications, 10))
-                        ? -1
-                        : parseInt(maxApplications, 10)
-                    : -1,
-                maxAMResourcePercent: maxAMResourcePercent ? parseFloat(maxAMResourcePercent) : undefined,
-                minimumUserLimitPercent: minimumUserLimitPercent ? parseInt(minimumUserLimitPercent, 10) : undefined,
-                userLimitFactor: userLimitFactor ? parseFloat(userLimitFactor) : undefined,
-                priority: priority ? parseInt(priority, 10) : undefined,
-                submitACL,
-                adminACL,
-                preemptionDisabled: preemptionDisabled === 'true',
-                accessibleNodeLabels: parsedAccessibleNodeLabels || (accessibleNodeLabels
-                    ? accessibleNodeLabels.split(',').map((s) => s.trim())
-                    : undefined),
-                defaultNodeLabelExpression,
-                // Add new fields for dynamic properties
-                rawConfig: Object.keys(rawConfig).length > 0 ? rawConfig : undefined,
-            };
-    
-            return queue;
+            });
         }
 
+        // Parse accessible node labels
+        let parsedAccessibleNodeLabels: string[] | undefined;
+        if (originalConfig) {
+            const nodeLabelsKey = `yarn.scheduler.capacity.${queuePath}.accessible-node-labels`;
+            if (originalConfig[nodeLabelsKey]) {
+                parsedAccessibleNodeLabels = originalConfig[nodeLabelsKey]
+                    .split(',')
+                    .map((s) => s.trim())
+                    .filter((s) => s);
+            }
+        }
+
+        const queue: ParsedQueue = {
+            name: queueName,
+            path: queuePath,
+            parent: this.getParentPath(queuePath),
+            children: [],
+            capacity,
+            maxCapacity,
+            state: (properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED',
+            properties: Object.fromEntries(properties),
+            isLeaf: true, // Will be updated when children are added
+            maxApplications: maxApplications
+                ? isNaN(parseInt(maxApplications, 10))
+                    ? -1
+                    : parseInt(maxApplications, 10)
+                : -1,
+            maxAMResourcePercent: maxAMResourcePercent ? parseFloat(maxAMResourcePercent) : undefined,
+            minimumUserLimitPercent: minimumUserLimitPercent ? parseInt(minimumUserLimitPercent, 10) : undefined,
+            userLimitFactor: userLimitFactor ? parseFloat(userLimitFactor) : undefined,
+            priority: priority ? parseInt(priority, 10) : undefined,
+            submitACL,
+            adminACL,
+            preemptionDisabled: preemptionDisabled === 'true',
+            accessibleNodeLabels:
+                parsedAccessibleNodeLabels ||
+                (accessibleNodeLabels ? accessibleNodeLabels.split(',').map((s) => s.trim()) : undefined),
+            defaultNodeLabelExpression,
+            // Add new fields for dynamic properties
+            rawConfig: Object.keys(rawConfig).length > 0 ? rawConfig : undefined,
+        };
+
+        return queue;
+    }
 
     /**
      * Parse capacity value into structured format

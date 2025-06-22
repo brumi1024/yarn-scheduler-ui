@@ -43,10 +43,10 @@ export function PropertyFormField({
     const {
         field,
         fieldState: { error },
-    } = useController({ 
-        control, 
+    } = useController({
+        control,
         name: formFieldName,
-        defaultValue: property.defaultValue 
+        defaultValue: property.defaultValue,
     });
 
     // Get real-time validation

@@ -75,7 +75,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         description: 'Guaranteed queue capacity. Can be percentage, weight, or absolute.',
         validation: capacityValueSchema,
         group: 'core',
-        getValueFromQueue: (q) => `${q.capacity}%`,
+        getValueFromQueue: (q) => q.capacity?.value || `${q.capacity?.numericValue || 0}%`,
     },
 
     'maximum-capacity': {
@@ -86,7 +86,7 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         description: 'Maximum capacity the queue can utilize.',
         validation: capacityValueSchema,
         group: 'core',
-        getValueFromQueue: (q) => `${q.maxCapacity}%`,
+        getValueFromQueue: (q) => q.maxCapacity?.value || `${q.maxCapacity?.numericValue || 100}%`,
     },
 
     state: {
@@ -315,8 +315,8 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         group: 'auto-creation',
         getValueFromQueue: (q) => {
             // Check rawConfig first, then properties, then default
-            const rawValue = q.rawConfig?.['auto-queue-creation-v2.enabled'] || 
-                           q.properties?.['auto-queue-creation-v2.enabled'];
+            const rawValue =
+                q.rawConfig?.['auto-queue-creation-v2.enabled'] || q.properties?.['auto-queue-creation-v2.enabled'];
             if (rawValue === 'true' || rawValue === true) return true;
             if (rawValue === 'false' || rawValue === false) return false;
             return false; // default value

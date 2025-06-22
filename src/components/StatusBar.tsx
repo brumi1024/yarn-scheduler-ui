@@ -85,13 +85,7 @@ export default function StatusBar() {
                         variant="outlined"
                     />
                 ) : (
-                    <Chip
-                        icon={<CheckCircleIcon />}
-                        label="Valid"
-                        color="success"
-                        size="small"
-                        variant="outlined"
-                    />
+                    <Chip icon={<CheckCircleIcon />} label="Valid" color="success" size="small" variant="outlined" />
                 )}
             </Box>
 

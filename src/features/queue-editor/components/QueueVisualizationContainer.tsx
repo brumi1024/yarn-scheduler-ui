@@ -17,7 +17,8 @@ import { useConfigurationQuery, useSchedulerQuery } from '../../../hooks/useYarn
 import { useQueueDataProcessor, type QueueNodeData } from '../hooks/useQueueDataProcessor';
 import { QueueInfoPanel } from './QueueInfoPanel';
 import { AddQueueModal } from './AddQueueModal';
-import { useUIStore, useSelectedQueue } from '../../../store';
+import { useUIStore } from '../../../store';
+import { useQueueConfiguration } from '../hooks/useQueueConfiguration';
 import QueueCardNode from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
 import type { Queue } from '../../../types/Queue';
@@ -32,10 +33,8 @@ const edgeTypes = { customFlow: CustomFlowEdge };
 
 // Inner Flow component that has access to React Flow instance
 const FlowInner: React.FC = () => {
-    const configQuery = useConfigurationQuery();
-    const schedulerQuery = useSchedulerQuery();
     // The hook now contains all the complex logic - we just consume the final result
-    const { nodes, edges, isLoading, error } = useQueueDataProcessor(configQuery, schedulerQuery);
+    const { nodes, edges, isLoading, error } = useQueueDataProcessor();
     const uiStore = useUIStore();
     const { fitView } = useReactFlow();
 
@@ -144,7 +143,10 @@ const FlowInner: React.FC = () => {
 
 export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerProps> = ({ className }) => {
     const uiStore = useUIStore();
-    const selectedQueueData = useSelectedQueue();
+
+    // UPDATED: Use the new hook
+    const { getQueueByPath } = useQueueConfiguration();
+    const selectedQueueData = uiStore?.selectedQueuePath ? getQueueByPath(uiStore.selectedQueuePath) : null;
 
     // Queue action handlers
     const handleQueueEdit = useCallback(() => {
