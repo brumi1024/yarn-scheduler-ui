@@ -9,6 +9,7 @@ This document describes the complete data flow in the YARN Scheduler UI, from AP
 The application uses React 19 with TypeScript, Material-UI, and Zustand for state management. The visualization is built with D3.js and HTML5 Canvas for high-performance rendering.
 
 ### Tech Stack
+
 - **Frontend**: React 19 + TypeScript + Vite
 - **UI**: Material-UI v6 with Emotion styling
 - **State**: Zustand (4 separate stores)
@@ -21,53 +22,61 @@ The application uses React 19 with TypeScript, Material-UI, and Zustand for stat
 The application uses four specialized Zustand stores:
 
 ### 1. Data Store (`dataStore.ts`)
+
 Centralized API data management:
+
 ```typescript
 interface DataStore {
-  scheduler: SchedulerInfo | null;
-  configuration: ConfigurationData | null;
-  nodeLabels: NodeLabel[] | null;
-  nodes: NodeInfo[] | null;
-  loading: boolean;
-  error: string | null;
-  loadAllData: () => Promise<void>;
+    scheduler: SchedulerInfo | null;
+    configuration: ConfigurationData | null;
+    nodeLabels: NodeLabel[] | null;
+    nodes: NodeInfo[] | null;
+    loading: boolean;
+    error: string | null;
+    loadAllData: () => Promise<void>;
 }
 ```
 
 ### 2. UI Store (`uiStore.ts`)
+
 UI state and interactions:
+
 ```typescript
 interface UIStore {
-  selectedQueue: string | null;
-  hoveredQueue: string | null;
-  expandedQueues: Set<string>;
-  viewSettings: ViewSettings;
-  modals: ModalState;
-  notifications: Notification[];
-  setSelectedQueue: (queueId: string | null) => void;
-  // ... other UI actions
+    selectedQueue: string | null;
+    hoveredQueue: string | null;
+    expandedQueues: Set<string>;
+    viewSettings: ViewSettings;
+    modals: ModalState;
+    notifications: Notification[];
+    setSelectedQueue: (queueId: string | null) => void;
+    // ... other UI actions
 }
 ```
 
 ### 3. Changes Store (`changesStore.ts`)
+
 Change management system:
+
 ```typescript
 interface ChangesStore {
-  stagedChanges: Map<string, ConfigChange>;
-  conflicts: Conflict[];
-  applyChanges: () => Promise<void>;
-  rollbackChanges: () => void;
-  stageChange: (change: ConfigChange) => void;
+    stagedChanges: Map<string, ConfigChange>;
+    conflicts: Conflict[];
+    applyChanges: () => Promise<void>;
+    rollbackChanges: () => void;
+    stageChange: (change: ConfigChange) => void;
 }
 ```
 
 ### 4. Activity Store (`activityStore.ts`)
+
 Activity logging and monitoring:
+
 ```typescript
 interface ActivityStore {
-  activities: Activity[];
-  logActivity: (activity: Activity) => void;
-  clearActivities: () => void;
+    activities: Activity[];
+    logActivity: (activity: Activity) => void;
+    clearActivities: () => void;
 }
 ```
 
@@ -79,19 +88,20 @@ The ApiService provides YARN REST API integration:
 
 ```typescript
 class ApiService {
-  // Core YARN APIs
-  getScheduler(): Promise<SchedulerInfo>
-  getConfiguration(): Promise<ConfigurationData>
-  updateConfiguration(changes: ConfigurationUpdate): Promise<void>
-  getNodeLabels(): Promise<NodeLabel[]>
-  getNodes(): Promise<NodeInfo[]>
-  
-  // Health checking
-  healthCheck(): Promise<boolean>
+    // Core YARN APIs
+    getScheduler(): Promise<SchedulerInfo>;
+    getConfiguration(): Promise<ConfigurationData>;
+    updateConfiguration(changes: ConfigurationUpdate): Promise<void>;
+    getNodeLabels(): Promise<NodeLabel[]>;
+    getNodes(): Promise<NodeInfo[]>;
+
+    // Health checking
+    healthCheck(): Promise<boolean>;
 }
 ```
 
 **API Endpoints:**
+
 - `GET /ws/v1/cluster/scheduler` - Queue hierarchy and runtime metrics
 - `GET /ws/v1/cluster/scheduler-conf` - Configuration properties
 - `PUT /ws/v1/cluster/scheduler-conf` - Apply configuration changes
@@ -132,15 +142,15 @@ Converts parsed configuration into visualization-ready data structures:
 
 ```typescript
 interface LayoutQueue extends ParsedQueue {
-  x: number;
-  y: number;
-  width: number;
-  height: number;
-  level: number;
-  absoluteCapacity: number;
-  usedCapacity?: number;
-  numApplications?: number;
-  resourcesUsed?: ResourceInfo;
+    x: number;
+    y: number;
+    width: number;
+    height: number;
+    level: number;
+    absoluteCapacity: number;
+    usedCapacity?: number;
+    numApplications?: number;
+    resourcesUsed?: ResourceInfo;
 }
 ```
 
@@ -166,22 +176,22 @@ Processes and merges API data for visualization:
 
 ```typescript
 const useQueueDataProcessor = () => {
-  const { scheduler, configuration } = useDataStore();
-  
-  return useMemo(() => {
-    if (!scheduler || !configuration) return null;
-    
-    // Parse configuration into queue hierarchy
-    const parsedQueues = ConfigParser.parse(configuration);
-    
-    // Merge with runtime data from scheduler
-    const enrichedQueues = mergeRuntimeData(parsedQueues, scheduler);
-    
-    // Calculate layout positions
-    const layoutQueues = TreeBuilder.buildLayout(enrichedQueues);
-    
-    return layoutQueues;
-  }, [scheduler, configuration]);
+    const { scheduler, configuration } = useDataStore();
+
+    return useMemo(() => {
+        if (!scheduler || !configuration) return null;
+
+        // Parse configuration into queue hierarchy
+        const parsedQueues = ConfigParser.parse(configuration);
+
+        // Merge with runtime data from scheduler
+        const enrichedQueues = mergeRuntimeData(parsedQueues, scheduler);
+
+        // Calculate layout positions
+        const layoutQueues = TreeBuilder.buildLayout(enrichedQueues);
+
+        return layoutQueues;
+    }, [scheduler, configuration]);
 };
 ```
 
@@ -195,9 +205,9 @@ Main visualization component that orchestrates the rendering:
 const QueueVisualizationContainer = () => {
   const queueData = useQueueDataProcessor();
   const { selectedQueue, hoveredQueue } = useUIStore();
-  
+
   return (
-    <CanvasDisplay 
+    <CanvasDisplay
       queues={queueData}
       selectedQueue={selectedQueue}
       hoveredQueue={hoveredQueue}
@@ -214,23 +224,21 @@ D3.js-powered canvas rendering with interaction handling:
 
 ```typescript
 const CanvasDisplay = ({ queues, selectedQueue, hoveredQueue, onQueueSelect, onQueueHover }) => {
-  useEffect(() => {
-    const canvas = d3.select(canvasRef.current);
-    
-    // Set up zoom behavior
-    const zoom = d3.zoom()
-      .scaleExtent([0.1, 4])
-      .on('zoom', handleZoom);
-    
-    canvas.call(zoom);
-    
-    // Render queue hierarchy
-    renderQueues(queues, selectedQueue, hoveredQueue);
-    
-    // Handle interactions
-    canvas.on('click', handleCanvasClick);
-    canvas.on('mousemove', handleCanvasHover);
-  }, [queues, selectedQueue, hoveredQueue]);
+    useEffect(() => {
+        const canvas = d3.select(canvasRef.current);
+
+        // Set up zoom behavior
+        const zoom = d3.zoom().scaleExtent([0.1, 4]).on('zoom', handleZoom);
+
+        canvas.call(zoom);
+
+        // Render queue hierarchy
+        renderQueues(queues, selectedQueue, hoveredQueue);
+
+        // Handle interactions
+        canvas.on('click', handleCanvasClick);
+        canvas.on('mousemove', handleCanvasHover);
+    }, [queues, selectedQueue, hoveredQueue]);
 };
 ```
 
@@ -244,17 +252,17 @@ When users modify queue properties:
 const { stageChange } = useChangesStore();
 
 const handleCapacityChange = (queuePath: string, newCapacity: number) => {
-  const change: ConfigChange = {
-    id: generateId(),
-    queuePath,
-    property: 'capacity',
-    oldValue: currentCapacity.toString(),
-    newValue: newCapacity.toString(),
-    changeType: 'update',
-    timestamp: Date.now()
-  };
-  
-  stageChange(change);
+    const change: ConfigChange = {
+        id: generateId(),
+        queuePath,
+        property: 'capacity',
+        oldValue: currentCapacity.toString(),
+        newValue: newCapacity.toString(),
+        changeType: 'update',
+        timestamp: Date.now(),
+    };
+
+    stageChange(change);
 };
 ```
 
@@ -264,14 +272,14 @@ Changes are validated before staging:
 
 ```typescript
 const validateChange = (change: ConfigChange): ValidationResult => {
-  switch (change.property) {
-    case 'capacity':
-      return validateCapacity(change.queuePath, change.newValue);
-    case 'maximum-capacity':
-      return validateMaxCapacity(change.queuePath, change.newValue);
-    default:
-      return { valid: true };
-  }
+    switch (change.property) {
+        case 'capacity':
+            return validateCapacity(change.queuePath, change.newValue);
+        case 'maximum-capacity':
+            return validateMaxCapacity(change.queuePath, change.newValue);
+        default:
+            return { valid: true };
+    }
 };
 ```
 
@@ -283,17 +291,17 @@ Staged changes are converted to YARN configuration format:
 const { applyChanges } = useChangesStore();
 
 const applyChanges = async () => {
-  // Convert staged changes to YARN XML format
-  const configUpdate = generateConfigurationUpdate(stagedChanges);
-  
-  // Apply via API
-  await apiService.updateConfiguration(configUpdate);
-  
-  // Refresh data
-  await loadAllData();
-  
-  // Clear staged changes
-  clearStagedChanges();
+    // Convert staged changes to YARN XML format
+    const configUpdate = generateConfigurationUpdate(stagedChanges);
+
+    // Apply via API
+    await apiService.updateConfiguration(configUpdate);
+
+    // Refresh data
+    await loadAllData();
+
+    // Clear staged changes
+    clearStagedChanges();
 };
 ```
 
@@ -341,27 +349,27 @@ The main queue management interface:
 
 ```typescript
 const handleApiError = (error: ApiError) => {
-  const { addNotification } = useUIStore();
-  
-  switch (error.status) {
-    case 400:
-      addNotification({
-        type: 'error',
-        message: `Invalid configuration: ${error.message}`
-      });
-      break;
-    case 403:
-      addNotification({
-        type: 'error',
-        message: 'Permission denied'
-      });
-      break;
-    default:
-      addNotification({
-        type: 'error',
-        message: 'An unexpected error occurred'
-      });
-  }
+    const { addNotification } = useUIStore();
+
+    switch (error.status) {
+        case 400:
+            addNotification({
+                type: 'error',
+                message: `Invalid configuration: ${error.message}`,
+            });
+            break;
+        case 403:
+            addNotification({
+                type: 'error',
+                message: 'Permission denied',
+            });
+            break;
+        default:
+            addNotification({
+                type: 'error',
+                message: 'An unexpected error occurred',
+            });
+    }
 };
 ```
 
@@ -369,16 +377,16 @@ const handleApiError = (error: ApiError) => {
 
 ```typescript
 const handleValidationError = (error: ValidationError) => {
-  const { setSelectedQueue, addNotification } = useUIStore();
-  
-  // Highlight problematic queue
-  setSelectedQueue(error.queuePath);
-  
-  // Show error notification
-  addNotification({
-    type: 'error',
-    message: error.message
-  });
+    const { setSelectedQueue, addNotification } = useUIStore();
+
+    // Highlight problematic queue
+    setSelectedQueue(error.queuePath);
+
+    // Show error notification
+    addNotification({
+        type: 'error',
+        message: error.message,
+    });
 };
 ```
 
@@ -396,34 +404,34 @@ const handleValidationError = (error: ValidationError) => {
 
 ```typescript
 interface Queue {
-  id: string;
-  queueName: string;
-  queuePath: string;
-  capacity: number;
-  maxCapacity: number;
-  absoluteCapacity: number;
-  usedCapacity: number;
-  numApplications: number;
-  resourcesUsed: ResourceInfo;
-  children: Queue[];
-  properties: Record<string, any>;
+    id: string;
+    queueName: string;
+    queuePath: string;
+    capacity: number;
+    maxCapacity: number;
+    absoluteCapacity: number;
+    usedCapacity: number;
+    numApplications: number;
+    resourcesUsed: ResourceInfo;
+    children: Queue[];
+    properties: Record<string, any>;
 }
 
 interface ConfigChange {
-  id: string;
-  queuePath: string;
-  property: string;
-  oldValue: string;
-  newValue: string;
-  changeType: 'create' | 'update' | 'delete';
-  timestamp: number;
+    id: string;
+    queuePath: string;
+    property: string;
+    oldValue: string;
+    newValue: string;
+    changeType: 'create' | 'update' | 'delete';
+    timestamp: number;
 }
 
 interface ValidationError {
-  queuePath: string;
-  property: string;
-  message: string;
-  severity: 'error' | 'warning';
+    queuePath: string;
+    property: string;
+    message: string;
+    severity: 'error' | 'warning';
 }
 ```
 
@@ -433,21 +441,21 @@ All user actions and system events are logged:
 
 ```typescript
 interface Activity {
-  id: string;
-  timestamp: number;
-  type: 'user_action' | 'api_call' | 'error' | 'info';
-  message: string;
-  details?: any;
+    id: string;
+    timestamp: number;
+    type: 'user_action' | 'api_call' | 'error' | 'info';
+    message: string;
+    details?: any;
 }
 
 const { logActivity } = useActivityStore();
 
 logActivity({
-  id: generateId(),
-  timestamp: Date.now(),
-  type: 'user_action',
-  message: 'Queue capacity changed',
-  details: { queuePath: 'root.default', newCapacity: 30 }
+    id: generateId(),
+    timestamp: Date.now(),
+    type: 'user_action',
+    message: 'Queue capacity changed',
+    details: { queuePath: 'root.default', newCapacity: 30 },
 });
 ```
 

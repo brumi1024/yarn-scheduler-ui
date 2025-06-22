@@ -2,8 +2,8 @@ import { ValidationRule, ValidationContext, ValidationIssue } from '../types';
 import type { ParsedQueue } from '../../types/Queue';
 
 export class QueueNameRule implements ValidationRule {
-    name = 'queue-name-format';
-    description = 'Queue names must be valid';
+    name = 'queue-name';
+    description = 'Queue names must contain only alphanumeric characters, hyphens, and underscores';
     severity = 'error' as const;
 
     private readonly VALID_NAME_REGEX = /^[a-zA-Z0-9_-]+$/;

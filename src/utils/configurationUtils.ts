@@ -58,6 +58,17 @@ function convertFormValueToYarnValue(propertyKey: string, value: unknown): strin
  * @param currentQueue The current state of the queue object.
  * @returns An array of ChangeSet objects representing the changes.
  */
+/**
+ * Converts a sanitized form field name back to the original property key
+ * @param sanitizedKey The sanitized key (e.g., "auto-queue-creation-v2_enabled")
+ * @returns The original property key (e.g., "auto-queue-creation-v2.enabled")
+ */
+function convertSanitizedKeyToPropertyKey(sanitizedKey: string): string {
+    // Convert underscores back to dots for property keys
+    // This reverses the sanitization done in PropertyFormField
+    return sanitizedKey.replace(/_/g, '.');
+}
+
 export function createChangeSetsFromFormData(
     queuePath: string,
     formData: Record<string, unknown>,
@@ -66,8 +77,11 @@ export function createChangeSetsFromFormData(
     const changes: ChangeSet[] = [];
     const timestamp = new Date();
 
-    for (const [key, newValue] of Object.entries(formData)) {
-        const definition = QUEUE_PROPERTIES[key];
+    for (const [sanitizedKey, newValue] of Object.entries(formData)) {
+        // Convert sanitized key back to original property key
+        const propertyKey = convertSanitizedKeyToPropertyKey(sanitizedKey);
+        const definition = QUEUE_PROPERTIES[propertyKey];
+        
         if (!definition || !currentQueue) {
             continue; // Skip properties not defined in our master list or if no queue is selected
         }
@@ -84,7 +98,7 @@ export function createChangeSetsFromFormData(
                 type: 'PROPERTY_UPDATE',
                 timestamp,
                 queuePath: queuePath,
-                property: key,
+                property: propertyKey, // Use the original property key, not the sanitized one
                 oldValue: String(oldValue),
                 newValue: String(newValue),
             });

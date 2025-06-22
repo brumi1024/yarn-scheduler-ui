@@ -4,16 +4,24 @@ import { MaxCapacityRule } from './rules/MaxCapacityRule';
 import { QueueNameRule } from './rules/QueueNameRule';
 import { AclFormatRule } from './rules/AclFormatRule';
 import { ResourceLimitRule } from './rules/ResourceLimitRule';
+import { NodeLabelCapacityRule } from './rules/NodeLabelCapacityRule';
+import { ApplicationLifetimeRule } from './rules/ApplicationLifetimeRule';
+import { QueueStateRule } from './rules/QueueStateRule';
 import { ConfigParser } from '../yarn-parser/ConfigParser';
+
 
 export class ValidationEngine {
     private rules: ValidationRule[] = [
-        new CapacitySumRule(),
-        new MaxCapacityRule(),
-        new QueueNameRule(),
-        new AclFormatRule(),
-        new ResourceLimitRule(),
-    ];
+            new CapacitySumRule(),
+            new MaxCapacityRule(),
+            new QueueNameRule(),
+            new AclFormatRule(),
+            new ResourceLimitRule(),
+            new NodeLabelCapacityRule(),
+            new ApplicationLifetimeRule(),
+            new QueueStateRule(),
+        ];
+
 
     validate(configuration: Record<string, string>): ValidationResult {
         // Parse configuration first

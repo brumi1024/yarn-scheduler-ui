@@ -313,7 +313,14 @@ export const QUEUE_PROPERTIES: Record<string, PropertyDefinition> = {
         description: 'Enable auto-creation of parent and leaf queues',
         validation: z.boolean(),
         group: 'auto-creation',
-        getValueFromQueue: (q) => q.autoQueueCreationV2Enabled || false,
+        getValueFromQueue: (q) => {
+            // Check rawConfig first, then properties, then default
+            const rawValue = q.rawConfig?.['auto-queue-creation-v2.enabled'] || 
+                           q.properties?.['auto-queue-creation-v2.enabled'];
+            if (rawValue === 'true' || rawValue === true) return true;
+            if (rawValue === 'false' || rawValue === false) return false;
+            return false; // default value
+        },
     },
 
     'auto-queue-creation-v2.max-queues': {

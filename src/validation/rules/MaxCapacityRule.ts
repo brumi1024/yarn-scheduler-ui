@@ -2,7 +2,7 @@ import { ValidationRule, ValidationContext, ValidationIssue } from '../types';
 import type { ParsedQueue } from '../../types/Queue';
 
 export class MaxCapacityRule implements ValidationRule {
-    name = 'max-capacity-constraint';
+    name = 'max-capacity';
     description = 'Maximum capacity must be >= capacity';
     severity = 'error' as const;
 
@@ -17,8 +17,8 @@ export class MaxCapacityRule implements ValidationRule {
 
                 if (maxCapacity < capacity) {
                     issues.push({
-                        path: `${queue.path}.maximum-capacity`,
-                        message: `Maximum capacity (${maxCapacity}%) is less than capacity (${capacity}%)`,
+                        path: queue.path,
+                        message: `maximum capacity (${maxCapacity}) must be >= capacity (${capacity})`,
                         severity: 'error',
                         rule: this.name,
                     });

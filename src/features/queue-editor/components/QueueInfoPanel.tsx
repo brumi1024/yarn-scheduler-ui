@@ -98,7 +98,9 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         if (queue && open) {
             const initialData: Record<string, any> = {};
             Object.values(QUEUE_PROPERTIES).forEach((propDef) => {
-                initialData[propDef.key] = getFormValueWithStagedPriority(propDef.key, queue, stagedChanges || []);
+                // Use sanitized key for form field registration (consistent with PropertyFormField)
+                const sanitizedKey = propDef.key.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '_');
+                initialData[sanitizedKey] = getFormValueWithStagedPriority(propDef.key, queue, stagedChanges || []);
             });
             reset(initialData);
             setActiveTab(0);

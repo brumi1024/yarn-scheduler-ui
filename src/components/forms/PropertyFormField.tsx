@@ -38,10 +38,16 @@ export function PropertyFormField({
     onCustomChange,
     showValidation = true,
 }: PropertyFormFieldProps) {
+    // For dynamic properties, we need to use a sanitized name for the form
+    const formFieldName = property.key.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '_');
     const {
         field,
         fieldState: { error },
-    } = useController({ control, name });
+    } = useController({ 
+        control, 
+        name: formFieldName,
+        defaultValue: property.defaultValue 
+    });
 
     // Get real-time validation
     const validation = usePropertyValidation(

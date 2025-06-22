@@ -1,13 +1,18 @@
-import { Box, Typography, Chip, Divider } from '@mui/material';
+import { Box, Typography, Chip, Divider, CircularProgress } from '@mui/material';
 import { useState, useEffect } from 'react';
 import { useAllQueues } from '../store';
 import { useSchedulerQuery } from '../hooks/useYarnApi';
+import { useValidationStatus } from '../hooks/useValidationStatus';
+import ErrorIcon from '@mui/icons-material/Error';
+import WarningIcon from '@mui/icons-material/Warning';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 
 export default function StatusBar() {
     const [lastRefresh, setLastRefresh] = useState<Date>(new Date());
 
     const allQueues = useAllQueues();
     const schedulerQuery = useSchedulerQuery();
+    const { errors, warnings, isValidating } = useValidationStatus();
 
     // Derive health status from scheduler query
     const healthStatus = schedulerQuery.isLoading ? 'loading' : schedulerQuery.isError ? 'error' : 'ok';
@@ -58,6 +63,37 @@ export default function StatusBar() {
                 size="small"
                 color={healthStatus === 'ok' ? 'success' : healthStatus === 'error' ? 'error' : 'default'}
             />
+
+            {/* Validation Status */}
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                {isValidating ? (
+                    <CircularProgress size={16} />
+                ) : errors > 0 ? (
+                    <Chip
+                        icon={<ErrorIcon />}
+                        label={`${errors} error${errors !== 1 ? 's' : ''}`}
+                        color="error"
+                        size="small"
+                        variant="outlined"
+                    />
+                ) : warnings > 0 ? (
+                    <Chip
+                        icon={<WarningIcon />}
+                        label={`${warnings} warning${warnings !== 1 ? 's' : ''}`}
+                        color="warning"
+                        size="small"
+                        variant="outlined"
+                    />
+                ) : (
+                    <Chip
+                        icon={<CheckCircleIcon />}
+                        label="Valid"
+                        color="success"
+                        size="small"
+                        variant="outlined"
+                    />
+                )}
+            </Box>
 
             <Divider orientation="vertical" flexItem />
 

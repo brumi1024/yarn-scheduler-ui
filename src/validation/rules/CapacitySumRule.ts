@@ -3,7 +3,7 @@ import type { ParsedQueue } from '../../types/Queue';
 
 export class CapacitySumRule implements ValidationRule {
     name = 'capacity-sum';
-    description = 'Child queue capacities must sum to 100%';
+    description = 'Child queue capacities must sum to 100% in percentage mode';
     severity = 'error' as const;
 
     validate(context: ValidationContext): ValidationIssue[] {

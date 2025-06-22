@@ -1,6 +1,6 @@
 import React from 'react';
 import { useFormContext } from 'react-hook-form';
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import {
     Box,
     Typography,
@@ -18,11 +18,14 @@ import {
     Tooltip,
 } from '@mui/material';
 import { ExpandMore as ExpandMoreIcon, ViewList as ViewListIcon, Tab as TabIcon } from '@mui/icons-material';
-import { getPropertyGroups } from '../../../../config';
+import { useQueueProperties } from '../../hooks/useQueueProperties';
+import { getPropertyGroups, PropertyDefinition } from '../../../../config';
 import type { Queue, QueueChild, PropertyGroup } from '../../types';
 import { PropertyFormField } from '../../../../components/forms/PropertyFormField';
 import { AutoQueueCreationSection } from '../../../../components/forms/AutoQueueCreationSection';
 import { NodeLabelsSection } from '../../../../components/forms/NodeLabelsSection';
+import { NodeLabelPropertiesSection } from './NodeLabelPropertiesSection';
+import { AutoQueueTemplatesSection } from './AutoQueueTemplatesSection';
 
 interface QueueInfoSettingsProps {
     queue: Queue;
@@ -67,7 +70,15 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
         handleSubmit,
         formState: { errors, isDirty },
     } = useFormContext();
-    const propertyGroups = getPropertyGroups();
+    const { groupedProperties, allProperties } = useQueueProperties(queue);
+
+    // Transform grouped properties to match expected format
+    const propertyGroups = useMemo(() => {
+        return Object.entries(groupedProperties).map(([groupName, properties]) => ({
+            name: groupName.charAt(0).toUpperCase() + groupName.slice(1).replace('-', ' '),
+            properties,
+        }));
+    }, [groupedProperties]);
 
     // State to manage which accordion sections are expanded
     const [expandedAccordions, setExpandedAccordions] = useState<Set<string>>(new Set(['node-labels']));
@@ -161,6 +172,48 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
                     <NodeLabelsSection queue={queue} />
                 </AccordionDetails>
             </Accordion>
+
+            {/* Node Label Properties - Only show if queue has node labels */}
+            {queue.accessibleNodeLabels && queue.accessibleNodeLabels.length > 0 && (
+                <Accordion
+                    expanded={expandedAccordions.has('node-label-properties')}
+                    onChange={handleAccordionChange('node-label-properties')}
+                    sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
+                >
+                    <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
+                    >
+                        <Typography variant="subtitle2" fontWeight="medium">
+                            Node Label Capacities
+                        </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 2 }}>
+                        <NodeLabelPropertiesSection queue={queue} queuePath={queue.queuePath} />
+                    </AccordionDetails>
+                </Accordion>
+            )}
+
+            {/* Auto-Queue Templates - Only show if auto-creation v2 is enabled */}
+            {queue.rawConfig?.['auto-queue-creation-v2.enabled'] === 'true' && (
+                <Accordion
+                    expanded={expandedAccordions.has('auto-templates')}
+                    onChange={handleAccordionChange('auto-templates')}
+                    sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
+                >
+                    <AccordionSummary
+                        expandIcon={<ExpandMoreIcon />}
+                        sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
+                    >
+                        <Typography variant="subtitle2" fontWeight="medium">
+                            Auto-Queue Templates
+                        </Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{ p: 2 }}>
+                        <AutoQueueTemplatesSection queue={queue} queuePath={queue.queuePath} />
+                    </AccordionDetails>
+                </Accordion>
+            )}
         </>
     );
 

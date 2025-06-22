@@ -33,6 +33,7 @@ import {
 } from '@mui/icons-material';
 import { useChangesStore } from '../../../store';
 import type { ChangeSet } from '../../../types/Configuration';
+import { ValidationPreview } from '../../../components/validation/ValidationPreview';
 
 interface StagedChangesPanelProps {
     onApplyChanges?: () => void;
@@ -48,6 +49,8 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
 
     const [isExpanded, setIsExpanded] = useState(false);
     const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
+    const [showValidationPreview, setShowValidationPreview] = useState(false);
+    const [pendingSaveAction, setPendingSaveAction] = useState<(() => void) | null>(null);
 
     // Group changes for better organization
     const groupedChanges = useMemo(() => {
@@ -83,15 +86,20 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         return null; // Don't show panel when no changes
     }
 
-    const handleApplyChanges = async () => {
-        try {
-            await applyChanges();
-            if (onApplyChanges) {
-                onApplyChanges();
+    const handleApplyChanges = () => {
+        // Show validation preview before applying changes
+        setShowValidationPreview(true);
+        setPendingSaveAction(() => async () => {
+            try {
+                await applyChanges();
+                if (onApplyChanges) {
+                    onApplyChanges();
+                }
+                setShowValidationPreview(false);
+            } catch (error) {
+                console.error('Failed to apply changes:', error);
             }
-        } catch (error) {
-            console.error('Failed to apply changes:', error);
-        }
+        });
     };
 
     const handleClearAll = () => {
@@ -337,6 +345,20 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
                     </Button>
                 </Stack>
             </Box>
+            
+            {/* Validation Preview */}
+            <ValidationPreview
+                open={showValidationPreview}
+                onClose={() => {
+                    setShowValidationPreview(false);
+                    setPendingSaveAction(null);
+                }}
+                onProceed={() => {
+                    if (pendingSaveAction) {
+                        pendingSaveAction();
+                    }
+                }}
+            />
         </Drawer>
     );
 }
