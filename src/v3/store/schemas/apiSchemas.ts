@@ -152,6 +152,8 @@ export const SchedulerResponseSchema = z.object({
   }).optional(),
   /** Queue state */
   state: z.string().optional(),
+  /** Number of running applications */
+  numApplications: z.number().optional(),
   /** Resources currently used */
   resourcesUsed: z.object({
     memory: z.number(),
