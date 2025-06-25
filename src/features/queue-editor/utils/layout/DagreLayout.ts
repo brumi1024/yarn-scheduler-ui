@@ -93,9 +93,9 @@ export class DagreLayout {
     constructor(options: Partial<LayoutOptions> = {}) {
         this.options = {
             nodeWidth: 280,
-            nodeHeight: 120,
+            nodeHeight: 220,
             horizontalSpacing: 120,
-            verticalSpacing: 30,
+            verticalSpacing: 60,
             orientation: 'horizontal',
             rankdir: 'LR', // Left-to-Right for horizontal layout
             align: 'DL', // Align nodes to lower-left for better centering

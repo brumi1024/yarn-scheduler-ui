@@ -4,17 +4,19 @@ import { useEffect } from 'react';
 import { theme } from './theme';
 import MainLayout from './components/MainLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useDataStore } from './store/dataStore';
+import { useConfigStore } from './store/configStore';
+import { useRuntimeStore } from './store/runtimeStore';
 
 function App() {
-    const loadAllData = useDataStore((state) => state.loadAllData);
+    const loadConfiguration = useConfigStore((state) => state.loadConfiguration);
+    const loadAllRuntimeData = useRuntimeStore((state) => state.loadAllData);
 
     useEffect(() => {
-        // Initialize data when app starts
-        loadAllData().catch((error) => {
+        // Initialize both config and runtime data when app starts
+        Promise.all([loadConfiguration(), loadAllRuntimeData()]).catch((error) => {
             console.error('Failed to load initial data:', error);
         });
-    }, [loadAllData]);
+    }, [loadConfiguration, loadAllRuntimeData]);
 
     return (
         <ErrorBoundary>

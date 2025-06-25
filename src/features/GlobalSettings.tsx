@@ -23,18 +23,20 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { nanoid } from 'nanoid';
 import { useGlobalProperties } from '../store';
-import { useChangesStore } from '../store/changesStore';
+import { useConfigStore } from '../store/configStore';
 import {
     globalProperties,
     getGlobalPropertyCategories,
     getGlobalPropertiesByCategory,
 } from '../config/globalProperties';
 import { ConfirmationModal } from '../components/ConfirmationModal';
-import StagedChangesPanel from './queue-editor/components/StagedChangesPanel';
+import { StagedChangesPanel } from './queue-editor/components/StagedChangesPanel';
 
 export default function GlobalSettings() {
     const globals = useGlobalProperties();
-    const { stagedChanges, stageChange, unstageChange } = useChangesStore();
+    const staged = useConfigStore((state) => state.staged);
+    const stageChange = useConfigStore((state) => state.stageChange);
+    const unstageChange = useConfigStore((state) => state.unstageChange);
     const [isLegacyModeModalOpen, setLegacyModeModalOpen] = useState(false);
 
     const handleToggleLegacyMode = () => {
@@ -44,36 +46,21 @@ export default function GlobalSettings() {
             setLegacyModeModalOpen(true);
         } else {
             // Turning it back on - just stage the change
-            stageChange({
-                id: nanoid(),
-                timestamp: new Date(),
-                queuePath: '_global',
-                property: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
-                oldValue: 'false',
-                newValue: 'true',
-            });
+            stageChange('yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true');
         }
     };
 
     const confirmLegacyModeChange = () => {
         // This is where you would trigger the automatic conversion of auto-queue settings
         // TODO: Implement automatic conversion of auto-queue settings
-        stageChange({
-            id: nanoid(),
-            timestamp: new Date(),
-            queuePath: '_global',
-            property: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
-            oldValue: 'true',
-            newValue: 'false',
-        });
+        stageChange('yarn.scheduler.capacity.legacy-queue-mode.enabled', 'false');
         setLegacyModeModalOpen(false);
     };
 
     const getCurrentValue = (key: string) => {
         // Check staged changes first, then global properties, then default
-        const stagedChange = stagedChanges.find((change) => change.queuePath === '_global' && change.property === key);
-        if (stagedChange) {
-            return stagedChange.newValue;
+        if (staged.has(key)) {
+            return String(staged.get(key));
         }
         return globals[key] || globalProperties[key]?.defaultValue || '';
     };
@@ -83,28 +70,15 @@ export default function GlobalSettings() {
 
         if (newValue === currentValue) {
             // Value reverted to original, unstage any changes
-            // Find the staged change and remove it by ID
-            const stagedChange = stagedChanges.find(
-                (change) => change.queuePath === '_global' && change.property === key
-            );
-            if (stagedChange) {
-                unstageChange(stagedChange.id);
-            }
+            unstageChange(key);
         } else {
-            stageChange({
-                id: nanoid(),
-                timestamp: new Date(),
-                queuePath: '_global',
-                property: key,
-                oldValue: currentValue,
-                newValue,
-            });
+            stageChange(key, newValue);
         }
     };
 
     const renderPropertyInput = (key: string, property: (typeof globalProperties)[string]) => {
         const currentValue = getCurrentValue(key);
-        const hasChanged = stagedChanges.some((change) => change.queuePath === '_global' && change.property === key);
+        const hasChanged = staged.has(key);
 
         switch (property.type) {
             case 'boolean':
@@ -224,11 +198,9 @@ export default function GlobalSettings() {
                                 <Typography variant="h6" sx={{ textTransform: 'capitalize' }}>
                                     {category} Settings
                                 </Typography>
-                                {categoryProperties.some(([key]) =>
-                                    stagedChanges.some(
-                                        (change) => change.queuePath === '_global' && change.property === key
-                                    )
-                                ) && <Chip label="Has Changes" size="small" color="primary" sx={{ ml: 2 }} />}
+                                {categoryProperties.some(([key]) => staged.has(key)) && (
+                                    <Chip label="Has Changes" size="small" color="primary" sx={{ ml: 2 }} />
+                                )}
                             </AccordionSummary>
                             <AccordionDetails>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>

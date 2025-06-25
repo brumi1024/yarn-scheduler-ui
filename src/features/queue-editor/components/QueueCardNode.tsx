@@ -17,7 +17,7 @@ import { Add as AddIcon, Delete as DeleteIcon, Label } from '@mui/icons-material
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import type { LayoutQueue } from '../utils/layout/DagreLayout';
 import type { Queue } from '../../../types/Queue';
-import { useChangesStore, useUIStore } from '../../../store';
+import { useConfigStore, useUIStore } from '../../../store';
 import { getInheritanceTooltip } from '../../../utils/nodeLabelUtils';
 import { parseCapacityValue } from '../../../utils/capacity';
 
@@ -37,7 +37,8 @@ export type QueueNodeData = LayoutQueue &
     };
 
 function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
-    const { stageChange, stagedChanges } = useChangesStore();
+    const stageChange = useConfigStore((state) => state.stageChange);
+    const staged = useConfigStore((state) => state.staged);
     const {
         openAddQueueModal,
         comparisonQueueNames,
@@ -101,15 +102,13 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
     // Determine the capacity mode for display
     const getCapacityModeInfo = () => {
         // Check if there are staged changes that affect capacity for this queue
-        const capacityChange = stagedChanges?.find(
-            (change) =>
-                change.queuePath === queuePath && change.type === 'PROPERTY_UPDATE' && change.property === 'capacity'
-        );
+        const capacityKey = `yarn.scheduler.capacity.${queuePath}.capacity`;
+        const capacityValue = staged.has(capacityKey) ? String(staged.get(capacityKey)) : null;
 
         // Use staged capacity value if available, otherwise fall back to current data
-        const capacityValue = capacityChange ? capacityChange.newValue : `${liveCapacityData.capacity}%`;
+        const finalCapacityValue = capacityValue || `${liveCapacityData.capacity}%`;
 
-        const parsed = parseCapacityValue(String(capacityValue));
+        const parsed = parseCapacityValue(String(finalCapacityValue));
 
         switch (parsed.mode) {
             case 'weight':
@@ -502,25 +501,17 @@ function QueueCardNode({ data, selected }: NodeProps<QueueNodeData>) {
                             >
                                 {(() => {
                                     // Check for staged capacity changes
-                                    const capacityChange = stagedChanges?.find(
-                                        (change) =>
-                                            change.queuePath === queuePath &&
-                                            change.type === 'PROPERTY_UPDATE' &&
-                                            change.property === 'capacity'
-                                    );
-                                    const maxCapacityChange = stagedChanges?.find(
-                                        (change) =>
-                                            change.queuePath === queuePath &&
-                                            change.type === 'PROPERTY_UPDATE' &&
-                                            change.property === 'maximum-capacity'
-                                    );
+                                    const capacityKey = `yarn.scheduler.capacity.${queuePath}.capacity`;
+                                    const maxCapacityKey = `yarn.scheduler.capacity.${queuePath}.maximum-capacity`;
+                                    const capacityChange = staged.has(capacityKey)
+                                        ? String(staged.get(capacityKey))
+                                        : null;
+                                    const maxCapacityChange = staged.has(maxCapacityKey)
+                                        ? String(staged.get(maxCapacityKey))
+                                        : null;
 
-                                    const currentCapacity = capacityChange
-                                        ? capacityChange.newValue
-                                        : `${liveCapacityData.capacity}%`;
-                                    const currentMaxCapacity = maxCapacityChange
-                                        ? maxCapacityChange.newValue
-                                        : `${liveCapacityData.maxCapacity}%`;
+                                    const currentCapacity = capacityChange || `${liveCapacityData.capacity}%`;
+                                    const currentMaxCapacity = maxCapacityChange || `${liveCapacityData.maxCapacity}%`;
 
                                     const capacityParsed = parseCapacityValue(String(currentCapacity));
                                     const maxCapacityParsed = parseCapacityValue(String(currentMaxCapacity));

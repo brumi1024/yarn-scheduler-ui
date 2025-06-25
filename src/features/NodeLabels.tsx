@@ -52,7 +52,7 @@ import {
     Warning as WarningIcon,
     Check as CheckIcon,
 } from '@mui/icons-material';
-import { useDataStore } from '../store/dataStore';
+import { useRuntimeStore } from '../store/runtimeStore';
 import { useNodeLabelStore } from '../store/nodeLabelStore';
 import type { NodeLabel, ClusterNode } from '../types/NodeLabel';
 
@@ -131,7 +131,7 @@ const AddLabelDialog: React.FC<AddLabelDialogProps> = ({ open, onClose, onConfir
 };
 
 const NodeLabelsPanel: React.FC = () => {
-    const { nodeLabels } = useDataStore();
+    const nodeLabels = useRuntimeStore((state) => state.nodeLabels);
     const {
         pendingNewLabels,
         pendingLabelRemovals,
@@ -147,7 +147,7 @@ const NodeLabelsPanel: React.FC = () => {
     const [addDialogOpen, setAddDialogOpen] = useState(false);
 
     const labels = useMemo(() => {
-        const current = nodeLabels?.nodeLabelsInfo?.nodeLabelInfo || [];
+        const current = nodeLabels || [];
         const pending = pendingNewLabels || [];
         const removing = pendingLabelRemovals || [];
 
@@ -294,7 +294,7 @@ const NodeLabelsPanel: React.FC = () => {
 };
 
 const NodesPanel: React.FC = () => {
-    const { nodes } = useDataStore();
+    const nodes = useRuntimeStore((state) => state.nodes);
     const {
         pendingNodeChanges,
         selectedNodes,
@@ -311,7 +311,7 @@ const NodesPanel: React.FC = () => {
     const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
 
     const clusterNodes = useMemo(() => {
-        return nodes?.nodes?.node || [];
+        return nodes || [];
     }, [nodes]);
 
     const sortedNodes = useMemo(() => {
@@ -375,8 +375,8 @@ const NodesPanel: React.FC = () => {
     };
 
     const availableLabels = useMemo(() => {
-        const { nodeLabels } = useDataStore.getState();
-        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map((label) => label.name) || [];
+        const nodeLabels = useRuntimeStore.getState().nodeLabels;
+        return nodeLabels?.map((label) => label.name) || [];
     }, []);
 
     return (
@@ -546,7 +546,12 @@ const NodesPanel: React.FC = () => {
 };
 
 export const NodeLabels: React.FC = () => {
-    const { loading, errors } = useDataStore();
+    const isLoadingNodeLabels = useRuntimeStore((state) => state.isLoadingNodeLabels);
+    const isLoadingNodes = useRuntimeStore((state) => state.isLoadingNodes);
+    const nodeLabelsError = useRuntimeStore((state) => state.nodeLabelsError);
+    const nodesError = useRuntimeStore((state) => state.nodesError);
+    const refresh = useRuntimeStore((state) => state.refresh);
+
     const { isLoading, error, hasChanges, getChangesSummary, applyChanges, clearAllChanges } = useNodeLabelStore();
 
     const [snackbarOpen, setSnackbarOpen] = useState(false);
@@ -554,7 +559,7 @@ export const NodeLabels: React.FC = () => {
     const [snackbarSeverity, setSnackbarSeverity] = useState<'success' | 'error'>('success');
 
     const changesSummary = getChangesSummary();
-    const isLoadingData = loading.nodeLabels || loading.nodes;
+    const isLoadingData = isLoadingNodeLabels || isLoadingNodes;
 
     const handleApplyChanges = async () => {
         try {
@@ -564,7 +569,6 @@ export const NodeLabels: React.FC = () => {
             setSnackbarOpen(true);
 
             // Refresh data to get latest state
-            const { refresh } = useDataStore.getState();
             await refresh();
         } catch (err) {
             setSnackbarMessage(err instanceof Error ? err.message : 'Failed to apply changes');
@@ -588,10 +592,10 @@ export const NodeLabels: React.FC = () => {
         );
     }
 
-    if (errors.nodeLabels || errors.nodes) {
+    if (nodeLabelsError || nodesError) {
         return (
             <Alert severity="error" sx={{ m: 2 }}>
-                Failed to load node labels or nodes data: {errors.nodeLabels?.message || errors.nodes?.message}
+                Failed to load node labels or nodes data: {nodeLabelsError || nodesError}
             </Alert>
         );
     }

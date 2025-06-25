@@ -2,12 +2,13 @@ import { Box, Typography, TextField, InputAdornment, Button } from '@mui/materia
 import { Search as SearchIcon } from '@mui/icons-material';
 import { useState, useEffect } from 'react';
 import { useDebounce } from 'use-debounce';
-import { QueueVisualization } from './components/QueueVisualization';
+import { QueueVisualizationContainer } from './components/QueueVisualizationContainer';
 import { ComponentErrorBoundary } from '../../components/ErrorBoundary';
 import { StagedChangesPanel } from './components/StagedChangesPanel';
 import MultiQueueComparisonView from './components/MultiQueueComparisonView';
 import { NodeLabelSelector } from './components/NodeLabelSelector';
 import { useUIStore } from '../../store';
+import { useConfigStore } from '../../store/configStore';
 
 export default function QueueEditor() {
     const [localSearchQuery, setLocalSearchQuery] = useState<string>('');
@@ -16,6 +17,13 @@ export default function QueueEditor() {
     // Use store selectors to avoid reference issues
     const setSearchQuery = useUIStore((state) => state.setSearchQuery);
     const comparisonQueueNames = useUIStore((state) => state.comparisonQueueNames);
+
+    // Get validation status for header display
+    const validationStatus = useConfigStore((state) => state.validationStatus);
+    const validationResults = useConfigStore((state) => state.validationResults);
+    const errorCount = Array.from(validationResults.values())
+        .flat()
+        .filter((issue) => issue.severity === 'error').length;
 
     // Debounce the search query to avoid excessive filtering
     const [debouncedSearchQuery] = useDebounce(localSearchQuery, 300);
@@ -33,6 +41,11 @@ export default function QueueEditor() {
 
     const handleCloseComparison = () => {
         setShowComparisonDialog(false);
+    };
+
+    const handleApplyChanges = () => {
+        // Refresh config after applying changes
+        useConfigStore.getState().refresh();
     };
 
     return (
@@ -60,9 +73,16 @@ export default function QueueEditor() {
                     <Typography variant="h5" component="h1">
                         Queue Management
                     </Typography>
-                    <Typography variant="body2" color="text.secondary">
-                        Interactive queue tree with search, modification, and staging
-                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                        <Typography variant="body2" color="text.secondary">
+                            Interactive queue tree with search, modification, and staging
+                        </Typography>
+                        {validationStatus === 'invalid' && (
+                            <Typography variant="body2" color="error" sx={{ fontWeight: 'medium' }}>
+                                • {errorCount} validation {errorCount === 1 ? 'error' : 'errors'}
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
 
                 {showCompareButton && (
@@ -100,29 +120,20 @@ export default function QueueEditor() {
                 />
             </Box>
 
-            {/* Visualization Area */}
-            <Box
-                sx={{
-                    flexGrow: 1,
-                    position: 'relative',
-                    minHeight: 0, // Important for flex children
-                }}
-            >
-                <ComponentErrorBoundary context="Queue Visualization">
-                    <QueueVisualization />
+            {/* Main Content */}
+            <Box sx={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+                <ComponentErrorBoundary>
+                    <QueueVisualizationContainer />
                 </ComponentErrorBoundary>
 
-                {/* Staged Changes Panel */}
-                <StagedChangesPanel
-                    onApplyChanges={() => {
-                        // TODO: Implement apply changes logic
-                        console.log('Apply changes requested');
-                    }}
-                />
+                {/* Multi-queue comparison dialog */}
+                {showComparisonDialog && (
+                    <MultiQueueComparisonView open={showComparisonDialog} onClose={handleCloseComparison} />
+                )}
             </Box>
 
-            {/* Comparison Dialog */}
-            <MultiQueueComparisonView open={showComparisonDialog} onClose={handleCloseComparison} />
+            {/* Staged Changes Panel */}
+            <StagedChangesPanel onApplyChanges={handleApplyChanges} />
         </Box>
     );
 }

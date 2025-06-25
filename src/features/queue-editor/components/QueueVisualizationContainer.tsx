@@ -13,7 +13,6 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 
-import { useConfigurationQuery, useSchedulerQuery } from '../../../hooks/useYarnApi';
 import { useQueueDataProcessor, type QueueNodeData } from '../hooks/useQueueDataProcessor';
 import { QueueInfoPanel } from './QueueInfoPanel';
 import { AddQueueModal } from './AddQueueModal';
@@ -21,7 +20,7 @@ import { useUIStore } from '../../../store';
 import { useQueueConfiguration } from '../hooks/useQueueConfiguration';
 import QueueCardNode from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
-import type { Queue } from '../../../types/Queue';
+import type { ParsedQueue } from '../../../types/Queue';
 
 export interface QueueVisualizationContainerProps {
     className?: string;
@@ -33,7 +32,7 @@ const edgeTypes = { customFlow: CustomFlowEdge };
 
 // Inner Flow component that has access to React Flow instance
 const FlowInner: React.FC = () => {
-    // The hook now contains all the complex logic - we just consume the final result
+    // Use the new hook that integrates with our new state management
     const { nodes, edges, isLoading, error } = useQueueDataProcessor();
     const uiStore = useUIStore();
     const { fitView } = useReactFlow();
@@ -131,6 +130,8 @@ const FlowInner: React.FC = () => {
             <MiniMap
                 nodeColor={(node) => {
                     if (node.selected) return '#1976d2';
+                    // Highlight nodes with staged changes
+                    if (node.data?.stagedStatus === 'modified') return '#ff9800';
                     return '#e0e0e0';
                 }}
                 nodeStrokeWidth={2}
@@ -141,64 +142,52 @@ const FlowInner: React.FC = () => {
     );
 };
 
+// Helper function to find queue in hierarchy
+function findQueueByPath(queues: ParsedQueue[], path: string): ParsedQueue | null {
+    for (const queue of queues) {
+        if (queue.path === path) {
+            return queue;
+        }
+        if (queue.children) {
+            const found = findQueueByPath(queue.children, path);
+            if (found) return found;
+        }
+    }
+    return null;
+}
+
 export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerProps> = ({ className }) => {
     const uiStore = useUIStore();
 
-    // UPDATED: Use the new hook
-    const { getQueueByPath } = useQueueConfiguration();
-    const selectedQueueData = uiStore?.selectedQueuePath ? getQueueByPath(uiStore.selectedQueuePath) : null;
+    // Use the new hook
+    const { queues } = useQueueConfiguration();
+    const selectedQueueData = React.useMemo(
+        () => (uiStore?.selectedQueuePath ? findQueueByPath(queues, uiStore.selectedQueuePath) : null),
+        [queues, uiStore?.selectedQueuePath]
+    );
 
-    // Queue action handlers
-    const handleQueueEdit = useCallback(() => {
-        if (uiStore?.selectedQueuePath) {
-            uiStore?.openPropertyEditor(uiStore.selectedQueuePath, 'edit');
-        }
-    }, [uiStore]);
+    // Queue actions
+    const handleDeleteQueue = useCallback((queuePath: string) => {
+        // TODO: Implement queue deletion with new state
+        console.log('Delete queue:', queuePath);
+    }, []);
 
-    const handleQueueDelete = useCallback(() => {
-        if (uiStore?.selectedQueuePath) {
-            uiStore?.openConfirmDialog(
-                'Delete Queue',
-                `Are you sure you want to delete queue "${uiStore.selectedQueuePath}"?`,
-                () => {
-                    // TODO: Implement queue deletion
-                    console.log('Delete queue:', uiStore.selectedQueuePath);
-                }
-            );
-        }
-    }, [uiStore]);
-
-    const handleQueueStateToggle = useCallback(() => {
-        // TODO: Update queue state via API
-        console.log('Toggle queue state:', uiStore?.selectedQueuePath);
-    }, [uiStore]);
+    const handleToggleQueueState = useCallback((queuePath: string, newState: 'RUNNING' | 'STOPPED') => {
+        // TODO: Implement state toggle with new state
+        console.log('Toggle queue state:', queuePath, newState);
+    }, []);
 
     const handleQueueSelect = useCallback(
-        (queue: Queue) => {
-            // Get the queue path from the queue object
-            const queuePath = (queue as any).queuePath || (queue as any).id || queue.queueName;
-            uiStore?.selectQueue(queuePath);
+        (queue: ParsedQueue) => {
+            uiStore?.selectQueue(queue.path);
         },
         [uiStore]
     );
 
-    // Handle info panel close
-    const handleInfoPanelClose = useCallback(() => {
-        uiStore?.selectQueue(undefined);
-    }, [uiStore]);
-
     return (
         <Box
+            sx={{ position: 'relative', width: '100%', height: '100%', bgcolor: 'background.default' }}
             className={className}
-            sx={{
-                position: 'absolute',
-                top: 0,
-                left: 0,
-                right: 0,
-                bottom: 0,
-                overflow: 'hidden',
-                bgcolor: 'background.default',
-            }}
         >
             <ReactFlowProvider>
                 <FlowInner />
@@ -207,35 +196,12 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
             {/* Queue Info Panel */}
             <QueueInfoPanel
                 queue={selectedQueueData}
-                open={!!uiStore?.selectedQueuePath}
-                onClose={handleInfoPanelClose}
-                onDelete={handleQueueDelete}
-                onToggleState={handleQueueStateToggle}
+                open={!!selectedQueueData}
+                onClose={() => uiStore?.selectQueue(null)}
+                onDelete={handleDeleteQueue}
+                onToggleState={handleToggleQueueState}
                 onQueueSelect={handleQueueSelect}
             />
-
-            {/* Debug info */}
-            {process.env.NODE_ENV === 'development' && (
-                <div
-                    style={{
-                        position: 'fixed',
-                        top: 10,
-                        right: 10,
-                        background: 'rgba(0,0,0,0.8)',
-                        color: 'white',
-                        padding: '10px',
-                        fontSize: '12px',
-                        borderRadius: '4px',
-                        zIndex: 9999,
-                    }}
-                >
-                    Selected: {uiStore?.selectedQueuePath || 'none'}
-                    <br />
-                    Panel Open: {uiStore?.selectedQueuePath ? 'true' : 'false'}
-                    <br />
-                    Queue Data: {selectedQueueData ? 'found' : 'null'}
-                </div>
-            )}
 
             {/* Add Queue Modal */}
             <AddQueueModal />

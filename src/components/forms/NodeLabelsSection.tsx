@@ -18,7 +18,7 @@ import {
     FormControl,
 } from '@mui/material';
 import { Info as InfoIcon } from '@mui/icons-material';
-import { useDataStore } from '../../store/dataStore';
+import { useRuntimeStore } from '../../store/runtimeStore';
 import { getCapacityMode } from '../../utils/capacity';
 import type { Queue } from '../../types/Queue';
 
@@ -33,11 +33,16 @@ interface NodeLabelCapacity {
 }
 
 export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) => {
-    const { nodeLabels } = useDataStore();
+    const nodeLabels = useRuntimeStore((state) => state.nodeLabels);
     const { watch, setValue } = useFormContext();
 
+    // Early return if queue is not provided
+    if (!queue) {
+        return null;
+    }
+
     const availableLabels = useMemo(() => {
-        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map((label) => label.name) || [];
+        return nodeLabels?.map((label) => label.name) || [];
     }, [nodeLabels]);
 
     // Watch the accessible node labels field
@@ -63,7 +68,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
         });
 
         return capacities;
-    }, [availableLabels, accessibleNodeLabels, queue.queuePath]);
+    }, [availableLabels, accessibleNodeLabels, queue?.queuePath]);
 
     const [nodeLabelCapacities, setNodeLabelCapacities] = useState<NodeLabelCapacity[]>(existingNodeLabelCapacities);
 
@@ -188,9 +193,7 @@ export const NodeLabelsSection: React.FC<NodeLabelsSectionProps> = ({ queue }) =
                             </TableHead>
                             <TableBody>
                                 {nodeLabelCapacities.map((labelCapacity) => {
-                                    const labelInfo = nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.find(
-                                        (label) => label.name === labelCapacity.label
-                                    );
+                                    const labelInfo = nodeLabels?.find((label) => label.name === labelCapacity.label);
 
                                     return (
                                         <TableRow key={labelCapacity.label}>

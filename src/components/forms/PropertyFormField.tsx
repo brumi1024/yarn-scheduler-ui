@@ -15,57 +15,77 @@ import {
     FormHelperText,
     Alert,
     Collapse,
+    Chip,
 } from '@mui/material';
 import { CapacityEditor } from '../CapacityEditor';
-import { usePropertyValidation } from '../../hooks/usePropertyValidation';
+import { useConfigField } from '../../hooks/useConfigField';
 
 interface PropertyFormFieldProps {
     property: PropertyDefinition;
-    control: Control<any>;
+    control: Control<unknown>;
     name: string;
     queuePath?: string;
     siblings?: Array<{ name: string; capacity: string }>;
-    onCustomChange?: (value: any) => void;
+    onCustomChange?: (value: unknown) => void;
     showValidation?: boolean;
 }
 
 export function PropertyFormField({
     property,
     control,
-    name,
     queuePath,
     siblings,
     onCustomChange,
     showValidation = true,
 }: PropertyFormFieldProps) {
-    // For dynamic properties, we need to use a sanitized name for the form
-    const formFieldName = property.key.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '_');
+    // Use the new config field hook - no more key sanitization!
+    const configField = useConfigField({
+        path: property.key,
+        queuePath,
+        validateOnChange: showValidation,
+    });
+
+    // Still use react-hook-form for form management, but sync with config store
     const {
         field,
         fieldState: { error },
     } = useController({
         control,
-        name: formFieldName,
-        defaultValue: property.defaultValue,
+        name: property.key, // Use the actual property key, no sanitization
+        defaultValue: configField.value,
     });
 
-    // Get real-time validation
-    const validation = usePropertyValidation(
-        queuePath || '',
-        property.key,
-        field.value || property.defaultValue?.toString() || ''
-    );
+    // Handle change - update both form and config store
+    const handleChange = (value: unknown) => {
+        field.onChange(value);
+        configField.onChange(value);
+        onCustomChange?.(value);
+    };
 
-    // Combine form errors with validation errors
-    const hasError = !!error || (showValidation && !validation.isValid);
-    const errorMessage = error?.message || (showValidation && validation.errors[0]?.message);
+    // Combine validation from form and config store
+    const hasError = !!error || (showValidation && !configField.isValid);
+    const validationErrors = configField.validation.filter((v) => v.severity === 'error');
+    const validationWarnings = configField.validation.filter((v) => v.severity === 'warning');
+    const errorMessage = error?.message || validationErrors[0]?.message;
     const helperText = errorMessage || property.description;
 
+    // Show staged change indicator
+    const ChangeIndicator = () =>
+        configField.hasChanges ? (
+            <Chip
+                label="Modified"
+                size="small"
+                color="primary"
+                sx={{ ml: 1 }}
+                title={`Original: ${configField.originalValue}`}
+            />
+        ) : null;
+
     const ValidationMessages = () =>
-        showValidation && validation.warnings.length > 0 ? (
+        showValidation && validationWarnings.length > 0 ? (
             <Collapse in={true}>
                 <Box sx={{ mt: 1 }}>
-                    {validation.warnings.map((warning, index) => (
+                    {validationWarnings.map((warning, index) => (
                         <Alert key={index} severity="warning" size="small" sx={{ mb: 1 }}>
                             {warning.message}
                         </Alert>
@@ -78,13 +98,16 @@ export function PropertyFormField({
         case 'capacity':
             return (
                 <Box>
-                    <CapacityEditor
-                        label={property.label}
-                        value={field.value || property.defaultValue}
-                        onChange={field.onChange}
-                        error={errorMessage}
-                        siblings={siblings}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <CapacityEditor
+                            label={property.label}
+                            value={field.value}
+                            onChange={handleChange}
+                            error={errorMessage}
+                            siblings={siblings}
+                        />
+                        <ChangeIndicator />
+                    </Box>
                     <ValidationMessages />
                 </Box>
             );
@@ -93,14 +116,22 @@ export function PropertyFormField({
             return (
                 <Box>
                     <FormControl fullWidth margin="normal" error={hasError}>
-                        <InputLabel>{property.label}</InputLabel>
-                        <Select {...field} label={property.label}>
-                            {property.options?.map((option) => (
-                                <MenuItem key={option} value={option}>
-                                    {option}
-                                </MenuItem>
-                            ))}
-                        </Select>
+                        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                            <InputLabel>{property.label}</InputLabel>
+                            <Select
+                                {...field}
+                                label={property.label}
+                                onChange={(e) => handleChange(e.target.value)}
+                                sx={{ flex: 1 }}
+                            >
+                                {property.options?.map((option) => (
+                                    <MenuItem key={option} value={option}>
+                                        {option}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                            <ChangeIndicator />
+                        </Box>
                         <FormHelperText>{helperText}</FormHelperText>
                     </FormControl>
                     <ValidationMessages />
@@ -110,16 +141,22 @@ export function PropertyFormField({
         case 'number':
             return (
                 <Box>
-                    <TextField
-                        {...field}
-                        type="number"
-                        label={property.label}
-                        error={hasError}
-                        helperText={helperText}
-                        fullWidth
-                        margin="normal"
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TextField
+                            {...field}
+                            type="number"
+                            label={property.label}
+                            error={hasError}
+                            helperText={helperText}
+                            fullWidth
+                            margin="normal"
+                            onChange={(e) => {
+                                const val = e.target.value;
+                                handleChange(val === '' ? undefined : parseFloat(val));
+                            }}
+                        />
+                        <ChangeIndicator />
+                    </Box>
                     <ValidationMessages />
                 </Box>
             );
@@ -127,19 +164,19 @@ export function PropertyFormField({
         case 'boolean':
             return (
                 <Box sx={{ my: 2 }}>
-                    <FormControlLabel
-                        control={
-                            <Switch
-                                {...field}
-                                checked={field.value || false}
-                                onChange={(e) => {
-                                    field.onChange(e.target.checked);
-                                    onCustomChange?.(e.target.checked);
-                                }}
-                            />
-                        }
-                        label={property.label}
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <FormControlLabel
+                            control={
+                                <Switch
+                                    {...field}
+                                    checked={!!field.value}
+                                    onChange={(e) => handleChange(e.target.checked)}
+                                />
+                            }
+                            label={property.label}
+                        />
+                        <ChangeIndicator />
+                    </Box>
                     {(hasError || property.description) && (
                         <Typography variant="caption" color={hasError ? 'error' : 'text.secondary'} display="block">
                             {helperText}
@@ -153,14 +190,18 @@ export function PropertyFormField({
         default:
             return (
                 <Box>
-                    <TextField
-                        {...field}
-                        label={property.label}
-                        error={hasError}
-                        helperText={helperText}
-                        fullWidth
-                        margin="normal"
-                    />
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <TextField
+                            {...field}
+                            label={property.label}
+                            error={hasError}
+                            helperText={helperText}
+                            fullWidth
+                            margin="normal"
+                            onChange={(e) => handleChange(e.target.value)}
+                        />
+                        <ChangeIndicator />
+                    </Box>
                     <ValidationMessages />
                 </Box>
             );

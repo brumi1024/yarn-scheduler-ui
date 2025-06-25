@@ -1,13 +1,15 @@
 import { useMemo } from 'react';
-import { useDataStore } from './dataStore';
+import { useRuntimeStore } from './runtimeStore';
+import { useConfigStore } from './configStore';
 import { useUIStore } from './uiStore';
-import { useChangesStore } from './changesStore';
 import { useActivityStore } from './activityStore';
+import { useNodeLabelStore } from './nodeLabelStore';
 
-export { useDataStore } from './dataStore';
+export { useRuntimeStore } from './runtimeStore';
+export { useConfigStore } from './configStore';
 export { useUIStore } from './uiStore';
-export { useChangesStore } from './changesStore';
 export { useActivityStore } from './activityStore';
+export { useNodeLabelStore } from './nodeLabelStore';
 
 // Re-export types
 export type * from './types';
@@ -15,9 +17,9 @@ export type * from './types';
 // Derived selectors
 
 export const useAllQueues = () => {
-    const scheduler = useDataStore((state) => state.scheduler);
+    const scheduler = useRuntimeStore((state) => state.scheduler);
     return useMemo(() => {
-        if (!scheduler?.scheduler?.schedulerInfo) return [];
+        if (!scheduler) return [];
 
         const flatten = (queue: any, parentPath = ''): any[] => {
             // Build the queue path properly
@@ -38,28 +40,21 @@ export const useAllQueues = () => {
             return result;
         };
 
-        return flatten(scheduler.scheduler.schedulerInfo);
+        return flatten(scheduler);
     }, [scheduler]);
 };
+
 export const useHasStagedChanges = () => {
-    return useChangesStore((state) => state.stagedChanges.length > 0);
+    return useConfigStore((state) => state.staged.size > 0);
 };
 
 export const useGlobalProperties = () => {
-    const configuration = useDataStore((state) => state.configuration);
+    const computed = useConfigStore((state) => state.computed);
 
     return useMemo(() => {
-        if (!configuration?.property) return {};
+        if (!computed?.global) return {};
 
-        const globalProps: Record<string, string> = {};
-
-        // Extract global properties (those not containing .root.)
-        for (const prop of configuration.property) {
-            if (prop.name && prop.value && !prop.name.includes('.root.')) {
-                globalProps[prop.name] = prop.value;
-            }
-        }
-
-        return globalProps;
-    }, [configuration?.property]);
+        // Return the global properties from the computed configuration
+        return computed.global as Record<string, string>;
+    }, [computed?.global]);
 };

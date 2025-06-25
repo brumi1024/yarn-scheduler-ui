@@ -39,21 +39,19 @@ vi.mock('./hooks/useYarnApi', () => ({
 
 // Mock all store modules to prevent API calls and provide default states
 vi.mock('./store', () => ({
-    useDataStore: vi.fn(),
-    useUIStore: vi.fn(),
-    useChangesStore: vi.fn(() => ({
-        stagedChanges: [],
+    useRuntimeStore: vi.fn(),
+    useConfigStore: vi.fn(() => ({
+        staged: new Map(),
         unstageChange: vi.fn(),
-        clearStagedChanges: vi.fn(),
+        clearAllChanges: vi.fn(),
         applyChanges: vi.fn(),
-        applyingChanges: false,
-        conflicts: [],
-        applyError: null,
-        lastApplied: undefined,
+        isApplying: false,
+        error: null,
         stageChange: vi.fn(),
-        hasUnsavedChanges: vi.fn(() => false),
-        getChangesByQueue: vi.fn(() => []),
+        validationStatus: 'idle',
+        validateAll: vi.fn(() => ({ isValid: true, errors: [], warnings: [] })),
     })),
+    useUIStore: vi.fn(),
     useActivityStore: vi.fn(() => ({
         addLogEntry: vi.fn(),
         addApiCallLog: vi.fn(),

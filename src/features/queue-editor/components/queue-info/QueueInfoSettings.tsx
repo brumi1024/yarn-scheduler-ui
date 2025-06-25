@@ -9,29 +9,33 @@ import {
     AccordionDetails,
     Button,
     Alert,
-    AlertTitle,
     Tabs,
     Tab,
     ToggleButtonGroup,
     ToggleButton,
-    IconButton,
-    Tooltip,
+    Divider,
 } from '@mui/material';
-import { ExpandMore as ExpandMoreIcon, ViewList as ViewListIcon, Tab as TabIcon } from '@mui/icons-material';
+import {
+    ExpandMore as ExpandMoreIcon,
+    ViewList as ViewListIcon,
+    Tab as TabIcon,
+    Warning as WarningIcon,
+    Error as ErrorIcon,
+} from '@mui/icons-material';
 import { useQueueProperties } from '../../hooks/useQueueProperties';
-import { getPropertyGroups, PropertyDefinition } from '../../../../config';
-import type { Queue, QueueChild, PropertyGroup } from '../../types';
+import { PropertyDefinition } from '../../../../config';
+import type { Queue, PropertyGroup } from '../../types';
 import { PropertyFormField } from '../../../../components/forms/PropertyFormField';
 import { AutoQueueCreationSection } from '../../../../components/forms/AutoQueueCreationSection';
 import { NodeLabelsSection } from '../../../../components/forms/NodeLabelsSection';
 import { NodeLabelPropertiesSection } from './NodeLabelPropertiesSection';
 import { AutoQueueTemplatesSection } from './AutoQueueTemplatesSection';
+import { useConfigStore } from '../../../../store/configStore';
+import { useHasConfigChanges } from '../../../../hooks/useConfigField';
 
 interface QueueInfoSettingsProps {
     queue: Queue;
     selectedNodeLabel?: string | null;
-    saveError: string | null;
-    onSave: (data: Record<string, any>) => void;
     onReset: () => void;
     expandedSection?: string;
 }
@@ -60,17 +64,21 @@ function TabPanel(props: TabPanelProps) {
 export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
     queue,
     selectedNodeLabel,
-    saveError,
-    onSave,
     onReset,
     expandedSection,
 }) => {
-    const {
-        control,
-        handleSubmit,
-        formState: { errors, isDirty },
-    } = useFormContext();
-    const { groupedProperties, allProperties } = useQueueProperties(queue);
+    const { control } = useFormContext();
+    const { groupedProperties } = useQueueProperties(queue);
+
+    // Get validation status from config store
+    const validationStatus = useConfigStore((state) => state.validationStatus);
+    const validationResults = useConfigStore((state) => state.validationResults);
+
+    // Check if this queue has any changes
+    const queuePropertyPaths = Object.keys(groupedProperties).flatMap((group) =>
+        groupedProperties[group].map((p) => `queues.${queue.path}.${p.key}`)
+    );
+    const hasChanges = useHasConfigChanges(queuePropertyPaths);
 
     // Transform grouped properties to match expected format
     const propertyGroups = useMemo(() => {
@@ -79,6 +87,27 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
             properties,
         }));
     }, [groupedProperties]);
+
+    // Count validation issues per group
+    const groupValidationCounts = useMemo(() => {
+        const counts: Record<string, { errors: number; warnings: number }> = {};
+
+        propertyGroups.forEach((group) => {
+            let errors = 0;
+            let warnings = 0;
+
+            group.properties.forEach((prop) => {
+                const path = `queues.${queue.path}.${prop.key}`;
+                const issues = validationResults.get(path) || [];
+                errors += issues.filter((i) => i.severity === 'error').length;
+                warnings += issues.filter((i) => i.severity === 'warning').length;
+            });
+
+            counts[group.name] = { errors, warnings };
+        });
+
+        return counts;
+    }, [propertyGroups, queue.path, validationResults]);
 
     // State to manage which accordion sections are expanded
     const [expandedAccordions, setExpandedAccordions] = useState<Set<string>>(new Set(['node-labels']));
@@ -93,6 +122,17 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
             setExpandedAccordions((prev) => new Set([...prev, expandedSection]));
         }
     }, [expandedSection]);
+
+    // Auto-expand sections with errors
+    useEffect(() => {
+        const sectionsWithErrors = Object.entries(groupValidationCounts)
+            .filter(([_, counts]) => counts.errors > 0)
+            .map(([name]) => name);
+
+        if (sectionsWithErrors.length > 0) {
+            setExpandedAccordions((prev) => new Set([...prev, ...sectionsWithErrors]));
+        }
+    }, [groupValidationCounts]);
 
     const handleAccordionChange = (section: string) => (event: React.SyntheticEvent, isExpanded: boolean) => {
         setExpandedAccordions((prev) => {
@@ -114,7 +154,20 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
             : [];
 
         if (group.name === 'Auto-Creation') {
-            return <AutoQueueCreationSection key={group.name} properties={group.properties} siblings={siblings} />;
+            return (
+                <Box key={group.name}>
+                    {group.properties.map((property: PropertyDefinition) => (
+                        <PropertyFormField
+                            key={property.key}
+                            property={property}
+                            control={control}
+                            name={property.key}
+                            queuePath={queue.queuePath}
+                            siblings={siblings}
+                        />
+                    ))}
+                </Box>
+            );
         }
 
         return (
@@ -135,27 +188,62 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
 
     const renderAccordionView = () => (
         <>
-            {propertyGroups.map((group: PropertyGroup, index: number) => (
-                <Accordion
-                    key={group.name}
-                    defaultExpanded={index === 0}
-                    sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
-                >
-                    <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
+            {propertyGroups.map((group: PropertyGroup, index: number) => {
+                const counts = groupValidationCounts[group.name] || { errors: 0, warnings: 0 };
+                const hasErrors = counts.errors > 0;
+                const hasWarnings = counts.warnings > 0;
+
+                return (
+                    <Accordion
+                        key={group.name}
+                        expanded={expandedAccordions.has(group.name)}
+                        onChange={handleAccordionChange(group.name)}
+                        sx={{
+                            mb: 1,
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+                            '&:before': { display: 'none' },
+                            ...(hasErrors && {
+                                borderLeft: '3px solid',
+                                borderLeftColor: 'error.main',
+                            }),
+                        }}
                     >
-                        <Typography variant="subtitle2" fontWeight="medium">
-                            {group.name}
-                        </Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 2 }}>{renderPropertyGroup(group)}</AccordionDetails>
-                </Accordion>
-            ))}
+                        <AccordionSummary
+                            expandIcon={<ExpandMoreIcon />}
+                            sx={{
+                                bgcolor: 'background.default',
+                                '&:hover': { bgcolor: 'action.hover' },
+                            }}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
+                                <Typography variant="subtitle2" fontWeight="medium">
+                                    {group.name}
+                                </Typography>
+                                {hasErrors && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <ErrorIcon color="error" fontSize="small" />
+                                        <Typography variant="caption" color="error">
+                                            {counts.errors}
+                                        </Typography>
+                                    </Box>
+                                )}
+                                {hasWarnings && !hasErrors && (
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                        <WarningIcon color="warning" fontSize="small" />
+                                        <Typography variant="caption" color="warning.main">
+                                            {counts.warnings}
+                                        </Typography>
+                                    </Box>
+                                )}
+                            </Box>
+                        </AccordionSummary>
+                        <AccordionDetails sx={{ pt: 0 }}>{renderPropertyGroup(group)}</AccordionDetails>
+                    </Accordion>
+                );
+            })}
 
             {/* Node Labels Section */}
             <Accordion
-                key="node-labels"
                 expanded={expandedAccordions.has('node-labels')}
                 onChange={handleAccordionChange('node-labels')}
                 sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
@@ -168,117 +256,59 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
                         Node Labels
                     </Typography>
                 </AccordionSummary>
-                <AccordionDetails sx={{ p: 2 }}>
+                <AccordionDetails sx={{ pt: 0 }}>
                     <NodeLabelsSection queue={queue} />
+                    {selectedNodeLabel && selectedNodeLabel !== '*' && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="subtitle2" gutterBottom>
+                                Properties for Label: {selectedNodeLabel}
+                            </Typography>
+                            <NodeLabelPropertiesSection queue={queue} nodeLabel={selectedNodeLabel} control={control} />
+                        </Box>
+                    )}
                 </AccordionDetails>
             </Accordion>
 
-            {/* Node Label Properties - Only show if queue has node labels */}
-            {queue.accessibleNodeLabels && queue.accessibleNodeLabels.length > 0 && (
-                <Accordion
-                    expanded={expandedAccordions.has('node-label-properties')}
-                    onChange={handleAccordionChange('node-label-properties')}
-                    sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
+            {/* Auto Queue Templates Section */}
+            <Accordion
+                expanded={expandedAccordions.has('auto-queue-templates')}
+                onChange={handleAccordionChange('auto-queue-templates')}
+                sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
+            >
+                <AccordionSummary
+                    expandIcon={<ExpandMoreIcon />}
+                    sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
                 >
-                    <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
-                    >
-                        <Typography variant="subtitle2" fontWeight="medium">
-                            Node Label Capacities
-                        </Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 2 }}>
-                        <NodeLabelPropertiesSection queue={queue} queuePath={queue.queuePath} />
-                    </AccordionDetails>
-                </Accordion>
-            )}
-
-            {/* Auto-Queue Templates - Only show if auto-creation v2 is enabled */}
-            {queue.rawConfig?.['auto-queue-creation-v2.enabled'] === 'true' && (
-                <Accordion
-                    expanded={expandedAccordions.has('auto-templates')}
-                    onChange={handleAccordionChange('auto-templates')}
-                    sx={{ mb: 1, boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)', '&:before': { display: 'none' } }}
-                >
-                    <AccordionSummary
-                        expandIcon={<ExpandMoreIcon />}
-                        sx={{ bgcolor: 'background.default', '&:hover': { bgcolor: 'action.hover' } }}
-                    >
-                        <Typography variant="subtitle2" fontWeight="medium">
-                            Auto-Queue Templates
-                        </Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{ p: 2 }}>
-                        <AutoQueueTemplatesSection queue={queue} queuePath={queue.queuePath} />
-                    </AccordionDetails>
-                </Accordion>
-            )}
+                    <Typography variant="subtitle2" fontWeight="medium">
+                        Auto Queue Templates
+                    </Typography>
+                </AccordionSummary>
+                <AccordionDetails sx={{ pt: 0 }}>
+                    <AutoQueueTemplatesSection queue={queue} />
+                </AccordionDetails>
+            </Accordion>
         </>
     );
 
-    const renderTabsView = () => {
-        const allGroups = [...propertyGroups, { name: 'Node Labels', properties: [] }];
-
-        return (
-            <Box>
-                <Tabs
-                    value={selectedTab}
-                    onChange={(_, newValue) => setSelectedTab(newValue)}
-                    variant="scrollable"
-                    scrollButtons="auto"
-                    sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
-                >
-                    {allGroups.map((group, index) => (
-                        <Tab
-                            key={group.name}
-                            label={group.name}
-                            id={`property-tab-${index}`}
-                            aria-controls={`property-tabpanel-${index}`}
-                        />
-                    ))}
-                </Tabs>
-
-                {propertyGroups.map((group, index) => (
-                    <TabPanel key={group.name} value={selectedTab} index={index}>
-                        {renderPropertyGroup(group)}
-                    </TabPanel>
-                ))}
-
-                <TabPanel value={selectedTab} index={propertyGroups.length}>
-                    <NodeLabelsSection queue={queue} />
-                </TabPanel>
-            </Box>
-        );
-    };
-
     return (
         <Box sx={{ p: 1.5 }}>
-            {selectedNodeLabel && (
-                <Alert severity="info" sx={{ mb: 2 }}>
-                    <AlertTitle>Node Label View</AlertTitle>
-                    Showing configuration for label: <strong>{selectedNodeLabel}</strong>
-                    {queue['accessible-node-labels']?.includes(selectedNodeLabel) ? (
-                        <>. Capacity values shown are specific to this label.</>
-                    ) : (
-                        <>. This queue does not have access to this label.</>
-                    )}
-                </Alert>
-            )}
-
-            {Object.keys(errors).length > 0 && (
+            {/* Validation Summary */}
+            {validationStatus === 'invalid' && (
                 <Alert severity="error" sx={{ mb: 2 }}>
-                    Please fix the validation errors before saving.
-                </Alert>
-            )}
-            {saveError && (
-                <Alert severity="error" sx={{ mb: 2 }}>
-                    {saveError}
+                    <Typography variant="body2" fontWeight="medium">
+                        Validation errors found
+                    </Typography>
+                    <Typography variant="caption">
+                        Please fix the highlighted fields before applying changes.
+                    </Typography>
                 </Alert>
             )}
 
             {/* View Mode Toggle */}
-            <Box sx={{ mb: 2, display: 'flex', justifyContent: 'flex-end' }}>
+            <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
+                <Typography variant="subtitle1" fontWeight="medium">
+                    Queue Settings
+                </Typography>
                 <ToggleButtonGroup
                     value={viewMode}
                     exclusive
@@ -286,36 +316,68 @@ export const QueueInfoSettings: React.FC<QueueInfoSettingsProps> = ({
                     size="small"
                 >
                     <ToggleButton value="accordion">
-                        <Tooltip title="Accordion View">
-                            <ViewListIcon />
-                        </Tooltip>
+                        <ViewListIcon fontSize="small" />
                     </ToggleButton>
                     <ToggleButton value="tabs">
-                        <Tooltip title="Tabbed View">
-                            <TabIcon />
-                        </Tooltip>
+                        <TabIcon fontSize="small" />
                     </ToggleButton>
                 </ToggleButtonGroup>
             </Box>
 
-            {/* Render the appropriate view */}
-            {viewMode === 'accordion' ? renderAccordionView() : renderTabsView()}
-
-            {isDirty && (
-                <Box sx={{ mt: 2, display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
-                    <Button variant="outlined" size="small" onClick={onReset}>
-                        Reset
-                    </Button>
-                    <Button
-                        variant="contained"
-                        size="small"
-                        onClick={handleSubmit(onSave)}
-                        disabled={Object.keys(errors).length > 0}
+            {/* Property Groups */}
+            {viewMode === 'accordion' ? (
+                renderAccordionView()
+            ) : (
+                <>
+                    <Tabs
+                        value={selectedTab}
+                        onChange={(_, newValue) => setSelectedTab(newValue)}
+                        variant="scrollable"
+                        scrollButtons="auto"
+                        sx={{ borderBottom: 1, borderColor: 'divider', mb: 2 }}
                     >
-                        Save Changes
-                    </Button>
-                </Box>
+                        {propertyGroups.map((group, index) => (
+                            <Tab key={group.name} label={group.name} />
+                        ))}
+                        <Tab label="Node Labels" />
+                        <Tab label="Auto Queue Templates" />
+                    </Tabs>
+                    {propertyGroups.map((group, index) => (
+                        <TabPanel key={group.name} value={selectedTab} index={index}>
+                            {renderPropertyGroup(group)}
+                        </TabPanel>
+                    ))}
+                    <TabPanel value={selectedTab} index={propertyGroups.length}>
+                        <NodeLabelsSection queue={queue} />
+                        {selectedNodeLabel && selectedNodeLabel !== '*' && (
+                            <Box sx={{ mt: 2 }}>
+                                <Typography variant="subtitle2" gutterBottom>
+                                    Properties for Label: {selectedNodeLabel}
+                                </Typography>
+                                <NodeLabelPropertiesSection
+                                    queue={queue}
+                                    nodeLabel={selectedNodeLabel}
+                                    control={control}
+                                />
+                            </Box>
+                        )}
+                    </TabPanel>
+                    <TabPanel value={selectedTab} index={propertyGroups.length + 1}>
+                        <AutoQueueTemplatesSection queue={queue} />
+                    </TabPanel>
+                </>
             )}
+
+            {/* Action Buttons */}
+            <Divider sx={{ my: 2 }} />
+            <Box sx={{ display: 'flex', gap: 1, justifyContent: 'flex-end' }}>
+                <Button variant="outlined" onClick={onReset} disabled={!hasChanges}>
+                    Reset Changes
+                </Button>
+                <Typography variant="caption" sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
+                    Changes are staged automatically
+                </Typography>
+            </Box>
         </Box>
     );
 };

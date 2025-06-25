@@ -18,7 +18,7 @@ import {
     Alert,
 } from '@mui/material';
 import { Add as AddIcon } from '@mui/icons-material';
-import { useUIStore, useChangesStore } from '../../../store';
+import { useUIStore, useConfigStore } from '../../../store';
 import { nanoid } from 'nanoid';
 
 const addQueueSchema = z.object({
@@ -36,7 +36,7 @@ type AddQueueFormData = z.infer<typeof addQueueSchema>;
 
 export function AddQueueModal() {
     const { modals, closeAddQueueModal } = useUIStore();
-    const { stageChange } = useChangesStore();
+    const { stageChange } = useConfigStore();
 
     const isOpen = modals.addQueueModal?.open || false;
     const parentQueuePath = modals.addQueueModal?.parentQueuePath || '';
@@ -73,20 +73,17 @@ export function AddQueueModal() {
     const onSubmit = (data: AddQueueFormData) => {
         const newQueuePath = `${parentQueuePath}.${data.queueName}`;
 
-        // Create staged change for adding the queue
-        stageChange({
-            id: nanoid(),
-            type: 'ADD_QUEUE',
-            queuePath: parentQueuePath,
-            property: newQueuePath,
-            oldValue: null,
-            newValue: {
-                capacity: data.capacity,
-                maxCapacity: data.maxCapacity,
-                state: data.state,
-            },
-            timestamp: new Date(),
-        });
+        // Stage changes for the new queue
+        const queuePrefix = `yarn.scheduler.capacity.${newQueuePath}`;
+
+        // Add the new queue to parent's queues list
+        const parentPrefix = `yarn.scheduler.capacity.${parentQueuePath}`;
+        stageChange(`${parentPrefix}.queues`, `${data.queueName}`);
+
+        // Set queue properties
+        stageChange(`${queuePrefix}.capacity`, data.capacity.toString());
+        stageChange(`${queuePrefix}.maximum-capacity`, data.maxCapacity.toString());
+        stageChange(`${queuePrefix}.state`, data.state);
 
         handleClose();
     };

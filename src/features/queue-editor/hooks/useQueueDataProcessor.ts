@@ -1,6 +1,7 @@
 import { useMemo } from 'react';
 import { DagreLayout, type LayoutNode, type FlowPath, type LayoutQueue } from '../utils/layout/DagreLayout';
 import { useUIStore } from '../../../store';
+import { useConfigStore } from '../../../store/configStore';
 import type { ParsedQueue } from '../../../types/Queue';
 import type { Node, Edge } from '@xyflow/react';
 import { useQueueConfiguration } from './useQueueConfiguration';
@@ -65,15 +66,19 @@ function applySearchFilter(queue: ParsedQueue, searchQuery: string, isMatch = fa
 }
 
 /**
- * Convert ParsedQueue to LayoutQueue format
+ * Convert ParsedQueue to LayoutQueue format with staged status
  */
 function convertToLayoutQueue(
     queue: ParsedQueue,
-    getMetrics: (path: string) => any,
-    filteredQueueMap: Map<string, FilteredQueue>
+    getMetricsForQueue: (path: string) => any,
+    filteredQueueMap: Map<string, FilteredQueue>,
+    stagedPaths: Set<string>
 ): LayoutQueue {
-    const metrics = getMetrics(queue.path) || {};
+    const metrics = getMetricsForQueue(queue.path) || {};
     const filteredData = filteredQueueMap.get(queue.path);
+
+    // Check if this queue has staged changes
+    const hasChanges = stagedPaths.has(queue.path);
 
     return {
         id: queue.path,
@@ -97,122 +102,124 @@ function convertToLayoutQueue(
         isLabelCapacityConfigured: filteredData?.isLabelCapacityConfigured ?? false,
         isLabelMaxCapacityConfigured: filteredData?.isLabelMaxCapacityConfigured ?? false,
         // UI state
-        children: queue.children?.map((child) => convertToLayoutQueue(child, getMetrics, filteredQueueMap)) || [],
-        stagedStatus: queue.stagedStatus,
+        children:
+            queue.children?.map((child) =>
+                convertToLayoutQueue(child, getMetricsForQueue, filteredQueueMap, stagedPaths)
+            ) || [],
+        isLeaf: !queue.children || queue.children.length === 0,
         isMatch: (queue as any).isMatch,
         isAncestorOfMatch: (queue as any).isAncestorOfMatch,
+        stagedStatus: hasChanges ? 'modified' : undefined,
     };
 }
 
-export function useQueueDataProcessor() {
-    const { hierarchy, isLoading: isConfigLoading, error: configError } = useQueueConfiguration();
-    const { getMetricsForQueue, isLoading: isMetricsLoading } = useQueueMetrics();
+/**
+ * Main hook to process queue data for visualization
+ * This version uses the new state management
+ */
+export function useQueueDataProcessor(): ProcessedFlowData {
+    const { queues, isLoading, error } = useQueueConfiguration();
+    const { getMetricsForQueue } = useQueueMetrics();
+    const filteredQueues = useNodeLabelFilteredQueues(queues);
+
+    // Get staged changes to mark modified queues
+    const staged = useConfigStore((state) => state.staged);
+    const stagedQueuePaths = useMemo(() => {
+        const paths = new Set<string>();
+        staged.forEach((_, path) => {
+            // Extract queue path from property path
+            if (path.startsWith('queues.')) {
+                const parts = path.split('.');
+                // Find where the property starts (after queue path)
+                const propertyIdx = parts.findIndex(
+                    (p) =>
+                        p.includes('-') ||
+                        p === 'capacity' ||
+                        p === 'maximum-capacity' ||
+                        p === 'state' ||
+                        p === 'accessible-node-labels'
+                );
+                if (propertyIdx > 1) {
+                    const queuePath = parts.slice(1, propertyIdx).join('.');
+                    paths.add(queuePath);
+                }
+            }
+        });
+        return paths;
+    }, [staged]);
+
+    // Get UI state
     const searchQuery = useUIStore((state) => state.searchQuery);
 
-    // Get all queues for node label filtering
-    const allQueues = useMemo(() => {
-        if (!hierarchy) return [];
+    // Process queue data
+    const { nodes, edges } = useMemo(() => {
+        // console.log('useQueueDataProcessor: Processing queues', { isLoading, queueCount: queues.length });
+        if (isLoading || !queues.length) {
+            return { nodes: [], edges: [] };
+        }
 
-        const queues: any[] = [];
-        const traverse = (q: ParsedQueue) => {
-            queues.push({
-                queueName: q.name,
-                queuePath: q.path,
-                capacity: q.capacity.numericValue || 0,
-                maxCapacity: q.maxCapacity.numericValue || 100,
-                state: q.state,
-                ...q.properties,
+        try {
+            // Build filtered queue map for node label filtering
+            const filteredQueueMap = new Map<string, FilteredQueue>();
+            filteredQueues.forEach((fq) => {
+                filteredQueueMap.set(fq.queuePath, fq);
             });
-            q.children?.forEach(traverse);
-        };
-        traverse(hierarchy);
-        return queues;
-    }, [hierarchy]);
 
-    // Apply node label filtering
-    const filteredQueues = useNodeLabelFilteredQueues(allQueues);
-    const filteredQueueMap = useMemo(() => {
-        const map = new Map<string, FilteredQueue>();
-        filteredQueues.forEach((q) => map.set(q.queuePath, q));
-        return map;
-    }, [filteredQueues]);
-
-    const treeLayout = useMemo(() => {
-        return new DagreLayout({
-            nodeWidth: 280,
-            nodeHeight: 220,
-            horizontalSpacing: 100,
-            verticalSpacing: 80,
-            orientation: 'horizontal',
-        });
-    }, []);
-
-    return useMemo((): ProcessedFlowData => {
-        if (isConfigLoading || isMetricsLoading) {
-            return { nodes: [], edges: [], isLoading: true, error: null };
-        }
-
-        if (configError) {
-            return {
-                nodes: [],
-                edges: [],
-                isLoading: false,
-                error: configError.message || 'Configuration loading failed',
-            };
-        }
-
-        if (!hierarchy) {
-            return { nodes: [], edges: [], isLoading: false, error: null };
-        }
-
-        // Apply search filter
-        const filteredHierarchy = searchQuery ? applySearchFilter(hierarchy, searchQuery) : hierarchy;
-
-        if (!filteredHierarchy) {
-            return { nodes: [], edges: [], isLoading: false, error: null };
-        }
-
-        // Convert to layout format
-        const layoutQueue = convertToLayoutQueue(filteredHierarchy, getMetricsForQueue, filteredQueueMap);
-
-        // Calculate layout
-        const layoutData = treeLayout.computeLayout(layoutQueue);
-
-        // Convert to React Flow format
-        const flowNodes: Node<QueueNodeData>[] = layoutData.nodes.map((node) => ({
-            id: node.id,
-            type: 'queueCard',
-            position: { x: node.x, y: node.y },
-            data: node.data as QueueNodeData,
-            draggable: false,
-            selectable: true,
-        }));
-
-        const flowEdges: Edge[] = layoutData.flows.map((flow) => ({
-            id: `${flow.source.id}-${flow.target.id}`,
-            source: flow.source.id,
-            target: flow.target.id,
-            type: 'customFlow',
-            animated: flow.target.data.state === 'RUNNING',
-            data: {
-                sourceStartY: flow.sourceStartY,
-                sourceEndY: flow.sourceEndY,
-                targetStartY: flow.targetStartY,
-                targetEndY: flow.targetEndY,
-                capacity: flow.capacity,
-                targetState: flow.target.data.state,
+            // Apply search filter if needed
+            let rootQueue = queues[0]; // Assume first queue is root
+            // console.log('useQueueDataProcessor: Root queue', rootQueue);
+            if (searchQuery) {
+                const filtered = applySearchFilter(rootQueue, searchQuery);
+                if (!filtered) {
+                    return { nodes: [], edges: [] };
+                }
+                rootQueue = filtered;
             }
-        }));
 
-        return { nodes: flowNodes, edges: flowEdges, isLoading: false, error: null };
-    }, [
-        isConfigLoading,
-        isMetricsLoading,
-        configError,
-        hierarchy,
-        searchQuery,
-        getMetricsForQueue,
-        filteredQueueMap,
-        treeLayout,
-    ]);
+            // Convert to layout format
+            const layoutQueue = convertToLayoutQueue(rootQueue, getMetricsForQueue, filteredQueueMap, stagedQueuePaths);
+
+            // Use Dagre layout to position nodes
+            const layout = new DagreLayout();
+            const { nodes: layoutNodes, flows } = layout.computeLayout(layoutQueue);
+
+            // Convert to React Flow nodes
+            const flowNodes: Node<QueueNodeData>[] = layoutNodes.map((node: LayoutNode) => ({
+                id: node.id,
+                type: 'queueCard',
+                position: { x: node.x, y: node.y },
+                data: node.data,
+                width: node.width,
+                height: node.height,
+            }));
+
+            // Convert to React Flow edges
+            const flowEdges: Edge[] = flows.map((flow: FlowPath, index: number) => ({
+                id: `e${flow.source.id}-${flow.target.id}-${index}`,
+                source: flow.source.id,
+                target: flow.target.id,
+                type: 'customFlow',
+                data: {
+                    capacity: flow.capacity,
+                    targetState: flow.target.data.state,
+                    sourceStartY: flow.sourceStartY,
+                    sourceEndY: flow.sourceEndY,
+                    targetStartY: flow.targetStartY,
+                    targetEndY: flow.targetEndY,
+                },
+            }));
+
+            return { nodes: flowNodes, edges: flowEdges };
+        } catch (err) {
+            console.error('Error processing queue data:', err);
+            return { nodes: [], edges: [] };
+        }
+    }, [queues, isLoading, searchQuery, filteredQueues, getMetricsForQueue, stagedQueuePaths]);
+
+    return {
+        nodes,
+        edges,
+        isLoading,
+        error,
+    };
 }

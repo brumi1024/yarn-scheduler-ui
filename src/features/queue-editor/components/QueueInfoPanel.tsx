@@ -1,7 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { useForm, FormProvider } from 'react-hook-form';
-import { zodResolver } from '@hookform/resolvers/zod';
-import { z } from 'zod';
 import { Box, Paper, Typography, IconButton, Tooltip, Card, CardContent, Button } from '@mui/material';
 import {
     Close as CloseIcon,
@@ -10,13 +8,12 @@ import {
     Settings as SettingsIcon,
 } from '@mui/icons-material';
 import type { ParsedQueue } from '../../../types/Queue';
-import type { ChangeSet } from '../../../types/Configuration';
-import { QUEUE_PROPERTIES } from '../../../config';
+import { useConfigStore } from '../../../store/configStore';
+import { useUIStore } from '../../../store/uiStore';
 import { QueueInfoOverview } from './queue-info/QueueInfoOverview';
 import { QueueInfoSettings } from './queue-info/QueueInfoSettings';
-import { useChangesStore } from '../../../store';
-import { useUIStore } from '../../../store/uiStore';
-import { createChangeSetsFromFormData } from '../../../utils/configurationUtils';
+import { buildConfigPath } from '../../../utils/configFormUtils';
+import { QUEUE_PROPERTIES } from '../../../config';
 
 export interface QueueInfoPanelProps {
     queue: ParsedQueue | null;
@@ -24,7 +21,6 @@ export interface QueueInfoPanelProps {
     onClose: () => void;
     onDelete?: (queuePath: string) => void;
     onToggleState?: (queuePath: string, newState: 'RUNNING' | 'STOPPED') => void;
-    onSaveProperties?: (queuePath: string, changes: Record<string, any>) => void;
     onQueueSelect?: (queue: ParsedQueue) => void;
 }
 
@@ -34,13 +30,11 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
     onClose,
     onDelete,
     onToggleState,
-    onSaveProperties,
     onQueueSelect,
 }) => {
     const [activeTab, setActiveTab] = useState(0);
-    const [saveError, setSaveError] = useState<string | null>(null);
 
-    const { stageChange, stagedChanges } = useChangesStore();
+    // Get state from stores
     const selectedNodeLabel = useUIStore((state) => state.selectedNodeLabel);
     const propertyEditorModal = useUIStore((state) => state.modals?.propertyEditor);
 
@@ -51,73 +45,64 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
         }
     }, [propertyEditorModal?.expandedSection]);
 
-    // Create validation schema from properties
-    const validationSchema = z.object(
-        Object.entries(QUEUE_PROPERTIES).reduce(
-            (acc, [key, prop]) => ({
-                ...acc,
-                [key]: prop.validation.nullable().optional(), // Make all validations optional and nullable
-            }),
-            {}
-        )
-    );
-
+    // Create form without validation schema - validation is handled by configStore
     const form = useForm({
-        resolver: zodResolver(validationSchema),
         defaultValues: {},
-        mode: 'onBlur',
+        mode: 'onChange',
     });
 
     const { reset } = form;
 
+    // Initialize form when queue changes or computed config updates
     useEffect(() => {
         if (queue && open) {
-            const initialData: Record<string, any> = {};
+            // Get current values from computed config
+            const formData: Record<string, any> = {};
 
-            // SIMPLIFIED: Queue from useQueueConfiguration already includes staged changes
-            Object.values(QUEUE_PROPERTIES).forEach((propDef) => {
-                const sanitizedKey = propDef.key.replace(/\./g, '_').replace(/\[/g, '_').replace(/\]/g, '_');
-                // Direct property access - no need to check staged changes separately
-                initialData[sanitizedKey] = propDef.getValueFromQueue(queue);
+            Object.entries(QUEUE_PROPERTIES).forEach(([key, definition]) => {
+                const path = buildConfigPath(queue.path, key);
+                const value = useConfigStore.getState().getFieldValue(path);
+
+
+                // Only use the actual value from config, no defaults
+                formData[key] = value;
             });
 
-            reset(initialData);
+            reset(formData);
+
             if (propertyEditorModal?.expandedSection) {
                 setActiveTab(2); // Settings tab
             } else {
                 setActiveTab(0); // Overview tab
             }
-            setSaveError(null);
         }
     }, [queue, open, reset, propertyEditorModal?.expandedSection]);
+
+    // Handle form submission - not needed in new architecture
+    // Changes are staged immediately via useConfigField
+    const handleSave = useCallback(() => {
+        // In the new architecture, changes are already staged
+        // This is just a placeholder for UI consistency
+        console.log('Changes are automatically staged');
+    }, []);
+
+    const handleReset = useCallback(() => {
+        // Clear all staged changes for this queue
+        const { staged, unstageChange } = useConfigStore.getState();
+
+        staged.forEach((_, path) => {
+            if (queue && path.startsWith(`queues.${queue.path}.`)) {
+                unstageChange(path);
+            }
+        });
+
+        // Reset form to current computed values
+        reset();
+    }, [queue?.path, reset]);
 
     if (!queue || !open) {
         return null;
     }
-
-    const handleSave = (data: Record<string, any>) => {
-        if (!queue?.name) return;
-        try {
-            setSaveError(null);
-            const queuePath = queue.path;
-            const changes = createChangeSetsFromFormData(queuePath, data, queue as any);
-            if (changes.length === 0) {
-                return; // No actual changes made
-            }
-            changes.forEach((change) => stageChange(change));
-            if (onSaveProperties) {
-                onSaveProperties(queue.name, data);
-            }
-            reset(data);
-        } catch (error) {
-            setSaveError(error instanceof Error ? error.message : 'Failed to save changes');
-        }
-    };
-
-    const handleReset = () => {
-        reset();
-        setSaveError(null);
-    };
 
     return (
         <FormProvider {...form}>
@@ -125,7 +110,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                 elevation={0}
                 sx={{
                     position: 'fixed',
-                    top: '112px', // Position below AppBar (64px) + TabNavigation (48px)
+                    top: '112px',
                     right: open ? 0 : '-400px',
                     width: 400,
                     height: 'calc(100vh - 112px)',
@@ -136,7 +121,7 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                     overflow: 'hidden',
                     bgcolor: 'grey.50',
                     boxShadow: '0 8px 32px rgba(0, 0, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.1)',
-                    pointerEvents: open ? 'auto' : 'none', // Allow clicks to pass through when closed
+                    pointerEvents: open ? 'auto' : 'none',
                 }}
             >
                 {/* Header */}
@@ -148,31 +133,37 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                         borderColor: 'divider',
                         display: 'flex',
                         alignItems: 'center',
-                        justifyContent: 'center',
-                        position: 'relative',
+                        justifyContent: 'space-between',
                     }}
                 >
-                    <Typography variant="subtitle1" component="h2" color="text.primary" sx={{ fontWeight: 600 }}>
-                        {queue?.name}
+                    <Typography variant="h6" sx={{ fontWeight: 600, fontSize: '1.125rem' }}>
+                        {queue.name}
                     </Typography>
-                    <IconButton
-                        onClick={onClose}
-                        size="small"
-                        sx={{
-                            color: 'text.secondary',
-                            position: 'absolute',
-                            right: 12,
-                        }}
-                    >
+                    <IconButton onClick={onClose} size="small">
                         <CloseIcon fontSize="small" />
                     </IconButton>
                 </Box>
 
-                {/* Tab Selector Card */}
-                <Box sx={{ p: 1.5 }}>
-                    <Card sx={{ boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)' }}>
-                        <CardContent sx={{ p: 1.5, '&:last-child': { pb: 1.5 } }}>
-                            <Box sx={{ display: 'flex', gap: 0.5 }}>
+                {/* Tab Navigation */}
+                <Box sx={{ p: 1.5, pt: 1 }}>
+                    <Card
+                        variant="outlined"
+                        sx={{
+                            bgcolor: 'background.paper',
+                            borderRadius: 2,
+                            boxShadow: '0 1px 3px rgba(0, 0, 0, 0.05)',
+                        }}
+                    >
+                        <CardContent sx={{ p: 1, '&:last-child': { pb: 1 } }}>
+                            <Box
+                                sx={{
+                                    display: 'flex',
+                                    gap: 0.5,
+                                    bgcolor: 'grey.100',
+                                    borderRadius: 1.5,
+                                    p: 0.5,
+                                }}
+                            >
                                 <Tooltip title="Overview">
                                     <Button
                                         variant="text"
@@ -185,10 +176,11 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                             fontSize: '0.75rem',
                                             py: 0.75,
                                             border: 'none',
-                                            bgcolor: activeTab === 0 ? 'action.selected' : 'transparent',
+                                            bgcolor: activeTab === 0 ? 'background.paper' : 'transparent',
                                             color: activeTab === 0 ? 'primary.main' : 'text.secondary',
+                                            boxShadow: activeTab === 0 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
                                             '&:hover': {
-                                                bgcolor: 'action.hover',
+                                                bgcolor: activeTab === 0 ? 'background.paper' : 'action.hover',
                                                 border: 'none',
                                             },
                                         }}
@@ -208,10 +200,11 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                             fontSize: '0.75rem',
                                             py: 0.75,
                                             border: 'none',
-                                            bgcolor: activeTab === 1 ? 'action.selected' : 'transparent',
+                                            bgcolor: activeTab === 1 ? 'background.paper' : 'transparent',
                                             color: activeTab === 1 ? 'primary.main' : 'text.secondary',
+                                            boxShadow: activeTab === 1 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
                                             '&:hover': {
-                                                bgcolor: 'action.hover',
+                                                bgcolor: activeTab === 1 ? 'background.paper' : 'action.hover',
                                                 border: 'none',
                                             },
                                         }}
@@ -231,10 +224,11 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                                             fontSize: '0.75rem',
                                             py: 0.75,
                                             border: 'none',
-                                            bgcolor: activeTab === 2 ? 'action.selected' : 'transparent',
+                                            bgcolor: activeTab === 2 ? 'background.paper' : 'transparent',
                                             color: activeTab === 2 ? 'primary.main' : 'text.secondary',
+                                            boxShadow: activeTab === 2 ? '0 1px 3px rgba(0, 0, 0, 0.1)' : 'none',
                                             '&:hover': {
-                                                bgcolor: 'action.hover',
+                                                bgcolor: activeTab === 2 ? 'background.paper' : 'action.hover',
                                                 border: 'none',
                                             },
                                         }}
@@ -253,9 +247,9 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                         <QueueInfoOverview
                             queue={queue}
                             onQueueSelect={onQueueSelect!}
-                            onDelete={() => onDelete?.(queue.queueName)}
+                            onDelete={() => onDelete?.(queue.name)}
                             onToggleState={() =>
-                                onToggleState?.(queue.queueName, queue.state === 'RUNNING' ? 'STOPPED' : 'RUNNING')
+                                onToggleState?.(queue.name, queue.state === 'RUNNING' ? 'STOPPED' : 'RUNNING')
                             }
                         />
                     )}
@@ -268,8 +262,6 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                         <QueueInfoSettings
                             queue={queue}
                             selectedNodeLabel={selectedNodeLabel}
-                            saveError={saveError}
-                            onSave={handleSave}
                             onReset={handleReset}
                             expandedSection={propertyEditorModal?.expandedSection}
                         />

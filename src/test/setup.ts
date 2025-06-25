@@ -131,32 +131,43 @@ Object.defineProperty(window, 'location', {
 });
 
 // Import all Zustand stores for global reset functionality
-import { useDataStore } from '../store/dataStore';
+import { useRuntimeStore } from '../store/runtimeStore';
+import { useConfigStore } from '../store/configStore';
 import { useUIStore } from '../store/uiStore';
-import { useChangesStore } from '../store/changesStore';
 import { useActivityStore } from '../store/activityStore';
 
 // Global store reset function for tests
 export const resetAllStores = () => {
-    // Reset data store
-    useDataStore.setState({
+    // Reset runtime store
+    useRuntimeStore.setState({
         scheduler: null,
-        configuration: null,
-        nodeLabels: null,
-        nodes: null,
-        loading: {
-            scheduler: false,
-            configuration: false,
-            nodeLabels: false,
-            nodes: false,
-        },
-        errors: {
-            scheduler: null,
-            configuration: null,
-            nodeLabels: null,
-            nodes: null,
-        },
-        lastUpdated: {},
+        rawScheduler: null,
+        nodes: [],
+        rawNodes: null,
+        nodeLabels: [],
+        rawNodeLabels: null,
+        isLoadingScheduler: false,
+        isLoadingNodes: false,
+        isLoadingNodeLabels: false,
+        schedulerError: null,
+        nodesError: null,
+        nodeLabelsError: null,
+    });
+
+    // Reset config store
+    useConfigStore.setState({
+        original: null,
+        staged: new Map(),
+        computed: null,
+        computedVersion: 0,
+        rawConfiguration: null,
+        validationResults: new Map(),
+        validationStatus: 'idle',
+        serverVersion: '',
+        lastSync: null,
+        isLoading: false,
+        isApplying: false,
+        error: null,
     });
 
     // Reset UI store
@@ -173,15 +184,6 @@ export const resetAllStores = () => {
         },
         notifications: [],
         modals: {},
-    });
-
-    // Reset changes store
-    useChangesStore.setState({
-        stagedChanges: [],
-        applyingChanges: false,
-        applyError: null,
-        lastApplied: undefined,
-        conflicts: [],
     });
 
     // Reset activity store

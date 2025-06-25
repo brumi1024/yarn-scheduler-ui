@@ -1,3 +1,5 @@
+// TODO: This test file needs to be updated to test the new runtimeStore and configStore
+// The old dataStore no longer exists
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useDataStore } from '../dataStore';
 import { apiService } from '../../api/ApiService';

@@ -1,17 +1,17 @@
 import React, { useMemo } from 'react';
 import { FormControl, InputLabel, MenuItem, Box, Chip } from '@mui/material';
 import Select from '@mui/material/Select';
-import { useDataStore } from '../../../store/dataStore';
+import { useRuntimeStore } from '../../../store/runtimeStore';
 import { useUIStore } from '../../../store/uiStore';
 
 export const NodeLabelSelector: React.FC = () => {
-    const nodeLabels = useDataStore((state) => state.nodeLabels);
+    const nodeLabels = useRuntimeStore((state) => state.nodeLabels);
     const selectedNodeLabel = useUIStore((state) => state.selectedNodeLabel);
     const setSelectedNodeLabel = useUIStore((state) => state.setSelectedNodeLabel);
 
     // Extract available labels from the API response
     const availableLabels = useMemo(() => {
-        return nodeLabels?.nodeLabelsInfo?.nodeLabelInfo?.map((label) => label.name) || [];
+        return nodeLabels?.map((label) => label.name) || [];
     }, [nodeLabels]);
 
     const handleChange = (event: React.ChangeEvent<{ value: unknown }>): void => {

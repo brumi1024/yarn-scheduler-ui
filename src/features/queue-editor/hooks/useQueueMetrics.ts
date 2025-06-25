@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useCallback } from 'react';
 import { useSchedulerQuery } from '../../../hooks/useYarnApi';
 import type { Queue } from '../../../types/Queue';
 
@@ -53,9 +53,12 @@ export function useQueueMetrics() {
         return map;
     }, [schedulerData]);
 
-    const getMetricsForQueue = (queuePath: string): QueueMetrics | undefined => {
-        return metricsMap.get(queuePath);
-    };
+    const getMetricsForQueue = useCallback(
+        (queuePath: string): QueueMetrics | undefined => {
+            return metricsMap.get(queuePath);
+        },
+        [metricsMap]
+    );
 
     return {
         getMetricsForQueue,

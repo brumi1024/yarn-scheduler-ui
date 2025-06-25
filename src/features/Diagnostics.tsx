@@ -30,8 +30,8 @@ import {
 } from '@mui/material';
 import { Download, Clear, BugReport, CheckCircle, Warning, Error } from '@mui/icons-material';
 import { useActivityStore } from '../store/activityStore';
-import { useDataStore } from '../store/dataStore';
-import { useChangesStore } from '../store/changesStore';
+import { useRuntimeStore } from '../store/runtimeStore';
+import { useConfigStore } from '../store/configStore';
 import { ValidationEngine, type ValidationResult } from '../validation';
 
 interface TabPanelProps {
@@ -57,8 +57,11 @@ function TabPanel(props: TabPanelProps) {
 
 export default function Diagnostics() {
     const { logs, clearActivityLogs } = useActivityStore();
-    const { scheduler, configuration, nodeLabels, nodes } = useDataStore();
-    const { stagedChanges } = useChangesStore();
+    const scheduler = useRuntimeStore((state) => state.scheduler);
+    const nodes = useRuntimeStore((state) => state.nodes);
+    const nodeLabels = useRuntimeStore((state) => state.nodeLabels);
+    const rawConfiguration = useConfigStore((state) => state.rawConfiguration);
+    const staged = useConfigStore((state) => state.staged);
 
     const [typeFilter, setTypeFilter] = useState<string>('all');
     const [levelFilter, setLevelFilter] = useState<string>('all');
@@ -74,11 +77,11 @@ export default function Diagnostics() {
 
     // Validate configuration
     const validationResult: ValidationResult | null = useMemo(() => {
-        if (!configuration) return null;
+        if (!rawConfiguration) return null;
         try {
             // Convert to flat format for ValidationEngine
             const flatConfig: Record<string, string> = {};
-            configuration.property.forEach((prop) => {
+            rawConfiguration.property.forEach((prop) => {
                 flatConfig[prop.name] = prop.value;
             });
 
@@ -98,7 +101,7 @@ export default function Diagnostics() {
                 isValid: false,
             };
         }
-    }, [configuration]);
+    }, [rawConfiguration]);
 
     const formatTimestamp = (timestamp: number) => {
         return new Date(timestamp).toLocaleString();
@@ -150,7 +153,7 @@ export default function Diagnostics() {
 
     const handleExportConfiguration = () => {
         const configData = {
-            configuration,
+            configuration: rawConfiguration,
             nodeLabels,
             exportedAt: new Date().toISOString(),
             type: 'configuration',
@@ -172,7 +175,7 @@ export default function Diagnostics() {
 
     const handleExportStaged = () => {
         const stagedData = {
-            stagedChanges,
+            stagedChanges: Array.from(staged.entries()),
             exportedAt: new Date().toISOString(),
             type: 'staged-changes',
             description: 'Staged configuration changes pending application',
@@ -392,7 +395,7 @@ export default function Diagnostics() {
                             variant="outlined"
                             onClick={handleExportConfiguration}
                             startIcon={<Download />}
-                            disabled={!configuration}
+                            disabled={!rawConfiguration}
                         >
                             Download Configuration Data
                         </Button>
@@ -414,15 +417,15 @@ export default function Diagnostics() {
                     <TabPanel value={exportTabValue} index={2}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                             Export all staged changes that haven't been applied yet.
-                            {stagedChanges.length === 0 && ' (No staged changes available)'}
+                            {staged.size === 0 && ' (No staged changes available)'}
                         </Typography>
                         <Button
                             variant="outlined"
                             onClick={handleExportStaged}
                             startIcon={<Download />}
-                            disabled={stagedChanges.length === 0}
+                            disabled={staged.size === 0}
                         >
-                            Download Staged Changes ({stagedChanges.length})
+                            Download Staged Changes ({staged.size})
                         </Button>
                     </TabPanel>
                 </DialogContent>

@@ -1,3 +1,5 @@
+// TODO: This test file needs to be updated to test the new configStore
+// The old changesStore no longer exists
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { useChangesStore } from '../changesStore';
 import { useDataStore } from '../dataStore';

@@ -24,8 +24,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import { ValidationEngine, type ValidationResult, type ValidationIssue } from '../../validation';
-import { useDataStore } from '../../store/dataStore';
-import { useChangesStore } from '../../store/changesStore';
+import { useConfigStore } from '../../store/configStore';
 
 interface ValidationPreviewProps {
     open: boolean;
@@ -34,37 +33,26 @@ interface ValidationPreviewProps {
 }
 
 export const ValidationPreview: React.FC<ValidationPreviewProps> = ({ open, onClose, onProceed }) => {
-    const { configuration } = useDataStore();
-    const { stagedChanges } = useChangesStore();
+    const rawConfiguration = useConfigStore((state) => state.rawConfiguration);
+    const staged = useConfigStore((state) => state.staged);
+    const validateAll = useConfigStore((state) => state.validateAll);
     const [validationResult, setValidationResult] = useState<ValidationResult | null>(null);
     const [isValidating, setIsValidating] = useState(false);
 
     const runValidation = useCallback(async () => {
-        if (!configuration) return;
+        if (!rawConfiguration) return;
 
         setIsValidating(true);
         try {
-            // Convert to flat configuration
-            const flatConfig: Record<string, string> = {};
-            configuration.property.forEach((prop) => {
-                flatConfig[prop.name] = prop.value;
-            });
-
-            // Apply staged changes
-            stagedChanges.forEach((change) => {
-                flatConfig[change.key] = change.value;
-            });
-
-            // Run validation
-            const engine = new ValidationEngine();
-            const result = engine.validate(flatConfig);
+            // Use the store's validation method which already handles staged changes
+            const result = validateAll();
             setValidationResult(result);
         } catch (error) {
             console.error('Validation failed:', error);
         } finally {
             setIsValidating(false);
         }
-    }, [configuration, stagedChanges]);
+    }, [rawConfiguration, validateAll]);
 
     // Run validation when dialog opens
     React.useEffect(() => {

@@ -18,6 +18,7 @@ import {
     Tooltip,
     Alert,
     Stack,
+    Divider,
 } from '@mui/material';
 import {
     ExpandMore as ExpandMoreIcon,
@@ -29,10 +30,8 @@ import {
     Info as InfoIcon,
     Edit as EditIcon,
     Schedule as ScheduleIcon,
-    Add as AddIcon,
 } from '@mui/icons-material';
-import { useChangesStore } from '../../../store';
-import type { ChangeSet } from '../../../types/Configuration';
+import { useConfigStore } from '../../../store/configStore';
 import { ValidationPreview } from '../../../components/validation/ValidationPreview';
 
 interface StagedChangesPanelProps {
@@ -40,164 +39,153 @@ interface StagedChangesPanelProps {
 }
 
 interface GroupedChanges {
-    [queueName: string]: ChangeSet[];
+    [queueName: string]: Array<{
+        path: string;
+        oldValue: any;
+        newValue: any;
+        propertyName: string;
+    }>;
 }
 
 export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) {
-    const { stagedChanges, unstageChange, clearStagedChanges, applyChanges, applyingChanges, conflicts } =
-        useChangesStore();
+    const { staged, unstageChange, clearAllChanges, applyChanges, isApplying, validationStatus, getFieldChanges } =
+        useConfigStore();
 
     const [isExpanded, setIsExpanded] = useState(false);
-    const [groupBy, setGroupBy] = useState<'queue' | 'type'>('queue');
+    const [groupBy, setGroupBy] = useState<'queue' | 'property'>('queue');
     const [showValidationPreview, setShowValidationPreview] = useState(false);
-    const [pendingSaveAction, setPendingSaveAction] = useState<(() => void) | null>(null);
+
+    // Convert Map to array for easier manipulation
+    const stagedArray = useMemo(() => {
+        const changes: Array<{
+            path: string;
+            oldValue: any;
+            newValue: any;
+            queueName: string;
+            propertyName: string;
+        }> = [];
+
+        staged.forEach((value, path) => {
+            const changeInfo = getFieldChanges(path);
+            if (!changeInfo) return;
+
+            // Parse path to extract queue and property names
+            let queueName = 'Global Settings';
+            let propertyName = path;
+
+            if (path.startsWith('queues.')) {
+                const parts = path.split('.');
+                // Format: queues.root.a.b.property
+                const propertyIdx = parts.findIndex(
+                    (p) => p.includes('-') || p === 'capacity' || p === 'maximum-capacity' || p === 'state'
+                );
+                if (propertyIdx > 0) {
+                    queueName = parts.slice(1, propertyIdx).join('.');
+                    propertyName = parts.slice(propertyIdx).join('.');
+                }
+            } else if (path.startsWith('global.')) {
+                propertyName = path.substring(7);
+            }
+
+            changes.push({
+                path,
+                oldValue: changeInfo.originalValue,
+                newValue: value,
+                queueName,
+                propertyName,
+            });
+        });
+
+        return changes;
+    }, [staged, getFieldChanges]);
 
     // Group changes for better organization
     const groupedChanges = useMemo(() => {
+        const grouped: GroupedChanges = {};
+
         if (groupBy === 'queue') {
-            // Group by queue name
-            const grouped: GroupedChanges = {};
-            stagedChanges.forEach((change) => {
-                const key = change.queuePath === '_global' ? 'Global Settings' : change.queuePath || 'global';
-                if (!grouped[key]) {
-                    grouped[key] = [];
+            stagedArray.forEach((change) => {
+                if (!grouped[change.queueName]) {
+                    grouped[change.queueName] = [];
                 }
-                grouped[key].push(change);
+                grouped[change.queueName].push(change);
             });
-            return grouped;
         } else {
             // Group by property type
-            const grouped: GroupedChanges = {};
-            stagedChanges.forEach((change) => {
-                const key = change.property;
-                if (!grouped[key]) {
-                    grouped[key] = [];
+            stagedArray.forEach((change) => {
+                if (!grouped[change.propertyName]) {
+                    grouped[change.propertyName] = [];
                 }
-                grouped[key].push(change);
+                grouped[change.propertyName].push(change);
             });
-            return grouped;
         }
-    }, [stagedChanges, groupBy]);
 
-    const changeCount = stagedChanges.length;
-    const hasConflicts = conflicts.length > 0;
+        return grouped;
+    }, [stagedArray, groupBy]);
+
+    const changeCount = staged.size;
+    const hasValidationErrors = validationStatus === 'invalid';
 
     if (changeCount === 0) {
         return null; // Don't show panel when no changes
     }
 
-    const handleApplyChanges = () => {
-        // Show validation preview before applying changes
-        setShowValidationPreview(true);
-        setPendingSaveAction(() => async () => {
-            try {
-                await applyChanges();
-                if (onApplyChanges) {
-                    onApplyChanges();
-                }
-                setShowValidationPreview(false);
-            } catch (error) {
-                console.error('Failed to apply changes:', error);
+    const handleApplyChanges = async () => {
+        if (hasValidationErrors) {
+            // Show validation preview before applying changes
+            setShowValidationPreview(true);
+            return;
+        }
+
+        try {
+            await applyChanges();
+            if (onApplyChanges) {
+                onApplyChanges();
             }
-        });
+        } catch (error) {
+            console.error('Failed to apply changes:', error);
+        }
     };
 
     const handleClearAll = () => {
-        clearStagedChanges();
+        clearAllChanges();
         setIsExpanded(false);
     };
 
-    const formatTimestamp = (timestamp: Date) => {
-        return new Intl.DateTimeFormat('en-US', {
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-        }).format(timestamp);
+    const formatValue = (value: any): string => {
+        if (value === null || value === undefined) return 'empty';
+        if (typeof value === 'boolean') return value ? 'true' : 'false';
+        if (Array.isArray(value)) return value.join(', ');
+        return String(value);
     };
 
-    const getChangeTypeColor = (changeType: ChangeSet['type']) => {
-        switch (changeType) {
-            case 'ADD_QUEUE':
-                return 'success';
-            case 'DELETE_QUEUE':
-                return 'error';
-            case 'PROPERTY_UPDATE':
-                return 'info';
-            default:
-                return 'default';
-        }
-    };
-
-    const getChangeTypeIcon = (changeType: ChangeSet['type']) => {
-        switch (changeType) {
-            case 'ADD_QUEUE':
-                return <AddIcon fontSize="small" />;
-            case 'DELETE_QUEUE':
-                return <DeleteIcon fontSize="small" />;
-            case 'PROPERTY_UPDATE':
-                return <EditIcon fontSize="small" />;
-            default:
-                return <EditIcon fontSize="small" />;
-        }
-    };
-
-    const renderChangeItem = (change: ChangeSet) => (
-        <ListItem key={change.id} divider>
+    const renderChangeItem = (change: (typeof stagedArray)[0]) => (
+        <ListItem key={change.path} divider>
             <ListItemText
                 primaryTypographyProps={{ component: 'div' }}
                 secondaryTypographyProps={{ component: 'div' }}
                 primary={
                     <Box display="flex" alignItems="center" gap={1}>
-                        <Chip
-                            icon={getChangeTypeIcon(change.type)}
-                            label={
-                                change.type === 'ADD_QUEUE'
-                                    ? 'Add Queue'
-                                    : change.type === 'DELETE_QUEUE'
-                                      ? 'Delete Queue'
-                                      : change.type === 'PROPERTY_UPDATE'
-                                        ? 'Property Update'
-                                        : 'Unknown'
-                            }
-                            size="small"
-                            color={getChangeTypeColor(change.type) as any}
-                            variant="outlined"
-                        />
+                        <EditIcon fontSize="small" color="primary" />
                         <Typography variant="body2" fontWeight="medium">
-                            {change.property}
+                            {change.propertyName}
                         </Typography>
+                        {groupBy === 'property' && <Chip label={change.queueName} size="small" variant="outlined" />}
                     </Box>
                 }
                 secondary={
-                    <Box component="div">
-                        <Box display="flex" alignItems="center" gap={2} mt={0.5}>
-                            <Box
-                                component="span"
-                                sx={{
-                                    fontSize: '0.75rem',
-                                    color: 'text.secondary',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                }}
-                            >
-                                <ScheduleIcon fontSize="inherit" sx={{ mr: 0.5 }} />
-                                {formatTimestamp(change.timestamp)}
-                            </Box>
-                            <Box display="flex" alignItems="center" gap={0.5}>
-                                <Box component="span" sx={{ fontSize: '0.75rem', color: 'error.main' }}>
-                                    From: {String(change.oldValue)}
-                                </Box>
-                                <Box component="span" sx={{ fontSize: '0.75rem', color: 'success.main' }}>
-                                    To: {String(change.newValue)}
-                                </Box>
-                            </Box>
-                        </Box>
+                    <Box mt={0.5}>
+                        <Typography variant="caption" color="text.secondary">
+                            <span style={{ textDecoration: 'line-through' }}>{formatValue(change.oldValue)}</span>
+                            {' → '}
+                            <span style={{ fontWeight: 'bold' }}>{formatValue(change.newValue)}</span>
+                        </Typography>
                     </Box>
                 }
             />
             <ListItemSecondaryAction>
-                <Tooltip title="Remove change">
-                    <IconButton edge="end" onClick={() => unstageChange(change.id)} size="small">
+                <Tooltip title="Remove this change">
+                    <IconButton edge="end" onClick={() => unstageChange(change.path)} size="small">
                         <DeleteIcon fontSize="small" />
                     </IconButton>
                 </Tooltip>
@@ -205,162 +193,131 @@ export function StagedChangesPanel({ onApplyChanges }: StagedChangesPanelProps) 
         </ListItem>
     );
 
-    const renderGroupedChanges = () => {
-        return Object.entries(groupedChanges).map(([groupKey, groupChanges]) => (
-            <Accordion key={groupKey} defaultExpanded>
-                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Typography variant="subtitle2" fontWeight="medium">
-                            {groupBy === 'queue'
-                                ? groupKey === 'Global Settings'
-                                    ? groupKey
-                                    : `Queue: ${groupKey}`
-                                : `Type: ${groupKey}`}
-                        </Typography>
-                        <Chip label={groupChanges.length} size="small" color="primary" variant="outlined" />
-                    </Box>
-                </AccordionSummary>
-                <AccordionDetails sx={{ p: 0 }}>
-                    <List dense>{groupChanges.map(renderChangeItem)}</List>
-                </AccordionDetails>
-            </Accordion>
-        ));
-    };
-
-    // Collapsed state - floating button/chip
-    if (!isExpanded) {
-        return (
+    return (
+        <>
+            {/* Floating Button */}
             <Paper
-                elevation={8}
+                elevation={3}
                 sx={{
                     position: 'fixed',
                     bottom: 24,
                     right: 24,
-                    zIndex: 1300,
-                    borderRadius: 3,
+                    borderRadius: 2,
                     overflow: 'hidden',
+                    zIndex: 1200,
                 }}
             >
-                <Button
-                    onClick={() => setIsExpanded(true)}
-                    variant="contained"
-                    size="large"
-                    startIcon={
-                        <Badge badgeContent={changeCount} color="secondary" max={99}>
-                            <EditIcon />
-                        </Badge>
-                    }
-                    endIcon={<ExpandLessIcon />}
+                <Box
                     sx={{
-                        px: 3,
-                        py: 1.5,
-                        textTransform: 'none',
-                        fontWeight: 'medium',
-                        bgcolor: hasConflicts ? 'warning.main' : 'primary.main',
-                        '&:hover': {
-                            bgcolor: hasConflicts ? 'warning.dark' : 'primary.dark',
-                        },
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1,
+                        p: 1.5,
+                        bgcolor: 'background.paper',
                     }}
                 >
-                    {changeCount} Change{changeCount !== 1 ? 's' : ''} Staged
-                </Button>
+                    <Badge badgeContent={changeCount} color="primary">
+                        <EditIcon />
+                    </Badge>
+                    <Typography variant="body2" fontWeight="medium">
+                        {changeCount} Staged {changeCount === 1 ? 'Change' : 'Changes'}
+                    </Typography>
+                    <IconButton onClick={() => setIsExpanded(!isExpanded)} size="small">
+                        {isExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                    </IconButton>
+                </Box>
             </Paper>
-        );
-    }
 
-    // Expanded state - drawer panel
-    return (
-        <Drawer
-            anchor="bottom"
-            open={isExpanded}
-            onClose={() => setIsExpanded(false)}
-            PaperProps={{
-                sx: {
-                    maxHeight: '70vh',
-                    borderTopLeftRadius: 16,
-                    borderTopRightRadius: 16,
-                },
-            }}
-        >
-            <Box sx={{ p: 2 }}>
-                {/* Header */}
+            {/* Expanded Panel */}
+            <Drawer
+                anchor="right"
+                open={isExpanded}
+                onClose={() => setIsExpanded(false)}
+                PaperProps={{
+                    sx: {
+                        width: 400,
+                        p: 2,
+                    },
+                }}
+            >
                 <Box display="flex" alignItems="center" justifyContent="space-between" mb={2}>
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Typography variant="h6" fontWeight="bold">
-                            Staged Changes
-                        </Typography>
+                    <Typography variant="h6">Staged Changes</Typography>
+                    <Box display="flex" gap={1}>
                         <Chip
-                            label={`${changeCount} change${changeCount !== 1 ? 's' : ''}`}
-                            color="primary"
+                            label="By Queue"
+                            onClick={() => setGroupBy('queue')}
+                            color={groupBy === 'queue' ? 'primary' : 'default'}
+                            size="small"
+                        />
+                        <Chip
+                            label="By Property"
+                            onClick={() => setGroupBy('property')}
+                            color={groupBy === 'property' ? 'primary' : 'default'}
                             size="small"
                         />
                     </Box>
-                    <Box display="flex" alignItems="center" gap={1}>
-                        <Button
-                            size="small"
-                            onClick={() => setGroupBy(groupBy === 'queue' ? 'type' : 'queue')}
-                            variant="outlined"
-                        >
-                            Group by {groupBy === 'queue' ? 'Type' : 'Queue'}
-                        </Button>
-                        <IconButton onClick={() => setIsExpanded(false)} size="small">
-                            <ExpandMoreIcon />
-                        </IconButton>
-                    </Box>
                 </Box>
 
-                {/* Conflicts Alert */}
-                {hasConflicts && (
+                {hasValidationErrors && (
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         <Typography variant="body2">
-                            {conflicts.length} conflict{conflicts.length !== 1 ? 's' : ''} detected. Please resolve
-                            before applying changes.
+                            There are validation errors. Please fix them before applying changes.
                         </Typography>
                     </Alert>
                 )}
 
-                {/* Changes List */}
-                <Box sx={{ maxHeight: 400, overflow: 'auto', mb: 2 }}>{renderGroupedChanges()}</Box>
+                <Box sx={{ flex: 1, overflow: 'auto', mb: 2 }}>
+                    {Object.entries(groupedChanges).map(([groupName, changes]) => (
+                        <Accordion key={groupName} defaultExpanded>
+                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                <Box display="flex" alignItems="center" gap={1} width="100%">
+                                    <Typography variant="subtitle2">{groupName}</Typography>
+                                    <Chip label={changes.length} size="small" />
+                                </Box>
+                            </AccordionSummary>
+                            <AccordionDetails sx={{ p: 0 }}>
+                                <List dense disablePadding>
+                                    {changes.map(renderChangeItem)}
+                                </List>
+                            </AccordionDetails>
+                        </Accordion>
+                    ))}
+                </Box>
 
-                {/* Actions */}
-                <Stack direction="row" spacing={1} justifyContent="space-between">
-                    <Button
-                        variant="outlined"
-                        color="error"
-                        startIcon={<ClearIcon />}
-                        onClick={handleClearAll}
-                        size="small"
-                    >
-                        Clear All
-                    </Button>
+                <Divider sx={{ my: 2 }} />
 
+                <Stack spacing={1}>
                     <Button
                         variant="contained"
+                        fullWidth
                         startIcon={<SaveIcon />}
                         onClick={handleApplyChanges}
-                        disabled={hasConflicts || changeCount === 0 || applyingChanges}
-                        size="small"
+                        disabled={isApplying || changeCount === 0}
                     >
-                        {applyingChanges ? 'Applying...' : 'Apply Changes'}
+                        {isApplying ? 'Applying...' : 'Apply Changes'}
+                    </Button>
+                    <Button
+                        variant="outlined"
+                        fullWidth
+                        startIcon={<ClearIcon />}
+                        onClick={handleClearAll}
+                        disabled={isApplying}
+                    >
+                        Clear All Changes
                     </Button>
                 </Stack>
-            </Box>
+            </Drawer>
 
-            {/* Validation Preview */}
-            <ValidationPreview
-                open={showValidationPreview}
-                onClose={() => {
-                    setShowValidationPreview(false);
-                    setPendingSaveAction(null);
-                }}
-                onProceed={() => {
-                    if (pendingSaveAction) {
-                        pendingSaveAction();
-                    }
-                }}
-            />
-        </Drawer>
+            {/* Validation Preview Dialog */}
+            {showValidationPreview && (
+                <ValidationPreview
+                    open={showValidationPreview}
+                    onClose={() => {
+                        setShowValidationPreview(false);
+                    }}
+                    onProceed={handleApplyChanges}
+                />
+            )}
+        </>
     );
 }
-
-export default StagedChangesPanel;

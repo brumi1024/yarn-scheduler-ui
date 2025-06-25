@@ -1,20 +1,21 @@
 // src/hooks/useValidationStatus.ts
 import { useState, useEffect } from 'react';
-import { useDataStore } from '../store/dataStore';
-import { useChangesStore } from '../store/changesStore';
+import { useConfigStore } from '../store/configStore';
 import { ValidationEngine } from '../validation';
 import { useDebouncedCallback } from 'use-debounce';
 
 export function useValidationStatus() {
-    const { configuration } = useDataStore();
-    const { stagedChanges } = useChangesStore();
+    const rawConfiguration = useConfigStore((state) => state.rawConfiguration);
+    const staged = useConfigStore((state) => state.staged);
+    const computedVersion = useConfigStore((state) => state.computedVersion);
+    const validateAll = useConfigStore((state) => state.validateAll);
     const [errors, setErrors] = useState(0);
     const [warnings, setWarnings] = useState(0);
     const [isValidating, setIsValidating] = useState(false);
 
     // Debounce validation to avoid too many calculations
     const runValidation = useDebouncedCallback(async () => {
-        if (!configuration) {
+        if (!rawConfiguration) {
             setErrors(0);
             setWarnings(0);
             return;
@@ -22,20 +23,8 @@ export function useValidationStatus() {
 
         setIsValidating(true);
         try {
-            // Convert to flat configuration
-            const flatConfig: Record<string, string> = {};
-            configuration.property.forEach((prop) => {
-                flatConfig[prop.name] = prop.value;
-            });
-
-            // Apply staged changes
-            stagedChanges.forEach((change) => {
-                flatConfig[change.key] = change.value;
-            });
-
-            // Run validation
-            const engine = new ValidationEngine();
-            const result = engine.validate(flatConfig);
+            // Use the store's validation method
+            const result = validateAll();
 
             setErrors(result.errors.length);
             setWarnings(result.warnings.length);
@@ -51,7 +40,7 @@ export function useValidationStatus() {
     // Run validation when configuration or changes update
     useEffect(() => {
         runValidation();
-    }, [configuration, stagedChanges, runValidation]);
+    }, [rawConfiguration, computedVersion, runValidation]);
 
     return {
         errors,

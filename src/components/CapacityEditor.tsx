@@ -17,21 +17,27 @@ import { parseCapacityValue, type ParsedCapacityValue, type CapacityMode } from 
 
 interface CapacityEditorProps {
     label: string;
-    value: string;
+    value: string | undefined;
     onChange: (value: string) => void;
     error?: string;
     siblings?: Array<{ name: string; capacity: string }>;
 }
 
 export function CapacityEditor({ label, value, onChange, error, siblings }: CapacityEditorProps) {
-    const [capacityValue, setCapacityValue] = useState<ParsedCapacityValue>({
-        mode: 'percentage',
-        value: value || '10%',
+    const [capacityValue, setCapacityValue] = useState<ParsedCapacityValue>(() => {
+        if (!value) {
+            return { mode: 'percentage', value: '' };
+        }
+        return parseCapacityValue(value);
     });
 
     useEffect(() => {
-        const parsed = parseCapacityValue(value || '10%');
-        setCapacityValue(parsed);
+        if (!value) {
+            setCapacityValue({ mode: 'percentage', value: '' });
+        } else {
+            const parsed = parseCapacityValue(value);
+            setCapacityValue(parsed);
+        }
     }, [value]);
 
     const formatCapacityValue = (
@@ -40,28 +46,31 @@ export function CapacityEditor({ label, value, onChange, error, siblings }: Capa
     ): string => {
         switch (mode) {
             case 'percentage':
-                return `${parsed.percentage || 10}%`;
+                return parsed.percentage !== undefined ? `${parsed.percentage}%` : '';
             case 'weight':
-                return `${parsed.weight || 1}w`;
+                return parsed.weight !== undefined ? `${parsed.weight}w` : '';
             case 'absolute':
-                return `[memory=${parsed.memory || 1024},vcores=${parsed.vcores || 1}]`;
+                return parsed.memory !== undefined && parsed.vcores !== undefined
+                    ? `[memory=${parsed.memory},vcores=${parsed.vcores}]`
+                    : '';
             default:
-                return '10%';
+                return '';
         }
     };
 
     const handleModeChange = (newMode: CapacityMode) => {
         let newParsed: { percentage?: number; weight?: number; memory?: number; vcores?: number } = {};
 
+        // Don't set default values when switching modes
         switch (newMode) {
             case 'percentage':
-                newParsed = { percentage: 10 };
+                newParsed = {};
                 break;
             case 'weight':
-                newParsed = { weight: 1 };
+                newParsed = {};
                 break;
             case 'absolute':
-                newParsed = { memory: 1024, vcores: 1 };
+                newParsed = {};
                 break;
         }
 
