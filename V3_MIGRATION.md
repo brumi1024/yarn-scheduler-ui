@@ -32,8 +32,11 @@ This document tracks the migration progress from the current state management to
         - [x] extractQueueConfig - Extracts queue-specific config from flat config
         - [x] buildQueueTree - Builds hierarchical tree from flat config with metrics
         - [x] flattenQueueTree - Flattens queue tree to array
-    - [ ] Capacity management utilities
-    - [ ] XML generator for API calls
+    - [x] Capacity management utilities
+        - [x] parseCapacityValue - Parses percentage, weight, and absolute formats
+        - [x] validateCapacityConstraints - Validates capacity rules and constraints
+    - [x] JSON formatter for API calls
+        - [x] formatChangesForAPI - Converts property changes to YARN API format
 - [ ] Persistence layer with localStorage
 
 ### Store Actions
@@ -149,11 +152,18 @@ This document tracks the migration progress from the current state management to
 ### Current Status
 
 - Migration started: 2024-01-15
-- Last major update: 2024-06-25 (Selector-based refactor)
+- Last major update: 2025-06-25 (Capacity management and API formatter)
 - Target completion: [To be determined]
 - Blockers: None currently
 
 ### Recent Changes
+
+- **2025-06-25**: Implemented capacity management and API formatter
+    - Added parseCapacityValue for handling percentage, weight, and absolute formats
+    - Added validateCapacityConstraints for capacity validation
+    - Implemented JSON formatter for YARN Mutation API
+    - Simplified capacity handling - removed unnecessary conversions
+    - All utilities follow TDD with comprehensive behavior tests
 
 - **2024-06-25**: Major refactor to remove manual tree syncing in favor of selectors
     - Queue tree is now derived from configuration + changes using selectors
