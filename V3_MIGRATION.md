@@ -63,6 +63,16 @@ This document tracks the migration progress from the current state management to
 - [x] selectPropertyChanges
 - [x] selectNodeLabelChanges
 
+### Test Organization
+
+- [x] Reorganized test files for better clarity and maintainability
+    - [x] yarnSchedulerStore.unit.test.ts - Simple unit tests for basic store functionality
+    - [x] yarnSchedulerStore.actions.test.ts - Complex action behaviors and interactions
+    - [x] yarnSchedulerStore.behavior.test.ts - User experience flows and workflows
+    - [x] yarnSchedulerStore.data-loading.test.ts - Data loading, error handling, HTTP integration
+    - [x] yarnSchedulerStore.integration.test.ts - Multi-step workflows and system integration
+    - [x] selectors.test.ts - Selector function tests for derived state
+
 ## API Integration
 
 - [ ] API service layer updates
