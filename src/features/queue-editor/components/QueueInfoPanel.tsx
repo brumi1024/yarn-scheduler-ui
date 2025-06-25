@@ -63,7 +63,6 @@ export const QueueInfoPanel: React.FC<QueueInfoPanelProps> = ({
                 const path = buildConfigPath(queue.path, key);
                 const value = useConfigStore.getState().getFieldValue(path);
 
-
                 // Only use the actual value from config, no defaults
                 formData[key] = value;
             });

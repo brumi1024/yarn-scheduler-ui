@@ -11,7 +11,7 @@ export const ValidationSeveritySchema = z.enum(['error', 'warning', 'info']);
 /**
  * Types of validation rules.
  * Each rule type checks specific configuration constraints.
- * 
+ *
  * - capacity-sum: Ensures child queue capacities sum to 100%
  * - max-capacity: Validates maximum capacity >= capacity
  * - queue-name: Checks queue naming conventions
@@ -23,21 +23,21 @@ export const ValidationSeveritySchema = z.enum(['error', 'warning', 'info']);
  * - custom: User-defined validation rules
  */
 export const ValidationRuleTypeSchema = z.enum([
-  'capacity-sum',
-  'max-capacity',
-  'queue-name',
-  'resource-limit',
-  'acl-format',
-  'queue-state',
-  'node-label-capacity',
-  'application-lifetime',
-  'custom'
+    'capacity-sum',
+    'max-capacity',
+    'queue-name',
+    'resource-limit',
+    'acl-format',
+    'queue-state',
+    'node-label-capacity',
+    'application-lifetime',
+    'custom',
 ]);
 
 /**
  * Validation issue details.
  * Represents a single validation problem found in the configuration.
- * 
+ *
  * @example
  * ```typescript
  * const capacityError: ValidationIssue = {
@@ -52,26 +52,26 @@ export const ValidationRuleTypeSchema = z.enum([
  * ```
  */
 export const ValidationIssueSchema = z.object({
-  /** Queue or property path where issue was found */
-  path: z.string(),
-  /** Human-readable error message */
-  message: z.string(),
-  /** Issue severity level */
-  severity: ValidationSeveritySchema,
-  /** Validation rule that triggered this issue */
-  rule: ValidationRuleTypeSchema,
-  /** Specific field/property name (optional) */
-  field: z.string().optional(),
-  /** Suggested fix for the issue */
-  suggestion: z.string().optional(),
-  /** Whether this can be automatically fixed */
-  autoFixable: z.boolean().optional()
+    /** Queue or property path where issue was found */
+    path: z.string(),
+    /** Human-readable error message */
+    message: z.string(),
+    /** Issue severity level */
+    severity: ValidationSeveritySchema,
+    /** Validation rule that triggered this issue */
+    rule: ValidationRuleTypeSchema,
+    /** Specific field/property name (optional) */
+    field: z.string().optional(),
+    /** Suggested fix for the issue */
+    suggestion: z.string().optional(),
+    /** Whether this can be automatically fixed */
+    autoFixable: z.boolean().optional(),
 });
 
 /**
  * Context provided to validation rules.
  * Contains all data needed to validate the configuration.
- * 
+ *
  * @example
  * ```typescript
  * const context: ValidationContext = {
@@ -86,20 +86,20 @@ export const ValidationIssueSchema = z.object({
  * ```
  */
 export const ValidationContextSchema = z.object({
-  /** Full configuration as key-value pairs */
-  configuration: z.record(z.string(), z.unknown()),
-  /** Queue hierarchy (array of QueueNode objects) */
-  queues: z.array(z.any()), // Will use QueueNode type in practice
-  /** Available node labels */
-  nodeLabels: z.array(z.string()).optional(),
-  /** Whether running in legacy compatibility mode */
-  legacyMode: z.boolean().optional()
+    /** Full configuration as key-value pairs */
+    configuration: z.record(z.string(), z.unknown()),
+    /** Queue hierarchy (array of QueueNode objects) */
+    queues: z.array(z.any()), // Will use QueueNode type in practice
+    /** Available node labels */
+    nodeLabels: z.array(z.string()).optional(),
+    /** Whether running in legacy compatibility mode */
+    legacyMode: z.boolean().optional(),
 });
 
 /**
  * Complete validation result.
  * Aggregates all validation issues by severity.
- * 
+ *
  * @example
  * ```typescript
  * const result: ValidationResult = {
@@ -117,20 +117,20 @@ export const ValidationContextSchema = z.object({
  * ```
  */
 export const ValidationResultSchema = z.object({
-  /** Blocking errors */
-  errors: z.array(ValidationIssueSchema),
-  /** Non-blocking warnings */
-  warnings: z.array(ValidationIssueSchema),
-  /** Informational messages */
-  info: z.array(ValidationIssueSchema),
-  /** Whether configuration is valid (no errors) */
-  isValid: z.boolean()
+    /** Blocking errors */
+    errors: z.array(ValidationIssueSchema),
+    /** Non-blocking warnings */
+    warnings: z.array(ValidationIssueSchema),
+    /** Informational messages */
+    info: z.array(ValidationIssueSchema),
+    /** Whether configuration is valid (no errors) */
+    isValid: z.boolean(),
 });
 
 /**
  * Validation rule definition.
  * Defines a validation rule that can be applied to configurations.
- * 
+ *
  * @example
  * ```typescript
  * const capacitySumRule: ValidationRuleDefinition = {
@@ -146,18 +146,18 @@ export const ValidationResultSchema = z.object({
  * ```
  */
 export const ValidationRuleDefinitionSchema = z.object({
-  /** Rule type identifier */
-  type: ValidationRuleTypeSchema,
-  /** Human-readable rule name */
-  name: z.string(),
-  /** Rule description */
-  description: z.string(),
-  /** Default severity for issues from this rule */
-  severity: ValidationSeveritySchema,
-  /** Whether rule is active */
-  enabled: z.boolean(),
-  /** Rule-specific parameters */
-  params: z.record(z.string(), z.unknown()).optional()
+    /** Rule type identifier */
+    type: ValidationRuleTypeSchema,
+    /** Human-readable rule name */
+    name: z.string(),
+    /** Rule description */
+    description: z.string(),
+    /** Default severity for issues from this rule */
+    severity: ValidationSeveritySchema,
+    /** Whether rule is active */
+    enabled: z.boolean(),
+    /** Rule-specific parameters */
+    params: z.record(z.string(), z.unknown()).optional(),
 });
 
 // Type exports

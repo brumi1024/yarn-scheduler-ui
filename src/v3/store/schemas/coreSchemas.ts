@@ -12,8 +12,8 @@ import { z } from 'zod';
  * ```
  */
 export const ResourcesSchema = z.object({
-  memory: z.number().min(0),
-  vCores: z.number().min(0)
+    memory: z.number().min(0),
+    vCores: z.number().min(0),
 });
 
 /**
@@ -43,24 +43,24 @@ export const CapacityModeSchema = z.enum(['percentage', 'weight', 'absolute']);
  * ```
  */
 export const CapacityValueSchema = z.object({
-  mode: CapacityModeSchema,
-  value: z.number().min(0)
+    mode: CapacityModeSchema,
+    value: z.number().min(0),
 });
 
 /**
  * Queue configuration properties schema.
- * 
+ *
  * This schema represents the configuration properties for a YARN queue.
  * All fields are optional because:
  * 1. Queues inherit properties from parents if not specified
  * 2. Different queue types may use different properties
  * 3. YARN is backward compatible with minimal configs
- * 
+ *
  * The `.catchall(z.string().optional())` allows for:
  * - Custom properties added by administrators
  * - Version-specific properties
  * - Dynamic properties like node-label-specific settings
- * 
+ *
  * Common properties:
  * - capacity: Queue's capacity as a percentage (e.g., "25.5")
  * - maximum-capacity: Maximum capacity the queue can use (e.g., "100")
@@ -68,7 +68,7 @@ export const CapacityValueSchema = z.object({
  * - minimum-user-limit-percent: Minimum resources per user (e.g., "10")
  * - user-limit-factor: Multiplier for user resource limits (e.g., "2.0")
  * - accessible-node-labels: Comma-separated node labels (e.g., "gpu,ssd")
- * 
+ *
  * @example
  * ```typescript
  * const queueConfig: QueueConfig = {
@@ -81,23 +81,25 @@ export const CapacityValueSchema = z.object({
  * };
  * ```
  */
-export const QueueConfigSchema = z.object({
-  capacity: z.string().optional(),
-  'maximum-capacity': z.string().optional(),
-  state: QueueStateSchema.optional(),
-  'minimum-user-limit-percent': z.string().optional(),
-  'user-limit-factor': z.string().optional(),
-  'accessible-node-labels': z.string().optional(),
-  'default-node-label-expression': z.string().optional(),
-  'acl-submit-applications': z.string().optional(),
-  'acl-administer-queue': z.string().optional()
-}).catchall(z.string().optional());
+export const QueueConfigSchema = z
+    .object({
+        capacity: z.string().optional(),
+        'maximum-capacity': z.string().optional(),
+        state: QueueStateSchema.optional(),
+        'minimum-user-limit-percent': z.string().optional(),
+        'user-limit-factor': z.string().optional(),
+        'accessible-node-labels': z.string().optional(),
+        'default-node-label-expression': z.string().optional(),
+        'acl-submit-applications': z.string().optional(),
+        'acl-administer-queue': z.string().optional(),
+    })
+    .catchall(z.string().optional());
 
 /**
  * Runtime metrics for queue monitoring.
  * Represents the current state and usage of a queue.
  * These values are typically fetched from the YARN ResourceManager API.
- * 
+ *
  * @example
  * ```typescript
  * const metrics: QueueMetrics = {
@@ -116,14 +118,14 @@ export const QueueConfigSchema = z.object({
  * ```
  */
 export const QueueMetricsSchema = z.object({
-  usedCapacity: z.number().min(0),
-  absoluteCapacity: z.number().min(0).max(100),
-  absoluteUsedCapacity: z.number().min(0).max(100),
-  absoluteMaxCapacity: z.number().min(0).max(100),
-  numApplications: z.number().min(0).int(),
-  numPendingApplications: z.number().min(0).int().optional(),
-  numActiveApplications: z.number().min(0).int().optional(),
-  resourcesUsed: ResourcesSchema
+    usedCapacity: z.number().min(0),
+    absoluteCapacity: z.number().min(0).max(100),
+    absoluteUsedCapacity: z.number().min(0).max(100),
+    absoluteMaxCapacity: z.number().min(0).max(100),
+    numApplications: z.number().min(0).int(),
+    numPendingApplications: z.number().min(0).int().optional(),
+    numActiveApplications: z.number().min(0).int().optional(),
+    resourcesUsed: ResourcesSchema,
 });
 
 // Type exports

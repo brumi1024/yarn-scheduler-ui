@@ -12,14 +12,14 @@ import { z } from 'zod';
  * - resource: Complex resource specifications
  */
 export const PropertyTypeSchema = z.enum([
-  'string',
-  'number',
-  'percentage',
-  'boolean',
-  'select',
-  'memory',
-  'vcores',
-  'resource'
+    'string',
+    'number',
+    'percentage',
+    'boolean',
+    'select',
+    'memory',
+    'vcores',
+    'resource',
 ]);
 
 /**
@@ -32,19 +32,12 @@ export const PropertyTypeSchema = z.enum([
  * - textarea: Multi-line text input
  * - resource-editor: Complex resource allocation UI
  */
-export const UIComponentSchema = z.enum([
-  'input',
-  'slider',
-  'select',
-  'switch',
-  'textarea',
-  'resource-editor'
-]);
+export const UIComponentSchema = z.enum(['input', 'slider', 'select', 'switch', 'textarea', 'resource-editor']);
 
 /**
  * Validation rules for property values.
  * Defines constraints that values must satisfy.
- * 
+ *
  * @example
  * ```typescript
  * const capacityValidation: PropertyValidation = {
@@ -56,28 +49,28 @@ export const UIComponentSchema = z.enum([
  * ```
  */
 export const PropertyValidationSchema = z.object({
-  /** Whether the property is required */
-  required: z.boolean().optional(),
-  /** Minimum numeric value */
-  min: z.number().optional(),
-  /** Maximum numeric value */
-  max: z.number().optional(),
-  /** Minimum string length */
-  minLength: z.number().optional(),
-  /** Maximum string length */
-  maxLength: z.number().optional(),
-  /** Regex pattern for string validation */
-  pattern: z.string().optional(),
-  /** Valid options for select properties */
-  options: z.array(z.string()).optional(),
-  /** Name of custom validation function */
-  custom: z.string().optional()
+    /** Whether the property is required */
+    required: z.boolean().optional(),
+    /** Minimum numeric value */
+    min: z.number().optional(),
+    /** Maximum numeric value */
+    max: z.number().optional(),
+    /** Minimum string length */
+    minLength: z.number().optional(),
+    /** Maximum string length */
+    maxLength: z.number().optional(),
+    /** Regex pattern for string validation */
+    pattern: z.string().optional(),
+    /** Valid options for select properties */
+    options: z.array(z.string()).optional(),
+    /** Name of custom validation function */
+    custom: z.string().optional(),
 });
 
 /**
  * UI rendering configuration for properties.
  * Controls how properties are displayed in the interface.
- * 
+ *
  * @example
  * ```typescript
  * const sliderUI: PropertyUIConfig = {
@@ -89,20 +82,20 @@ export const PropertyValidationSchema = z.object({
  * ```
  */
 export const PropertyUIConfigSchema = z.object({
-  /** UI component to render */
-  component: UIComponentSchema,
-  /** Text suffix (e.g., "%", "MB") */
-  suffix: z.string().optional(),
-  /** Text prefix (e.g., "$") */
-  prefix: z.string().optional(),
-  /** Placeholder text for inputs */
-  placeholder: z.string().optional(),
-  /** Step size for numeric inputs */
-  step: z.number().optional(),
-  /** Enable multi-line for textareas */
-  multiline: z.boolean().optional(),
-  /** Number of rows for textareas */
-  rows: z.number().optional()
+    /** UI component to render */
+    component: UIComponentSchema,
+    /** Text suffix (e.g., "%", "MB") */
+    suffix: z.string().optional(),
+    /** Text prefix (e.g., "$") */
+    prefix: z.string().optional(),
+    /** Placeholder text for inputs */
+    placeholder: z.string().optional(),
+    /** Step size for numeric inputs */
+    step: z.number().optional(),
+    /** Enable multi-line for textareas */
+    multiline: z.boolean().optional(),
+    /** Number of rows for textareas */
+    rows: z.number().optional(),
 });
 
 /**
@@ -117,19 +110,19 @@ export const PropertyUIConfigSchema = z.object({
  * - auto-creation: Auto queue creation policies
  */
 export const PropertyGroupSchema = z.enum([
-  'capacity',
-  'scheduling',
-  'security',
-  'resources',
-  'advanced',
-  'node-labels',
-  'auto-creation'
+    'capacity',
+    'scheduling',
+    'security',
+    'resources',
+    'advanced',
+    'node-labels',
+    'auto-creation',
 ]);
 
 /**
  * Complete property definition metadata.
  * Defines everything needed to render and validate a configuration property.
- * 
+ *
  * @example
  * ```typescript
  * const capacityProperty: PropertyDefinition = {
@@ -153,7 +146,7 @@ export const PropertyGroupSchema = z.enum([
  *   isDynamic: false,
  *   visible: true
  * };
- * 
+ *
  * // Dynamic property example (node-label specific)
  * const nodeLabelCapacity: PropertyDefinition = {
  *   key: "accessible-node-labels.{label}.capacity",
@@ -168,34 +161,34 @@ export const PropertyGroupSchema = z.enum([
  * ```
  */
 export const PropertyDefinitionSchema = z.object({
-  /** Unique property key */
-  key: z.string(),
-  /** Full configuration path with placeholders */
-  path: z.string(),
-  /** Display label */
-  label: z.string(),
-  /** Help text/description */
-  description: z.string(),
-  /** Data type */
-  type: PropertyTypeSchema,
-  /** UI grouping */
-  group: PropertyGroupSchema,
-  /** Validation rules */
-  validation: PropertyValidationSchema.optional(),
-  /** UI rendering config */
-  ui: PropertyUIConfigSchema,
-  /** Default value if not set */
-  defaultValue: z.unknown().optional(),
-  /** Whether this has dynamic segments like {label} */
-  isDynamic: z.boolean().optional(),
-  /** Other property keys this depends on */
-  dependsOn: z.array(z.string()).optional(),
-  /** Whether to show in UI */
-  visible: z.boolean().optional(),
-  /** Whether property is deprecated */
-  deprecated: z.boolean().optional(),
-  /** Deprecation warning message */
-  deprecationMessage: z.string().optional()
+    /** Unique property key */
+    key: z.string(),
+    /** Full configuration path with placeholders */
+    path: z.string(),
+    /** Display label */
+    label: z.string(),
+    /** Help text/description */
+    description: z.string(),
+    /** Data type */
+    type: PropertyTypeSchema,
+    /** UI grouping */
+    group: PropertyGroupSchema,
+    /** Validation rules */
+    validation: PropertyValidationSchema.optional(),
+    /** UI rendering config */
+    ui: PropertyUIConfigSchema,
+    /** Default value if not set */
+    defaultValue: z.unknown().optional(),
+    /** Whether this has dynamic segments like {label} */
+    isDynamic: z.boolean().optional(),
+    /** Other property keys this depends on */
+    dependsOn: z.array(z.string()).optional(),
+    /** Whether to show in UI */
+    visible: z.boolean().optional(),
+    /** Whether property is deprecated */
+    deprecated: z.boolean().optional(),
+    /** Deprecation warning message */
+    deprecationMessage: z.string().optional(),
 });
 
 /**

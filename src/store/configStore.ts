@@ -82,7 +82,6 @@ export const useConfigStore = create<ConfigStore>()(
                     const response = await apiService.getConfiguration();
                     const parsed = parseConfiguration(response);
 
-
                     set({
                         rawConfiguration: response,
                         original: parsed,

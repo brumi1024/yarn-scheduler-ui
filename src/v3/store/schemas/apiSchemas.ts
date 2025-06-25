@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Single configuration property from YARN API.
  * YARN returns configuration as an array of name-value pairs.
- * 
+ *
  * @example
  * ```typescript
  * const configProp: ConfigProperty = {
@@ -13,16 +13,16 @@ import { z } from 'zod';
  * ```
  */
 export const ConfigPropertySchema = z.object({
-  /** Property key/name */
-  name: z.string(),
-  /** Property value (always string in YARN) */
-  value: z.string()
+    /** Property key/name */
+    name: z.string(),
+    /** Property value (always string in YARN) */
+    value: z.string(),
 });
 
 /**
  * Configuration response from YARN REST API.
  * GET /ws/v1/cluster/scheduler-conf returns this format.
- * 
+ *
  * @example
  * ```typescript
  * const response: ConfigurationResponse = {
@@ -35,14 +35,14 @@ export const ConfigPropertySchema = z.object({
  * ```
  */
 export const ConfigurationResponseSchema = z.object({
-  /** Array of configuration properties */
-  property: z.array(ConfigPropertySchema)
+    /** Array of configuration properties */
+    property: z.array(ConfigPropertySchema),
 });
 
 /**
  * Queue update request for modifying existing queues.
  * Part of the configuration update API payload.
- * 
+ *
  * @example
  * ```typescript
  * const updateReq: QueueUpdateRequest = {
@@ -56,22 +56,22 @@ export const ConfigurationResponseSchema = z.object({
  * ```
  */
 export const QueueUpdateRequestSchema = z.object({
-  /** Queue path to update */
-  'queue-name': z.string(),
-  /** Properties to update as key-value pairs */
-  params: z.record(z.string(), z.string())
+    /** Queue path to update */
+    'queue-name': z.string(),
+    /** Properties to update as key-value pairs */
+    params: z.record(z.string(), z.string()),
 });
 
 /**
  * Complete configuration update request.
  * PUT /ws/v1/cluster/scheduler-conf accepts this format.
  * Supports adding, updating, and removing queues, plus global updates.
- * 
+ *
  * @example
  * ```typescript
  * const updateRequest: ConfigurationUpdateRequest = {
  *   "global-updates": {
- *     "yarn.scheduler.capacity.resource-calculator": 
+ *     "yarn.scheduler.capacity.resource-calculator":
  *       "org.apache.hadoop.yarn.util.resource.DominantResourceCalculator"
  *   },
  *   "add-queue": [{
@@ -90,26 +90,30 @@ export const QueueUpdateRequestSchema = z.object({
  * ```
  */
 export const ConfigurationUpdateRequestSchema = z.object({
-  /** Global configuration updates */
-  'global-updates': z.record(z.string(), z.string()).optional(),
-  /** New queues to add */
-  'add-queue': z.array(z.object({
-    /** New queue path */
-    'queue-name': z.string(),
-    /** Initial properties */
-    params: z.record(z.string(), z.string())
-  })).optional(),
-  /** Existing queues to update */
-  'update-queue': z.array(QueueUpdateRequestSchema).optional(),
-  /** Queue paths to remove */
-  'remove-queue': z.array(z.string()).optional()
+    /** Global configuration updates */
+    'global-updates': z.record(z.string(), z.string()).optional(),
+    /** New queues to add */
+    'add-queue': z
+        .array(
+            z.object({
+                /** New queue path */
+                'queue-name': z.string(),
+                /** Initial properties */
+                params: z.record(z.string(), z.string()),
+            })
+        )
+        .optional(),
+    /** Existing queues to update */
+    'update-queue': z.array(QueueUpdateRequestSchema).optional(),
+    /** Queue paths to remove */
+    'remove-queue': z.array(z.string()).optional(),
 });
 
 /**
  * Scheduler information from YARN REST API.
  * GET /ws/v1/cluster/scheduler returns hierarchical queue data.
  * This is a simplified schema - actual response has many more fields.
- * 
+ *
  * @example
  * ```typescript
  * const scheduler: SchedulerResponse = {
@@ -136,35 +140,39 @@ export const ConfigurationUpdateRequestSchema = z.object({
  * ```
  */
 export const SchedulerResponseSchema = z.object({
-  /** Scheduler type (usually "capacityScheduler") */
-  type: z.string(),
-  /** Queue capacity percentage */
-  capacity: z.number(),
-  /** Current usage percentage */
-  usedCapacity: z.number(),
-  /** Maximum capacity percentage */
-  maxCapacity: z.number(),
-  /** Queue name */
-  queueName: z.string(),
-  /** Child queues (recursive structure) */
-  queues: z.object({
-    queue: z.array(z.lazy(() => SchedulerResponseSchema))
-  }).optional(),
-  /** Queue state */
-  state: z.string().optional(),
-  /** Number of running applications */
-  numApplications: z.number().optional(),
-  /** Resources currently used */
-  resourcesUsed: z.object({
-    memory: z.number(),
-    vCores: z.number()
-  }).optional()
+    /** Scheduler type (usually "capacityScheduler") */
+    type: z.string(),
+    /** Queue capacity percentage */
+    capacity: z.number(),
+    /** Current usage percentage */
+    usedCapacity: z.number(),
+    /** Maximum capacity percentage */
+    maxCapacity: z.number(),
+    /** Queue name */
+    queueName: z.string(),
+    /** Child queues (recursive structure) */
+    queues: z
+        .object({
+            queue: z.array(z.lazy(() => SchedulerResponseSchema)),
+        })
+        .optional(),
+    /** Queue state */
+    state: z.string().optional(),
+    /** Number of running applications */
+    numApplications: z.number().optional(),
+    /** Resources currently used */
+    resourcesUsed: z
+        .object({
+            memory: z.number(),
+            vCores: z.number(),
+        })
+        .optional(),
 });
 
 /**
  * Node labels response from YARN REST API.
  * GET /ws/v1/cluster/node-labels returns available labels.
- * 
+ *
  * @example
  * ```typescript
  * const labels: NodeLabelsResponse = {
@@ -181,27 +189,33 @@ export const SchedulerResponseSchema = z.object({
  * ```
  */
 export const NodeLabelsResponseSchema = z.object({
-  /** Simple list of label names */
-  nodeLabels: z.array(z.string()).optional(),
-  /** Detailed label information */
-  nodeLabelsInfo: z.array(z.object({
-    /** Label name */
-    name: z.string(),
-    /** Whether label is exclusive */
-    exclusivity: z.boolean(),
-    /** Partition details */
-    partitionInfo: z.object({
-      defaultPartition: z.boolean(),
-      exclusiveToPartition: z.boolean()
-    }).optional()
-  })).optional()
+    /** Simple list of label names */
+    nodeLabels: z.array(z.string()).optional(),
+    /** Detailed label information */
+    nodeLabelsInfo: z
+        .array(
+            z.object({
+                /** Label name */
+                name: z.string(),
+                /** Whether label is exclusive */
+                exclusivity: z.boolean(),
+                /** Partition details */
+                partitionInfo: z
+                    .object({
+                        defaultPartition: z.boolean(),
+                        exclusiveToPartition: z.boolean(),
+                    })
+                    .optional(),
+            })
+        )
+        .optional(),
 });
 
 /**
  * Nodes response from YARN REST API.
  * GET /ws/v1/cluster/nodes returns cluster node information.
  * This is a simplified schema - actual nodes have many more fields.
- * 
+ *
  * @example
  * ```typescript
  * const nodesResp: NodesResponse = {
@@ -217,21 +231,25 @@ export const NodeLabelsResponseSchema = z.object({
  * ```
  */
 export const NodesResponseSchema = z.object({
-  /** Container for node array */
-  nodes: z.object({
-    /** Array of nodes */
-    node: z.array(z.object({
-      /** Node ID */
-      id: z.string(),
-      /** Node hostname */
-      nodeHostName: z.string(),
-      /** HTTP address for node UI */
-      nodeHTTPAddress: z.string(),
-      /** Node state */
-      state: z.string(),
-      // Note: Many more fields available in actual API
-    }))
-  }).optional()
+    /** Container for node array */
+    nodes: z
+        .object({
+            /** Array of nodes */
+            node: z.array(
+                z.object({
+                    /** Node ID */
+                    id: z.string(),
+                    /** Node hostname */
+                    nodeHostName: z.string(),
+                    /** HTTP address for node UI */
+                    nodeHTTPAddress: z.string(),
+                    /** Node state */
+                    state: z.string(),
+                    // Note: Many more fields available in actual API
+                })
+            ),
+        })
+        .optional(),
 });
 
 // Type exports

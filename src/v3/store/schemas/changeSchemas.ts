@@ -3,7 +3,7 @@ import { z } from 'zod';
 /**
  * Tracks changes to a single configuration property.
  * Used for staging changes before committing to YARN.
- * 
+ *
  * @example
  * ```typescript
  * const capacityChange: PropertyChange = {
@@ -14,18 +14,18 @@ import { z } from 'zod';
  * ```
  */
 export const PropertyChangeSchema = z.object({
-  /** The original value from the server/configuration */
-  originalValue: z.unknown(),
-  /** The new value staged by the user */
-  stagedValue: z.unknown(),
-  /** When the change was made */
-  timestamp: z.date().optional()
+    /** The original value from the server/configuration */
+    originalValue: z.unknown(),
+    /** The new value staged by the user */
+    stagedValue: z.unknown(),
+    /** When the change was made */
+    timestamp: z.date().optional(),
 });
 
 /**
  * Tracks node label assignment changes.
  * Monitors which labels are assigned to which nodes.
- * 
+ *
  * @example
  * ```typescript
  * const labelChange: NodeLabelAssignment = {
@@ -36,12 +36,12 @@ export const PropertyChangeSchema = z.object({
  * ```
  */
 export const NodeLabelAssignmentSchema = z.object({
-  /** The node identifier */
-  nodeId: z.string(),
-  /** Original labels assigned to the node */
-  originalLabels: z.array(z.string()),
-  /** New labels to be assigned */
-  stagedLabels: z.array(z.string())
+    /** The node identifier */
+    nodeId: z.string(),
+    /** Original labels assigned to the node */
+    originalLabels: z.array(z.string()),
+    /** New labels to be assigned */
+    stagedLabels: z.array(z.string()),
 });
 
 /**
@@ -56,7 +56,7 @@ export const ChangeTypeSchema = z.enum(['property', 'queue-add', 'queue-remove',
 /**
  * Complete change set for undo/redo functionality.
  * Represents a single atomic change that can be reverted.
- * 
+ *
  * @example
  * ```typescript
  * // Property change
@@ -70,7 +70,7 @@ export const ChangeTypeSchema = z.enum(['property', 'queue-add', 'queue-remove',
  *     stagedValue: "60.0"
  *   }
  * };
- * 
+ *
  * // Queue addition
  * const queueAdd: ChangeSet = {
  *   id: "change-124",
@@ -86,24 +86,24 @@ export const ChangeTypeSchema = z.enum(['property', 'queue-add', 'queue-remove',
  * ```
  */
 export const ChangeSetSchema = z.object({
-  /** Unique identifier for this change */
-  id: z.string(),
-  /** Type of change */
-  type: ChangeTypeSchema,
-  /** Path affected by this change */
-  path: z.string(),
-  /** When the change was made */
-  timestamp: z.date(),
-  /** The actual change data (varies by type) */
-  change: z.union([
-    PropertyChangeSchema,
-    NodeLabelAssignmentSchema,
-    z.object({
-      action: z.enum(['add', 'remove']),
-      queuePath: z.string(),
-      queueData: z.any().optional()
-    })
-  ])
+    /** Unique identifier for this change */
+    id: z.string(),
+    /** Type of change */
+    type: ChangeTypeSchema,
+    /** Path affected by this change */
+    path: z.string(),
+    /** When the change was made */
+    timestamp: z.date(),
+    /** The actual change data (varies by type) */
+    change: z.union([
+        PropertyChangeSchema,
+        NodeLabelAssignmentSchema,
+        z.object({
+            action: z.enum(['add', 'remove']),
+            queuePath: z.string(),
+            queueData: z.any().optional(),
+        }),
+    ]),
 });
 
 // Type exports

@@ -4,7 +4,7 @@ import { ResourcesSchema } from './coreSchemas';
 /**
  * Node state enumeration.
  * Represents the lifecycle states of a YARN node.
- * 
+ *
  * - NEW: Node just added, not yet active
  * - RUNNING: Node is active and healthy
  * - UNHEALTHY: Node failed health checks
@@ -15,21 +15,21 @@ import { ResourcesSchema } from './coreSchemas';
  * - SHUTDOWN: Node has been shut down
  */
 export const NodeStateSchema = z.enum([
-  'NEW',
-  'RUNNING',
-  'UNHEALTHY',
-  'DECOMMISSIONING',
-  'DECOMMISSIONED',
-  'LOST',
-  'REBOOTED',
-  'SHUTDOWN'
+    'NEW',
+    'RUNNING',
+    'UNHEALTHY',
+    'DECOMMISSIONING',
+    'DECOMMISSIONED',
+    'LOST',
+    'REBOOTED',
+    'SHUTDOWN',
 ]);
 
 /**
  * Complete node information from YARN.
  * Contains all details about a cluster node including resources,
  * state, containers, and utilization metrics.
- * 
+ *
  * @example
  * ```typescript
  * const nodeInfo: NodeInfo = {
@@ -59,56 +59,58 @@ export const NodeStateSchema = z.enum([
  * ```
  */
 export const NodeInfoSchema = z.object({
-  /** Unique node identifier (hostname:port) */
-  id: z.string(),
-  /** Rack location for topology awareness */
-  rack: z.string().optional(),
-  /** Current node state */
-  state: NodeStateSchema,
-  /** Node hostname */
-  nodeHostName: z.string(),
-  /** HTTP address for node UI */
-  nodeHTTPAddress: z.string(),
-  /** Timestamp of last health check */
-  lastHealthUpdate: z.number(),
-  /** Health check report message */
-  healthReport: z.string().optional(),
-  /** Number of containers running */
-  numContainers: z.number().min(0).int(),
-  /** Memory currently in use (MB) */
-  usedMemoryMB: z.number().min(0),
-  /** Memory available (MB) */
-  availMemoryMB: z.number().min(0),
-  /** Virtual cores in use */
-  usedVirtualCores: z.number().min(0),
-  /** Virtual cores available */
-  availableVirtualCores: z.number().min(0),
-  /** Detailed resource utilization metrics */
-  resourceUtilization: z.object({
-    /** Total physical memory on node (MB) */
-    nodePhysicalMemoryMB: z.number().min(0),
-    /** Total virtual memory on node (MB) */
-    nodeVirtualMemoryMB: z.number().min(0),
-    /** Node CPU usage percentage */
-    nodeCPUUsage: z.number().min(0).max(100),
-    /** Physical memory used by containers (MB) */
-    aggregatedContainersPhysicalMemoryMB: z.number().min(0),
-    /** Virtual memory used by containers (MB) */
-    aggregatedContainersVirtualMemoryMB: z.number().min(0),
-    /** CPU usage by containers percentage */
-    containersCPUUsage: z.number().min(0).max(100)
-  }).optional(),
-  /** Labels assigned to this node */
-  nodeLabels: z.array(z.string()).optional(),
-  /** Node manager version */
-  version: z.string().optional()
+    /** Unique node identifier (hostname:port) */
+    id: z.string(),
+    /** Rack location for topology awareness */
+    rack: z.string().optional(),
+    /** Current node state */
+    state: NodeStateSchema,
+    /** Node hostname */
+    nodeHostName: z.string(),
+    /** HTTP address for node UI */
+    nodeHTTPAddress: z.string(),
+    /** Timestamp of last health check */
+    lastHealthUpdate: z.number(),
+    /** Health check report message */
+    healthReport: z.string().optional(),
+    /** Number of containers running */
+    numContainers: z.number().min(0).int(),
+    /** Memory currently in use (MB) */
+    usedMemoryMB: z.number().min(0),
+    /** Memory available (MB) */
+    availMemoryMB: z.number().min(0),
+    /** Virtual cores in use */
+    usedVirtualCores: z.number().min(0),
+    /** Virtual cores available */
+    availableVirtualCores: z.number().min(0),
+    /** Detailed resource utilization metrics */
+    resourceUtilization: z
+        .object({
+            /** Total physical memory on node (MB) */
+            nodePhysicalMemoryMB: z.number().min(0),
+            /** Total virtual memory on node (MB) */
+            nodeVirtualMemoryMB: z.number().min(0),
+            /** Node CPU usage percentage */
+            nodeCPUUsage: z.number().min(0).max(100),
+            /** Physical memory used by containers (MB) */
+            aggregatedContainersPhysicalMemoryMB: z.number().min(0),
+            /** Virtual memory used by containers (MB) */
+            aggregatedContainersVirtualMemoryMB: z.number().min(0),
+            /** CPU usage by containers percentage */
+            containersCPUUsage: z.number().min(0).max(100),
+        })
+        .optional(),
+    /** Labels assigned to this node */
+    nodeLabels: z.array(z.string()).optional(),
+    /** Node manager version */
+    version: z.string().optional(),
 });
 
 /**
  * Node label metadata.
  * Defines a label that can be assigned to nodes for
  * partitioning and resource isolation.
- * 
+ *
  * @example
  * ```typescript
  * const gpuLabel: NodeLabel = {
@@ -122,23 +124,25 @@ export const NodeInfoSchema = z.object({
  * ```
  */
 export const NodeLabelSchema = z.object({
-  /** Label name */
-  name: z.string(),
-  /** Whether label is exclusive (restricts node access) */
-  exclusivity: z.boolean(),
-  /** Partition configuration */
-  partitionInfo: z.object({
-    /** Whether this is the default partition */
-    defaultPartition: z.boolean().optional(),
-    /** Whether nodes are exclusive to this partition */
-    exclusiveToPartition: z.boolean().optional()
-  }).optional()
+    /** Label name */
+    name: z.string(),
+    /** Whether label is exclusive (restricts node access) */
+    exclusivity: z.boolean(),
+    /** Partition configuration */
+    partitionInfo: z
+        .object({
+            /** Whether this is the default partition */
+            defaultPartition: z.boolean().optional(),
+            /** Whether nodes are exclusive to this partition */
+            exclusiveToPartition: z.boolean().optional(),
+        })
+        .optional(),
 });
 
 /**
  * Maps nodes to their assigned labels.
  * Used for tracking which labels are on which nodes.
- * 
+ *
  * @example
  * ```typescript
  * const mapping: NodeToLabelsMapping = {
@@ -148,20 +152,20 @@ export const NodeLabelSchema = z.object({
  * ```
  */
 export const NodeToLabelsMappingSchema = z.object({
-  /** Node identifier */
-  nodeId: z.string(),
-  /** Labels assigned to this node */
-  labels: z.array(z.string())
+    /** Node identifier */
+    nodeId: z.string(),
+    /** Labels assigned to this node */
+    labels: z.array(z.string()),
 });
 
 /**
  * Complete cluster node information.
  * Combines node info with detailed resource breakdowns.
- * 
+ *
  * @example
  * ```typescript
  * const clusterNode: ClusterNode = {
- *   nodeInfo: { /* ... NodeInfo data ... */ },
+ *   nodeInfo: { ...nodeInfoData },
  *   totalResources: {
  *     memory: 131072,  // 128 GB total
  *     vCores: 64
@@ -178,14 +182,14 @@ export const NodeToLabelsMappingSchema = z.object({
  * ```
  */
 export const ClusterNodeSchema = z.object({
-  /** Node information */
-  nodeInfo: NodeInfoSchema,
-  /** Total resources on node */
-  totalResources: ResourcesSchema,
-  /** Resources currently in use */
-  usedResources: ResourcesSchema,
-  /** Resources available for allocation */
-  availableResources: ResourcesSchema
+    /** Node information */
+    nodeInfo: NodeInfoSchema,
+    /** Total resources on node */
+    totalResources: ResourcesSchema,
+    /** Resources currently in use */
+    usedResources: ResourcesSchema,
+    /** Resources available for allocation */
+    availableResources: ResourcesSchema,
 });
 
 // Type exports

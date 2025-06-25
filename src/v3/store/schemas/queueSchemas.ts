@@ -6,26 +6,26 @@ import { QueueConfigSchema, QueueMetricsSchema } from './coreSchemas';
  * Used to break recursion in TypeScript type inference.
  */
 const BaseQueueNodeSchema = z.object({
-  /** Full dot-separated path (e.g., "root.production.analytics") */
-  path: z.string(),
-  /** Queue name without parent path (e.g., "analytics") */
-  name: z.string(),
-  /** Queue configuration properties */
-  config: QueueConfigSchema,
-  /** Runtime metrics (optional, not available for new queues) */
-  metrics: QueueMetricsSchema.optional(),
-  /** Flag indicating this is a newly created queue */
-  isNew: z.boolean().optional(),
-  /** Flag indicating this queue is marked for deletion */
-  isDeleted: z.boolean().optional(),
-  /** Validation errors mapped by property key */
-  validationErrors: z.record(z.string(), z.string()).optional()
+    /** Full dot-separated path (e.g., "root.production.analytics") */
+    path: z.string(),
+    /** Queue name without parent path (e.g., "analytics") */
+    name: z.string(),
+    /** Queue configuration properties */
+    config: QueueConfigSchema,
+    /** Runtime metrics (optional, not available for new queues) */
+    metrics: QueueMetricsSchema.optional(),
+    /** Flag indicating this is a newly created queue */
+    isNew: z.boolean().optional(),
+    /** Flag indicating this queue is marked for deletion */
+    isDeleted: z.boolean().optional(),
+    /** Validation errors mapped by property key */
+    validationErrors: z.record(z.string(), z.string()).optional(),
 });
 
 /**
  * Full queue node schema with recursive children.
  * Represents a node in the queue hierarchy tree.
- * 
+ *
  * @example
  * ```typescript
  * const queueNode: QueueNode = {
@@ -58,7 +58,7 @@ const BaseQueueNodeSchema = z.object({
  * ```
  */
 export const QueueNodeSchema: z.ZodType<QueueNode> = BaseQueueNodeSchema.extend({
-  children: z.lazy(() => z.array(QueueNodeSchema))
+    children: z.lazy(() => z.array(QueueNodeSchema)),
 });
 
 /**
@@ -66,7 +66,7 @@ export const QueueNodeSchema: z.ZodType<QueueNode> = BaseQueueNodeSchema.extend(
  * Manually defined to handle recursive nature properly.
  */
 export type QueueNode = z.infer<typeof BaseQueueNodeSchema> & {
-  children: QueueNode[];
+    children: QueueNode[];
 };
 
 /**
@@ -82,23 +82,25 @@ export const QueueTreeSchema = QueueNodeSchema.nullable();
  * - Can contain letters, numbers, hyphens, underscores
  * - Must end with alphanumeric
  * - Dot-separated for hierarchy
- * 
+ *
  * @example
  * Valid paths:
  * - "root"
  * - "root.production"
  * - "root.prod-team.analytics_v2"
- * 
+ *
  * Invalid paths:
  * - ".root" (starts with dot)
  * - "root." (ends with dot)
  * - "root..prod" (double dots)
  * - "root.prod-" (ends with hyphen)
  */
-export const QueuePathSchema = z.string().regex(
-  /^[a-zA-Z0-9]([a-zA-Z0-9-_]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-_]*[a-zA-Z0-9])?)*$/,
-  "Invalid queue path format"
-);
+export const QueuePathSchema = z
+    .string()
+    .regex(
+        /^[a-zA-Z0-9]([a-zA-Z0-9-_]*[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-_]*[a-zA-Z0-9])?)*$/,
+        'Invalid queue path format'
+    );
 
 /**
  * Types of operations that can be performed on queues.
