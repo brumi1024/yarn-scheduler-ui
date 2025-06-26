@@ -2,8 +2,9 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import {
     createSchedulerStore,
     traverseQueueTree,
-    buildMutationRequest,
 } from './schedulerStore';
+import { buildMutationRequest } from '../utils/mutationBuilder';
+import type { YarnApiClient } from '../api/YarnApiClient';
 import type {
     QueueInfo,
     StagedChange,
@@ -17,28 +18,31 @@ import {
 } from '../__mocks__/schedulerResponse';
 
 // Mock the YARN API client
-const mockFetch = vi.fn();
-global.fetch = mockFetch;
+vi.mock('../api/YarnApiClient');
+
+// Create mock API client
+const createMockApiClient = () => ({
+    getScheduler: vi.fn(),
+    getSchedulerConf: vi.fn(),
+    getNodeLabels: vi.fn(),
+    getSchedulerConfVersion: vi.fn(),
+    updateSchedulerConf: vi.fn(),
+});
+
+// Helper to create store with mock API client
+const createTestStore = () => {
+    const mockApiClient = createMockApiClient();
+    return createSchedulerStore(mockApiClient as unknown as YarnApiClient);
+};
 
 // Helper function to set up store with data
 async function setupStoreWithData(store: ReturnType<typeof createSchedulerStore>) {
-    mockFetch
-        .mockResolvedValueOnce({
-            ok: true,
-            json: vi.fn().mockResolvedValue(mockSchedulerResponse),
-        })
-        .mockResolvedValueOnce({
-            ok: true,
-            json: vi.fn().mockResolvedValue(mockConfigResponse),
-        })
-        .mockResolvedValueOnce({
-            ok: true,
-            json: vi.fn().mockResolvedValue(mockNodeLabelsResponse),
-        })
-        .mockResolvedValueOnce({
-            ok: true,
-            json: vi.fn().mockResolvedValue(mockVersionResponse),
-        });
+    const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
+    
+    mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+    mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+    mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+    mockApiClient.getSchedulerConfVersion.mockResolvedValue(mockVersionResponse);
 
     await store.getState().loadInitialData();
 }
@@ -54,7 +58,8 @@ describe('schedulerStore', () => {
 
     describe('store initialization', () => {
         it('should create store with initial state', () => {
-            const store = createSchedulerStore();
+            const mockApiClient = createMockApiClient();
+            const store = createSchedulerStore(mockApiClient as unknown as YarnApiClient);
             const state = store.getState();
 
             expect(state.schedulerData).toBeNull();
@@ -68,7 +73,7 @@ describe('schedulerStore', () => {
         });
 
         it('should have all required actions', () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
             const state = store.getState();
 
             expect(typeof state.loadInitialData).toBe('function');
@@ -85,7 +90,7 @@ describe('schedulerStore', () => {
         });
 
         it('should have computed value functions', () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
             const state = store.getState();
 
             expect(typeof state.getQueueConfiguredCapacity).toBe('function');
@@ -96,41 +101,20 @@ describe('schedulerStore', () => {
 
     describe('loadInitialData', () => {
         it('should load all data sources in parallel', async () => {
-            mockFetch
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockSchedulerResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockConfigResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockNodeLabelsResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockVersionResponse),
-                });
-
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
+            
+            mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+            mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+            mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+            mockApiClient.getSchedulerConfVersion.mockResolvedValue(mockVersionResponse);
 
             await store.getState().loadInitialData();
 
-            expect(mockFetch).toHaveBeenCalledTimes(4);
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/scheduler', {
-                headers: { Accept: 'application/json' },
-            });
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/scheduler-conf', {
-                headers: { Accept: 'application/json' },
-            });
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/get-node-labels', {
-                headers: { Accept: 'application/json' },
-            });
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/scheduler-conf/version', {
-                headers: { Accept: 'application/json' },
-            });
+            expect(mockApiClient.getScheduler).toHaveBeenCalledTimes(1);
+            expect(mockApiClient.getSchedulerConf).toHaveBeenCalledTimes(1);
+            expect(mockApiClient.getNodeLabels).toHaveBeenCalledTimes(1);
+            expect(mockApiClient.getSchedulerConfVersion).toHaveBeenCalledTimes(1);
 
             expect(store.getState().schedulerData).toEqual(mockSchedulerResponse.scheduler.schedulerInfo);
             expect(store.getState().configData.size).toBe(19);
@@ -140,15 +124,19 @@ describe('schedulerStore', () => {
         });
 
         it('should set loading state during data fetch', async () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
 
-            // Create a promise that we can control
-            let resolvePromise: (value: any) => void;
-            const controlledPromise = new Promise((resolve) => {
-                resolvePromise = resolve;
+            // Create promises that we can control
+            let resolveScheduler: (value: any) => void;
+            const schedulerPromise = new Promise((resolve) => {
+                resolveScheduler = resolve;
             });
 
-            mockFetch.mockReturnValue(controlledPromise);
+            mockApiClient.getScheduler.mockReturnValue(schedulerPromise);
+            mockApiClient.getSchedulerConf.mockReturnValue(Promise.resolve(mockConfigResponse));
+            mockApiClient.getNodeLabels.mockReturnValue(Promise.resolve(mockNodeLabelsResponse));
+            mockApiClient.getSchedulerConfVersion.mockReturnValue(Promise.resolve(mockVersionResponse));
 
             // Start the load without awaiting
             const loadPromise = store.getState().loadInitialData();
@@ -156,11 +144,8 @@ describe('schedulerStore', () => {
             // Check loading state immediately
             expect(store.getState().isLoading).toBe(true);
 
-            // Resolve all the promises
-            resolvePromise!({
-                ok: true,
-                json: vi.fn().mockResolvedValue(mockSchedulerResponse),
-            });
+            // Resolve the scheduler promise
+            resolveScheduler!(mockSchedulerResponse);
             
             // Wait for the promise to settle
             await loadPromise.catch(() => {}); // Catch any errors to prevent unhandled rejection
@@ -169,9 +154,10 @@ describe('schedulerStore', () => {
         });
 
         it('should handle API errors gracefully', async () => {
-            mockFetch.mockRejectedValueOnce(new Error('Network error'));
-
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
+            
+            mockApiClient.getScheduler.mockRejectedValue(new Error('Network error'));
 
             // Call loadInitialData and expect it to throw
             let error: unknown;
@@ -188,14 +174,10 @@ describe('schedulerStore', () => {
         });
 
         it('should handle HTTP error responses', async () => {
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 403,
-                statusText: 'Forbidden',
-                text: vi.fn().mockResolvedValue('Access denied'),
-            });
-
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
+            
+            mockApiClient.getScheduler.mockRejectedValue(new Error('HTTP 403: Forbidden'));
 
             // Call loadInitialData and expect it to throw
             let error: unknown;
@@ -207,35 +189,18 @@ describe('schedulerStore', () => {
             
             expect(error).toBeDefined();
 
-            expect(store.getState().error).toBe('Failed to load initial data: Failed to load scheduler data: HTTP 403: Access denied');
+            expect(store.getState().error).toBe('Failed to load initial data: HTTP 403: Forbidden');
             expect(store.getState().isLoading).toBe(false);
         });
     });
 
     describe('refreshSchedulerData', () => {
         it('should only refresh scheduler data, not config', async () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
 
             // First load initial data
-            mockFetch
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockSchedulerResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockConfigResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockNodeLabelsResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockVersionResponse),
-                });
-
-            await store.getState().loadInitialData();
+            await setupStoreWithData(store);
 
             vi.clearAllMocks();
 
@@ -251,18 +216,12 @@ describe('schedulerStore', () => {
                 },
             };
 
-            mockFetch.mockResolvedValueOnce({
-                ok: true,
-                json: vi.fn().mockResolvedValue(updatedSchedulerResponse),
-            });
+            mockApiClient.getScheduler.mockResolvedValue(updatedSchedulerResponse);
 
             await store.getState().refreshSchedulerData();
 
-            expect(mockFetch).toHaveBeenCalledTimes(1);
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/scheduler', {
-                headers: { Accept: 'application/json' },
-            });
-
+            expect(mockApiClient.getScheduler).toHaveBeenCalledTimes(1);
+            
             expect(store.getState().schedulerData?.usedCapacity).toBe(60);
             // Config data should remain unchanged
             expect(store.getState().configData.size).toBe(19);
@@ -272,7 +231,7 @@ describe('schedulerStore', () => {
     describe('staging changes', () => {
         describe('stageQueueChange', () => {
             it('should stage a queue property change', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
 
@@ -288,7 +247,7 @@ describe('schedulerStore', () => {
             });
 
             it('should update existing staged change for same property', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 store.getState().stageQueueChange('root.default', 'capacity', '70');
@@ -300,7 +259,7 @@ describe('schedulerStore', () => {
 
         describe('stageGlobalChange', () => {
             it('should stage a global property change', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageGlobalChange('maximum-applications', '15000');
 
@@ -317,7 +276,7 @@ describe('schedulerStore', () => {
 
         describe('stageQueueAddition', () => {
             it('should stage queue addition with properties', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 const queueConfig = {
                     capacity: '20',
@@ -337,7 +296,7 @@ describe('schedulerStore', () => {
 
         describe('stageQueueRemoval', () => {
             it('should stage queue removal', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueRemoval('root.production.batch');
 
@@ -354,7 +313,7 @@ describe('schedulerStore', () => {
 
         describe('stageLabelQueueChange', () => {
             it('should stage node label property change', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageLabelQueueChange('root.default', 'gpu', 'capacity', '30');
 
@@ -373,7 +332,7 @@ describe('schedulerStore', () => {
     describe('change management', () => {
         describe('revertChange', () => {
             it('should remove staged change by id', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
 
@@ -385,7 +344,7 @@ describe('schedulerStore', () => {
             });
 
             it('should not affect other staged changes', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 store.getState().stageQueueChange('root.production', 'capacity', '40');
@@ -401,7 +360,7 @@ describe('schedulerStore', () => {
 
         describe('clearAllChanges', () => {
             it('should clear all staged changes', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 store.getState().stageGlobalChange('maximum-applications', '15000');
@@ -417,61 +376,44 @@ describe('schedulerStore', () => {
 
     describe('applyChanges', () => {
         it('should send mutation request and reload data on success', async () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
 
             // Stage some changes
             store.getState().stageQueueChange('root.default', 'capacity', '60');
             store.getState().stageGlobalChange('maximum-applications', '15000');
 
             // Mock successful mutation response
-            mockFetch
-                .mockResolvedValueOnce({
-                    ok: true,
-                    text: vi.fn().mockResolvedValue(''),
-                })
-                // Mock reload calls
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockSchedulerResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockConfigResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue(mockNodeLabelsResponse),
-                })
-                .mockResolvedValueOnce({
-                    ok: true,
-                    json: vi.fn().mockResolvedValue({ versionID: 1234567891 }),
-                });
+            mockApiClient.updateSchedulerConf.mockResolvedValue(undefined);
+            
+            // Mock reload calls
+            mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+            mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+            mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+            mockApiClient.getSchedulerConfVersion.mockResolvedValue({ versionID: 1234567891 });
 
             await store.getState().applyChanges();
 
             // Check mutation request was sent
-            expect(mockFetch).toHaveBeenCalledWith('/ws/v1/cluster/scheduler-conf', {
-                method: 'PUT',
-                headers: { 'Content-Type': 'application/json' },
-                body: expect.stringContaining('update-queue'),
-            });
+            expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(1);
+            expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledWith(expect.objectContaining({
+                'update-queue': expect.any(Array),
+                'global-updates': expect.any(Object),
+            }));
 
             // Check staged changes were cleared
             expect(store.getState().stagedChanges).toHaveLength(0);
             // Version should be incremented from initial load
-            expect(store.getState().configVersion).toBe(1234567891); // Initial was 1234567890
+            expect(store.getState().configVersion).toBe(1234567891);
         });
 
         it('should handle mutation failures without clearing changes', async () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
+            const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
 
             store.getState().stageQueueChange('root.default', 'capacity', '60');
 
-            mockFetch.mockResolvedValueOnce({
-                ok: false,
-                status: 400,
-                text: vi.fn().mockResolvedValue('Invalid configuration'),
-            });
+            mockApiClient.updateSchedulerConf.mockRejectedValue(new Error('HTTP 400: Invalid configuration'));
 
             // Call applyChanges and expect it to throw
             let error: unknown;
@@ -485,14 +427,14 @@ describe('schedulerStore', () => {
 
             // Changes should not be cleared on failure
             expect(store.getState().stagedChanges).toHaveLength(1);
-            expect(store.getState().error).toBe('Failed to apply changes: HTTP 400: Invalid configuration');
+            expect(store.getState().error).toBe('HTTP 400: Invalid configuration');
         });
     });
 
     describe('computed values', () => {
         describe('getQueueConfiguredCapacity', () => {
             it('should return configured capacity from config data', async () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
                 await setupStoreWithData(store);
 
                 const capacity = store.getState().getQueueConfiguredCapacity('root.default');
@@ -500,7 +442,7 @@ describe('schedulerStore', () => {
             });
 
             it('should return staged value if change is staged', async () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
                 await setupStoreWithData(store);
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
@@ -510,7 +452,7 @@ describe('schedulerStore', () => {
             });
 
             it('should return default value for unconfigured queue', async () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
                 await setupStoreWithData(store);
 
                 const capacity = store.getState().getQueueConfiguredCapacity('root.nonexistent');
@@ -520,7 +462,7 @@ describe('schedulerStore', () => {
 
         describe('getQueueDisplayValue', () => {
             it('should return configured value with staged flag false', async () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
                 await setupStoreWithData(store);
 
                 const displayValue = store.getState().getQueueDisplayValue('root.default', 'capacity');
@@ -531,7 +473,7 @@ describe('schedulerStore', () => {
             });
 
             it('should return staged value with staged flag true', async () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
                 await setupStoreWithData(store);
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
@@ -546,7 +488,7 @@ describe('schedulerStore', () => {
 
         describe('getLabelChangesForQueue', () => {
             it('should return label-specific changes for a queue', () => {
-                const store = createSchedulerStore();
+                const store = createTestStore();
 
                 store.getState().stageLabelQueueChange('root.default', 'gpu', 'capacity', '30');
                 store.getState().stageLabelQueueChange('root.default', 'gpu', 'maximum-capacity', '80');
@@ -561,11 +503,141 @@ describe('schedulerStore', () => {
                 expect(ssdChanges[0].property).toContain('ssd');
             });
         });
+        
+        describe('getQueueByPath', () => {
+            it('should find queue by path in tree', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+                
+                const rootQueue = store.getState().getQueueByPath('root');
+                expect(rootQueue).toBeDefined();
+                expect(rootQueue?.queueName).toBe('root');
+                
+                const defaultQueue = store.getState().getQueueByPath('root.default');
+                expect(defaultQueue).toBeDefined();
+                expect(defaultQueue?.queueName).toBe('default');
+                
+                const nonExistent = store.getState().getQueueByPath('root.nonexistent');
+                expect(nonExistent).toBeNull();
+            });
+            
+            it('should return null when no scheduler data', () => {
+                const store = createTestStore();
+                
+                const queue = store.getState().getQueueByPath('root');
+                expect(queue).toBeNull();
+            });
+        });
+        
+        describe('getChildQueues', () => {
+            it('should return child queues for parent', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+                
+                const rootChildren = store.getState().getChildQueues('root');
+                expect(rootChildren).toHaveLength(3); // default, production, development
+                expect(rootChildren.map(q => q.queueName)).toContain('default');
+                expect(rootChildren.map(q => q.queueName)).toContain('production');
+                expect(rootChildren.map(q => q.queueName)).toContain('development');
+                
+                const productionChildren = store.getState().getChildQueues('root.production');
+                expect(productionChildren).toHaveLength(2); // batch and interactive
+            });
+            
+            it('should return empty array for leaf queues', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+                
+                const leafChildren = store.getState().getChildQueues('root.default');
+                expect(leafChildren).toHaveLength(0);
+            });
+            
+            it('should return empty array for non-existent queue', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+                
+                const children = store.getState().getChildQueues('root.nonexistent');
+                expect(children).toHaveLength(0);
+            });
+        });
+        
+        describe('hasUnsavedChanges', () => {
+            it('should return false when no staged changes', () => {
+                const store = createTestStore();
+                
+                expect(store.getState().hasUnsavedChanges()).toBe(false);
+            });
+            
+            it('should return true when staged changes exist', () => {
+                const store = createTestStore();
+                
+                store.getState().stageQueueChange('root.default', 'capacity', '60');
+                
+                expect(store.getState().hasUnsavedChanges()).toBe(true);
+            });
+            
+            it('should return false after clearing changes', () => {
+                const store = createTestStore();
+                
+                store.getState().stageQueueChange('root.default', 'capacity', '60');
+                store.getState().clearAllChanges();
+                
+                expect(store.getState().hasUnsavedChanges()).toBe(false);
+            });
+        });
+        
+        describe('getChangesForQueue', () => {
+            it('should return all changes for specific queue', () => {
+                const store = createTestStore();
+                
+                store.getState().stageQueueChange('root.default', 'capacity', '60');
+                store.getState().stageQueueChange('root.default', 'maximum-capacity', '90');
+                store.getState().stageQueueChange('root.production', 'capacity', '40');
+                
+                const defaultChanges = store.getState().getChangesForQueue('root.default');
+                expect(defaultChanges).toHaveLength(2);
+                expect(defaultChanges.every(c => c.queuePath === 'root.default')).toBe(true);
+                
+                const productionChanges = store.getState().getChangesForQueue('root.production');
+                expect(productionChanges).toHaveLength(1);
+                expect(productionChanges[0].queuePath).toBe('root.production');
+            });
+            
+            it('should return empty array for queue with no changes', () => {
+                const store = createTestStore();
+                
+                const changes = store.getState().getChangesForQueue('root.batch');
+                expect(changes).toHaveLength(0);
+            });
+        });
+        
+        describe('getStagedChangeById', () => {
+            it('should find staged change by id', () => {
+                const store = createTestStore();
+                
+                store.getState().stageQueueChange('root.default', 'capacity', '60');
+                const changeId = store.getState().stagedChanges[0].id;
+                
+                const change = store.getState().getStagedChangeById(changeId);
+                expect(change).toBeDefined();
+                expect(change?.queuePath).toBe('root.default');
+                expect(change?.property).toBe('capacity');
+            });
+            
+            it('should return undefined for non-existent id', () => {
+                const store = createTestStore();
+                
+                store.getState().stageQueueChange('root.default', 'capacity', '60');
+                
+                const change = store.getState().getStagedChangeById('non-existent-id');
+                expect(change).toBeUndefined();
+            });
+        });
     });
 
     describe('node label selection', () => {
         it('should set selected node label', () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
 
             store.getState().selectNodeLabel('gpu');
 
@@ -573,7 +645,7 @@ describe('schedulerStore', () => {
         });
 
         it('should clear selected node label', () => {
-            const store = createSchedulerStore();
+            const store = createTestStore();
 
             store.getState().selectNodeLabel('gpu');
             store.getState().selectNodeLabel(null);

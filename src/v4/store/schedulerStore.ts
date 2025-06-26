@@ -19,8 +19,21 @@ import {
     buildGlobalPropertyKey,
     buildNodeLabelPropertyKey,
 } from '../utils/propertyUtils';
+import { buildMutationRequest } from '../utils/mutationBuilder';
+import { YarnApiClient } from '../api/YarnApiClient';
+import { 
+    createStoreError, 
+    ERROR_CODES, 
+    extractErrorMessage,
+    isNetworkError,
+    createDetailedErrorMessage 
+} from '../utils/errorUtils';
+import { isValidQueueName, isValidPropertyValue } from '../types/guards';
 
 export interface SchedulerStore {
+    // API Client
+    apiClient: YarnApiClient;
+    
     // Dual data sources
     schedulerData: SchedulerInfo | null;
     configData: Map<string, string>;
@@ -50,6 +63,11 @@ export interface SchedulerStore {
     getQueueConfiguredCapacity: (queuePath: string) => string;
     getQueueDisplayValue: (queuePath: string, property: string) => { value: string; isStaged: boolean };
     getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
+    getQueueByPath: (queuePath: string) => QueueInfo | null;
+    getChildQueues: (parentPath: string) => QueueInfo[];
+    hasUnsavedChanges: () => boolean;
+    getChangesForQueue: (queuePath: string) => StagedChange[];
+    getStagedChangeById: (changeId: string) => StagedChange | undefined;
 }
 
 // Utility function to traverse queue tree and combine with config data
@@ -89,76 +107,13 @@ export function traverseQueueTree(
     }
 }
 
-// Utility function to build mutation request from staged changes
-export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUpdateInfo {
-    const request: SchedConfUpdateInfo = {};
-    
-    // Group changes by type and queue
-    const updatesByQueue = new Map<string, Record<string, string>>();
-    const addsByQueue = new Map<string, Record<string, string>>();
-    const removals: string[] = [];
-    const globalUpdates: Record<string, string> = {};
-    
-    for (const change of stagedChanges) {
-        if (change.queuePath === 'global') {
-            // Global property
-            if (change.property && change.newValue !== undefined) {
-                globalUpdates[change.property] = change.newValue;
-            }
-        } else {
-            switch (change.type) {
-                case 'update': {
-                    if (!change.property || change.newValue === undefined) continue;
-                    
-                    const updates = updatesByQueue.get(change.queuePath) || {};
-                    updates[change.property] = change.newValue;
-                    updatesByQueue.set(change.queuePath, updates);
-                    break;
-                }
-                case 'add': {
-                    if (!change.property || change.newValue === undefined) continue;
-                    
-                    const adds = addsByQueue.get(change.queuePath) || {};
-                    adds[change.property] = change.newValue;
-                    addsByQueue.set(change.queuePath, adds);
-                    break;
-                }
-                case 'remove': {
-                    removals.push(change.queuePath);
-                    break;
-                }
-            }
-        }
-    }
-    
-    // Build request object
-    if (updatesByQueue.size > 0) {
-        request['update-queue'] = Array.from(updatesByQueue.entries()).map(([queuePath, params]) => ({
-            'queue-name': queuePath,
-            params,
-        }));
-    }
-    
-    if (addsByQueue.size > 0) {
-        request['add-queue'] = Array.from(addsByQueue.entries()).map(([queuePath, params]) => ({
-            'queue-name': queuePath,
-            params,
-        }));
-    }
-    
-    if (removals.length > 0) {
-        request['remove-queue'] = removals;
-    }
-    
-    if (Object.keys(globalUpdates).length > 0) {
-        request['global-updates'] = globalUpdates;
-    }
-    
-    return request;
-}
 
 // Store implementation using immer middleware
-const storeImplementation = immer<SchedulerStore>((set, get) => ({
+const createStoreImplementation = (apiClient: YarnApiClient) => 
+    immer<SchedulerStore>((set, get) => ({
+            // API Client
+            apiClient,
+            
             // Initial state
             schedulerData: null,
             configData: new Map(),
@@ -177,44 +132,13 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                 });
                 
                 try {
-                    // Load all data sources in parallel
-                    const [schedulerResponse, configResponse, labelsResponse, versionResponse] = await Promise.all([
-                        fetch('/ws/v1/cluster/scheduler', {
-                            headers: { Accept: 'application/json' },
-                        }),
-                        fetch('/ws/v1/cluster/scheduler-conf', {
-                            headers: { Accept: 'application/json' },
-                        }),
-                        fetch('/ws/v1/cluster/get-node-labels', {
-                            headers: { Accept: 'application/json' },
-                        }),
-                        fetch('/ws/v1/cluster/scheduler-conf/version', {
-                            headers: { Accept: 'application/json' },
-                        }),
+                    // Load all data sources in parallel using API client
+                    const [scheduler, config, labels, version] = await Promise.all([
+                        get().apiClient.getScheduler(),
+                        get().apiClient.getSchedulerConf(),
+                        get().apiClient.getNodeLabels(),
+                        get().apiClient.getSchedulerConfVersion(),
                     ]);
-                    
-                    // Check for HTTP errors
-                    if (!schedulerResponse.ok) {
-                        const errorText = await schedulerResponse.text();
-                        throw new Error(`Failed to load scheduler data: HTTP ${schedulerResponse.status}: ${errorText}`);
-                    }
-                    if (!configResponse.ok) {
-                        const errorText = await configResponse.text();
-                        throw new Error(`Failed to load config data: HTTP ${configResponse.status}: ${errorText}`);
-                    }
-                    if (!labelsResponse.ok) {
-                        const errorText = await labelsResponse.text();
-                        throw new Error(`Failed to load node labels: HTTP ${labelsResponse.status}: ${errorText}`);
-                    }
-                    if (!versionResponse.ok) {
-                        const errorText = await versionResponse.text();
-                        throw new Error(`Failed to load version: HTTP ${versionResponse.status}: ${errorText}`);
-                    }
-                    
-                    const scheduler = await schedulerResponse.json();
-                    const config = await configResponse.json();
-                    const labels = await labelsResponse.json();
-                    const version = await versionResponse.json();
                     
                     set((state) => {
                         // Use scheduler data directly - no parsing needed!
@@ -230,11 +154,18 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                         state.isLoading = false;
                     });
                 } catch (error) {
+                    const errorMessage = createDetailedErrorMessage('load initial data', error);
+                    
                     set((state) => {
-                        state.error = `Failed to load initial data: ${error instanceof Error ? error.message : String(error)}`;
+                        state.error = errorMessage;
                         state.isLoading = false;
                     });
-                    throw error;
+                    
+                    throw createStoreError(
+                        isNetworkError(error) ? ERROR_CODES.NETWORK_ERROR : ERROR_CODES.LOAD_INITIAL_DATA_FAILED,
+                        errorMessage,
+                        error
+                    );
                 }
             },
             
@@ -245,32 +176,45 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                 });
                 
                 try {
-                    // Refresh only the scheduler data (live metrics)
-                    const response = await fetch('/ws/v1/cluster/scheduler', {
-                        headers: { Accept: 'application/json' },
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Failed to refresh scheduler data: HTTP ${response.status}: ${errorText}`);
-                    }
-                    
-                    const scheduler = await response.json();
+                    // Refresh only the scheduler data (live metrics) using API client
+                    const scheduler = await get().apiClient.getScheduler();
                     
                     set((state) => {
                         state.schedulerData = scheduler.scheduler.schedulerInfo;
                         state.isLoading = false;
                     });
                 } catch (error) {
+                    const errorMessage = createDetailedErrorMessage('refresh scheduler data', error);
+                    
                     set((state) => {
-                        state.error = `Failed to refresh scheduler data: ${error instanceof Error ? error.message : String(error)}`;
+                        state.error = errorMessage;
                         state.isLoading = false;
                     });
-                    throw error;
+                    
+                    throw createStoreError(
+                        isNetworkError(error) ? ERROR_CODES.NETWORK_ERROR : ERROR_CODES.REFRESH_SCHEDULER_FAILED,
+                        errorMessage,
+                        error
+                    );
                 }
             },
             
             stageQueueChange: (queuePath, property, value) => {
+                // Validate inputs
+                if (!queuePath || !queuePath.startsWith('root')) {
+                    throw createStoreError(
+                        ERROR_CODES.INVALID_QUEUE_PATH,
+                        `Invalid queue path: ${queuePath}. Queue paths must start with 'root'`
+                    );
+                }
+                
+                if (!property || property.trim() === '') {
+                    throw createStoreError(
+                        ERROR_CODES.INVALID_PROPERTY_NAME,
+                        'Property name cannot be empty'
+                    );
+                }
+                
                 set((state) => {
                     const propertyKey = buildPropertyKey(queuePath, property);
                     
@@ -327,6 +271,36 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
             },
             
             stageQueueAddition: (parentPath, queueName, config) => {
+                // Validate inputs
+                if (!parentPath || !parentPath.startsWith('root')) {
+                    throw createStoreError(
+                        ERROR_CODES.INVALID_QUEUE_PATH,
+                        `Invalid parent path: ${parentPath}. Queue paths must start with 'root'`
+                    );
+                }
+                
+                if (!isValidQueueName(queueName)) {
+                    throw createStoreError(
+                        ERROR_CODES.INVALID_QUEUE_NAME,
+                        `Invalid queue name: ${queueName}. Queue names must be alphanumeric with hyphens or underscores only, and cannot contain dots.`
+                    );
+                }
+                
+                if (!config || Object.keys(config).length === 0) {
+                    throw createStoreError(
+                        ERROR_CODES.VALIDATION_ERROR,
+                        'Queue configuration cannot be empty'
+                    );
+                }
+                
+                // Validate required properties
+                if (!config.capacity) {
+                    throw createStoreError(
+                        ERROR_CODES.VALIDATION_ERROR,
+                        'New queues must have a capacity property'
+                    );
+                }
+                
                 set((state) => {
                     const queuePath = `${parentPath}.${queueName}`;
                     
@@ -393,7 +367,12 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
             
             applyChanges: async () => {
                 const changes = get().stagedChanges;
-                if (changes.length === 0) return;
+                if (changes.length === 0) {
+                    throw createStoreError(
+                        ERROR_CODES.EMPTY_STAGED_CHANGES,
+                        'No staged changes to apply'
+                    );
+                }
                 
                 set((state) => {
                     state.isLoading = true;
@@ -403,16 +382,8 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                 try {
                     const request = buildMutationRequest(changes);
                     
-                    const response = await fetch('/ws/v1/cluster/scheduler-conf', {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(request),
-                    });
-                    
-                    if (!response.ok) {
-                        const errorText = await response.text();
-                        throw new Error(`Failed to apply changes: HTTP ${response.status}: ${errorText}`);
-                    }
+                    // Use API client to update configuration
+                    await get().apiClient.updateSchedulerConf(request);
                     
                     set((state) => {
                         state.stagedChanges = [];
@@ -422,11 +393,22 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                     // Reload both data sources
                     await get().loadInitialData();
                 } catch (error) {
+                    const errorMessage = createDetailedErrorMessage(
+                        'apply changes',
+                        error,
+                        { changeCount: changes.length }
+                    );
+                    
                     set((state) => {
-                        state.error = error instanceof Error ? error.message : String(error);
+                        state.error = extractErrorMessage(error);
                         state.isLoading = false;
                     });
-                    throw error;
+                    
+                    throw createStoreError(
+                        ERROR_CODES.APPLY_CHANGES_FAILED,
+                        errorMessage,
+                        error
+                    );
                 }
             },
             
@@ -495,11 +477,66 @@ const storeImplementation = immer<SchedulerStore>((set, get) => ({
                     (c) => c.queuePath === queuePath && c.property?.includes(`accessible-node-labels.${label}.`)
                 );
             },
+            
+            getQueueByPath: (queuePath) => {
+                const state = get();
+                if (!state.schedulerData) return null;
+                
+                // Helper function to find queue in tree
+                const findQueue = (queue: QueueInfo): QueueInfo | null => {
+                    if (queue.queuePath === queuePath) {
+                        return queue;
+                    }
+                    
+                    if (queue.queues?.queue) {
+                        const children = Array.isArray(queue.queues.queue) 
+                            ? queue.queues.queue 
+                            : [queue.queues.queue];
+                            
+                        for (const child of children) {
+                            const found = findQueue(child);
+                            if (found) return found;
+                        }
+                    }
+                    
+                    return null;
+                };
+                
+                return findQueue(state.schedulerData);
+            },
+            
+            getChildQueues: (parentPath) => {
+                const state = get();
+                const parentQueue = state.getQueueByPath(parentPath);
+                
+                if (!parentQueue || !parentQueue.queues?.queue) {
+                    return [];
+                }
+                
+                return Array.isArray(parentQueue.queues.queue) 
+                    ? parentQueue.queues.queue 
+                    : [parentQueue.queues.queue];
+            },
+            
+            hasUnsavedChanges: () => {
+                return get().stagedChanges.length > 0;
+            },
+            
+            getChangesForQueue: (queuePath) => {
+                return get().stagedChanges.filter(c => c.queuePath === queuePath);
+            },
+            
+            getStagedChangeById: (changeId) => {
+                return get().stagedChanges.find(c => c.id === changeId);
+            },
 }));
 
 // Store creator function - returns a new store instance
-export const createSchedulerStore = () => 
-    create<SchedulerStore>()(storeImplementation);
+export const createSchedulerStore = (apiClient: YarnApiClient) => 
+    create<SchedulerStore>()(createStoreImplementation(apiClient));
+
+// Default API client for singleton instance
+const defaultApiClient = new YarnApiClient('/ws/v1/cluster');
 
 // Export the hook for use in components - this creates a singleton instance
-export const useSchedulerStore = createSchedulerStore();
+export const useSchedulerStore = createSchedulerStore(defaultApiClient);
