@@ -16,6 +16,7 @@ import { useSchedulerStore } from '../../store/schedulerStore';
 import { useQueueTreeData } from './hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
+import { PropertyPanel } from '../property-panel/PropertyPanel';
 
 export interface QueueVisualizationContainerProps {
     className?: string;
@@ -127,6 +128,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
         >
             <ReactFlowProvider>
                 <FlowInner />
+                <PropertyPanel />
             </ReactFlowProvider>
         </Box>
     );

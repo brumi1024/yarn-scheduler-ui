@@ -5,15 +5,7 @@ import type { QueueNodeData } from './hooks/useQueueTreeData';
 import { QueueContextMenu } from './components/QueueContextMenu';
 import { useSchedulerStore } from '../../store/schedulerStore';
 import { parseCapacityValue } from '../../../utils/capacity';
-
-// Helper function to format memory
-const formatMemory = (memoryMB: number): string => {
-    if (memoryMB < 1024) {
-        return `${memoryMB} MB`;
-    }
-    const gb = memoryMB / 1024;
-    return gb % 1 === 0 ? `${gb} GB` : `${gb.toFixed(1)} GB`;
-};
+import { formatMemory } from '../../utils/formatUtils';
 
 export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, selected, id }) => {
     const [contextMenu, setContextMenu] = useState<{
@@ -21,9 +13,11 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
         mouseY: number;
     } | null>(null);
     
-    // Store access for comparison functionality
+    // Store access for comparison and property panel functionality
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
     const toggleComparisonQueue = useSchedulerStore(state => state.toggleComparisonQueue);
+    const selectQueue = useSchedulerStore(state => state.selectQueue);
+    const setPropertyPanelOpen = useSchedulerStore(state => state.setPropertyPanelOpen);
 
     const {
         queuePath,
@@ -499,7 +493,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                 queuePath={queuePath}
                 queueState={state}
                 onEditProperties={() => {
-                    // TODO: Implement property editor opening
+                    selectQueue(queuePath);
+                    setPropertyPanelOpen(true);
                     handleCloseContextMenu();
                 }}
             />

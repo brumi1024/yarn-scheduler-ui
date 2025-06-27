@@ -53,6 +53,9 @@ export type SchedulerStore = {
     isLoading: boolean;
     error: string | null;
     
+    // Property panel state
+    isPropertyPanelOpen: boolean;
+    
     // Actions
     loadInitialData: () => Promise<void>;
     refreshSchedulerData: () => Promise<void>;
@@ -67,6 +70,7 @@ export type SchedulerStore = {
     selectNodeLabel: (label: string | null) => void;
     selectQueue: (queuePath: string | null) => void;
     toggleComparisonQueue: (queuePath: string) => void;
+    setPropertyPanelOpen: (isOpen: boolean) => void;
     
     // Computed values
     getQueueConfiguredCapacity: (queuePath: string) => string;
@@ -135,6 +139,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             configVersion: 0,
             isLoading: false,
             error: null,
+            isPropertyPanelOpen: false,
             
             // Actions
             loadInitialData: async () => {
@@ -475,6 +480,12 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                     } else {
                         state.comparisonQueues.splice(index, 1);
                     }
+                });
+            },
+            
+            setPropertyPanelOpen: (isOpen) => {
+                set((state) => {
+                    state.isPropertyPanelOpen = isOpen;
                 });
             },
             
