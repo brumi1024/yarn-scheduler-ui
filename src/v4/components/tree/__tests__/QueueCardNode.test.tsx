@@ -39,6 +39,8 @@ describe('QueueCardNode', () => {
         numApplications: 5,
         resourcesUsed: { memory: 2048, vCores: 4 },
         isLeaf: false,
+        capacityConfig: '70',
+        maxCapacityConfig: '100',
     };
 
     const mockNodeProps: NodeProps<QueueNodeData> = {

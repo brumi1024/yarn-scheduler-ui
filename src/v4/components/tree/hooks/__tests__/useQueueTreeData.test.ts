@@ -118,6 +118,19 @@ describe('useQueueTreeData', () => {
         error: null,
     };
 
+    // Create a mock for the QueueInfo data that matches the queue tree structure
+    const mockQueueInfoMap = new Map([
+        ['root', { capacity: 100, maxCapacity: 100, usedCapacity: 40, absoluteUsedCapacity: 40, numApplications: 12 }],
+        ['root.default', { capacity: 30, maxCapacity: 100, usedCapacity: 20, absoluteUsedCapacity: 6, numApplications: 2 }],
+        ['root.production', { capacity: 70, maxCapacity: 100, usedCapacity: 45, absoluteUsedCapacity: 31.5, numApplications: 10 }],
+        ['root.production.critical', { capacity: 50, maxCapacity: 80, usedCapacity: 60, absoluteUsedCapacity: 21, numApplications: 5 }],
+    ]);
+
+    // Mock the getState method with getQueueByPath
+    (useSchedulerStore as any).getState = () => ({
+        getQueueByPath: (path: string) => mockQueueInfoMap.get(path),
+    });
+
     it('should return nodes and edges for queue tree', () => {
         // Mock individual selector calls
         (useSchedulerStore as any).mockImplementation((selector: any) => {
@@ -261,11 +274,11 @@ describe('useQueueTreeData', () => {
             expect(typeof node.position.y).toBe('number');
         });
 
-        // Check relative positions (parent should be above children)
+        // Check relative positions (parent should be to the left of children in horizontal layout)
         const rootNode = result.current.nodes.find(n => n.id === 'root');
         const defaultNode = result.current.nodes.find(n => n.id === 'root.default');
         
-        expect(rootNode!.position.y).toBeLessThan(defaultNode!.position.y);
+        expect(rootNode!.position.x).toBeLessThan(defaultNode!.position.x);
     });
 
     it('should calculate capacity flow data for edges', () => {

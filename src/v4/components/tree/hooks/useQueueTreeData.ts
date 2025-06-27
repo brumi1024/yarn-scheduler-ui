@@ -17,6 +17,9 @@ export type QueueNodeData = {
     stagedStatus?: 'new' | 'modified' | 'deleted';
     isLeaf: boolean;
     autoCreateChildQueueEnabled?: boolean;
+    // Raw config strings from scheduler-conf
+    capacityConfig: string;
+    maxCapacityConfig: string;
 };
 
 export type UseQueueTreeDataResult = {
@@ -54,8 +57,17 @@ function getStagedStatus(queuePath: string, stagedChanges: StagedChange[]): 'new
 
 // Transform QueueNode to React Flow node data
 function transformToNodeData(queue: QueueNode, stagedChanges: StagedChange[]): QueueNodeData {
-    const capacity = parseFloat(queue.properties.get('capacity') || '0');
-    const maxCapacity = parseFloat(queue.properties.get('maximum-capacity') || '100');
+    // Get QueueInfo from scheduler data for normalized percentages
+    const queueInfo = useSchedulerStore.getState().getQueueByPath(queue.path);
+    
+    // Use scheduler data for numeric values, fallback to parsed config if not available
+    const capacity = queueInfo?.capacity ?? parseFloat(queue.properties.get('capacity') || '0');
+    const maxCapacity = queueInfo?.maxCapacity ?? parseFloat(queue.properties.get('maximum-capacity') || '100');
+    
+    // Get raw config strings from scheduler-conf
+    const capacityConfig = queue.properties.get('capacity') || '0';
+    const maxCapacityConfig = queue.properties.get('maximum-capacity') || '100';
+    
     const state = (queue.properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED';
     const autoCreateChildQueueEnabled = queue.properties.get('auto-create-child-queue.enabled') === 'true';
 
@@ -65,13 +77,15 @@ function transformToNodeData(queue: QueueNode, stagedChanges: StagedChange[]): Q
         capacity,
         maxCapacity,
         state,
-        usedCapacity: queue.metrics?.usedCapacity || 0,
-        absoluteUsedCapacity: queue.metrics?.absoluteUsedCapacity || 0,
-        numApplications: queue.metrics?.numApplications || 0,
-        resourcesUsed: queue.metrics?.resourcesUsed,
+        usedCapacity: queueInfo?.usedCapacity ?? queue.metrics?.usedCapacity ?? 0,
+        absoluteUsedCapacity: queueInfo?.absoluteUsedCapacity ?? queue.metrics?.absoluteUsedCapacity ?? 0,
+        numApplications: queueInfo?.numApplications ?? queue.metrics?.numApplications ?? 0,
+        resourcesUsed: queueInfo?.resourcesUsed ?? queue.metrics?.resourcesUsed,
         stagedStatus: getStagedStatus(queue.path, stagedChanges),
         isLeaf: queue.children.length === 0,
         autoCreateChildQueueEnabled,
+        capacityConfig,
+        maxCapacityConfig,
     };
 }
 
@@ -125,6 +139,8 @@ function createNodes(
                 numApplications: 0,
                 stagedStatus: 'new',
                 isLeaf: true,
+                capacityConfig: '0',
+                maxCapacityConfig: '100',
             },
             width: 280,
             height: 220,

@@ -38,6 +38,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
         isLeaf,
         absoluteUsedCapacity,
         autoCreateChildQueueEnabled,
+        capacityConfig,
+        maxCapacityConfig,
     } = data;
     
     const isSelectedForComparison = comparisonQueues.includes(queuePath);
@@ -64,12 +66,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
 
     // Determine the capacity mode based on the actual value
     const getCapacityModeInfo = () => {
-        // Get the raw capacity value from node properties (not the parsed numeric value)
-        const rawCapacity = data.queuePath ? 
-            useSchedulerStore.getState().getQueueDisplayValue(data.queuePath, 'capacity').value : 
-            `${capacity}%`;
-        
-        const parsed = parseCapacityValue(rawCapacity);
+        const parsed = parseCapacityValue(capacityConfig);
         
         switch (parsed.mode) {
             case 'weight':
@@ -326,7 +323,18 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
-                                    {capacity}%
+                                    {(() => {
+                                        const parsed = parseCapacityValue(capacityConfig);
+                                        // Display the raw configured value
+                                        if (parsed.mode === 'weight') {
+                                            return capacityConfig; // e.g., "2w"
+                                        } else if (parsed.mode === 'absolute') {
+                                            return capacityConfig; // e.g., "[memory=1024,vcores=2]"
+                                        } else {
+                                            // For percentage, add % if not present
+                                            return capacityConfig.endsWith('%') ? capacityConfig : `${capacityConfig}%`;
+                                        }
+                                    })()}
                                 </Typography>
                                 <Typography
                                     sx={{
@@ -413,7 +421,19 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
-                                    {maxCapacity}% max
+                                    {(() => {
+                                        const parsed = parseCapacityValue(maxCapacityConfig);
+                                        // Display the raw configured value
+                                        if (parsed.mode === 'weight') {
+                                            return `${maxCapacityConfig} max`; // e.g., "5w max"
+                                        } else if (parsed.mode === 'absolute') {
+                                            return `${maxCapacityConfig} max`; // e.g., "[memory=2048,vcores=4] max"
+                                        } else {
+                                            // For percentage
+                                            const value = maxCapacityConfig.endsWith('%') ? maxCapacityConfig : `${maxCapacityConfig}%`;
+                                            return `${value} max`;
+                                        }
+                                    })()}
                                 </Typography>
                             </Box>
                         </Box>
