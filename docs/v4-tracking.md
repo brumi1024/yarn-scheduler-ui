@@ -111,7 +111,6 @@ console.log('Queue Tree:', store.queueTree);
 - [ ] **Export/Import** - Configuration backup and restore
 - [ ] **Undo/Redo** - Change history navigation
 - [ ] **Keyboard shortcuts** - Power user features
-- [ ] **Help system** - Inline documentation
 - [ ] **Performance optimizations** - Virtual scrolling for large trees
 
 ### Phase 5: Visual Polish

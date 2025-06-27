@@ -6,6 +6,7 @@ import QueueEditor from '../features/queue-editor/QueueEditor';
 import GlobalSettings from '../features/GlobalSettings';
 import NodeLabels from '../features/NodeLabels';
 import Diagnostics from '../features/Diagnostics';
+import { V4Demo } from '../v4/demo/V4Demo';
 import { FeatureErrorBoundary } from './ErrorBoundary';
 
 const TAB_COMPONENTS = [
@@ -13,6 +14,7 @@ const TAB_COMPONENTS = [
     { component: GlobalSettings, name: 'Global Settings' },
     { component: NodeLabels, name: 'Node Labels' },
     { component: Diagnostics, name: 'Diagnostics' },
+    { component: V4Demo, name: 'V4 Preview' },
 ];
 
 export default function MainLayout() {

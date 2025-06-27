@@ -26,6 +26,12 @@ export const handlers = [
         });
     }),
 
+    http.get('/ws/v1/cluster/scheduler-conf/version', () => {
+        return HttpResponse.json({
+            versionID: 1234567890,
+        });
+    }),
+
     // Node endpoints
     http.get('/ws/v1/cluster/nodes', async () => {
         const response = await fetch('/mock/ws/v1/cluster/nodes.json');

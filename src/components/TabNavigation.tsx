@@ -10,6 +10,7 @@ const TABS = [
     { label: 'Global Settings', id: 1 },
     { label: 'Node Labels', id: 2 },
     { label: 'Diagnostics', id: 3 },
+    { label: 'V4 Preview', id: 4 },
 ];
 
 export default function TabNavigation({ activeTab, onTabChange }: TabNavigationProps) {

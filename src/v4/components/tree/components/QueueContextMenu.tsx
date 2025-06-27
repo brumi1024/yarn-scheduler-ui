@@ -103,16 +103,14 @@ export function QueueContextMenu({
                     <ListItemText>{isRunning ? 'Stop Queue' : 'Start Queue'}</ListItemText>
                 </MenuItem>
 
+                {canDelete && <Divider />}
                 {canDelete && (
-                    <>
-                        <Divider />
-                        <MenuItem onClick={handleDeleteQueue}>
-                            <ListItemIcon>
-                                <DeleteIcon fontSize="small" color="error" />
-                            </ListItemIcon>
-                            <ListItemText>Delete Queue</ListItemText>
-                        </MenuItem>
-                    </>
+                    <MenuItem onClick={handleDeleteQueue}>
+                        <ListItemIcon>
+                            <DeleteIcon fontSize="small" color="error" />
+                        </ListItemIcon>
+                        <ListItemText>Delete Queue</ListItemText>
+                    </MenuItem>
                 )}
             </Menu>
 
