@@ -820,4 +820,46 @@ describe('utility functions', () => {
             });
         });
     });
+
+    describe('queue selection', () => {
+        it('should select a queue by path', async () => {
+            const store = createTestStore();
+            await setupStoreWithData(store);
+
+            // Initially no queue is selected
+            expect(store.getState().selectedQueuePath).toBeNull();
+
+            // Select a queue
+            store.getState().selectQueue('root.default');
+            expect(store.getState().selectedQueuePath).toBe('root.default');
+
+            // Select a different queue
+            store.getState().selectQueue('root.production');
+            expect(store.getState().selectedQueuePath).toBe('root.production');
+        });
+
+        it('should clear selection when null is passed', async () => {
+            const store = createTestStore();
+            await setupStoreWithData(store);
+
+            // Select a queue first
+            store.getState().selectQueue('root.default');
+            expect(store.getState().selectedQueuePath).toBe('root.default');
+
+            // Clear selection
+            store.getState().selectQueue(null);
+            expect(store.getState().selectedQueuePath).toBeNull();
+        });
+
+        it('should validate queue path exists before selecting', async () => {
+            const store = createTestStore();
+            await setupStoreWithData(store);
+
+            // Try to select a non-existent queue
+            store.getState().selectQueue('root.nonexistent');
+            
+            // Should not select invalid queue
+            expect(store.getState().selectedQueuePath).toBeNull();
+        });
+    });
 });

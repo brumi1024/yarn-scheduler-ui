@@ -1,20 +1,20 @@
 import dagre from 'dagre';
 import type { QueueNode } from '../../../types';
 
-export interface LayoutPosition {
+export type LayoutPosition = {
     x: number;
     y: number;
     width: number;
     height: number;
-}
+};
 
-export interface DagreLayoutOptions {
+export type DagreLayoutOptions = {
     nodeWidth?: number;
     nodeHeight?: number;
     horizontalSpacing?: number;
     verticalSpacing?: number;
     orientation?: 'horizontal' | 'vertical';
-}
+};
 
 export class DagreLayout {
     private options: Required<DagreLayoutOptions>;

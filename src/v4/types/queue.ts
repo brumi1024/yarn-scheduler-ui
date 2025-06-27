@@ -34,6 +34,9 @@ export type QueueInfo = {
     absoluteMaxCapacity: number;
     absoluteUsedCapacity: number;
     numApplications: number;
+    numActiveApplications: number;
+    numPendingApplications: number;
+    resourcesUsed?: ResourceInfo;
     queueName: string;
     queuePath: string;
     state: QueueState;

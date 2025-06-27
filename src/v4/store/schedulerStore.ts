@@ -8,6 +8,7 @@ enableMapSet();
 import type {
     SchedulerInfo,
     QueueInfo,
+    QueueNode,
     ConfigProperty,
     StagedChange,
     SchedConfUpdateInfo,
@@ -28,9 +29,10 @@ import {
     isNetworkError,
     createDetailedErrorMessage 
 } from '../utils/errorUtils';
-import { isValidQueueName, isValidPropertyValue } from '../types/guards';
+import { isValidQueueName } from '../types/guards';
+import { transformQueueInfoToQueueNode } from './transformQueueInfoToQueueNode';
 
-export interface SchedulerStore {
+export type SchedulerStore = {
     // API Client
     apiClient: YarnApiClient;
     
@@ -38,10 +40,14 @@ export interface SchedulerStore {
     schedulerData: SchedulerInfo | null;
     configData: Map<string, string>;
     
+    // Computed data
+    queueTree: QueueNode | null;
+    
     // Other state
     nodeLabels: NodeLabel[];
     stagedChanges: StagedChange[];
     selectedNodeLabel: string | null;
+    selectedQueuePath: string | null;
     configVersion: number;
     isLoading: boolean;
     error: string | null;
@@ -58,6 +64,7 @@ export interface SchedulerStore {
     revertChange: (changeId: string) => void;
     clearAllChanges: () => void;
     selectNodeLabel: (label: string | null) => void;
+    selectQueue: (queuePath: string | null) => void;
     
     // Computed values
     getQueueConfiguredCapacity: (queuePath: string) => string;
@@ -68,7 +75,7 @@ export interface SchedulerStore {
     hasUnsavedChanges: () => boolean;
     getChangesForQueue: (queuePath: string) => StagedChange[];
     getStagedChangeById: (changeId: string) => StagedChange | undefined;
-}
+};
 
 // Utility function to traverse queue tree and combine with config data
 export function traverseQueueTree(
@@ -117,9 +124,11 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             // Initial state
             schedulerData: null,
             configData: new Map(),
+            queueTree: null,
             nodeLabels: [],
             stagedChanges: [],
             selectedNodeLabel: null,
+            selectedQueuePath: null,
             configVersion: 0,
             isLoading: false,
             error: null,
@@ -148,6 +157,11 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                         state.configData = new Map(
                             config.property.map((p: ConfigProperty) => [p.name, p.value])
                         );
+                        
+                        // Transform scheduler data to queue tree
+                        state.queueTree = state.schedulerData 
+                            ? transformQueueInfoToQueueNode(state.schedulerData, state.configData)
+                            : null;
                         
                         state.nodeLabels = labels.nodeLabelsInfo?.nodeLabelInfo || [];
                         state.configVersion = version.versionID;
@@ -181,6 +195,12 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                     
                     set((state) => {
                         state.schedulerData = scheduler.scheduler.schedulerInfo;
+                        
+                        // Update queue tree with new scheduler data
+                        state.queueTree = state.schedulerData 
+                            ? transformQueueInfoToQueueNode(state.schedulerData, state.configData)
+                            : null;
+                        
                         state.isLoading = false;
                     });
                 } catch (error) {
@@ -427,6 +447,20 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             selectNodeLabel: (label) => {
                 set((state) => {
                     state.selectedNodeLabel = label;
+                });
+            },
+            
+            selectQueue: (queuePath) => {
+                set((state) => {
+                    // Validate queue exists if path is provided
+                    if (queuePath !== null) {
+                        const queue = get().getQueueByPath(queuePath);
+                        if (!queue) {
+                            // Don't select non-existent queue
+                            return;
+                        }
+                    }
+                    state.selectedQueuePath = queuePath;
                 });
             },
             

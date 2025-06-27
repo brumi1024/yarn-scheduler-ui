@@ -4,7 +4,7 @@ import { useSchedulerStore } from '../../../store/schedulerStore';
 import type { QueueNode, StagedChange } from '../../../types';
 import { DagreLayout } from '../utils/DagreLayout';
 
-export interface QueueNodeData {
+export type QueueNodeData = {
     queuePath: string;
     queueName: string;
     capacity: number;
@@ -16,14 +16,14 @@ export interface QueueNodeData {
     resourcesUsed?: { memory: number; vCores: number };
     stagedStatus?: 'new' | 'modified' | 'deleted';
     isLeaf: boolean;
-}
+};
 
-export interface UseQueueTreeDataResult {
+export type UseQueueTreeDataResult = {
     nodes: Node<QueueNodeData>[];
     edges: Edge[];
     isLoading: boolean;
     error: string | null;
-}
+};
 
 // Create layout engine instance
 const layoutEngine = new DagreLayout({

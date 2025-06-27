@@ -1,7 +1,8 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Box, Typography, Chip, LinearProgress } from '@mui/material';
 import type { QueueNodeData } from './hooks/useQueueTreeData';
+import { QueueContextMenu } from './components/QueueContextMenu';
 
 // Helper function to format memory
 const formatMemory = (memoryMB: number): string => {
@@ -12,8 +13,14 @@ const formatMemory = (memoryMB: number): string => {
     return gb % 1 === 0 ? `${gb} GB` : `${gb.toFixed(1)} GB`;
 };
 
-export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, selected }) => {
+export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, selected, id }) => {
+    const [contextMenu, setContextMenu] = useState<{
+        mouseX: number;
+        mouseY: number;
+    } | null>(null);
+
     const {
+        queuePath,
         queueName,
         capacity,
         maxCapacity,
@@ -38,11 +45,29 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
         return '1px solid #e0e0e0';
     };
 
+    const handleContextMenu = (event: React.MouseEvent) => {
+        event.preventDefault();
+        setContextMenu(
+            contextMenu === null
+                ? {
+                      mouseX: event.clientX + 2,
+                      mouseY: event.clientY - 6,
+                  }
+                : null
+        );
+    };
+
+    const handleCloseContextMenu = () => {
+        setContextMenu(null);
+    };
+
     return (
-        <Box
-            data-testid="queue-card"
-            className={`queue-card ${selected ? 'selected' : ''} ${isLeaf ? 'leaf-queue' : ''} ${stagedStatus === 'deleted' ? 'queue-deleted' : ''}`}
-            sx={{
+        <>
+            <Box
+                data-testid="queue-card"
+                className={`queue-card ${selected ? 'selected' : ''} ${isLeaf ? 'leaf-queue' : ''} ${stagedStatus === 'deleted' ? 'queue-deleted' : ''}`}
+                onContextMenu={handleContextMenu}
+                sx={{
                 width: 280,
                 bgcolor: 'background.paper',
                 border: getBorderStyle(),
@@ -160,7 +185,21 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                     </Typography>
                 </Box>
             )}
-        </Box>
+            </Box>
+
+            <QueueContextMenu
+                anchorEl={contextMenu ? document.elementFromPoint(contextMenu.mouseX, contextMenu.mouseY) as HTMLElement : null}
+                open={contextMenu !== null}
+                onClose={handleCloseContextMenu}
+                queuePath={queuePath || id}
+                queueState={state}
+                onEditProperties={() => {
+                    // TODO: Open property editor
+                    console.log('Edit properties for', queuePath);
+                    handleCloseContextMenu();
+                }}
+            />
+        </>
     );
 };
 

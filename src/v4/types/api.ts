@@ -8,29 +8,29 @@ import type { SchedConfUpdateInfo } from './config';
 
 // Response types that match the actual YARN API
 
-export interface SchedulerResponse {
+export type SchedulerResponse = {
     scheduler: {
         schedulerInfo: SchedulerInfo;
     };
-}
+};
 
-export interface SchedulerConfResponse {
+export type SchedulerConfResponse = {
     property: ConfigProperty[];
-}
+};
 
-export interface YarnErrorResponse {
+export type YarnErrorResponse = {
     RemoteException?: {
         exception: string;
         javaClassName: string;
         message: string;
     };
-}
+};
 
-export interface VersionResponse {
+export type VersionResponse = {
     versionID: number;
-}
+};
 
-export interface NodeLabelsResponse {
+export type NodeLabelsResponse = {
     nodeLabelsInfo?: {
         nodeLabelInfo?: Array<{
             name: string;
@@ -38,29 +38,29 @@ export interface NodeLabelsResponse {
             partitionName?: string;
         }>;
     };
-}
+};
 
-export interface NodeToLabelsResponse {
+export type NodeToLabelsResponse = {
     nodeToLabels?: {
         nodeToLabels?: Array<{
             nodeId: string;
             labels: string[];
         }>;
     };
-}
+};
 
-export interface HealthCheckResponse {
+export type HealthCheckResponse = {
     status: 'ok' | 'error';
     message?: string;
     timestamp: number;
-}
+};
 
 // API client configuration
-export interface ApiClientConfig {
+export type ApiClientConfig = {
     timeout?: number;
     headers?: Record<string, string>;
     retryAttempts?: number;
     retryDelay?: number;
     requestInterceptor?: (request: Request) => Request | Promise<Request>;
     responseInterceptor?: (response: Response) => Response | Promise<Response>;
-}
+};

@@ -73,21 +73,18 @@ GET  /ws/v1/cluster/get-node-to-labels      # Get node-to-label mappings
 ## Understanding YARN Properties
 
 ### Property Structure
+
 YARN properties follow a hierarchical dot-notation format:
 ```
 yarn.scheduler.capacity.<queue-path>.<property-name>
 ```
 
-### Deconstructing Properties
+**Note**: With the dual-loading approach, the UI doesn't need to parse these properties. Instead:
+- Queue paths come pre-parsed from the `/scheduler` endpoint
+- The UI constructs property keys when needed: `yarn.scheduler.capacity.${queuePath}.${property}`
+- This eliminates the complexity of parsing multi-part properties like `accessible-node-labels.<label>.capacity`
 
-#### Example: `yarn.scheduler.capacity.root.production.capacity`
-- **Prefix**: `yarn.scheduler.capacity` (constant)
-- **Queue Path**: `root.production`
-- **Property Name**: `capacity`
-
-### Queue Path Determination
-
-YARN uses a simple approach for queue paths:
+### Queue Configuration
 
 1. **Parent Queue Declaration**
    ```
@@ -99,28 +96,6 @@ YARN uses a simple approach for queue paths:
     - **Queue names cannot contain dots (.)** - YARN uses dots as path separators
     - No escaping mechanism exists
     - Names should use alphanumeric characters, hyphens, or underscores
-
-3. **Property Parsing**
-   YARN uses `lastIndexOf('.')` to split queue paths from property names.
-
-### Property Parsing Algorithm
-```typescript
-function parseProperty(propertyKey: string): { queuePath: string; propertyName: string } {
-  const prefix = 'yarn.scheduler.capacity.';
-  const withoutPrefix = propertyKey.substring(prefix.length);
-  const lastDot = withoutPrefix.lastIndexOf('.');
-  
-  if (lastDot === -1) {
-    // Global property
-    return { queuePath: '', propertyName: withoutPrefix };
-  }
-  
-  return {
-    queuePath: withoutPrefix.substring(0, lastDot),
-    propertyName: withoutPrefix.substring(lastDot + 1)
-  };
-}
-```
 
 ### Queue Name Validation
 ```typescript
@@ -3768,33 +3743,33 @@ const capacityValidation: ValidationRule = {
 
 ```typescript
 class YarnApiError extends Error {
-  constructor(
-    public statusCode: number,
-    public message: string,
-    public details?: any
-  ) {
-    super(message);
-    this.name = 'YarnApiError';
-  }
+    constructor(
+        public statusCode: number,
+        public message: string,
+        public details?: any
+    ) {
+        super(message);
+        this.name = 'YarnApiError';
+    }
 }
 
 async function handleApiError(error: YarnApiError): Promise<void> {
-  switch (error.statusCode) {
-    case 400:
-      // Validation error - show specific field errors
-      showValidationErrors(error.details);
-      break;
-    case 403:
-      // Permission denied
-      showPermissionError();
-      break;
-    case 409:
-      // Conflict - configuration version mismatch
-      await reloadAndRetry();
-      break;
-    default:
-      showGenericError(error.message);
-  }
+    switch (error.statusCode) {
+        case 400:
+            // Validation error - show specific field errors
+            showValidationErrors(error.details);
+            break;
+        case 403:
+            // Permission denied
+            showPermissionError();
+            break;
+        case 409:
+            // Conflict - configuration version mismatch
+            await reloadAndRetry();
+            break;
+        default:
+            showGenericError(error.message);
+    }
 }
 ```
 

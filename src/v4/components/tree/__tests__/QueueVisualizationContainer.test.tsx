@@ -187,9 +187,12 @@ describe('QueueVisualizationContainer', () => {
 
     it('should handle queue selection on node click', async () => {
         const mockSelectQueue = vi.fn();
-        (useSchedulerStore as any).mockReturnValue({
-            ...mockStoreState,
-            selectQueue: mockSelectQueue,
+        (useSchedulerStore as any).mockImplementation((selector) => {
+            if (selector) {
+                // Return the selectQueue function when selector asks for it
+                return mockSelectQueue;
+            }
+            return mockStoreState;
         });
 
         const { ReactFlow } = await import('@xyflow/react');

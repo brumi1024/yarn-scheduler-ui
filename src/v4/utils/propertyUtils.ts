@@ -43,10 +43,10 @@ export function buildNodeLabelPropertyKey(queuePath: string, label: string, prop
 /**
  * Result of queue name validation
  */
-export interface ValidationResult {
+export type ValidationResult = {
     valid: boolean;
     message?: string;
-}
+};
 
 /**
  * Validates a queue name according to YARN rules

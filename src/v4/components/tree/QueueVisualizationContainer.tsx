@@ -33,7 +33,7 @@ const edgeTypes = {
 
 // Inner component that has access to React Flow instance
 const FlowInner: React.FC = () => {
-    const { selectQueue } = useSchedulerStore();
+    const selectQueue = useSchedulerStore(state => state.selectQueue);
     
     // Use the tree data hook
     const { nodes, edges, isLoading, error } = useQueueTreeData();
