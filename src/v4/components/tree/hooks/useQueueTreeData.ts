@@ -16,6 +16,7 @@ export type QueueNodeData = {
     resourcesUsed?: { memory: number; vCores: number };
     stagedStatus?: 'new' | 'modified' | 'deleted';
     isLeaf: boolean;
+    autoCreateChildQueueEnabled?: boolean;
 };
 
 export type UseQueueTreeDataResult = {
@@ -29,9 +30,9 @@ export type UseQueueTreeDataResult = {
 const layoutEngine = new DagreLayout({
     nodeWidth: 280,
     nodeHeight: 220,
-    horizontalSpacing: 50,
-    verticalSpacing: 100,
-    orientation: 'vertical',
+    horizontalSpacing: 120,
+    verticalSpacing: 80,
+    orientation: 'horizontal',
 });
 
 // Get staged change status for a queue
@@ -56,6 +57,7 @@ function transformToNodeData(queue: QueueNode, stagedChanges: StagedChange[]): Q
     const capacity = parseFloat(queue.properties.get('capacity') || '0');
     const maxCapacity = parseFloat(queue.properties.get('maximum-capacity') || '100');
     const state = (queue.properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED';
+    const autoCreateChildQueueEnabled = queue.properties.get('auto-create-child-queue.enabled') === 'true';
 
     return {
         queuePath: queue.path,
@@ -69,6 +71,7 @@ function transformToNodeData(queue: QueueNode, stagedChanges: StagedChange[]): Q
         resourcesUsed: queue.metrics?.resourcesUsed,
         stagedStatus: getStagedStatus(queue.path, stagedChanges),
         isLeaf: queue.children.length === 0,
+        autoCreateChildQueueEnabled,
     };
 }
 

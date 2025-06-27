@@ -163,12 +163,23 @@ src/v4/
 - **Main Component**: `src/v4/components/tree/QueueVisualizationContainer.tsx`
 - **Tests**: `src/v4/**/__tests__/`
 
+## Immediate Fix Needed
+
+### Capacity Mode Display
+- **Issue**: Currently all capacity values are parsed as floats and displayed as percentages
+- **Impact**: Weight mode (e.g., "2w") shows as "2%", Absolute mode (e.g., "[memory=2048,vcores=2]") shows as "0%"
+- **Fix Required**: 
+  - Update QueueNodeData type to include raw capacity string values
+  - Modify transform function to preserve raw capacity values
+  - Update QueueCardNode display logic to format based on mode (like the original implementation)
+
 ## Next Immediate Steps
 
-1. **Create integration point** - Add route to access v4 UI
-2. **Test with real YARN cluster** - Validate against production data
-3. **Gather user feedback** - Identify priority features
-4. **Plan Phase 3** - Based on user needs
+1. **Fix capacity mode display** - Properly handle weights and absolute values
+2. **Create integration point** - Add route to access v4 UI
+3. **Test with real YARN cluster** - Validate against production data
+4. **Gather user feedback** - Identify priority features
+5. **Plan Phase 3** - Based on user needs
 
 ## Success Metrics
 

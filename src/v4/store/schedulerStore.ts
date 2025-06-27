@@ -48,6 +48,7 @@ export type SchedulerStore = {
     stagedChanges: StagedChange[];
     selectedNodeLabel: string | null;
     selectedQueuePath: string | null;
+    comparisonQueues: string[];
     configVersion: number;
     isLoading: boolean;
     error: string | null;
@@ -65,6 +66,7 @@ export type SchedulerStore = {
     clearAllChanges: () => void;
     selectNodeLabel: (label: string | null) => void;
     selectQueue: (queuePath: string | null) => void;
+    toggleComparisonQueue: (queuePath: string) => void;
     
     // Computed values
     getQueueConfiguredCapacity: (queuePath: string) => string;
@@ -129,6 +131,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             stagedChanges: [],
             selectedNodeLabel: null,
             selectedQueuePath: null,
+            comparisonQueues: [],
             configVersion: 0,
             isLoading: false,
             error: null,
@@ -461,6 +464,17 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                         }
                     }
                     state.selectedQueuePath = queuePath;
+                });
+            },
+            
+            toggleComparisonQueue: (queuePath) => {
+                set((state) => {
+                    const index = state.comparisonQueues.indexOf(queuePath);
+                    if (index === -1) {
+                        state.comparisonQueues.push(queuePath);
+                    } else {
+                        state.comparisonQueues.splice(index, 1);
+                    }
                 });
             },
             
