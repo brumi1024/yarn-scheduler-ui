@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useImperativeHandle } from 'react';
 import {
     Box,
     Typography,
@@ -30,6 +30,7 @@ interface PropertyEditorTabProps {
     queue: QueueInfo;
     onHasChangesChange?: (hasChanges: boolean) => void;
     onIsSubmittingChange?: (isSubmitting: boolean) => void;
+    ref?: React.Ref<PropertyEditorTabHandle>;
 }
 
 // Category display configuration
@@ -66,11 +67,12 @@ const categoryConfig: Record<PropertyCategory, { label: string; description: str
     },
 };
 
-export const PropertyEditorTab = React.forwardRef<PropertyEditorTabHandle, PropertyEditorTabProps>(({ 
+export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({ 
     queue,
     onHasChangesChange,
-    onIsSubmittingChange
-}, ref) => {
+    onIsSubmittingChange,
+    ref
+}) => {
     const [submitError, setSubmitError] = useState<string | null>(null);
     const [submitSuccess, setSubmitSuccess] = useState(false);
 
@@ -118,7 +120,7 @@ export const PropertyEditorTab = React.forwardRef<PropertyEditorTabHandle, Prope
     };
 
     // Expose handlers to parent via ref
-    React.useImperativeHandle(ref, () => ({
+    useImperativeHandle(ref, () => ({
         submit: onSubmit,
         reset: onReset,
     }), [onSubmit, onReset]);
@@ -200,4 +202,4 @@ export const PropertyEditorTab = React.forwardRef<PropertyEditorTabHandle, Prope
             </Box>
     </Box>
     );
-});
+};

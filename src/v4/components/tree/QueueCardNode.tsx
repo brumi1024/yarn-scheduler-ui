@@ -1,54 +1,65 @@
 import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Box, Typography, Card, CardContent, Checkbox } from '@mui/material';
-import type { QueueNodeData } from './hooks/useQueueTreeData';
-import { QueueContextMenu } from './components/QueueContextMenu';
+import { Box, Typography, Card, CardContent, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Tooltip } from '@mui/material';
+import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, PlayArrow as PlayIcon, Stop as StopIcon, AutoFixHigh as AutoIcon, Loop as LegacyIcon } from '@mui/icons-material';
+import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
+import type { QueueCardData } from './hooks/useQueueTreeData';
+import { useQueueActions } from './hooks/useQueueActions';
 import { useSchedulerStore } from '../../store/schedulerStore';
 import { parseCapacityValue } from '../../../utils/capacity';
 import { formatMemory } from '../../utils/formatUtils';
 
-export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, selected, id }) => {
-    const [contextMenu, setContextMenu] = useState<{
-        mouseX: number;
-        mouseY: number;
-    } | null>(null);
+export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected, id }) => {
+    // Popup state for context menu
+    const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
     
     // Store access for comparison and property panel functionality
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
+    const selectedQueuePath = useSchedulerStore(state => state.selectedQueuePath);
     const toggleComparisonQueue = useSchedulerStore(state => state.toggleComparisonQueue);
     const selectQueue = useSchedulerStore(state => state.selectQueue);
     const setPropertyPanelOpen = useSchedulerStore(state => state.setPropertyPanelOpen);
+    
+    // Queue actions for context menu
+    const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
 
     const {
         queuePath,
         queueName,
-        capacity,
-        maxCapacity,
+        capacity,           // LIVE DATA - always normalized percentage
+        maxCapacity,        // LIVE DATA - always normalized percentage  
         state,
-        usedCapacity,
+        usedCapacity,       // LIVE DATA - current usage percentage
         numApplications,
         resourcesUsed,
         stagedStatus,
         isLeaf,
         absoluteUsedCapacity,
-        autoCreateChildQueueEnabled,
-        capacityConfig,
-        maxCapacityConfig,
+        capacityConfig,     // CONFIG STRING - for editing only
+        maxCapacityConfig,  // CONFIG STRING - for editing only
+        stagedState,        // STAGED STATE - for visual indication
+        autoCreationStatus, // AUTO CREATION STATUS - with staging info
     } = data;
     
     const isSelectedForComparison = comparisonQueues.includes(queuePath);
+    const isSelectedQueue = selectedQueuePath === queuePath;
 
-    // Get border color based on staged status (matching original)
+    // Get border color based on staged status and selection
     const getBorderColor = () => {
         if (stagedStatus === 'new') return '#22c55e'; // Green for new
         if (stagedStatus === 'deleted') return '#ef4444'; // Red for deleted
         if (stagedStatus === 'modified') return '#f59e0b'; // Orange for modified
+        if (isSelectedQueue) return '#1976d2'; // Blue for selected
         return '#e0e0e0'; // Default
     };
 
-    const getBorderWidth = () => (stagedStatus ? '2px' : '1px');
+    const getBorderWidth = () => {
+        if (stagedStatus) return '2px';
+        if (isSelectedQueue) return '2px';
+        return '1px';
+    };
 
-    // Get usage color using same logic as original
+    // Get usage color using live data
     const getUsageColor = (used: number): string => {
         if (capacity === 0) return '#94a3b8'; // Gray for no capacity
         if (used >= 90) return '#ef4444';
@@ -58,92 +69,96 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
         return '#84cc16';
     };
 
-    // Determine the capacity mode based on the actual value
+    // Calculate capacity bar width using LIVE DATA
+    const getCapacityBarWidth = (): number => {
+        if (maxCapacity === 0) return 0;
+        return Math.min((capacity / maxCapacity) * 100, 100);
+    };
+
+    // Calculate usage bar width using LIVE DATA
+    const getUsageBarWidth = (): number => {
+        if (capacity === 0) return 0;
+        return Math.min((usedCapacity / capacity) * 100, 100);
+    };
+
+    // Determine capacity mode and color based on config string
     const getCapacityModeInfo = () => {
         const parsed = parseCapacityValue(capacityConfig);
-        
-        switch (parsed.mode) {
-            case 'weight':
-                return { label: 'WEIGHT', color: '#10b981' };
-            case 'absolute':
-                return { label: 'ABSOLUTE', color: '#f59e0b' };
-            case 'percentage':
-            default:
-                return { label: 'PERCENTAGE', color: '#3b82f6' };
+        if (parsed.mode === 'weight') {
+            return { label: 'WEIGHT', color: '#8b5cf6' };
+        } else if (parsed.mode === 'absolute') {
+            return { label: 'ABSOLUTE', color: '#f59e0b' };
+        } else {
+            return { label: 'PERCENT', color: '#3b82f6' };
         }
     };
-    
+
     const capacityModeInfo = getCapacityModeInfo();
+    const canAdd = canAddChildQueue(queuePath);
+    const canDelete = canDeleteQueue(queuePath);
+    const isRunning = state === 'RUNNING';
 
-    const handleContextMenu = (event: React.MouseEvent) => {
-        event.preventDefault();
-        setContextMenu(
-            contextMenu === null
-                ? {
-                      mouseX: event.clientX + 2,
-                      mouseY: event.clientY - 6,
-                  }
-                : null,
-        );
+    const handleClick = (event: React.MouseEvent) => {
+        event.stopPropagation();
+        selectQueue(queuePath);
+        setPropertyPanelOpen(true);
     };
 
-    const handleCloseContextMenu = () => {
-        setContextMenu(null);
-    };
-    
-    const handleComparisonCheck = (event: React.MouseEvent<HTMLButtonElement>) => {
-        event.stopPropagation(); // Prevent card selection
+    const handleComparisonToggle = (event: React.MouseEvent) => {
+        event.stopPropagation();
         toggleComparisonQueue(queuePath);
+    };
+
+    // Context menu handlers
+    const handleAddChildQueue = () => {
+        // TODO: Implement add child queue dialog
+        console.log('Add child queue to:', queuePath);
+        popupState.close();
+    };
+
+    const handleDeleteQueue = () => {
+        // TODO: Implement delete queue dialog  
+        console.log('Delete queue:', queuePath);
+        popupState.close();
+    };
+
+    const handleToggleState = () => {
+        const newState = isRunning ? 'STOPPED' : 'RUNNING';
+        updateQueueProperty(queuePath, 'state', newState);
+        popupState.close();
+    };
+
+    const handleEditProperties = () => {
+        selectQueue(queuePath);
+        setPropertyPanelOpen(true);
+        popupState.close();
     };
 
     return (
         <>
             <Card
-                data-testid="queue-card"
-                onContextMenu={handleContextMenu}
+                {...bindContextMenu(popupState)}
                 sx={{
-                    width: 280,
+                    width: 320,
                     height: 220,
-                    border: `${getBorderWidth()} solid ${getBorderColor()}`,
-                    borderRadius: '12px',
-                    boxShadow: selected ? '0 15px 30px rgba(0, 0, 0, 0.5)' : '0 2px 4px rgba(0, 0, 0, 0.15)',
-                    transform: selected ? 'scale(1.02)' : 'scale(1)',
-                    transition: 'all 0.2s ease-in-out',
-                    backgroundColor: selected ? '#f0f8ff' : '#ffffff',
-                    opacity: stagedStatus === 'deleted' ? 0.6 : 1,
-                    textDecoration: stagedStatus === 'deleted' ? 'line-through' : 'none',
-                    '&:hover': {
-                        boxShadow: '0 12px 24px rgba(0, 0, 0, 0.4)',
-                        transform: 'scale(1.02)',
-                    },
-                    overflow: 'hidden',
-                    fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                     cursor: 'pointer',
+                    border: `${getBorderWidth()} solid ${getBorderColor()}`,
+                    borderRadius: 2,
+                    boxShadow: isSelectedQueue ? 4 : (selected ? 3 : 1),
+                    '&:hover': {
+                        boxShadow: 3,
+                        borderColor: '#1976d2',
+                    },
+                    transition: 'all 0.2s ease-in-out',
+                    bgcolor: isSelectedQueue 
+                        ? 'rgba(25, 118, 210, 0.08)' // Light blue for selected
+                        : isSelectedForComparison 
+                            ? 'action.selected' 
+                            : 'background.paper',
                 }}
+                onClick={handleClick}
             >
-                {/* React Flow Handles */}
-                <Handle 
-                    type="target" 
-                    position={Position.Left}
-                    style={{
-                        background: '#555',
-                        width: 8,
-                        height: 8,
-                        border: '2px solid #fff',
-                    }}
-                />
-                <Handle 
-                    type="source" 
-                    position={Position.Right}
-                    style={{
-                        background: '#555',
-                        width: 8,
-                        height: 8,
-                        border: '2px solid #fff',
-                    }}
-                />
-
-                {/* Header with queue name - exactly like original */}
+                {/* Header */}
                 <Box
                     sx={{
                         padding: '8px 16px',
@@ -170,11 +185,34 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                         {queueName}
                     </Typography>
                     
+                    {/* Auto creation indicator */}
+                    {autoCreationStatus && autoCreationStatus.status !== 'off' && (
+                        <Tooltip title={`Auto Queue Creation: ${autoCreationStatus.status}${autoCreationStatus.isStaged ? ' (staged)' : ''}`}>
+                            <Box
+                                sx={{
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    ml: 1,
+                                    color: autoCreationStatus.isStaged 
+                                        ? '#ff9800' // Orange for staged changes
+                                        : autoCreationStatus.status === 'flexible' ? '#10b981' : '#f59e0b',
+                                    opacity: autoCreationStatus.isStaged ? 0.8 : 1,
+                                }}
+                            >
+                                {autoCreationStatus.isStaged && '→'}
+                                {autoCreationStatus.status === 'flexible' ? 
+                                    <AutoIcon sx={{ fontSize: '14px' }} /> : 
+                                    <LegacyIcon sx={{ fontSize: '14px' }} />
+                                }
+                            </Box>
+                        </Tooltip>
+                    )}
+                    
                     {/* Comparison checkbox */}
                     <Checkbox
                         checked={isSelectedForComparison}
-                        onChange={() => {}} // Handled by onClick
-                        onClick={handleComparisonCheck}
+                        onChange={handleComparisonToggle}
+                        onClick={(e) => e.stopPropagation()}
                         size="small"
                         sx={{
                             padding: '2px',
@@ -186,7 +224,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                 </Box>
 
                 <CardContent sx={{ p: 0, height: 'calc(100% - 40px)' }}>
-                    {/* Badges section - exactly like original */}
+                    {/* Badges section */}
                     <Box sx={{ p: '8px 16px 0 16px' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                             {/* Capacity mode badge */}
@@ -239,17 +277,17 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                     {state}
                                 </Typography>
                             </Box>
-                            
-                            {/* Auto creation badge if enabled */}
-                            {autoCreateChildQueueEnabled && (
+
+                            {/* Staged state badge if applicable */}
+                            {stagedState && (
                                 <Box
                                     sx={{
                                         display: 'inline-flex',
                                         alignItems: 'center',
-                                        px: 1,
+                                        px: 0.5,
                                         py: 0.25,
-                                        backgroundColor: '#fef3c7',
-                                        border: '1px solid rgba(245, 158, 11, 0.2)',
+                                        backgroundColor: '#fff7ed',
+                                        border: '1px solid rgba(251, 146, 60, 0.3)',
                                         borderRadius: '6px',
                                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                                     }}
@@ -257,12 +295,14 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                     <Typography
                                         sx={{
                                             fontWeight: 'bold',
-                                            fontSize: '10px',
-                                            color: '#f59e0b',
+                                            fontSize: '9px',
+                                            color: '#ea580c',
                                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
+                                            textTransform: 'uppercase',
+                                            whiteSpace: 'nowrap',
                                         }}
                                     >
-                                        AUTO
+                                        →{stagedState}
                                     </Typography>
                                 </Box>
                             )}
@@ -306,7 +346,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                             )}
                         </Box>
 
-                        {/* Capacity info */}
+                        {/* Capacity info - Display CONFIG STRING for editing, use LIVE DATA for visualization */}
                         <Box sx={{ mb: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                                 <Typography
@@ -319,7 +359,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                 >
                                     {(() => {
                                         const parsed = parseCapacityValue(capacityConfig);
-                                        // Display the raw configured value
+                                        // Display the raw configured value for editing
                                         if (parsed.mode === 'weight') {
                                             return capacityConfig; // e.g., "2w"
                                         } else if (parsed.mode === 'absolute') {
@@ -341,7 +381,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                 </Typography>
                             </Box>
                             
-                            {/* Capacity bar - exactly like original */}
+                            {/* Capacity bar - Using LIVE DATA for visualization */}
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -406,7 +446,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
-                                    {usedCapacity}% used
+                                    {usedCapacity.toFixed(1)}% used
                                 </Typography>
                                 <Typography
                                     sx={{
@@ -417,7 +457,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                 >
                                     {(() => {
                                         const parsed = parseCapacityValue(maxCapacityConfig);
-                                        // Display the raw configured value
+                                        // Display the raw configured max value
                                         if (parsed.mode === 'weight') {
                                             return `${maxCapacityConfig} max`; // e.g., "5w max"
                                         } else if (parsed.mode === 'absolute') {
@@ -477,27 +517,83 @@ export const QueueCardNode: React.FC<NodeProps<QueueNodeData>> = ({ data, select
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
-                                    {absoluteUsedCapacity}% used of cluster
+                                    {absoluteUsedCapacity.toFixed(1)}% used of cluster
                                 </Typography>
                             </Box>
                         )}
                     </Box>
                 </CardContent>
+
+                {/* React Flow handles */}
+                <Handle
+                    type="target"
+                    position={Position.Left}
+                    style={{
+                        background: '#1976d2',
+                        border: '2px solid #fff',
+                        width: 8,
+                        height: 8,
+                    }}
+                />
+                <Handle
+                    type="source"
+                    position={Position.Right}
+                    style={{
+                        background: '#1976d2',
+                        border: '2px solid #fff',
+                        width: 8,
+                        height: 8,
+                    }}
+                />
             </Card>
 
             {/* Context Menu */}
-            <QueueContextMenu
-                anchorEl={contextMenu ? (document.elementFromPoint(contextMenu.mouseX, contextMenu.mouseY) as HTMLElement) : null}
-                open={contextMenu !== null}
-                onClose={handleCloseContextMenu}
-                queuePath={queuePath}
-                queueState={state}
-                onEditProperties={() => {
-                    selectQueue(queuePath);
-                    setPropertyPanelOpen(true);
-                    handleCloseContextMenu();
+            <Menu
+                {...bindMenu(popupState)}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
                 }}
-            />
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                {canAdd && (
+                    <MenuItem onClick={handleAddChildQueue}>
+                        <ListItemIcon>
+                            <AddIcon fontSize="small" />
+                        </ListItemIcon>
+                        <ListItemText>Add Child Queue</ListItemText>
+                    </MenuItem>
+                )}
+
+                <MenuItem onClick={handleEditProperties}>
+                    <ListItemIcon>
+                        <EditIcon fontSize="small" />
+                    </ListItemIcon>
+                    <ListItemText>Edit Properties</ListItemText>
+                </MenuItem>
+
+                <Divider />
+
+                <MenuItem onClick={handleToggleState}>
+                    <ListItemIcon>
+                        {isRunning ? <StopIcon fontSize="small" /> : <PlayIcon fontSize="small" />}
+                    </ListItemIcon>
+                    <ListItemText>{isRunning ? 'Stop Queue' : 'Start Queue'}</ListItemText>
+                </MenuItem>
+
+                {canDelete && <Divider />}
+                {canDelete && (
+                    <MenuItem onClick={handleDeleteQueue}>
+                        <ListItemIcon>
+                            <DeleteIcon fontSize="small" color="error" />
+                        </ListItemIcon>
+                        <ListItemText>Delete Queue</ListItemText>
+                    </MenuItem>
+                )}
+            </Menu>
         </>
     );
 };

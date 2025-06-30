@@ -59,7 +59,7 @@ export const mockSchedulerResponse = {
                         numPendingApplications: 2,
                         resourcesUsed: { memory: 20480, vCores: 10 },
                         state: 'RUNNING',
-                        autoCreationEligibility: 'off',
+                        autoCreationEligibility: 'flexible',
                         queues: {
                             queue: [
                                 {
@@ -120,7 +120,7 @@ export const mockSchedulerResponse = {
                         numPendingApplications: 1,
                         resourcesUsed: { memory: 11264, vCores: 5 },
                         state: 'RUNNING',
-                        autoCreationEligibility: 'off',
+                        autoCreationEligibility: 'legacy',
                         queues: {
                             queue: [
                                 {

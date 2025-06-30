@@ -1,29 +1,28 @@
 import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useSchedulerStore } from '../../../store/schedulerStore';
-import type { QueueNode, StagedChange } from '../../../types';
+import type { QueueInfo, StagedChange, SchedulerInfo, CapacitySchedulerInfo } from '../../../types';
+import type { QueueStateValue } from '../../../types/constants';
+import { AUTO_CREATION_PROPS } from '../../../types/constants';
 import { DagreLayout } from '../utils/DagreLayout';
 
-export type QueueNodeData = {
-    queuePath: string;
-    queueName: string;
-    capacity: number;
-    maxCapacity: number;
-    state: 'RUNNING' | 'STOPPED';
-    usedCapacity: number;
-    absoluteUsedCapacity: number;
-    numApplications: number;
-    resourcesUsed?: { memory: number; vCores: number };
+// Extended QueueInfo for React Flow nodes - just adds UI-specific metadata
+export type QueueCardData = QueueInfo & {
     stagedStatus?: 'new' | 'modified' | 'deleted';
     isLeaf: boolean;
-    autoCreateChildQueueEnabled?: boolean;
-    // Raw config strings from scheduler-conf
+    // Config strings for editable fields (separate from live data)
     capacityConfig: string;
     maxCapacityConfig: string;
+    // Staged state for visual indication
+    stagedState?: string;
+    // Auto queue creation eligibility
+    autoCreationEligibility?: string;
+    // Auto-creation status with staging info
+    autoCreationStatus?: { status: string; isStaged: boolean };
 };
 
 export type UseQueueTreeDataResult = {
-    nodes: Node<QueueNodeData>[];
+    nodes: Node<QueueCardData>[];
     edges: Edge[];
     isLoading: boolean;
     error: string | null;
@@ -31,12 +30,41 @@ export type UseQueueTreeDataResult = {
 
 // Create layout engine instance
 const layoutEngine = new DagreLayout({
-    nodeWidth: 280,
+    nodeWidth: 320,
     nodeHeight: 220,
     horizontalSpacing: 120,
     verticalSpacing: 80,
     orientation: 'horizontal',
 });
+
+// Convert SchedulerInfo to QueueInfo format for consistent processing
+function convertSchedulerInfoToQueueInfo(schedulerInfo: SchedulerInfo): QueueInfo {
+    // Type guard and cast to CapacitySchedulerInfo if needed for additional properties
+    const capacitySchedulerInfo = schedulerInfo as CapacitySchedulerInfo;
+    
+    return {
+        type: schedulerInfo.type,
+        capacity: schedulerInfo.capacity,
+        usedCapacity: schedulerInfo.usedCapacity,
+        maxCapacity: schedulerInfo.maxCapacity,
+        // Extract these from capacities if available, otherwise use calculated defaults
+        absoluteCapacity: capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteCapacity ?? schedulerInfo.capacity,
+        absoluteMaxCapacity: capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteMaxCapacity ?? schedulerInfo.maxCapacity,
+        absoluteUsedCapacity: capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteUsedCapacity ?? schedulerInfo.usedCapacity,
+        // These properties may not exist on base SchedulerInfo, use defaults
+        numApplications: 0, // Root queue typically doesn't run applications directly
+        numActiveApplications: 0,
+        numPendingApplications: 0,
+        resourcesUsed: capacitySchedulerInfo.usedResources,
+        queueName: schedulerInfo.queueName,
+        queuePath: capacitySchedulerInfo.queuePath || schedulerInfo.queueName, // Fallback to queueName if path missing
+        state: (capacitySchedulerInfo.state as QueueStateValue) || 'RUNNING', // Default to RUNNING if not specified
+        queues: schedulerInfo.queues, // Preserve the children queues structure
+        // Preserve auto-creation eligibility if available
+        autoCreationEligibility: capacitySchedulerInfo.autoCreationEligibility,
+    };
+}
+
 
 // Get staged change status for a queue
 function getStagedStatus(queuePath: string, stagedChanges: StagedChange[]): 'new' | 'modified' | 'deleted' | undefined {
@@ -55,68 +83,126 @@ function getStagedStatus(queuePath: string, stagedChanges: StagedChange[]): 'new
     return undefined;
 }
 
-// Transform QueueNode to React Flow node data
-function transformToNodeData(queue: QueueNode, stagedChanges: StagedChange[]): QueueNodeData {
-    // Get QueueInfo from scheduler data for normalized percentages
-    const queueInfo = useSchedulerStore.getState().getQueueByPath(queue.path);
+// Get auto-creation status considering staged changes
+function getAutoCreationStatus(
+    queuePath: string, 
+    liveAutoCreationEligibility: string | undefined,
+    stagedChanges: StagedChange[]
+): { status: string; isStaged: boolean } {
+    // Check for staged auto-creation changes
+    const legacyChange = stagedChanges.find(
+        c => c.queuePath === queuePath && c.property === AUTO_CREATION_PROPS.LEGACY_ENABLED
+    );
+    const flexibleChange = stagedChanges.find(
+        c => c.queuePath === queuePath && c.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED
+    );
     
-    // Use scheduler data for numeric values, fallback to parsed config if not available
-    const capacity = queueInfo?.capacity ?? parseFloat(queue.properties.get('capacity') || '0');
-    const maxCapacity = queueInfo?.maxCapacity ?? parseFloat(queue.properties.get('maximum-capacity') || '100');
+    // If there are staged changes, determine the new status
+    if (legacyChange || flexibleChange) {
+        const isLegacyEnabled = legacyChange?.newValue === 'true';
+        const isFlexibleEnabled = flexibleChange?.newValue === 'true';
+        
+        // Flexible takes precedence if both are somehow enabled
+        if (isFlexibleEnabled) {
+            return { status: AUTO_CREATION_PROPS.ELIGIBILITY_FLEXIBLE, isStaged: true };
+        } else if (isLegacyEnabled) {
+            return { status: AUTO_CREATION_PROPS.ELIGIBILITY_LEGACY, isStaged: true };
+        } else {
+            return { status: AUTO_CREATION_PROPS.ELIGIBILITY_OFF, isStaged: true };
+        }
+    }
     
-    // Get raw config strings from scheduler-conf
-    const capacityConfig = queue.properties.get('capacity') || '0';
-    const maxCapacityConfig = queue.properties.get('maximum-capacity') || '100';
-    
-    const state = (queue.properties.get('state') || 'RUNNING') as 'RUNNING' | 'STOPPED';
-    const autoCreateChildQueueEnabled = queue.properties.get('auto-create-child-queue.enabled') === 'true';
-
-    return {
-        queuePath: queue.path,
-        queueName: queue.name,
-        capacity,
-        maxCapacity,
-        state,
-        usedCapacity: queueInfo?.usedCapacity ?? queue.metrics?.usedCapacity ?? 0,
-        absoluteUsedCapacity: queueInfo?.absoluteUsedCapacity ?? queue.metrics?.absoluteUsedCapacity ?? 0,
-        numApplications: queueInfo?.numApplications ?? queue.metrics?.numApplications ?? 0,
-        resourcesUsed: queueInfo?.resourcesUsed ?? queue.metrics?.resourcesUsed,
-        stagedStatus: getStagedStatus(queue.path, stagedChanges),
-        isLeaf: queue.children.length === 0,
-        autoCreateChildQueueEnabled,
-        capacityConfig,
-        maxCapacityConfig,
+    // No staged changes, return live data
+    return { 
+        status: liveAutoCreationEligibility || AUTO_CREATION_PROPS.ELIGIBILITY_OFF, 
+        isStaged: false 
     };
 }
 
-// Create React Flow nodes from queue tree
+// Transform QueueInfo to React Flow node data - direct transformation
+function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
+    const getQueueDisplayValue = useSchedulerStore.getState().getQueueDisplayValue;
+    
+    // Get config strings (for editable fields only - completely separate from live data)
+    const capacityDisplay = getQueueDisplayValue(queueInfo.queuePath, 'capacity');
+    const maxCapacityDisplay = getQueueDisplayValue(queueInfo.queuePath, 'maximum-capacity');
+    
+    // Check for staged state changes
+    const stateDisplay = getQueueDisplayValue(queueInfo.queuePath, 'state');
+    
+    // Create QueueCardData with live data + config strings + UI metadata
+    return {
+        // Spread all live QueueInfo data (includes capacity, maxCapacity as numbers)
+        ...queueInfo,
+        
+        // UI-specific metadata
+        stagedStatus: getStagedStatus(queueInfo.queuePath, stagedChanges),
+        isLeaf: !queueInfo.queues?.queue || (
+            Array.isArray(queueInfo.queues.queue) ? queueInfo.queues.queue.length === 0 : false
+        ),
+        
+        // Config strings (for editing only - separate concern from live data)
+        capacityConfig: capacityDisplay.value || '0',
+        maxCapacityConfig: maxCapacityDisplay.value || '100',
+        
+        // Staged state for visual indication (only when different from live state)
+        stagedState: stateDisplay.isStaged ? stateDisplay.value : undefined,
+        
+        // Auto queue creation eligibility (from queue data if available)
+        autoCreationEligibility: queueInfo.autoCreationEligibility,
+        
+        // Auto-creation status with staging info
+        autoCreationStatus: getAutoCreationStatus(queueInfo.queuePath, queueInfo.autoCreationEligibility, stagedChanges),
+    };
+}
+
+// Flatten QueueInfo tree to array for React Flow
+function flattenQueueTree(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData[] {
+    const result: QueueCardData[] = [];
+    
+    // Add current queue
+    result.push(transformToCardData(queueInfo, stagedChanges));
+    
+    // Recursively add children
+    if (queueInfo.queues?.queue) {
+        const children = Array.isArray(queueInfo.queues.queue) 
+            ? queueInfo.queues.queue 
+            : [queueInfo.queues.queue];
+            
+        for (const child of children) {
+            result.push(...flattenQueueTree(child, stagedChanges));
+        }
+    }
+    
+    return result;
+}
+
+// Create React Flow nodes from flattened queue list
 function createNodes(
-    queue: QueueNode,
+    queues: QueueCardData[],
     positions: Map<string, { x: number; y: number; width: number; height: number }>,
     stagedChanges: StagedChange[]
-): Node<QueueNodeData>[] {
-    const nodes: Node<QueueNodeData>[] = [];
-    const position = positions.get(queue.path);
-
-    if (position) {
-        nodes.push({
-            id: queue.path,
-            type: 'queueCard',
-            position: { x: position.x, y: position.y },
-            data: transformToNodeData(queue, stagedChanges),
-            width: position.width,
-            height: position.height,
-        });
+): Node<QueueCardData>[] {
+    const nodes: Node<QueueCardData>[] = [];
+    
+    for (const queue of queues) {
+        const position = positions.get(queue.queuePath);
+        
+        if (position) {
+            nodes.push({
+                id: queue.queuePath,
+                type: 'queueCard',
+                position: { x: position.x, y: position.y },
+                data: queue,
+                width: position.width,
+                height: position.height,
+            });
+        }
     }
-
-    // Recursively add child nodes
-    queue.children.forEach(child => {
-        nodes.push(...createNodes(child, positions, stagedChanges));
-    });
-
-    // Check for new queues in staged changes
+    
+    // Add nodes for staged new queues
     const newQueues = stagedChanges.filter(
-        c => c.type === 'add' && !c.property && c.queuePath.startsWith(queue.path + '.')
+        c => c.type === 'add' && !c.property
     );
     
     newQueues.forEach(change => {
@@ -129,20 +215,28 @@ function createNodes(
             type: 'queueCard',
             position: { x: 0, y: depth * 320 }, // Rough positioning
             data: {
-                queuePath: change.queuePath,
-                queueName,
+                // Create minimal QueueInfo structure for new queue
+                type: 'capacitySchedulerLeafQueueInfo',
                 capacity: 0,
-                maxCapacity: 100,
-                state: 'RUNNING',
                 usedCapacity: 0,
+                maxCapacity: 100,
+                absoluteCapacity: 0,
+                absoluteMaxCapacity: 100,
                 absoluteUsedCapacity: 0,
                 numApplications: 0,
-                stagedStatus: 'new',
+                numActiveApplications: 0,
+                numPendingApplications: 0,
+                queueName,
+                queuePath: change.queuePath,
+                state: 'RUNNING' as const,
+                
+                // UI metadata
+                stagedStatus: 'new' as const,
                 isLeaf: true,
                 capacityConfig: '0',
                 maxCapacityConfig: '100',
             },
-            width: 280,
+            width: 320,
             height: 220,
         });
     });
@@ -150,62 +244,70 @@ function createNodes(
     return nodes;
 }
 
-// Helper to get capacity from a queue
-function getCapacity(queue: QueueNode): number {
-    return parseFloat(queue.properties.get('capacity') || '0');
-}
-
-// Create edges between parent and child nodes
-function createEdges(parentQueue: QueueNode): Edge[] {
+// Create edges between parent and child nodes - use LIVE DATA for visualization
+function createEdges(queueInfo: QueueInfo): Edge[] {
     const edges: Edge[] = [];
 
-    parentQueue.children.forEach((child) => {
-        const edge: Edge = {
-            id: `${parentQueue.path}-${child.path}`,
-            source: parentQueue.path,
-            target: child.path,
-            type: 'sankeyFlow',
-            data: {
-                capacity: getCapacity(child),
-                targetState: child.properties.get('state') || 'UNKNOWN',
-            },
-        };
-        edges.push(edge);
+    if (queueInfo.queues?.queue) {
+        const children = Array.isArray(queueInfo.queues.queue)
+            ? queueInfo.queues.queue
+            : [queueInfo.queues.queue];
 
-        // Recursively create edges for children
-        edges.push(...createEdges(child));
-    });
+        children.forEach((child) => {
+            const edge: Edge = {
+                id: `${queueInfo.queuePath}-${child.queuePath}`,
+                source: queueInfo.queuePath,
+                target: child.queuePath,
+                type: 'sankeyFlow',
+                data: {
+                    // FIXED: Use live capacity data for edge visualization, not config strings
+                    capacity: child.capacity, // This is always a number from QueueInfo
+                    targetState: child.state,
+                },
+            };
+            edges.push(edge);
+
+            // Recursively create edges for children
+            edges.push(...createEdges(child));
+        });
+    }
 
     return edges;
 }
 
 export function useQueueTreeData(): UseQueueTreeDataResult {
-    const queueTree = useSchedulerStore(state => state.queueTree);
+    const schedulerData = useSchedulerStore(state => state.schedulerData);
     const stagedChanges = useSchedulerStore(state => state.stagedChanges);
     const isLoading = useSchedulerStore(state => state.isLoading);
     const error = useSchedulerStore(state => state.error);
 
     const { nodes, edges } = useMemo(() => {
-        if (!queueTree || isLoading) {
+        if (!schedulerData || isLoading) {
             return { nodes: [], edges: [] };
         }
 
         try {
-            // Calculate layout using Dagre
-            const positions = layoutEngine.calculatePositions(queueTree);
+            // Convert SchedulerInfo to QueueInfo for consistent processing
+            const rootQueue = convertSchedulerInfoToQueueInfo(schedulerData);
+            
+            // Flatten QueueInfo tree to array
+            const flatQueues = flattenQueueTree(rootQueue, stagedChanges);
+            
+            // Calculate layout using Dagre directly with QueueInfo
+            const positions = layoutEngine.calculatePositions(rootQueue);
 
-            // Create nodes
-            const flowNodes = createNodes(queueTree, positions, stagedChanges);
+            // Create nodes using flattened queue data
+            const flowNodes = createNodes(flatQueues, positions, stagedChanges);
 
-            // Create edges
-            const flowEdges = createEdges(queueTree);
+            // Create edges using live data
+            const flowEdges = createEdges(rootQueue);
 
             return { nodes: flowNodes, edges: flowEdges };
         } catch (err) {
             console.error('Error processing queue tree data:', err);
             return { nodes: [], edges: [] };
         }
-    }, [queueTree, stagedChanges, isLoading]);
+    }, [schedulerData, stagedChanges, isLoading]);
 
     return {
         nodes,
@@ -214,3 +316,4 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
         error,
     };
 }
+

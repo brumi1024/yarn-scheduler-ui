@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueueCardNode } from '../QueueCardNode';
 import type { NodeProps } from '@xyflow/react';
-import type { QueueNodeData } from '../hooks/useQueueTreeData';
+import type { QueueCardData } from '../hooks/useQueueTreeData';
+import { useSchedulerStore } from '../../../store/schedulerStore';
 
 // Mock React Flow Handle component
 vi.mock('@xyflow/react', () => ({
@@ -12,15 +13,22 @@ vi.mock('@xyflow/react', () => ({
 }));
 
 // Mock the scheduler store
-vi.mock('../../store/schedulerStore', () => ({
-    useSchedulerStore: vi.fn(() => ({
+vi.mock('../../../store/schedulerStore', () => {
+    const mockUseSchedulerStore = vi.fn(() => ({
         comparisonQueues: [],
+        selectedQueuePath: null,
         toggleComparisonQueue: vi.fn(),
+        selectQueue: vi.fn(),
+        setPropertyPanelOpen: vi.fn(),
         getState: () => ({
             getQueueDisplayValue: () => ({ value: '70%', isStaged: false }),
         }),
-    })),
-}));
+    }));
+    
+    return {
+        useSchedulerStore: mockUseSchedulerStore,
+    };
+});
 
 // Mock the QueueContextMenu component
 vi.mock('../components/QueueContextMenu', () => ({
@@ -28,22 +36,33 @@ vi.mock('../components/QueueContextMenu', () => ({
 }));
 
 describe('QueueCardNode', () => {
-    const mockNodeData: QueueNodeData = {
+    const mockNodeData: QueueCardData = {
+        // Required QueueInfo properties
+        type: 'capacitySchedulerLeafQueueInfo',
         queuePath: 'root.production',
         queueName: 'production',
         capacity: 70,
         maxCapacity: 100,
-        state: 'RUNNING',
         usedCapacity: 45,
+        absoluteCapacity: 70,
+        absoluteMaxCapacity: 100,
         absoluteUsedCapacity: 31.5,
         numApplications: 5,
+        numActiveApplications: 3,
+        numPendingApplications: 2,
+        state: 'RUNNING',
         resourcesUsed: { memory: 2048, vCores: 4 },
+        
+        // UI-specific QueueCardData properties
         isLeaf: false,
         capacityConfig: '70',
         maxCapacityConfig: '100',
+        stagedState: undefined,
+        autoCreationEligibility: 'off',
+        autoCreationStatus: { status: 'off', isStaged: false },
     };
 
-    const mockNodeProps: NodeProps<QueueNodeData> = {
+    const mockNodeProps: NodeProps<QueueCardData> = {
         id: 'root.production',
         data: mockNodeData,
         type: 'queueCard',
@@ -142,7 +161,7 @@ describe('QueueCardNode', () => {
     it('should display usage percentage', () => {
         render(<QueueCardNode {...mockNodeProps} />);
         
-        expect(screen.getByText(/45% used/)).toBeInTheDocument();
+        expect(screen.getByText(/45\.0% used/)).toBeInTheDocument();
     });
 
     it('should display capacity text', () => {
@@ -222,4 +241,153 @@ describe('QueueCardNode', () => {
         expect(screen.queryByText(/GB/)).not.toBeInTheDocument();
         expect(screen.queryByText(/vCores/)).not.toBeInTheDocument();
     });
+
+    it('should show staged state badge when state is staged', () => {
+        const stagedStateProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                state: 'RUNNING',
+                stagedState: 'STOPPED',
+            },
+        };
+        
+        render(<QueueCardNode {...stagedStateProps} />);
+        
+        // Should show both live state and staged state
+        expect(screen.getByText('RUNNING')).toBeInTheDocument();
+        expect(screen.getByText('→STOPPED')).toBeInTheDocument();
+    });
+
+    it('should not show staged state badge when no staged state', () => {
+        render(<QueueCardNode {...mockNodeProps} />);
+        
+        // Should only show live state
+        expect(screen.getByText('RUNNING')).toBeInTheDocument();
+        expect(screen.queryByText(/→/)).not.toBeInTheDocument();
+    });
+
+    it('should not show auto-creation icon when autoCreationEligibility is off', () => {
+        render(<QueueCardNode {...mockNodeProps} />);
+        
+        // Should not show auto-creation icon
+        expect(screen.queryByLabelText(/Auto Queue Creation/)).not.toBeInTheDocument();
+    });
+
+    it('should show auto-creation icon when autoCreationEligibility is flexible', () => {
+        const flexibleProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'flexible',
+                autoCreationStatus: { status: 'flexible', isStaged: false },
+            },
+        };
+        
+        render(<QueueCardNode {...flexibleProps} />);
+        
+        // Should show auto-creation icon with tooltip
+        expect(screen.getByLabelText('Auto Queue Creation: flexible')).toBeInTheDocument();
+    });
+
+    it('should show auto-creation icon when autoCreationEligibility is legacy', () => {
+        const legacyProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'legacy',
+                autoCreationStatus: { status: 'legacy', isStaged: false },
+            },
+        };
+        
+        render(<QueueCardNode {...legacyProps} />);
+        
+        // Should show auto-creation icon with tooltip
+        expect(screen.getByLabelText('Auto Queue Creation: legacy')).toBeInTheDocument();
+    });
+
+    it('should show staged auto-creation change from off to flexible', () => {
+        const stagedFlexibleProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'off',
+                autoCreationStatus: { status: 'flexible', isStaged: true },
+            },
+        };
+        
+        render(<QueueCardNode {...stagedFlexibleProps} />);
+        
+        // Should show arrow and staged status in tooltip
+        expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
+        expect(screen.getByText('→')).toBeInTheDocument();
+    });
+
+    it('should show staged auto-creation change from off to legacy', () => {
+        const stagedLegacyProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'off',
+                autoCreationStatus: { status: 'legacy', isStaged: true },
+            },
+        };
+        
+        render(<QueueCardNode {...stagedLegacyProps} />);
+        
+        // Should show arrow and staged status in tooltip
+        expect(screen.getByLabelText('Auto Queue Creation: legacy (staged)')).toBeInTheDocument();
+        expect(screen.getByText('→')).toBeInTheDocument();
+    });
+
+    it('should show staged auto-creation change from flexible to off', () => {
+        const stagedOffProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'flexible',
+                autoCreationStatus: { status: 'off', isStaged: true },
+            },
+        };
+        
+        render(<QueueCardNode {...stagedOffProps} />);
+        
+        // Should not show auto-creation indicator when staged status is off
+        expect(screen.queryByLabelText(/Auto Queue Creation/)).not.toBeInTheDocument();
+    });
+
+    it('should show staged auto-creation change from legacy to flexible', () => {
+        const stagedChangeProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'legacy',
+                autoCreationStatus: { status: 'flexible', isStaged: true },
+            },
+        };
+        
+        render(<QueueCardNode {...stagedChangeProps} />);
+        
+        // Should show arrow and new staged status
+        expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
+        expect(screen.getByText('→')).toBeInTheDocument();
+    });
+
+    it('should show arrow indicator for staged auto-creation changes', () => {
+        const stagedProps = {
+            ...mockNodeProps,
+            data: {
+                ...mockNodeData,
+                autoCreationEligibility: 'off',
+                autoCreationStatus: { status: 'flexible', isStaged: true },
+            },
+        };
+        
+        render(<QueueCardNode {...stagedProps} />);
+        
+        // Should show arrow indicator and proper tooltip
+        expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
+        expect(screen.getByText('→')).toBeInTheDocument();
+    });
+
 });

@@ -15,15 +15,6 @@ export type QueueMetrics = {
     resourcesUsed: ResourceInfo;
 };
 
-export type QueueNode = {
-    path: string;      // e.g., "root.production"
-    name: string;      // e.g., "production"
-    type: QueueType;
-    properties: Map<string, string>;
-    children: QueueNode[];
-    metrics?: QueueMetrics;
-    labelConfigs: Map<string, LabelConfig>;
-};
 
 export type QueueInfo = {
     type: string;
@@ -40,6 +31,7 @@ export type QueueInfo = {
     queueName: string;
     queuePath: string;
     state: QueueState;
+    autoCreationEligibility?: string;
     queues?: {
         queue: QueueInfo[];
     };

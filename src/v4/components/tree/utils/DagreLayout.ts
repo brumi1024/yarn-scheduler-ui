@@ -1,5 +1,5 @@
 import dagre from 'dagre';
-import type { QueueNode } from '../../../types';
+import type { QueueInfo } from '../../../types';
 
 export type LayoutPosition = {
     x: number;
@@ -33,7 +33,7 @@ export class DagreLayout {
     /**
      * Calculate positions for all nodes in the queue tree using Dagre
      */
-    calculatePositions(root: QueueNode): Map<string, LayoutPosition> {
+    calculatePositions(root: QueueInfo): Map<string, LayoutPosition> {
         const positions = new Map<string, LayoutPosition>();
         
         // Create a new directed graph
@@ -106,24 +106,30 @@ export class DagreLayout {
      */
     private addNodesRecursively(
         g: dagre.graphlib.Graph,
-        node: QueueNode,
+        node: QueueInfo,
         parent?: string
     ): void {
         // Add the node
-        g.setNode(node.path, {
-            label: node.name,
+        g.setNode(node.queuePath, {
+            label: node.queueName,
             width: this.options.nodeWidth,
             height: this.options.nodeHeight,
         });
 
         // Add edge from parent if exists
         if (parent) {
-            g.setEdge(parent, node.path);
+            g.setEdge(parent, node.queuePath);
         }
 
         // Recursively add children
-        node.children.forEach((child) => {
-            this.addNodesRecursively(g, child, node.path);
-        });
+        if (node.queues?.queue) {
+            const children = Array.isArray(node.queues.queue) 
+                ? node.queues.queue 
+                : [node.queues.queue];
+                
+            children.forEach((child) => {
+                this.addNodesRecursively(g, child, node.queuePath);
+            });
+        }
     }
 }

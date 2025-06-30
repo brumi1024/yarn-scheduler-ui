@@ -8,7 +8,6 @@ enableMapSet();
 import type {
     SchedulerInfo,
     QueueInfo,
-    QueueNode,
     ConfigProperty,
     StagedChange,
     SchedConfUpdateInfo,
@@ -30,18 +29,13 @@ import {
     createDetailedErrorMessage 
 } from '../utils/errorUtils';
 import { isValidQueueName } from '../types/guards';
-import { transformQueueInfoToQueueNode } from './transformQueueInfoToQueueNode';
-
 export type SchedulerStore = {
     // API Client
     apiClient: YarnApiClient;
     
-    // Dual data sources
+    // Main data sources - work directly with SchedulerInfo (contains QueueInfo tree)
     schedulerData: SchedulerInfo | null;
     configData: Map<string, string>;
-    
-    // Computed data
-    queueTree: QueueNode | null;
     
     // Other state
     nodeLabels: NodeLabel[];
@@ -82,6 +76,7 @@ export type SchedulerStore = {
     getChangesForQueue: (queuePath: string) => StagedChange[];
     getStagedChangeById: (changeId: string) => StagedChange | undefined;
 };
+
 
 // Utility function to traverse queue tree and combine with config data
 export function traverseQueueTree(
@@ -130,7 +125,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             // Initial state
             schedulerData: null,
             configData: new Map(),
-            queueTree: null,
+
             nodeLabels: [],
             stagedChanges: [],
             selectedNodeLabel: null,
@@ -166,11 +161,6 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                             config.property.map((p: ConfigProperty) => [p.name, p.value])
                         );
                         
-                        // Transform scheduler data to queue tree
-                        state.queueTree = state.schedulerData 
-                            ? transformQueueInfoToQueueNode(state.schedulerData, state.configData)
-                            : null;
-                        
                         state.nodeLabels = labels.nodeLabelsInfo?.nodeLabelInfo || [];
                         state.configVersion = version.versionID;
                         state.isLoading = false;
@@ -203,11 +193,6 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                     
                     set((state) => {
                         state.schedulerData = scheduler.scheduler.schedulerInfo;
-                        
-                        // Update queue tree with new scheduler data
-                        state.queueTree = state.schedulerData 
-                            ? transformQueueInfoToQueueNode(state.schedulerData, state.configData)
-                            : null;
                         
                         state.isLoading = false;
                     });

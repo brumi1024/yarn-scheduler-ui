@@ -47,8 +47,8 @@ export function useQueueActions(): UseQueueActionsResult {
                 throw new Error('Queue not found');
             }
 
-            // Check if queue has children
-            if (queue.children && queue.children.length > 0) {
+            // Check if queue has children (QueueInfo structure)
+            if (queue.queues?.queue && queue.queues.queue.length > 0) {
                 throw new Error('Cannot delete queue with children');
             }
 
@@ -85,8 +85,8 @@ export function useQueueActions(): UseQueueActionsResult {
                 return false;
             }
 
-            // Cannot delete if has children
-            return !queue.children || queue.children.length === 0;
+            // Cannot delete if has children (QueueInfo structure)
+            return !queue.queues?.queue || queue.queues.queue.length === 0;
         },
         [getQueueByPath]
     );
