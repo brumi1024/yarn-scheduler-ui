@@ -7,10 +7,17 @@ import {
     Tabs,
     Tab,
     Divider,
+    Button,
+    CircularProgress,
 } from '@mui/material';
-import { Close as CloseIcon } from '@mui/icons-material';
+import { 
+    Close as CloseIcon,
+    Save as SaveIcon,
+    Refresh as RefreshIcon,
+} from '@mui/icons-material';
 import { useSchedulerStore } from '../../store/schedulerStore';
 import { QueueOverview } from './QueueOverview';
+import { PropertyEditorTab, PropertyEditorTabHandle } from './PropertyEditorTab';
 
 interface TabPanelProps {
     children?: React.ReactNode;
@@ -27,10 +34,22 @@ function TabPanel(props: TabPanelProps) {
             hidden={value !== index}
             id={`property-tabpanel-${index}`}
             aria-labelledby={`property-tab-${index}`}
+            style={{
+                height: '100%',
+                display: 'flex',
+                flexDirection: 'column',
+            }}
             {...other}
         >
             {value === index && (
-                <Box sx={{ height: '100%', overflow: 'auto' }}>
+                <Box sx={{ 
+                    height: '100%', 
+                    // Configuration tab needs full height for its internal scrolling
+                    // Other tabs can use auto overflow
+                    overflow: index === 2 ? 'hidden' : 'auto',
+                    display: index === 2 ? 'flex' : 'block',
+                    flexDirection: index === 2 ? 'column' : undefined,
+                }}>
                     {children}
                 </Box>
             )}
@@ -47,6 +66,10 @@ export const PropertyPanel: React.FC = () => {
     } = useSchedulerStore();
     
     const [tabValue, setTabValue] = useState(0);
+    const [hasChanges, setHasChanges] = useState(false);
+    const [isSubmitting, setIsSubmitting] = useState(false);
+    
+    const propertyEditorRef = React.useRef<PropertyEditorTabHandle>(null);
 
     const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
 
@@ -56,6 +79,33 @@ export const PropertyPanel: React.FC = () => {
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
+    };
+
+    const handleSubmit = async () => {
+        if (propertyEditorRef.current) {
+            await propertyEditorRef.current.submit();
+        }
+    };
+
+    const handleReset = () => {
+        if (propertyEditorRef.current) {
+            propertyEditorRef.current.reset();
+        }
+    };
+
+    const handleHasChangesChange = (newHasChanges: boolean) => {
+        setHasChanges(newHasChanges);
+    };
+
+    // Reset hasChanges state when panel opens/closes or queue changes
+    React.useEffect(() => {
+        if (!isPropertyPanelOpen || !selectedQueuePath) {
+            setHasChanges(false);
+        }
+    }, [isPropertyPanelOpen, selectedQueuePath]);
+
+    const handleIsSubmittingChange = (newIsSubmitting: boolean) => {
+        setIsSubmitting(newIsSubmitting);
     };
 
     if (!selectedQueue || !isPropertyPanelOpen) {
@@ -69,15 +119,15 @@ export const PropertyPanel: React.FC = () => {
             onClose={handleClose}
             variant="persistent"
             sx={{
-                width: 320,
+                width: 450,
                 flexShrink: 0,
                 '& .MuiDrawer-paper': {
-                    width: 320,
+                    width: 450,
                     boxSizing: 'border-box',
                 },
             }}
         >
-            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
                     <Typography variant="h6">Queue Details</Typography>
                     <IconButton onClick={handleClose} size="small">
@@ -91,11 +141,17 @@ export const PropertyPanel: React.FC = () => {
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="property panel tabs">
                         <Tab label="Overview" />
                         <Tab label="Statistics" />
-                        <Tab label="Settings" />
+                        <Tab label="Configuration" />
                     </Tabs>
                 </Box>
                 
-                <Box sx={{ flexGrow: 1, overflow: 'hidden' }}>
+                <Box sx={{ 
+                    flexGrow: 1, 
+                    overflow: 'hidden',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    pb: tabValue === 2 ? 8 : 0, // Add padding bottom for buttons on Configuration tab
+                }}>
                     <TabPanel value={tabValue} index={0}>
                         <QueueOverview queue={selectedQueue} />
                     </TabPanel>
@@ -108,14 +164,50 @@ export const PropertyPanel: React.FC = () => {
                         </Box>
                     </TabPanel>
                     <TabPanel value={tabValue} index={2}>
-                        {/* TODO: Implement Settings tab */}
-                        <Box sx={{ p: 2 }}>
-                            <Typography variant="body2" color="text.secondary">
-                                Settings view coming soon...
-                            </Typography>
-                        </Box>
+                        <PropertyEditorTab 
+                            ref={propertyEditorRef}
+                            queue={selectedQueue}
+                            onHasChangesChange={handleHasChangesChange}
+                            onIsSubmittingChange={handleIsSubmittingChange}
+                        />
                     </TabPanel>
                 </Box>
+
+                {/* Fixed Apply/Reset buttons - show on Configuration tab, disabled when no changes */}
+                {tabValue === 2 && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            bottom: 0,
+                            left: 0,
+                            right: 0,
+                            p: 2,
+                            bgcolor: 'background.paper',
+                            borderTop: 1,
+                            borderColor: 'divider',
+                            display: 'flex',
+                            gap: 1,
+                            justifyContent: 'flex-end',
+                        }}
+                    >
+                        <Button
+                            variant="outlined"
+                            onClick={handleReset}
+                            disabled={isSubmitting || !hasChanges}
+                            startIcon={<RefreshIcon />}
+                        >
+                            Reset
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={handleSubmit}
+                            disabled={isSubmitting || !hasChanges}
+                            startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
+                        >
+                            {isSubmitting ? 'Applying...' : 'Apply Changes'}
+                        </Button>
+                    </Box>
+                )}
             </Box>
         </Drawer>
     );
