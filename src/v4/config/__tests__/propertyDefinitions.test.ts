@@ -34,6 +34,10 @@ describe('propertyDefinitions', () => {
             // Security
             expect(propertyNames).toContain('acl_submit_applications');
             expect(propertyNames).toContain('acl_administer_queue');
+
+            // Node label access control
+            expect(propertyNames).toContain('accessible-node-labels');
+            expect(propertyNames).toContain('default-node-label-expression');
         });
 
         it('has required capacity property', () => {
@@ -84,6 +88,48 @@ describe('propertyDefinitions', () => {
             );
             expect(leafQueueTemplate?.enableWhen).toBeDefined();
             expect(leafQueueTemplate?.enableWhen?.['auto-create-child-queue.enabled']).toBeDefined();
+        });
+
+        it('has accessible node labels properties', () => {
+            const accessibleLabelsProperty = queuePropertyDefinitions.find(
+                p => p.name === 'accessible-node-labels'
+            );
+            expect(accessibleLabelsProperty).toBeDefined();
+            expect(accessibleLabelsProperty?.category).toBe('general');
+            expect(accessibleLabelsProperty?.required).toBe(false);
+            expect(accessibleLabelsProperty?.type).toBe('string');
+            expect(accessibleLabelsProperty?.validationRules).toBeDefined();
+
+            const defaultExpressionProperty = queuePropertyDefinitions.find(
+                p => p.name === 'default-node-label-expression'
+            );
+            expect(defaultExpressionProperty).toBeDefined();
+            expect(defaultExpressionProperty?.category).toBe('general');
+            expect(defaultExpressionProperty?.required).toBe(false);
+            expect(defaultExpressionProperty?.type).toBe('string');
+        });
+
+        it('validates accessible node labels correctly', () => {
+            const accessibleLabelsProperty = queuePropertyDefinitions.find(
+                p => p.name === 'accessible-node-labels'
+            );
+            const validator = accessibleLabelsProperty?.validationRules?.[0]?.validator;
+            
+            expect(validator).toBeDefined();
+            if (validator) {
+                // Valid cases
+                expect(validator('')).toBe(true); // Empty for default partition
+                expect(validator('*')).toBe(true); // All labels
+                expect(validator('gpu')).toBe(true); // Single label
+                expect(validator('gpu,cpu')).toBe(true); // Multiple labels
+                expect(validator('gpu, cpu, fpga')).toBe(true); // With spaces
+                
+                // Invalid cases
+                expect(validator('gpu,cpu,')).toBe(false); // Trailing comma
+                expect(validator(',gpu')).toBe(false); // Leading comma
+                expect(validator('gpu.cpu')).toBe(false); // Invalid character
+                expect(validator('gpu cpu')).toBe(false); // Space instead of comma
+            }
         });
     });
 

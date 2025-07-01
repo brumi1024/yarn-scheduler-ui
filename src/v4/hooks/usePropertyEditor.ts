@@ -3,8 +3,9 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useCallback, useEffect, useMemo } from 'react';
 import { useSchedulerStore } from '../store/schedulerStore';
-import type { PropertyDescriptor } from '../types/property-descriptor';
+import type { PropertyDescriptor, LabelPropertyDescriptor } from '../types/property-descriptor';
 import { queuePropertyDefinitions } from '../config/propertyDefinitions';
+import { generateLabelPropertyDescriptors, isLabelProperty, extractLabelFromPropertyName, extractBasePropertyFromLabelProperty } from '../utils/labelPropertyUtils';
 
 function createFormSchema(properties: PropertyDescriptor[]) {
     const schemaFields: Record<string, z.ZodType> = {};
@@ -62,13 +63,25 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     const {
         getQueueDisplayValue,
         stageQueueChange,
+        stageLabelQueueChange,
         clearAllChanges,
         applyChanges,
+        nodeLabels,
     } = useSchedulerStore();
 
     const stagedChanges = useSchedulerStore(state => state.stagedChanges);
+    
+    // Generate dynamic label properties based on available node labels
+    const labelProperties = useMemo(() => {
+        return generateLabelPropertyDescriptors(nodeLabels);
+    }, [nodeLabels]);
+    
+    // Combine base properties with label properties
+    const allProperties = useMemo(() => {
+        return [...properties, ...labelProperties];
+    }, [properties, labelProperties]);
 
-    const formSchema = useMemo(() => createFormSchema(properties), [properties]);
+    const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
     const form = useForm({
         resolver: zodResolver(formSchema),
@@ -83,13 +96,13 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     useEffect(() => {
         const initialValues: Record<string, string> = {};
 
-        properties.forEach((property) => {
+        allProperties.forEach((property) => {
             const { value } = getQueueDisplayValue(queuePath, property.name);
             initialValues[property.name] = value;
         });
 
         reset(initialValues);
-    }, [queuePath, properties, getQueueDisplayValue, reset]);
+    }, [queuePath, allProperties, getQueueDisplayValue, reset]);
 
     const getStagedStatus = useCallback((propertyName: string) => {
         const { isStaged } = getQueueDisplayValue(queuePath, propertyName);
@@ -97,13 +110,23 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     }, [queuePath, getQueueDisplayValue]);
 
     const stageChange = useCallback((propertyName: string, value: string) => {
-        const property = properties.find(p => p.name === propertyName);
+        const property = allProperties.find(p => p.name === propertyName);
         if (!property?.required && !value.trim()) {
             return;
         }
 
-        stageQueueChange(queuePath, propertyName, value);
-    }, [queuePath, stageQueueChange, properties]);
+        // Handle label properties differently than regular properties
+        if (isLabelProperty(propertyName)) {
+            const labelName = extractLabelFromPropertyName(propertyName);
+            const baseProperty = extractBasePropertyFromLabelProperty(propertyName);
+            
+            if (labelName && baseProperty) {
+                stageLabelQueueChange(queuePath, labelName, baseProperty, value);
+            }
+        } else {
+            stageQueueChange(queuePath, propertyName, value);
+        }
+    }, [queuePath, stageQueueChange, stageLabelQueueChange, allProperties]);
 
     const handleFieldChange = useCallback((propertyName: string) => (value: string) => {
         setValue(propertyName, value);
@@ -137,12 +160,12 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
         clearAllChanges();
 
         const currentValues: Record<string, string> = {};
-        properties.forEach((property) => {
+        allProperties.forEach((property) => {
             const { value } = getQueueDisplayValue(queuePath, property.name);
             currentValues[property.name] = value;
         });
         reset(currentValues);
-    }, [queuePath, stagedChanges, getQueueDisplayValue, setValue, clearAllChanges, reset, properties]);
+    }, [queuePath, stagedChanges, getQueueDisplayValue, setValue, clearAllChanges, reset, allProperties]);
 
     const hasChanges = useMemo(() => {
         if (!Array.isArray(stagedChanges)) {
@@ -155,7 +178,7 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     const propertiesByCategory = useMemo(() => {
         const categories: Record<string, PropertyDescriptor[]> = {};
 
-        properties.forEach((property) => {
+        allProperties.forEach((property) => {
             if (!categories[property.category]) {
                 categories[property.category] = [];
             }
@@ -163,7 +186,7 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
         });
 
         return categories;
-    }, [properties]);
+    }, [allProperties]);
 
     return {
         control,
@@ -180,6 +203,7 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
 
         getStagedStatus,
 
-        properties,
+        properties: allProperties,
+        labelProperties,
     };
 }

@@ -19,7 +19,8 @@ import {
 import { usePropertyEditor } from '../../hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
 import type { QueueInfo } from '../../types/queue';
-import type { PropertyCategory } from '../../types/property-descriptor';
+import type { PropertyCategory, LabelPropertyDescriptor } from '../../types/property-descriptor';
+import { groupLabelPropertiesByLabel } from '../../utils/labelPropertyUtils';
 
 export interface PropertyEditorTabHandle {
     submit: () => Promise<void>;
@@ -65,6 +66,11 @@ const categoryConfig: Record<PropertyCategory, { label: string; description: str
         description: 'Preemption, auto-queue creation, and other advanced settings',
         defaultExpanded: false,
     },
+    nodeLabels: {
+        label: 'Node Labels',
+        description: 'Capacity allocation per node label partition',
+        defaultExpanded: false,
+    },
 };
 
 export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
@@ -86,9 +92,25 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
         watchedValues,
         propertiesByCategory,
         getStagedStatus,
+        labelProperties,
     } = usePropertyEditor({
         queuePath: queue.queuePath,
     });
+
+    // Determine which labels this queue has access to
+    const getAccessibleLabels = React.useCallback(() => {
+        const accessibleLabelsValue = watchedValues?.['accessible-node-labels'] || '';
+        if (!accessibleLabelsValue.trim()) {
+            return []; // Default partition only
+        }
+        if (accessibleLabelsValue.trim() === '*') {
+            return ['*']; // All labels
+        }
+        return accessibleLabelsValue.split(',').map(l => l.trim()).filter(l => l.length > 0);
+    }, [watchedValues]);
+
+    const accessibleLabels = getAccessibleLabels();
+    const hasAccessibleLabels = accessibleLabels.length > 0;
 
     // Notify parent about hasChanges state
     React.useEffect(() => {
@@ -126,7 +148,12 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
     }), [onSubmit, onReset]);
 
     // Get category order for consistent display
-    const categoryOrder: PropertyCategory[] = ['general', 'resource', 'limits', 'scheduling', 'security', 'advanced'];
+    const baseCategoryOrder: PropertyCategory[] = ['general', 'resource', 'limits', 'scheduling', 'security', 'advanced'];
+    
+    // Only show nodeLabels category if queue has accessible labels
+    const categoryOrder: PropertyCategory[] = hasAccessibleLabels 
+        ? [...baseCategoryOrder, 'nodeLabels']
+        : baseCategoryOrder;
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
@@ -164,6 +191,64 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
 
                     const config = categoryConfig[category];
 
+                    // Special handling for nodeLabels category - group by label and filter by accessible labels
+                    if (category === 'nodeLabels') {
+                        const labelPropsTyped = categoryProps as LabelPropertyDescriptor[];
+                        const labelGroups = groupLabelPropertiesByLabel(labelPropsTyped);
+                        
+                        // Filter to only show properties for accessible labels
+                        const filteredLabelGroups = Object.entries(labelGroups).filter(([labelName]) => {
+                            if (accessibleLabels.includes('*')) return true; // All labels accessible
+                            return accessibleLabels.includes(labelName);
+                        });
+
+                        if (filteredLabelGroups.length === 0) return null;
+                        
+                        return (
+                            <Accordion
+                                key={category}
+                                defaultExpanded={config.defaultExpanded}
+                                sx={{ mb: 1 }}
+                            >
+                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
+                                    <Box>
+                                        <Typography variant="subtitle1" fontWeight="medium">
+                                            {config.label}
+                                        </Typography>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Per-label capacity configuration for accessible labels
+                                        </Typography>
+                                    </Box>
+                                </AccordionSummary>
+                                <AccordionDetails>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                        {filteredLabelGroups.map(([labelName, labelProps]) => (
+                                            <Box key={labelName} sx={{ mb: 2 }}>
+                                                <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
+                                                    Label: {labelName}
+                                                </Typography>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pl: 2 }}>
+                                                    {labelProps.map((property) => (
+                                                        <PropertyFormField
+                                                            key={property.name}
+                                                            property={property}
+                                                            control={control}
+                                                            error={errors[property.name]}
+                                                            isStaged={getStagedStatus(property.name)}
+                                                            dependentValues={watchedValues}
+                                                            onFieldChange={stageChange}
+                                                        />
+                                                    ))}
+                                                </Box>
+                                            </Box>
+                                        ))}
+                                    </Box>
+                                </AccordionDetails>
+                            </Accordion>
+                        );
+                    }
+
+                    // Regular category rendering
                     return (
                         <Accordion
                             key={category}

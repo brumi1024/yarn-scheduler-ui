@@ -81,10 +81,12 @@ describe('usePropertyEditor', () => {
     const mockStoreActions = {
         getQueueDisplayValue: vi.fn(),
         stageQueueChange: vi.fn(),
+        stageLabelQueueChange: vi.fn(),
         clearAllChanges: vi.fn(),
         applyChanges: vi.fn(),
         hasUnsavedChanges: vi.fn(),
         getChangesForQueue: vi.fn(),
+        nodeLabels: [], // Add nodeLabels as a property of the store object
     };
 
     beforeEach(() => {
@@ -96,9 +98,10 @@ describe('usePropertyEditor', () => {
                 // Handle state selectors (e.g., state => state.stagedChanges)
                 return selector({
                     stagedChanges: [], // Default to empty array
+                    nodeLabels: [], // Default to empty array for node labels
                 });
             }
-            // Handle direct store access (returns the store actions)
+            // Handle direct store access (returns the store actions and properties)
             return mockStoreActions;
         });
 
@@ -106,6 +109,7 @@ describe('usePropertyEditor', () => {
         mockStoreActions.getQueueDisplayValue.mockReturnValue({ value: '', isStaged: false });
         mockStoreActions.hasUnsavedChanges.mockReturnValue(false);
         mockStoreActions.getChangesForQueue.mockReturnValue([]);
+        mockStoreActions.nodeLabels = []; // Reset nodeLabels to empty array
     });
 
     it('initializes with correct queue path and properties', () => {
@@ -175,9 +179,15 @@ describe('usePropertyEditor', () => {
 
         mockUseSchedulerStore.mockImplementation((selector) => {
             if (typeof selector === 'function') {
-                return selector({ stagedChanges });
+                return selector({ 
+                    stagedChanges,
+                    nodeLabels: [], // Include nodeLabels in state
+                });
             }
-            return mockStoreActions;
+            return {
+                ...mockStoreActions,
+                nodeLabels: [], // Include nodeLabels in the direct store access
+            };
         });
 
         const { result } = renderHook(() =>

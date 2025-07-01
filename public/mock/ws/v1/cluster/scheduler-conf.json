@@ -307,6 +307,38 @@
         {
             "name": "yarn.scheduler.capacity.root.development.team1.maximum-capacity",
             "value": "100"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.capacity",
+            "value": "40"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.maximum-capacity",
+            "value": "80"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.capacity",
+            "value": "30"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels.gpu.maximum-capacity",
+            "value": "60"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.production.prod01.accessible-node-labels",
+            "value": "gpu,fpga"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.development.team2.accessible-node-labels",
+            "value": "*"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.development.team1.accessible-node-labels.gpu.maximum-am-resource-percent",
+            "value": "0.2"
+        },
+        {
+            "name": "yarn.scheduler.capacity.root.development.team1.default-node-label-expression",
+            "value": "gpu"
         }
     ]
 }

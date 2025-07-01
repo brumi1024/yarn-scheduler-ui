@@ -1,6 +1,6 @@
 export type PropertyType = 'string' | 'number' | 'boolean' | 'enum' | 'list';
 
-export type PropertyCategory = 'general' | 'resource' | 'scheduling' | 'limits' | 'security' | 'advanced';
+export type PropertyCategory = 'general' | 'resource' | 'scheduling' | 'limits' | 'security' | 'advanced' | 'nodeLabels';
 
 export type ComparisonOperator = '<' | '<=' | '>' | '>=' | '==' | '!=';
 
@@ -37,4 +37,9 @@ export type PropertyDescriptor = {
     displayFormat?: DisplayFormat;
     deprecated?: boolean;
     deprecationMessage?: string;
+};
+
+export type LabelPropertyDescriptor = PropertyDescriptor & {
+    label: string;
+    basePropertyName: string; // e.g., 'capacity' for 'accessible-node-labels.gpu.capacity'
 };

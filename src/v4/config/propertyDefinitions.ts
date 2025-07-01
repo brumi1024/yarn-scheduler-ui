@@ -470,6 +470,52 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
                 validator: (value: string) => integerSchema.safeParse(value).success
             }
         ]
+    },
+
+    // Node Label Access Control Properties (queue-specific configuration)
+    {
+        name: 'accessible-node-labels',
+        displayName: 'Accessible Node Labels',
+        description: 'Comma-separated list of node labels this queue can access. Use "*" for all labels, empty for default partition only.',
+        type: 'string' as PropertyType,
+        category: 'general' as PropertyCategory,
+        defaultValue: '',
+        required: false,
+        validationRules: [
+            {
+                type: 'custom',
+                message: 'Must be a comma-separated list of valid label names, "*" for all, or empty for default partition',
+                validator: (value: string) => {
+                    if (!value.trim()) return true; // Empty is valid (default partition only)
+                    if (value.trim() === '*') return true; // All labels
+                    
+                    // Validate comma-separated label names
+                    const labels = value.split(',').map(l => l.trim());
+                    // Check for empty labels (like trailing/leading commas)
+                    if (labels.some(label => label.length === 0)) return false;
+                    return labels.every(label => /^[0-9a-zA-Z][0-9a-zA-Z-_]*$/.test(label));
+                }
+            }
+        ]
+    },
+    {
+        name: 'default-node-label-expression',
+        displayName: 'Default Node Label Expression',
+        description: 'Default node label expression for applications submitted to this queue. Empty for default partition.',
+        type: 'string' as PropertyType,
+        category: 'general' as PropertyCategory,
+        defaultValue: '',
+        required: false,
+        validationRules: [
+            {
+                type: 'custom',
+                message: 'Must be a valid node label name or empty for default partition',
+                validator: (value: string) => {
+                    if (!value.trim()) return true; // Empty is valid (default partition)
+                    return /^[0-9a-zA-Z][0-9a-zA-Z-_]*$/.test(value.trim());
+                }
+            }
+        ]
     }
 ];
 

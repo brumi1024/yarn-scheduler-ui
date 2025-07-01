@@ -127,7 +127,7 @@ export function traverseQueueTree(
 }
 
 
-const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: any) => SchedulerStore) =>
+const createStoreImplementation = (apiClient: YarnApiClient) =>
     immer<SchedulerStore>((set, get) => ({
             apiClient,
 
