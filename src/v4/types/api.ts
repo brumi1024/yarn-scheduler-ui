@@ -41,10 +41,10 @@ export type NodeLabelsResponse = {
 };
 
 export type NodeToLabelsResponse = {
-    nodeToLabels?: {
+    nodeToLabelsInfo?: {
         nodeToLabels?: Array<{
             nodeId: string;
-            labels: string[];
+            nodeLabels: string[];
         }>;
     };
 };

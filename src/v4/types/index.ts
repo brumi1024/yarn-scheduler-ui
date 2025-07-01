@@ -3,6 +3,7 @@ export * from './scheduler';
 export * from './config';
 export * from './resource';
 export * from './node-label';
+export * from './node';
 export * from './staged-change';
 export * from './property-descriptor';
 export * from './mutation';

@@ -2,11 +2,13 @@ import React, { useState } from 'react';
 import { Box, Typography, Paper, Tabs, Tab } from '@mui/material';
 import { QueueVisualizationContainer } from '../components/tree/QueueVisualizationContainer';
 import { GlobalSettings } from '../components/global-settings';
+import { NodeLabels } from '../components/node-labels';
 import { useSchedulerStore } from '../store/schedulerStore';
 
 const V4_TABS = [
     { label: 'Queue Tree', component: QueueVisualizationContainer },
     { label: 'Global Settings', component: GlobalSettings },
+    { label: 'Node Labels', component: NodeLabels },
 ];
 
 export function V4Demo(): React.ReactElement {

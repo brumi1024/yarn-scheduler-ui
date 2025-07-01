@@ -12,6 +12,7 @@ import type {
     YarnErrorResponse,
     NodeLabelsResponse,
     NodeToLabelsResponse,
+    NodesResponse,
     VersionResponse,
 } from '../types';
 
@@ -76,18 +77,23 @@ export class YarnApiClient {
     }
 
     /**
-     * GET /get-node-labels - List all node labels
+     * GET /ws/v1/cluster/get-node-labels - List all node labels
      */
     async getNodeLabels(): Promise<NodeLabelsResponse> {
         return this.request<NodeLabelsResponse>('GET', '/get-node-labels');
     }
 
     /**
-     * POST /add-node-labels - Add new node labels
+     * POST /ws/v1/cluster/add-node-labels - Add new node labels
      */
-    async addNodeLabels(labels: string[]): Promise<void> {
+    async addNodeLabels(labels: { name: string; exclusivity: boolean }[]): Promise<void> {
         await this.request('POST', '/add-node-labels', {
-            body: JSON.stringify({ nodeLabels: labels }),
+            body: JSON.stringify({ 
+                nodeLabels: labels.map(label => ({
+                    name: label.name,
+                    exclusivity: label.exclusivity
+                }))
+            }),
             headers: {
                 'Content-Type': 'application/json',
             },
@@ -95,7 +101,7 @@ export class YarnApiClient {
     }
 
     /**
-     * POST /remove-node-labels - Remove node labels
+     * POST /ws/v1/cluster/remove-node-labels - Remove node labels
      */
     async removeNodeLabels(labels: string[]): Promise<void> {
         await this.request('POST', '/remove-node-labels', {
@@ -107,18 +113,29 @@ export class YarnApiClient {
     }
 
     /**
-     * GET /get-node-to-labels - Get node to label mappings
+     * GET /ws/v1/cluster/get-node-to-labels - Get node to label mappings
      */
     async getNodeToLabels(): Promise<NodeToLabelsResponse> {
         return this.request<NodeToLabelsResponse>('GET', '/get-node-to-labels');
     }
 
     /**
-     * POST /replace-node-to-labels - Replace node label assignments
+     * GET /ws/v1/cluster/nodes - Get cluster nodes information
      */
-    async replaceNodeToLabels(nodeToLabels: Record<string, string[]>): Promise<void> {
+    async getNodes(): Promise<NodesResponse> {
+        return this.request<NodesResponse>('GET', '/nodes');
+    }
+
+    /**
+     * POST /ws/v1/cluster/replace-node-to-labels - Replace node label assignments
+     */
+    async replaceNodeToLabels(nodeToLabels: { nodeId: string; labels: string[] }[]): Promise<void> {
         await this.request('POST', '/replace-node-to-labels', {
-            body: JSON.stringify({ nodeToLabels }),
+            body: JSON.stringify({ 
+                nodeToLabels: {
+                    nodeLabels: nodeToLabels
+                }
+            }),
             headers: {
                 'Content-Type': 'application/json',
             },

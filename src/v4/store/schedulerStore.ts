@@ -11,6 +11,8 @@ import type {
     StagedChange,
     SchedConfUpdateInfo,
     NodeLabel,
+    NodeInfo,
+    NodeToLabelMapping,
     VersionResponse,
 } from '../types';
 import {
@@ -35,6 +37,8 @@ export type SchedulerStore = {
     configData: Map<string, string>;
 
     nodeLabels: NodeLabel[];
+    nodes: NodeInfo[];
+    nodeToLabels: NodeToLabelMapping[];
     stagedChanges: StagedChange[];
     selectedNodeLabel: string | null;
     selectedQueuePath: string | null;
@@ -60,6 +64,11 @@ export type SchedulerStore = {
     toggleComparisonQueue: (queuePath: string) => void;
     setPropertyPanelOpen: (isOpen: boolean) => void;
 
+    // Direct node label operations (not staged)
+    addNodeLabel: (name: string, exclusivity: boolean) => Promise<void>;
+    removeNodeLabel: (name: string) => Promise<void>;
+    assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;
+
     getQueueConfiguredCapacity: (queuePath: string) => string;
     // TODO rename these
     getQueueDisplayValue: (queuePath: string, property: string) => { value: string; isStaged: boolean };
@@ -72,6 +81,17 @@ export type SchedulerStore = {
     getStagedChangeById: (changeId: string) => StagedChange | undefined;
 };
 
+
+/**
+ * Helper function to normalize node labels from API response
+ * Ensures exclusivity defaults to true if not specified (YARN default)
+ */
+function normalizeNodeLabels(nodeLabelsInfo?: { name: string; exclusivity?: boolean; partitionName?: string }[]): NodeLabel[] {
+    return (nodeLabelsInfo || []).map(label => ({
+        ...label,
+        exclusivity: label.exclusivity ?? true // Default to exclusive if not specified
+    }));
+}
 
 export function traverseQueueTree(
     queueInfo: QueueInfo,
@@ -115,6 +135,8 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
             configData: new Map(),
 
             nodeLabels: [],
+            nodes: [],
+            nodeToLabels: [],
             stagedChanges: [],
             selectedNodeLabel: null,
             selectedQueuePath: null,
@@ -131,10 +153,12 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
                 });
 
                 try {
-                    const [scheduler, config, labels, version] = await Promise.all([
+                    const [scheduler, config, labels, nodes, nodeToLabels, version] = await Promise.all([
                         get().apiClient.getScheduler(),
                         get().apiClient.getSchedulerConf(),
                         get().apiClient.getNodeLabels(),
+                        get().apiClient.getNodes(),
+                        get().apiClient.getNodeToLabels(),
                         get().apiClient.getSchedulerConfVersion(),
                     ]);
 
@@ -145,7 +169,9 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
                             config.property.map((p: ConfigProperty) => [p.name, p.value])
                         );
 
-                        state.nodeLabels = labels.nodeLabelsInfo?.nodeLabelInfo || [];
+                        state.nodeLabels = normalizeNodeLabels(labels.nodeLabelsInfo?.nodeLabelInfo);
+                        state.nodes = nodes.nodes?.node || [];
+                        state.nodeToLabels = nodeToLabels.nodeToLabelsInfo?.nodeToLabels || [];
                         state.configVersion = version.versionID;
                         state.isLoading = false;
                     });
@@ -438,6 +464,128 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
                 set((state) => {
                     state.isPropertyPanelOpen = isOpen;
                 });
+            },
+
+            // Direct node label operations (immediate API calls, not staged)
+            addNodeLabel: async (name, exclusivity) => {
+                try {
+                    set((state) => {
+                        state.isLoading = true;
+                        state.error = null;
+                    });
+
+                    await get().apiClient.addNodeLabels([{ name, exclusivity }]);
+
+                    // Refresh node labels data to reflect the new label
+                    const nodeLabelsResponse = await get().apiClient.getNodeLabels();
+                    
+                    set((state) => {
+                        state.nodeLabels = normalizeNodeLabels(nodeLabelsResponse.nodeLabelsInfo?.nodeLabelInfo);
+                        state.isLoading = false;
+                    });
+                } catch (error) {
+                    const errorMessage = extractErrorMessage(error);
+                    set((state) => {
+                        state.error = `Failed to add node label: ${errorMessage}`;
+                        state.isLoading = false;
+                    });
+                    throw createStoreError(
+                        ERROR_CODES.API_ERROR,
+                        `Failed to add node label: ${errorMessage}`,
+                        error
+                    );
+                }
+            },
+
+            removeNodeLabel: async (name) => {
+                try {
+                    set((state) => {
+                        state.isLoading = true;
+                        state.error = null;
+                    });
+
+                    await get().apiClient.removeNodeLabels([name]);
+
+                    // Refresh node labels data to reflect the removal
+                    const nodeLabelsResponse = await get().apiClient.getNodeLabels();
+                    
+                    set((state) => {
+                        state.nodeLabels = normalizeNodeLabels(nodeLabelsResponse.nodeLabelsInfo?.nodeLabelInfo);
+                        state.isLoading = false;
+                        
+                        // Clear selection if the removed label was selected
+                        if (state.selectedNodeLabel === name) {
+                            state.selectedNodeLabel = null;
+                        }
+                    });
+                } catch (error) {
+                    const errorMessage = extractErrorMessage(error);
+                    set((state) => {
+                        state.error = `Failed to remove node label: ${errorMessage}`;
+                        state.isLoading = false;
+                    });
+                    throw createStoreError(
+                        ERROR_CODES.API_ERROR,
+                        `Failed to remove node label: ${errorMessage}`,
+                        error
+                    );
+                }
+            },
+
+            assignNodeToLabel: async (nodeId, labelName) => {
+                try {
+                    set((state) => {
+                        state.isLoading = true;
+                        state.error = null;
+                    });
+
+                    // Get current node-to-label mappings
+                    const currentMappings = await get().apiClient.getNodeToLabels();
+                    
+                    // Convert current mappings to array format and update the specific node
+                    const existingMappings = currentMappings.nodeToLabelsInfo?.nodeToLabels || [];
+                    const updatedMappings = existingMappings.map((mapping) => {
+                        if (mapping.nodeId === nodeId) {
+                            return {
+                                nodeId,
+                                labels: labelName === null ? [] : [labelName]
+                            };
+                        }
+                        return {
+                            nodeId: mapping.nodeId,
+                            labels: mapping.nodeLabels || []
+                        };
+                    });
+                    
+                    // If this is a new node, add it to the mappings
+                    if (!existingMappings.some(mapping => mapping.nodeId === nodeId)) {
+                        updatedMappings.push({
+                            nodeId,
+                            labels: labelName === null ? [] : [labelName]
+                        });
+                    }
+
+                    await get().apiClient.replaceNodeToLabels(updatedMappings);
+
+                    // Refresh node-to-label mappings to reflect the change
+                    const refreshedMappings = await get().apiClient.getNodeToLabels();
+
+                    set((state) => {
+                        state.nodeToLabels = refreshedMappings.nodeToLabelsInfo?.nodeToLabels || [];
+                        state.isLoading = false;
+                    });
+                } catch (error) {
+                    const errorMessage = extractErrorMessage(error);
+                    set((state) => {
+                        state.error = `Failed to assign node to label: ${errorMessage}`;
+                        state.isLoading = false;
+                    });
+                    throw createStoreError(
+                        ERROR_CODES.API_ERROR,
+                        `Failed to assign node to label: ${errorMessage}`,
+                        error
+                    );
+                }
             },
             // TODO can be removed
             getQueueConfiguredCapacity: (queuePath) => {

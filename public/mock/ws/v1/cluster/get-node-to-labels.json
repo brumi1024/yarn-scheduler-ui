@@ -15,11 +15,11 @@
             },
             {
                 "nodeId": "ccycloud-4.nightly7x-us-sq.root.comops.site:8041",
-                "nodeLabels": ["default"]
+                "nodeLabels": []
             },
             {
                 "nodeId": "ccycloud-5.nightly7x-us-sq.root.comops.site:8041",
-                "nodeLabels": ["default", "fpga"]
+                "nodeLabels": ["fpga"]
             }
         ]
     }

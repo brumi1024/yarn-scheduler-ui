@@ -46,13 +46,13 @@ export const handlers = [
         return HttpResponse.json(data);
     }),
 
-    http.get('/ws/v1/cluster/nodes/get-node-to-labels', async () => {
+    http.get('/ws/v1/cluster/get-node-to-labels', async () => {
         const response = await fetch('/mock/ws/v1/cluster/get-node-to-labels.json');
         const data = await response.json();
         return HttpResponse.json(data);
     }),
 
-    http.get('/ws/v1/cluster/nodes/get-labels-to-nodes', async () => {
+    http.get('/ws/v1/cluster/get-labels-to-nodes', async () => {
         const response = await fetch('/mock/ws/v1/cluster/get-labels-to-nodes.json');
         const data = await response.json();
         return HttpResponse.json(data);
@@ -64,16 +64,15 @@ export const handlers = [
         return HttpResponse.json({ message: 'Labels added successfully' });
     }),
 
-    http.post('/ws/v1/cluster/nodes/replace-node-to-labels', async ({ request }) => {
+    http.post('/ws/v1/cluster/replace-node-to-labels', async ({ request }) => {
         const body = await request.json();
         console.log('Mock: Replacing node labels:', body);
         return HttpResponse.json({ message: 'Node labels replaced successfully' });
     }),
 
     http.post('/ws/v1/cluster/remove-node-labels', async ({ request }) => {
-        const url = new URL(request.url);
-        const nodeLabels = url.searchParams.getAll('nodeLabels');
-        console.log('Mock: Removing node labels:', nodeLabels);
+        const body = await request.json();
+        console.log('Mock: Removing node labels:', body);
         return HttpResponse.json({ message: 'Labels removed successfully' });
     }),
 ];
