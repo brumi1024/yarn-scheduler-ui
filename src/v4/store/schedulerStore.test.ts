@@ -95,6 +95,7 @@ describe('schedulerStore', () => {
 
             expect(typeof state.getQueueConfiguredCapacity).toBe('function');
             expect(typeof state.getQueueDisplayValue).toBe('function');
+            expect(typeof state.getGlobalDisplayValue).toBe('function');
             expect(typeof state.getLabelChangesForQueue).toBe('function');
         });
     });
@@ -481,6 +482,81 @@ describe('schedulerStore', () => {
                 const displayValue = store.getState().getQueueDisplayValue('root.default', 'capacity');
                 expect(displayValue).toEqual({
                     value: '60',
+                    isStaged: true,
+                });
+            });
+        });
+
+        describe('getGlobalDisplayValue', () => {
+            it('should return empty value with staged flag false for unconfigured global property', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                const displayValue = store.getState().getGlobalDisplayValue('non-existent-property');
+                expect(displayValue).toEqual({
+                    value: '',
+                    isStaged: false,
+                });
+            });
+
+            it('should return configured global value with staged flag false', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                // The mockConfigResponse already includes 'yarn.scheduler.capacity.maximum-applications': '10000'
+                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                expect(displayValue).toEqual({
+                    value: '10000',
+                    isStaged: false,
+                });
+            });
+
+            it('should return staged global value with staged flag true', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                // Stage a global change
+                store.getState().stageGlobalChange('maximum-applications', '15000');
+
+                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                expect(displayValue).toEqual({
+                    value: '15000',
+                    isStaged: true,
+                });
+            });
+
+            it('should prioritize staged value over configured value', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                // mockConfigResponse already has 'yarn.scheduler.capacity.maximum-applications': '10000'
+                // Stage a different value
+                store.getState().stageGlobalChange('maximum-applications', '20000');
+
+                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                expect(displayValue).toEqual({
+                    value: '20000',
+                    isStaged: true,
+                });
+            });
+
+            it('should handle multiple global properties independently', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                // mockConfigResponse has 'yarn.scheduler.capacity.maximum-applications': '10000'
+                // Stage a change for a different property
+                store.getState().stageGlobalChange('legacy-queue-mode.enabled', 'false');
+
+                const maxAppsValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                const legacyModeValue = store.getState().getGlobalDisplayValue('legacy-queue-mode.enabled');
+
+                expect(maxAppsValue).toEqual({
+                    value: '10000',
+                    isStaged: false,
+                });
+                expect(legacyModeValue).toEqual({
+                    value: 'false',
                     isStaged: true,
                 });
             });

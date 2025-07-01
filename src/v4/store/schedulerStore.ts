@@ -61,7 +61,9 @@ export type SchedulerStore = {
     setPropertyPanelOpen: (isOpen: boolean) => void;
 
     getQueueConfiguredCapacity: (queuePath: string) => string;
+    // TODO rename these
     getQueueDisplayValue: (queuePath: string, property: string) => { value: string; isStaged: boolean };
+    getGlobalDisplayValue: (property: string) => { value: string; isStaged: boolean };
     getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
     getQueueByPath: (queuePath: string) => QueueInfo | null;
     getChildQueues: (parentPath: string) => QueueInfo[];
@@ -437,7 +439,7 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
                     state.isPropertyPanelOpen = isOpen;
                 });
             },
-
+            // TODO can be removed
             getQueueConfiguredCapacity: (queuePath) => {
                 const state = get();
                 const propertyKey = buildPropertyKey(queuePath, 'capacity');
@@ -459,6 +461,27 @@ const createStoreImplementation = (apiClient: YarnApiClient): ((set: any, get: a
 
                 const stagedChange = state.stagedChanges.find(
                     (c) => c.queuePath === queuePath && c.property === property
+                );
+
+                if (stagedChange?.newValue !== undefined) {
+                    return {
+                        value: stagedChange.newValue,
+                        isStaged: true,
+                    };
+                }
+
+                return {
+                    value: state.configData.get(propertyKey) || '',
+                    isStaged: false,
+                };
+            },
+
+            getGlobalDisplayValue: (property) => {
+                const state = get();
+                const propertyKey = buildGlobalPropertyKey(property);
+
+                const stagedChange = state.stagedChanges.find(
+                    (c) => c.queuePath === 'global' && c.property === property
                 );
 
                 if (stagedChange?.newValue !== undefined) {

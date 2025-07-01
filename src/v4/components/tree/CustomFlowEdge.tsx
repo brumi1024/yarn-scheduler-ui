@@ -11,23 +11,24 @@ import { type EdgeProps } from '@xyflow/react';
 function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
     const gradientId = `gradient-${id}`;
 
+    // Determine flow colors based on target queue state
     const getFlowColors = () => {
         if (data?.targetState === 'RUNNING') {
             return {
-                startColor: '#2196f3',
-                endColor: '#64b5f6',
+                startColor: '#2196f3', // Running flow color
+                endColor: '#64b5f6', // Lighter blue for gradient effect
                 opacity: 0.8,
             };
         } else if (data?.targetState === 'STOPPED') {
             return {
-                startColor: '#f44336',
-                endColor: '#e57373',
+                startColor: '#f44336', // Stopped flow color
+                endColor: '#e57373', // Lighter red for gradient effect
                 opacity: 0.8,
             };
         } else {
             return {
-                startColor: '#9e9e9e',
-                endColor: '#bdbdbd',
+                startColor: '#9e9e9e', // Default flow color
+                endColor: '#bdbdbd', // Lighter gray for gradient effect
                 opacity: 0.7,
             };
         }
@@ -73,13 +74,16 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
                     <stop offset="100%" style={{ stopColor: endColor, stopOpacity: opacity }} />
                 </linearGradient>
 
+                {/* Add a subtle shadow for depth */}
                 <filter id={`shadow-${id}`} x="-20%" y="-20%" width="140%" height="140%">
                     <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.1" />
                 </filter>
             </defs>
 
+            {/* Shadow path */}
             <path d={sankeyPath} fill="rgba(0, 0, 0, 0.1)" transform="translate(2, 2)" />
 
+            {/* Main Sankey flow path */}
             <path
                 d={sankeyPath}
                 fill={`url(#${gradientId})`}
@@ -89,6 +93,7 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
                 }}
             />
 
+            {/* Optional animated flow indication for running queues */}
             {data?.targetState === 'RUNNING' && (
                 <path
                     d={sankeyPath}
