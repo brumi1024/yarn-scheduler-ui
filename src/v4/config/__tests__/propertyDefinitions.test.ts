@@ -17,20 +17,20 @@ describe('propertyDefinitions', () => {
     describe('queuePropertyDefinitions', () => {
         it('includes essential YARN queue properties', () => {
             const propertyNames = queuePropertyDefinitions.map(p => p.name);
-            
+
             // Core properties
             expect(propertyNames).toContain('capacity');
             expect(propertyNames).toContain('maximum-capacity');
             expect(propertyNames).toContain('state');
-            
+
             // User limits
             expect(propertyNames).toContain('minimum-user-limit-percent');
             expect(propertyNames).toContain('user-limit-factor');
-            
+
             // Application control
             expect(propertyNames).toContain('maximum-applications');
             expect(propertyNames).toContain('maximum-am-resource-percent');
-            
+
             // Security
             expect(propertyNames).toContain('acl_submit_applications');
             expect(propertyNames).toContain('acl_administer_queue');
@@ -45,7 +45,7 @@ describe('propertyDefinitions', () => {
 
         it('has proper categories for all properties', () => {
             const validCategories = ['general', 'resource', 'scheduling', 'limits', 'security', 'advanced'];
-            
+
             queuePropertyDefinitions.forEach(property => {
                 expect(validCategories).toContain(property.category);
             });
@@ -90,7 +90,7 @@ describe('propertyDefinitions', () => {
     describe('globalPropertyDefinitions', () => {
         it('includes global YARN properties', () => {
             const propertyNames = globalPropertyDefinitions.map(p => p.name);
-            
+
             expect(propertyNames).toContain('maximum-applications');
             expect(propertyNames).toContain('maximum-am-resource-percent');
             expect(propertyNames).toContain('resource-calculator');
@@ -153,7 +153,7 @@ describe('propertyDefinitions', () => {
                 expect(capacityValueSchema.safeParse('50%').success).toBe(true);
                 expect(capacityValueSchema.safeParse('100').success).toBe(true);
                 expect(capacityValueSchema.safeParse('0').success).toBe(true);
-                
+
                 expect(capacityValueSchema.safeParse('101').success).toBe(false);
                 expect(capacityValueSchema.safeParse('-1').success).toBe(false);
                 expect(capacityValueSchema.safeParse('150%').success).toBe(false);
@@ -163,7 +163,7 @@ describe('propertyDefinitions', () => {
                 expect(capacityValueSchema.safeParse('2w').success).toBe(true);
                 expect(capacityValueSchema.safeParse('10w').success).toBe(true);
                 expect(capacityValueSchema.safeParse('0.5w').success).toBe(true);
-                
+
                 expect(capacityValueSchema.safeParse('0w').success).toBe(false);
                 expect(capacityValueSchema.safeParse('-1w').success).toBe(false);
                 expect(capacityValueSchema.safeParse('w').success).toBe(false);
@@ -173,7 +173,7 @@ describe('propertyDefinitions', () => {
                 expect(capacityValueSchema.safeParse('[memory=1024,vcores=2]').success).toBe(true);
                 expect(capacityValueSchema.safeParse('[memory=2048]').success).toBe(true);
                 expect(capacityValueSchema.safeParse('[vcores=4]').success).toBe(true);
-                
+
                 expect(capacityValueSchema.safeParse('[]').success).toBe(false);
                 expect(capacityValueSchema.safeParse('[memory=]').success).toBe(false);
                 expect(capacityValueSchema.safeParse('[=1024]').success).toBe(false);
@@ -192,7 +192,7 @@ describe('propertyDefinitions', () => {
                 expect(percentageSchema.safeParse('50').success).toBe(true);
                 expect(percentageSchema.safeParse('100').success).toBe(true);
                 expect(percentageSchema.safeParse('25.5').success).toBe(true);
-                
+
                 expect(percentageSchema.safeParse('101').success).toBe(false);
                 expect(percentageSchema.safeParse('-1').success).toBe(false);
                 expect(percentageSchema.safeParse('abc').success).toBe(false);
@@ -208,7 +208,7 @@ describe('propertyDefinitions', () => {
                 expect(positiveNumberSchema.safeParse('1').success).toBe(true);
                 expect(positiveNumberSchema.safeParse('0.1').success).toBe(true);
                 expect(positiveNumberSchema.safeParse('100').success).toBe(true);
-                
+
                 expect(positiveNumberSchema.safeParse('0').success).toBe(false);
                 expect(positiveNumberSchema.safeParse('-1').success).toBe(false);
                 expect(positiveNumberSchema.safeParse('abc').success).toBe(false);
@@ -224,7 +224,7 @@ describe('propertyDefinitions', () => {
                 expect(integerSchema.safeParse('1').success).toBe(true);
                 expect(integerSchema.safeParse('100').success).toBe(true);
                 expect(integerSchema.safeParse('1000').success).toBe(true);
-                
+
                 expect(integerSchema.safeParse('0').success).toBe(false);
                 expect(integerSchema.safeParse('-1').success).toBe(false);
                 expect(integerSchema.safeParse('1.5').success).toBe(false);
@@ -244,7 +244,7 @@ describe('propertyDefinitions', () => {
                 expect(aclFormatSchema.safeParse('user1 group1').success).toBe(true);
                 expect(aclFormatSchema.safeParse('user1').success).toBe(true);
                 expect(aclFormatSchema.safeParse('user1,user2').success).toBe(true);
-                
+
                 expect(aclFormatSchema.safeParse('user1 group1 extra').success).toBe(false);
                 expect(aclFormatSchema.safeParse('user@domain').success).toBe(false);
                 expect(aclFormatSchema.safeParse('user with spaces').success).toBe(false);
@@ -259,7 +259,7 @@ describe('propertyDefinitions', () => {
     describe('property completeness', () => {
         it('covers major YARN configuration categories', () => {
             const categories = new Set(queuePropertyDefinitions.map(p => p.category));
-            
+
             expect(categories.has('general')).toBe(true);
             expect(categories.has('resource')).toBe(true);
             expect(categories.has('limits')).toBe(true);

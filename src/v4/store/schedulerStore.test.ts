@@ -38,7 +38,7 @@ const createTestStore = () => {
 // Helper function to set up store with data
 async function setupStoreWithData(store: ReturnType<typeof createSchedulerStore>) {
     const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
-    
+
     mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
     mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
     mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
@@ -103,7 +103,7 @@ describe('schedulerStore', () => {
         it('should load all data sources in parallel', async () => {
             const store = createTestStore();
             const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
-            
+
             mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
             mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
             mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
@@ -146,7 +146,7 @@ describe('schedulerStore', () => {
 
             // Resolve the scheduler promise
             resolveScheduler!(mockSchedulerResponse);
-            
+
             // Wait for the promise to settle
             await loadPromise.catch(() => {}); // Catch any errors to prevent unhandled rejection
 
@@ -156,7 +156,7 @@ describe('schedulerStore', () => {
         it('should handle API errors gracefully', async () => {
             const store = createTestStore();
             const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
-            
+
             mockApiClient.getScheduler.mockRejectedValue(new Error('Network error'));
 
             // Call loadInitialData and expect it to throw
@@ -166,7 +166,7 @@ describe('schedulerStore', () => {
             } catch (e) {
                 error = e;
             }
-            
+
             expect(error).toBeDefined();
 
             expect(store.getState().error).toBe('Failed to load initial data: Network error');
@@ -176,7 +176,7 @@ describe('schedulerStore', () => {
         it('should handle HTTP error responses', async () => {
             const store = createTestStore();
             const mockApiClient = store.getState().apiClient as ReturnType<typeof createMockApiClient>;
-            
+
             mockApiClient.getScheduler.mockRejectedValue(new Error('HTTP 403: Forbidden'));
 
             // Call loadInitialData and expect it to throw
@@ -186,7 +186,7 @@ describe('schedulerStore', () => {
             } catch (e) {
                 error = e;
             }
-            
+
             expect(error).toBeDefined();
 
             expect(store.getState().error).toBe('Failed to load initial data: HTTP 403: Forbidden');
@@ -221,7 +221,7 @@ describe('schedulerStore', () => {
             await store.getState().refreshSchedulerData();
 
             expect(mockApiClient.getScheduler).toHaveBeenCalledTimes(1);
-            
+
             expect(store.getState().schedulerData?.usedCapacity).toBe(60);
             // Config data should remain unchanged
             expect(store.getState().configData.size).toBe(19);
@@ -287,7 +287,7 @@ describe('schedulerStore', () => {
                 store.getState().stageQueueAddition('root.production', 'team2', queueConfig);
 
                 expect(store.getState().stagedChanges).toHaveLength(3); // One for each property
-                
+
                 const addChanges = store.getState().stagedChanges.filter(c => c.type === 'add');
                 expect(addChanges).toHaveLength(3);
                 expect(addChanges.every(c => c.queuePath === 'root.production.team2')).toBe(true);
@@ -385,7 +385,7 @@ describe('schedulerStore', () => {
 
             // Mock successful mutation response
             mockApiClient.updateSchedulerConf.mockResolvedValue(undefined);
-            
+
             // Mock reload calls
             mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
             mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
@@ -422,7 +422,7 @@ describe('schedulerStore', () => {
             } catch (e) {
                 error = e;
             }
-            
+
             expect(error).toBeDefined();
 
             // Changes should not be cleared on failure
@@ -503,132 +503,132 @@ describe('schedulerStore', () => {
                 expect(ssdChanges[0].property).toContain('ssd');
             });
         });
-        
+
         describe('getQueueByPath', () => {
             it('should find queue by path in tree', async () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
-                
+
                 const rootQueue = store.getState().getQueueByPath('root');
                 expect(rootQueue).toBeDefined();
                 expect(rootQueue?.queueName).toBe('root');
-                
+
                 const defaultQueue = store.getState().getQueueByPath('root.default');
                 expect(defaultQueue).toBeDefined();
                 expect(defaultQueue?.queueName).toBe('default');
-                
+
                 const nonExistent = store.getState().getQueueByPath('root.nonexistent');
                 expect(nonExistent).toBeNull();
             });
-            
+
             it('should return null when no scheduler data', () => {
                 const store = createTestStore();
-                
+
                 const queue = store.getState().getQueueByPath('root');
                 expect(queue).toBeNull();
             });
         });
-        
+
         describe('getChildQueues', () => {
             it('should return child queues for parent', async () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
-                
+
                 const rootChildren = store.getState().getChildQueues('root');
                 expect(rootChildren).toHaveLength(3); // default, production, development
                 expect(rootChildren.map(q => q.queueName)).toContain('default');
                 expect(rootChildren.map(q => q.queueName)).toContain('production');
                 expect(rootChildren.map(q => q.queueName)).toContain('development');
-                
+
                 const productionChildren = store.getState().getChildQueues('root.production');
                 expect(productionChildren).toHaveLength(2); // batch and interactive
             });
-            
+
             it('should return empty array for leaf queues', async () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
-                
+
                 const leafChildren = store.getState().getChildQueues('root.default');
                 expect(leafChildren).toHaveLength(0);
             });
-            
+
             it('should return empty array for non-existent queue', async () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
-                
+
                 const children = store.getState().getChildQueues('root.nonexistent');
                 expect(children).toHaveLength(0);
             });
         });
-        
+
         describe('hasUnsavedChanges', () => {
             it('should return false when no staged changes', () => {
                 const store = createTestStore();
-                
+
                 expect(store.getState().hasUnsavedChanges()).toBe(false);
             });
-            
+
             it('should return true when staged changes exist', () => {
                 const store = createTestStore();
-                
+
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
-                
+
                 expect(store.getState().hasUnsavedChanges()).toBe(true);
             });
-            
+
             it('should return false after clearing changes', () => {
                 const store = createTestStore();
-                
+
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 store.getState().clearAllChanges();
-                
+
                 expect(store.getState().hasUnsavedChanges()).toBe(false);
             });
         });
-        
+
         describe('getChangesForQueue', () => {
             it('should return all changes for specific queue', () => {
                 const store = createTestStore();
-                
+
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 store.getState().stageQueueChange('root.default', 'maximum-capacity', '90');
                 store.getState().stageQueueChange('root.production', 'capacity', '40');
-                
+
                 const defaultChanges = store.getState().getChangesForQueue('root.default');
                 expect(defaultChanges).toHaveLength(2);
                 expect(defaultChanges.every(c => c.queuePath === 'root.default')).toBe(true);
-                
+
                 const productionChanges = store.getState().getChangesForQueue('root.production');
                 expect(productionChanges).toHaveLength(1);
                 expect(productionChanges[0].queuePath).toBe('root.production');
             });
-            
+
             it('should return empty array for queue with no changes', () => {
                 const store = createTestStore();
-                
+
                 const changes = store.getState().getChangesForQueue('root.batch');
                 expect(changes).toHaveLength(0);
             });
         });
-        
+
         describe('getStagedChangeById', () => {
             it('should find staged change by id', () => {
                 const store = createTestStore();
-                
+
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
                 const changeId = store.getState().stagedChanges[0].id;
-                
+
                 const change = store.getState().getStagedChangeById(changeId);
                 expect(change).toBeDefined();
                 expect(change?.queuePath).toBe('root.default');
                 expect(change?.property).toBe('capacity');
             });
-            
+
             it('should return undefined for non-existent id', () => {
                 const store = createTestStore();
-                
+
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
-                
+
                 const change = store.getState().getStagedChangeById('non-existent-id');
                 expect(change).toBeUndefined();
             });
@@ -857,7 +857,7 @@ describe('utility functions', () => {
 
             // Try to select a non-existent queue
             store.getState().selectQueue('root.nonexistent');
-            
+
             // Should not select invalid queue
             expect(store.getState().selectedQueuePath).toBeNull();
         });

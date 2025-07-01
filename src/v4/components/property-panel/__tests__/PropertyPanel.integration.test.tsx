@@ -64,7 +64,7 @@ describe('PropertyPanel Integration Tests', () => {
         // Buttons should be visible (but disabled initially)
         expect(screen.getByText('Apply Changes')).toBeInTheDocument();
         expect(screen.getByText('Reset')).toBeInTheDocument();
-        
+
         // Buttons should be disabled when no changes
         expect(screen.getByText('Apply Changes')).toBeDisabled();
         expect(screen.getByText('Reset')).toBeDisabled();

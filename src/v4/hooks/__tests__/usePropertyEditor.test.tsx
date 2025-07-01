@@ -89,7 +89,7 @@ describe('usePropertyEditor', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Mock the store with both function calls and reactive state access
         mockUseSchedulerStore.mockImplementation((selector) => {
             if (typeof selector === 'function') {
@@ -101,7 +101,7 @@ describe('usePropertyEditor', () => {
             // Handle direct store access (returns the store actions)
             return mockStoreActions;
         });
-        
+
         // Default mock return values
         mockStoreActions.getQueueDisplayValue.mockReturnValue({ value: '', isStaged: false });
         mockStoreActions.hasUnsavedChanges.mockReturnValue(false);
@@ -131,11 +131,11 @@ describe('usePropertyEditor', () => {
         );
 
         const { propertiesByCategory } = result.current;
-        
+
         expect(propertiesByCategory.general).toHaveLength(2);
         expect(propertiesByCategory.general[0].name).toBe('capacity');
         expect(propertiesByCategory.general[1].name).toBe('state');
-        
+
         expect(propertiesByCategory.limits).toHaveLength(1);
         expect(propertiesByCategory.limits[0].name).toBe('user-limit-factor');
     });
@@ -172,7 +172,7 @@ describe('usePropertyEditor', () => {
                 timestamp: Date.now(),
             },
         ];
-        
+
         mockUseSchedulerStore.mockImplementation((selector) => {
             if (typeof selector === 'function') {
                 return selector({ stagedChanges });

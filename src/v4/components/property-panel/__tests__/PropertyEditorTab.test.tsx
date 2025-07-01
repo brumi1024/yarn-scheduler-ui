@@ -122,7 +122,7 @@ describe('PropertyEditorTab', () => {
             hasUnsavedChanges: vi.fn().mockReturnValue(false),
             getChangesForQueue: vi.fn().mockReturnValue([]),
         });
-        
+
         mockUsePropertyEditor.mockReturnValue(createMockUsePropertyEditor());
     });
 
@@ -168,8 +168,8 @@ describe('PropertyEditorTab', () => {
 
     it('notifies parent about hasChanges state via callback', () => {
         const mockOnHasChangesChange = vi.fn();
-        
-        mockUsePropertyEditor.mockReturnValue(createMockUsePropertyEditor({ 
+
+        mockUsePropertyEditor.mockReturnValue(createMockUsePropertyEditor({
             hasChanges: true
         }));
 
@@ -180,7 +180,7 @@ describe('PropertyEditorTab', () => {
 
     it('provides submit and reset handlers via ref', () => {
         const ref = React.createRef<PropertyEditorTabHandle>();
-        
+
         render(<PropertyEditorTab ref={ref} queue={mockQueue} />);
 
         expect(ref.current).toBeDefined();
@@ -196,7 +196,7 @@ describe('PropertyEditorTab', () => {
 
     it('expands and collapses accordion sections', async () => {
         const user = userEvent.setup();
-        
+
         render(<PropertyEditorTab queue={mockQueue} />);
 
         // General Configuration should be expanded by default

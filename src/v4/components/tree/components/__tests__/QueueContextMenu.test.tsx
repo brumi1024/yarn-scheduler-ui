@@ -6,12 +6,12 @@ import { useQueueActions } from '../../hooks/useQueueActions';
 // Mock the hooks and dialogs
 vi.mock('../../hooks/useQueueActions');
 vi.mock('../../dialogs/AddQueueDialog', () => ({
-    AddQueueDialog: vi.fn(({ open, onClose }) => 
+    AddQueueDialog: vi.fn(({ open, onClose }) =>
         open ? <div data-testid="add-queue-dialog">Add Queue Dialog</div> : null
     ),
 }));
 vi.mock('../../dialogs/DeleteQueueDialog', () => ({
-    DeleteQueueDialog: vi.fn(({ open, onClose }) => 
+    DeleteQueueDialog: vi.fn(({ open, onClose }) =>
         open ? <div data-testid="delete-queue-dialog">Delete Queue Dialog</div> : null
     ),
 }));

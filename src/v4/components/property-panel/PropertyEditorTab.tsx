@@ -67,7 +67,7 @@ const categoryConfig: Record<PropertyCategory, { label: string; description: str
     },
 };
 
-export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({ 
+export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
     queue,
     onHasChangesChange,
     onIsSubmittingChange,
@@ -150,7 +150,7 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                         Configuration changes applied successfully!
                     </Alert>
                 )}
-                
+
                 {submitError && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {submitError}
@@ -163,7 +163,7 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                     if (!categoryProps || categoryProps.length === 0) return null;
 
                     const config = categoryConfig[category];
-                    
+
                     return (
                         <Accordion
                             key={category}

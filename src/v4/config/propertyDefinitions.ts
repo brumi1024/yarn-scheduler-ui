@@ -1,30 +1,26 @@
 import { z } from 'zod';
 import type { PropertyDescriptor, PropertyCategory, PropertyType } from '../types/property-descriptor';
 
-// Validation schemas for different property types
 export const capacityValueSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
-            
+            if (!value.trim()) return true;
+
             const trimmedValue = value.trim();
 
-            // Percentage mode: ends with % or is a raw number
             if (trimmedValue.endsWith('%')) {
                 const numericPart = trimmedValue.slice(0, -1);
                 const numericValue = parseFloat(numericPart);
                 return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 100;
             }
 
-            // Weight mode: ends with w
             if (trimmedValue.endsWith('w')) {
                 const numericPart = trimmedValue.slice(0, -1);
                 const numericValue = parseFloat(numericPart);
                 return !isNaN(numericValue) && numericValue > 0;
             }
 
-            // Absolute mode: [resource=value,resource=value]
             if (trimmedValue.startsWith('[') && trimmedValue.endsWith(']')) {
                 const resourcePart = trimmedValue.slice(1, -1);
                 if (resourcePart.trim() === '') return false;
@@ -36,7 +32,6 @@ export const capacityValueSchema = z
                 });
             }
 
-            // Raw number (percentage without %)
             const numericValue = parseFloat(trimmedValue);
             return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 100;
         },
@@ -49,7 +44,7 @@ export const percentageSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
+            if (!value.trim()) return true;
             const numericValue = parseFloat(value);
             return !isNaN(numericValue) && numericValue >= 0 && numericValue <= 100;
         },
@@ -60,7 +55,7 @@ export const positiveNumberSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
+            if (!value.trim()) return true;
             const numericValue = parseFloat(value);
             return !isNaN(numericValue) && numericValue > 0;
         },
@@ -71,7 +66,7 @@ export const nonNegativeNumberSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
+            if (!value.trim()) return true;
             const numericValue = parseFloat(value);
             return !isNaN(numericValue) && numericValue >= 0;
         },
@@ -82,7 +77,7 @@ export const integerSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
+            if (!value.trim()) return true;
             const numericValue = parseFloat(value);
             return !isNaN(numericValue) && Number.isInteger(numericValue) && numericValue > 0;
         },
@@ -93,19 +88,16 @@ export const aclFormatSchema = z
     .string()
     .refine(
         (value) => {
-            if (!value.trim()) return true; // Allow empty for optional fields
-            
-            // Special values
+            if (!value.trim()) return true;
+
             if (value === '*' || value === ' ') return true;
-            
-            // Format: "user1,user2 group1,group2"
+
             const parts = value.split(' ');
             if (parts.length > 2) return false;
-            
-            // Validate each part contains valid identifiers
+
             return parts.every(part => {
-                if (!part) return true; // Allow empty parts
-                return part.split(',').every(item => 
+                if (!part) return true;
+                return part.split(',').every(item =>
                     item.trim().length > 0 && /^[a-zA-Z0-9_-]+$/.test(item.trim())
                 );
             });
@@ -113,9 +105,7 @@ export const aclFormatSchema = z
         { message: 'Invalid ACL format. Use "user1,user2 group1,group2" or "*" or " " (space for none)' }
     );
 
-// Core queue properties based on CS_config_guide.md
 export const queuePropertyDefinitions: PropertyDescriptor[] = [
-    // Basic Queue Configuration
     {
         name: 'capacity',
         displayName: 'Capacity',
@@ -163,7 +153,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         enumValues: ['RUNNING', 'STOPPED']
     },
 
-    // User Limits
     {
         name: 'minimum-user-limit-percent',
         displayName: 'Minimum User Limit Percent',
@@ -202,7 +191,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Application Control
     {
         name: 'maximum-applications',
         displayName: 'Maximum Applications',
@@ -257,7 +245,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Scheduling Policy
     {
         name: 'ordering-policy',
         displayName: 'Ordering Policy',
@@ -301,7 +288,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Security (ACLs)
     {
         name: 'acl_submit_applications',
         displayName: 'Submit Applications ACL',
@@ -335,7 +321,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Resource Allocation Overrides
     {
         name: 'maximum-allocation-mb',
         displayName: 'Maximum Allocation MB',
@@ -369,7 +354,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Application Lifetime
     {
         name: 'maximum-application-lifetime',
         displayName: 'Maximum Application Lifetime',
@@ -411,7 +395,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Preemption
     {
         name: 'disable_preemption',
         displayName: 'Disable Preemption',
@@ -431,7 +414,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         required: false
     },
 
-    // Auto-Queue Creation (Legacy)
     {
         name: 'auto-create-child-queue.enabled',
         displayName: 'Auto-Create Child Queues (Legacy)',
@@ -461,7 +443,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         ]
     },
 
-    // Auto-Queue Creation v2 (Flexible)
     {
         name: 'auto-queue-creation-v2.enabled',
         displayName: 'Auto-Queue Creation v2',
@@ -492,7 +473,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     }
 ];
 
-// Global system properties (these would be for global configuration)
 export const globalPropertyDefinitions: PropertyDescriptor[] = [
     {
         name: 'maximum-applications',
@@ -542,17 +522,14 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     }
 ];
 
-// Helper function to get property definitions by category
 export function getPropertiesByCategory(category: PropertyCategory): PropertyDescriptor[] {
     return queuePropertyDefinitions.filter(prop => prop.category === category);
 }
 
-// Helper function to get all property categories
 export function getPropertyCategories(): PropertyCategory[] {
     return ['general', 'resource', 'scheduling', 'limits', 'security', 'advanced'];
 }
 
-// Helper function to get property definition by name
 export function getPropertyDefinition(name: string): PropertyDescriptor | undefined {
     return queuePropertyDefinitions.find(prop => prop.name === name);
 }

@@ -35,11 +35,9 @@ export class DagreLayout {
      */
     calculatePositions(root: QueueInfo): Map<string, LayoutPosition> {
         const positions = new Map<string, LayoutPosition>();
-        
-        // Create a new directed graph
+
         const g = new dagre.graphlib.Graph();
-        
-        // Set graph configuration
+
         g.setGraph({
             rankdir: this.options.orientation === 'horizontal' ? 'LR' : 'TB',
             nodesep: this.options.horizontalSpacing,
@@ -47,17 +45,13 @@ export class DagreLayout {
             marginx: 0,
             marginy: 0,
         });
-        
-        // Default edge label
+
         g.setDefaultEdgeLabel(() => ({}));
-        
-        // Add nodes and edges recursively
+
         this.addNodesRecursively(g, root);
-        
-        // Run the layout algorithm
+
         dagre.layout(g);
-        
-        // Extract positions
+
         g.nodes().forEach((nodeId) => {
             const node = g.node(nodeId);
             if (node) {
@@ -69,7 +63,7 @@ export class DagreLayout {
                 });
             }
         });
-        
+
         return positions;
     }
 
@@ -109,24 +103,21 @@ export class DagreLayout {
         node: QueueInfo,
         parent?: string
     ): void {
-        // Add the node
         g.setNode(node.queuePath, {
             label: node.queueName,
             width: this.options.nodeWidth,
             height: this.options.nodeHeight,
         });
 
-        // Add edge from parent if exists
         if (parent) {
             g.setEdge(parent, node.queuePath);
         }
 
-        // Recursively add children
         if (node.queues?.queue) {
-            const children = Array.isArray(node.queues.queue) 
-                ? node.queues.queue 
+            const children = Array.isArray(node.queues.queue)
+                ? node.queues.queue
                 : [node.queues.queue];
-                
+
             children.forEach((child) => {
                 this.addNodesRecursively(g, child, node.queuePath);
             });

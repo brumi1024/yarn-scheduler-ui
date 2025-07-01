@@ -162,7 +162,7 @@ describe('YarnApiClient', () => {
         it('should handle baseUrl with trailing slash', () => {
             const client1 = new YarnApiClient('/ws/v1/cluster/');
             const client2 = new YarnApiClient('/ws/v1/cluster');
-            
+
             expect(client1).toBeDefined();
             expect(client2).toBeDefined();
         });

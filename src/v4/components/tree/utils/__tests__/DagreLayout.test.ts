@@ -175,7 +175,7 @@ describe('DagreLayout', () => {
 
         expect(positions.size).toBe(1);
         expect(positions.has('root')).toBe(true);
-        
+
         const rootPos = positions.get('root')!;
         expect(rootPos.x).toBe(0);
         expect(rootPos.y).toBe(0);

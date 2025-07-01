@@ -9,7 +9,7 @@ export function isQueueInfo(obj: unknown): obj is QueueInfo {
     if (!obj || typeof obj !== 'object') {
         return false;
     }
-    
+
     const q = obj as Record<string, unknown>;
     return (
         typeof q.type === 'string' &&
@@ -42,7 +42,7 @@ export function hasQueueChildren(obj: unknown): boolean {
     if (!obj || typeof obj !== 'object') {
         return false;
     }
-    
+
     const q = obj as Record<string, unknown>;
     return (
         q.queues !== undefined &&
@@ -57,12 +57,12 @@ export function isValidQueueName(name: string): boolean {
     if (!name || name.trim() !== name) {
         return false;
     }
-    
+
     // Queue names cannot contain dots
     if (name.includes('.')) {
         return false;
     }
-    
+
     // Must match alphanumeric, hyphen, underscore pattern
     return /^[a-zA-Z0-9_-]+$/.test(name);
 }
@@ -74,7 +74,7 @@ export function isValidPropertyValue(value: string, descriptor: Pick<PropertyDes
             if (isNaN(num)) {
                 return false;
             }
-            
+
             if (descriptor.validationRules) {
                 for (const rule of descriptor.validationRules) {
                     if (rule.type === 'range') {
@@ -88,13 +88,13 @@ export function isValidPropertyValue(value: string, descriptor: Pick<PropertyDes
                 }
             }
             return true;
-            
+
         case 'boolean':
             return value.toLowerCase() === 'true' || value.toLowerCase() === 'false';
-            
+
         case 'enum':
             return descriptor.enumValues?.includes(value) ?? false;
-            
+
         case 'string':
             if (descriptor.validationRules) {
                 for (const rule of descriptor.validationRules) {
@@ -107,11 +107,11 @@ export function isValidPropertyValue(value: string, descriptor: Pick<PropertyDes
                 }
             }
             return true;
-            
+
         case 'list':
             // Basic validation - could be enhanced
             return true;
-            
+
         default:
             return false;
     }
@@ -122,16 +122,16 @@ export function isGlobalProperty(propertyName: string): boolean {
     if (!propertyName.startsWith(CONFIG_PREFIXES.BASE)) {
         return false;
     }
-    
+
     const remainder = propertyName.substring(CONFIG_PREFIXES.BASE.length + 1);
     // If it starts with 'root.', it's queue-specific
     if (remainder.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME + '.')) {
         return false;
     }
-    
+
     // Common global properties
     const globalProperties = Object.values(GLOBAL_CONFIG_PROPS);
-    
+
     return globalProperties.some(prop => remainder === prop);
 }
 
@@ -143,12 +143,12 @@ export function isResourceInfo(obj: unknown): obj is ResourceInfo {
     if (!obj || typeof obj !== 'object') {
         return false;
     }
-    
+
     const r = obj as Record<string, unknown>;
     return (
         typeof r.memory === 'number' &&
         typeof r.vCores === 'number' &&
-        (r.resourceInformations === undefined || 
+        (r.resourceInformations === undefined ||
          (typeof r.resourceInformations === 'object' && r.resourceInformations !== null))
     );
 }
@@ -157,7 +157,7 @@ export function isMutationError(obj: unknown): obj is MutationError {
     if (!obj || typeof obj !== 'object') {
         return false;
     }
-    
+
     const e = obj as Record<string, unknown>;
     return (
         e.RemoteException !== undefined &&

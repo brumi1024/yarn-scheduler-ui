@@ -24,7 +24,7 @@ vi.mock('../../../store/schedulerStore', () => {
             getQueueDisplayValue: () => ({ value: '70%', isStaged: false }),
         }),
     }));
-    
+
     return {
         useSchedulerStore: mockUseSchedulerStore,
     };
@@ -52,7 +52,7 @@ describe('QueueCardNode', () => {
         numPendingApplications: 2,
         state: 'RUNNING',
         resourcesUsed: { memory: 2048, vCores: 4 },
-        
+
         // UI-specific QueueCardData properties
         isLeaf: false,
         capacityConfig: '70',
@@ -76,20 +76,20 @@ describe('QueueCardNode', () => {
 
     it('should render queue name', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         expect(screen.getByText('production')).toBeInTheDocument();
     });
 
     it('should display capacity information', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Should show capacity percentage
         expect(screen.getByText(/70%/)).toBeInTheDocument();
     });
 
     it('should show state badge', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         expect(screen.getByText('RUNNING')).toBeInTheDocument();
     });
 
@@ -101,16 +101,16 @@ describe('QueueCardNode', () => {
                 state: 'STOPPED' as const,
             },
         };
-        
+
         render(<QueueCardNode {...stoppedProps} />);
-        
+
         const stateBadge = screen.getByText('STOPPED');
         expect(stateBadge).toBeInTheDocument();
     });
 
     it('should display resource usage', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Should show memory, vCores, and apps in the combined format
         expect(screen.getByText(/Memory: 2 GB • vCores: 4 • Apps: 5/)).toBeInTheDocument();
     });
@@ -123,9 +123,9 @@ describe('QueueCardNode', () => {
                 stagedStatus: 'modified' as const,
             },
         };
-        
+
         render(<QueueCardNode {...modifiedProps} />);
-        
+
         expect(screen.getByText('modified')).toBeInTheDocument();
     });
 
@@ -137,9 +137,9 @@ describe('QueueCardNode', () => {
                 stagedStatus: 'new' as const,
             },
         };
-        
+
         render(<QueueCardNode {...newProps} />);
-        
+
         expect(screen.getByText('new')).toBeInTheDocument();
     });
 
@@ -151,22 +151,22 @@ describe('QueueCardNode', () => {
                 stagedStatus: 'deleted' as const,
             },
         };
-        
+
         render(<QueueCardNode {...deletedProps} />);
-        
+
         const deletedBadge = screen.getByText('deleted');
         expect(deletedBadge).toBeInTheDocument();
     });
 
     it('should display usage percentage', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         expect(screen.getByText(/45\.0% used/)).toBeInTheDocument();
     });
 
     it('should display capacity text', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Should show the capacity percentage and label
         expect(screen.getByText('70%')).toBeInTheDocument();
         expect(screen.getByText('capacity')).toBeInTheDocument();
@@ -177,9 +177,9 @@ describe('QueueCardNode', () => {
             ...mockNodeProps,
             selected: true,
         };
-        
+
         render(<QueueCardNode {...selectedProps} />);
-        
+
         // Should render without error
         expect(screen.getByText('production')).toBeInTheDocument();
     });
@@ -192,16 +192,16 @@ describe('QueueCardNode', () => {
                 isLeaf: true,
             },
         };
-        
+
         render(<QueueCardNode {...leafProps} />);
-        
+
         // Should render without error
         expect(screen.getByText('production')).toBeInTheDocument();
     });
 
     it('should format memory correctly', () => {
         const { rerender } = render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Test different memory values
         const testCases = [
             { memory: 512, expected: 'Memory: 536.87 MB' }, // formatBytes converts MB to bytes first
@@ -211,15 +211,15 @@ describe('QueueCardNode', () => {
 
         testCases.forEach(({ memory, expected }) => {
             rerender(
-                <QueueCardNode 
-                    {...mockNodeProps} 
+                <QueueCardNode
+                    {...mockNodeProps}
                     data={{
                         ...mockNodeData,
                         resourcesUsed: { memory, vCores: 1 },
                     }}
                 />
             );
-            
+
             // Check for presence of memory value
             expect(screen.getByText(new RegExp(`Memory:.*vCores: 1`))).toBeInTheDocument();
         });
@@ -233,9 +233,9 @@ describe('QueueCardNode', () => {
                 resourcesUsed: undefined,
             },
         };
-        
+
         render(<QueueCardNode {...noResourceProps} />);
-        
+
         // Should not crash and should show basic info
         expect(screen.getByText('production')).toBeInTheDocument();
         expect(screen.queryByText(/GB/)).not.toBeInTheDocument();
@@ -251,9 +251,9 @@ describe('QueueCardNode', () => {
                 stagedState: 'STOPPED',
             },
         };
-        
+
         render(<QueueCardNode {...stagedStateProps} />);
-        
+
         // Should show both live state and staged state
         expect(screen.getByText('RUNNING')).toBeInTheDocument();
         expect(screen.getByText('→STOPPED')).toBeInTheDocument();
@@ -261,7 +261,7 @@ describe('QueueCardNode', () => {
 
     it('should not show staged state badge when no staged state', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Should only show live state
         expect(screen.getByText('RUNNING')).toBeInTheDocument();
         expect(screen.queryByText(/→/)).not.toBeInTheDocument();
@@ -269,7 +269,7 @@ describe('QueueCardNode', () => {
 
     it('should not show auto-creation icon when autoCreationEligibility is off', () => {
         render(<QueueCardNode {...mockNodeProps} />);
-        
+
         // Should not show auto-creation icon
         expect(screen.queryByLabelText(/Auto Queue Creation/)).not.toBeInTheDocument();
     });
@@ -283,9 +283,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'flexible', isStaged: false },
             },
         };
-        
+
         render(<QueueCardNode {...flexibleProps} />);
-        
+
         // Should show auto-creation icon with tooltip
         expect(screen.getByLabelText('Auto Queue Creation: flexible')).toBeInTheDocument();
     });
@@ -299,9 +299,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'legacy', isStaged: false },
             },
         };
-        
+
         render(<QueueCardNode {...legacyProps} />);
-        
+
         // Should show auto-creation icon with tooltip
         expect(screen.getByLabelText('Auto Queue Creation: legacy')).toBeInTheDocument();
     });
@@ -315,9 +315,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'flexible', isStaged: true },
             },
         };
-        
+
         render(<QueueCardNode {...stagedFlexibleProps} />);
-        
+
         // Should show arrow and staged status in tooltip
         expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
         expect(screen.getByText('→')).toBeInTheDocument();
@@ -332,9 +332,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'legacy', isStaged: true },
             },
         };
-        
+
         render(<QueueCardNode {...stagedLegacyProps} />);
-        
+
         // Should show arrow and staged status in tooltip
         expect(screen.getByLabelText('Auto Queue Creation: legacy (staged)')).toBeInTheDocument();
         expect(screen.getByText('→')).toBeInTheDocument();
@@ -349,9 +349,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'off', isStaged: true },
             },
         };
-        
+
         render(<QueueCardNode {...stagedOffProps} />);
-        
+
         // Should not show auto-creation indicator when staged status is off
         expect(screen.queryByLabelText(/Auto Queue Creation/)).not.toBeInTheDocument();
     });
@@ -365,9 +365,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'flexible', isStaged: true },
             },
         };
-        
+
         render(<QueueCardNode {...stagedChangeProps} />);
-        
+
         // Should show arrow and new staged status
         expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
         expect(screen.getByText('→')).toBeInTheDocument();
@@ -382,9 +382,9 @@ describe('QueueCardNode', () => {
                 autoCreationStatus: { status: 'flexible', isStaged: true },
             },
         };
-        
+
         render(<QueueCardNode {...stagedProps} />);
-        
+
         // Should show arrow indicator and proper tooltip
         expect(screen.getByLabelText('Auto Queue Creation: flexible (staged)')).toBeInTheDocument();
         expect(screen.getByText('→')).toBeInTheDocument();

@@ -30,7 +30,7 @@ vi.mock('@xyflow/react', async () => {
 
 describe('QueueCardNode Store Integration', () => {
     const mockQueueTree = createMockQueueTree();
-    
+
     const mockStoreState = {
         queueTree: mockQueueTree,
         schedulerData: null as QueueInfo | null,
@@ -64,12 +64,12 @@ describe('QueueCardNode Store Integration', () => {
             // Return null since getQueueByPath returns QueueInfo, not QueueNode
             return null;
         });
-        
+
         mockStoreState.getChildQueues.mockImplementation(() => {
             // Return empty array since this expects QueueInfo[]
             return [];
         });
-        
+
         // Mock useQueueActions to call the store methods
         (useQueueActions as any).mockReturnValue({
             canAddChildQueue: () => true,
@@ -92,7 +92,7 @@ describe('QueueCardNode Store Integration', () => {
 
     it('should complete add queue flow from context menu to store', async () => {
         const user = userEvent.setup();
-        
+
         // Create a node for the production queue
         const nodeProps: NodeProps<QueueNodeData> = {
             id: 'root.production',
@@ -265,7 +265,7 @@ describe('QueueCardNode Store Integration', () => {
 
     it.skip('should validate queue names during add flow', async () => {
         const user = userEvent.setup();
-        
+
         const nodeProps: NodeProps<QueueNodeData> = {
             id: 'root.production',
             data: {
@@ -301,7 +301,7 @@ describe('QueueCardNode Store Integration', () => {
         // Try to enter invalid queue name with dots
         const queueNameInput = await screen.findByPlaceholderText('e.g., production, development');
         await user.type(queueNameInput, 'invalid.name');
-        
+
         // Trigger validation by blurring the input
         fireEvent.blur(queueNameInput);
 
@@ -328,13 +328,13 @@ describe('QueueCardNode Store Integration', () => {
                 }),
             ],
         });
-        
+
         // Update the mock state
         mockStoreState.queueTree = testQueueTree;
 
         const TestComponent = () => {
             const actions = useQueueActions();
-            
+
             return (
                 <div>
                     <button onClick={() => actions.addChildQueue('root', 'test2', { capacity: '10' })}>

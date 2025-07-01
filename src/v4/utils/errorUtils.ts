@@ -41,15 +41,15 @@ export function extractErrorMessage(error: unknown): string {
     if (error instanceof SchedulerStoreError) {
         return error.message;
     }
-    
+
     if (error instanceof Error) {
         return error.message;
     }
-    
+
     if (typeof error === 'string') {
         return error;
     }
-    
+
     return 'An unexpected error occurred';
 }
 
@@ -86,15 +86,15 @@ export function createDetailedErrorMessage(
 ): string {
     const baseMessage = `Failed to ${operation}`;
     const errorMessage = extractErrorMessage(error);
-    
+
     let message = `${baseMessage}: ${errorMessage}`;
-    
+
     if (context && Object.keys(context).length > 0) {
         const contextStr = Object.entries(context)
             .map(([key, value]) => `${key}=${JSON.stringify(value)}`)
             .join(', ');
         message += ` (${contextStr})`;
     }
-    
+
     return message;
 }

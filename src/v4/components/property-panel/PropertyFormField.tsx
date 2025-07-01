@@ -37,7 +37,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     // Check if field should be enabled based on dependencies
     const isFieldEnabled = React.useMemo(() => {
         if (!property.enableWhen) return true;
-        
+
         return Object.entries(property.enableWhen).every(([dependentField, condition]) => {
             const dependentValue = dependentValues[dependentField];
             return condition(dependentValue || '');
@@ -48,7 +48,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     const createCustomOnChange = (originalOnChange: (value: any) => void) => (value: any) => {
         // Update form state
         originalOnChange(value);
-        
+
         // Trigger staging if callback provided
         if (onFieldChange) {
             const stringValue = typeof value === 'boolean' ? (value ? 'true' : '') : String(value || '');
@@ -119,8 +119,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                             }}
                         >
                             {property.enumValues?.map((option) => (
-                                <ToggleButton 
-                                    key={option} 
+                                <ToggleButton
+                                    key={option}
                                     value={option}
                                     size="small"
                                 >

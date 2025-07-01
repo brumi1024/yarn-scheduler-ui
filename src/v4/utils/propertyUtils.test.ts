@@ -112,7 +112,7 @@ describe('propertyUtils', () => {
                 valid: false,
                 message: 'Queue names cannot contain dots (.)',
             });
-            
+
             expect(validateQueueName('production.')).toEqual({
                 valid: false,
                 message: 'Queue names cannot contain dots (.)',
@@ -124,7 +124,7 @@ describe('propertyUtils', () => {
                 valid: false,
                 message: 'Queue name cannot be empty',
             });
-            
+
             expect(validateQueueName('   ')).toEqual({
                 valid: false,
                 message: 'Queue name cannot be empty',
@@ -136,12 +136,12 @@ describe('propertyUtils', () => {
                 valid: false,
                 message: 'Queue names should only contain letters, numbers, hyphens, and underscores',
             });
-            
+
             expect(validateQueueName('queue name')).toEqual({
                 valid: false,
                 message: 'Queue names should only contain letters, numbers, hyphens, and underscores',
             });
-            
+
             expect(validateQueueName('queue/name')).toEqual({
                 valid: false,
                 message: 'Queue names should only contain letters, numbers, hyphens, and underscores',

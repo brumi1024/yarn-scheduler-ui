@@ -2,6 +2,10 @@
  * React Query hooks for YARN API
  * Provides typed hooks for all YARN Scheduler endpoints with automatic
  * caching, retries, and state management
+ *
+ * NOTE: Currently unused - this file provides an alternative React Query-based
+ * architecture that could be used instead of the current Zustand store pattern.
+ * Consider this for future migration to React Query state management.
  */
 
 import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
@@ -175,7 +179,7 @@ export const useReplaceNodeToLabelsMutation = (
     const queryClient = useQueryClient();
 
     return useMutation({
-        mutationFn: (nodeToLabels: Record<string, string[]>) => 
+        mutationFn: (nodeToLabels: Record<string, string[]>) =>
             getApiClient().replaceNodeToLabels(nodeToLabels),
         onSuccess: () => {
             // Invalidate node to labels query

@@ -17,18 +17,15 @@ export function useQueueActions(): UseQueueActionsResult {
 
     const addChildQueue = useCallback(
         (parentPath: string, queueName: string, config: Record<string, string>) => {
-            // Validate queue name doesn't contain dots
             if (queueName.includes('.')) {
                 throw new Error('Queue name cannot contain dots');
             }
 
-            // Validate parent exists
             const parent = getQueueByPath(parentPath);
             if (!parent) {
                 throw new Error('Parent queue not found');
             }
 
-            // Add the queue
             stageQueueAddition(parentPath, queueName, config);
         },
         [stageQueueAddition, getQueueByPath]
@@ -36,23 +33,19 @@ export function useQueueActions(): UseQueueActionsResult {
 
     const deleteQueue = useCallback(
         (queuePath: string) => {
-            // Cannot delete root queue
             if (queuePath === 'root') {
                 throw new Error('Cannot delete root queue');
             }
 
-            // Check if queue exists
             const queue = getQueueByPath(queuePath);
             if (!queue) {
                 throw new Error('Queue not found');
             }
 
-            // Check if queue has children (QueueInfo structure)
             if (queue.queues?.queue && queue.queues.queue.length > 0) {
                 throw new Error('Cannot delete queue with children');
             }
 
-            // Delete the queue
             stageQueueRemoval(queuePath);
         },
         [stageQueueRemoval, getQueueByPath]
@@ -75,7 +68,6 @@ export function useQueueActions(): UseQueueActionsResult {
 
     const canDeleteQueue = useCallback(
         (queuePath: string) => {
-            // Cannot delete root
             if (queuePath === 'root') {
                 return false;
             }
@@ -85,7 +77,6 @@ export function useQueueActions(): UseQueueActionsResult {
                 return false;
             }
 
-            // Cannot delete if has children (QueueInfo structure)
             return !queue.queues?.queue || queue.queues.queue.length === 0;
         },
         [getQueueByPath]

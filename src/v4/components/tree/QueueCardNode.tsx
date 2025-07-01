@@ -10,47 +10,43 @@ import { parseCapacityValue } from '../../../utils/capacity';
 import { formatMemory } from '../../utils/formatUtils';
 
 export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected, id }) => {
-    // Popup state for context menu
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
-    
-    // Store access for comparison and property panel functionality
+
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
     const selectedQueuePath = useSchedulerStore(state => state.selectedQueuePath);
     const toggleComparisonQueue = useSchedulerStore(state => state.toggleComparisonQueue);
     const selectQueue = useSchedulerStore(state => state.selectQueue);
     const setPropertyPanelOpen = useSchedulerStore(state => state.setPropertyPanelOpen);
-    
-    // Queue actions for context menu
+
     const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
 
     const {
         queuePath,
         queueName,
-        capacity,           // LIVE DATA - always normalized percentage
-        maxCapacity,        // LIVE DATA - always normalized percentage  
+        capacity,
+        maxCapacity,
         state,
-        usedCapacity,       // LIVE DATA - current usage percentage
+        usedCapacity,
         numApplications,
         resourcesUsed,
         stagedStatus,
         isLeaf,
         absoluteUsedCapacity,
-        capacityConfig,     // CONFIG STRING - for editing only
-        maxCapacityConfig,  // CONFIG STRING - for editing only
-        stagedState,        // STAGED STATE - for visual indication
-        autoCreationStatus, // AUTO CREATION STATUS - with staging info
+        capacityConfig,
+        maxCapacityConfig,
+        stagedState,
+        autoCreationStatus,
     } = data;
-    
+
     const isSelectedForComparison = comparisonQueues.includes(queuePath);
     const isSelectedQueue = selectedQueuePath === queuePath;
 
-    // Get border color based on staged status and selection
     const getBorderColor = () => {
-        if (stagedStatus === 'new') return '#22c55e'; // Green for new
-        if (stagedStatus === 'deleted') return '#ef4444'; // Red for deleted
-        if (stagedStatus === 'modified') return '#f59e0b'; // Orange for modified
-        if (isSelectedQueue) return '#1976d2'; // Blue for selected
-        return '#e0e0e0'; // Default
+        if (stagedStatus === 'new') return '#22c55e';
+        if (stagedStatus === 'deleted') return '#ef4444';
+        if (stagedStatus === 'modified') return '#f59e0b';
+        if (isSelectedQueue) return '#1976d2';
+        return '#e0e0e0';
     };
 
     const getBorderWidth = () => {
@@ -59,9 +55,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
         return '1px';
     };
 
-    // Get usage color using live data
     const getUsageColor = (used: number): string => {
-        if (capacity === 0) return '#94a3b8'; // Gray for no capacity
+        if (capacity === 0) return '#94a3b8';
         if (used >= 90) return '#ef4444';
         if (used >= 75) return '#f97316';
         if (used >= 50) return '#eab308';
@@ -69,19 +64,16 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
         return '#84cc16';
     };
 
-    // Calculate capacity bar width using LIVE DATA
     const getCapacityBarWidth = (): number => {
         if (maxCapacity === 0) return 0;
         return Math.min((capacity / maxCapacity) * 100, 100);
     };
 
-    // Calculate usage bar width using LIVE DATA
     const getUsageBarWidth = (): number => {
         if (capacity === 0) return 0;
         return Math.min((usedCapacity / capacity) * 100, 100);
     };
 
-    // Determine capacity mode and color based on config string
     const getCapacityModeInfo = () => {
         const parsed = parseCapacityValue(capacityConfig);
         if (parsed.mode === 'weight') {
@@ -109,15 +101,12 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
         toggleComparisonQueue(queuePath);
     };
 
-    // Context menu handlers
     const handleAddChildQueue = () => {
-        // TODO: Implement add child queue dialog
         console.log('Add child queue to:', queuePath);
         popupState.close();
     };
 
     const handleDeleteQueue = () => {
-        // TODO: Implement delete queue dialog  
         console.log('Delete queue:', queuePath);
         popupState.close();
     };
@@ -150,15 +139,14 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                         borderColor: '#1976d2',
                     },
                     transition: 'all 0.2s ease-in-out',
-                    bgcolor: isSelectedQueue 
+                    bgcolor: isSelectedQueue
                         ? 'rgba(25, 118, 210, 0.08)' // Light blue for selected
-                        : isSelectedForComparison 
-                            ? 'action.selected' 
+                        : isSelectedForComparison
+                            ? 'action.selected'
                             : 'background.paper',
                 }}
                 onClick={handleClick}
             >
-                {/* Header */}
                 <Box
                     sx={{
                         padding: '8px 16px',
@@ -184,8 +172,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                     >
                         {queueName}
                     </Typography>
-                    
-                    {/* Auto creation indicator */}
+
                     {autoCreationStatus && autoCreationStatus.status !== 'off' && (
                         <Tooltip title={`Auto Queue Creation: ${autoCreationStatus.status}${autoCreationStatus.isStaged ? ' (staged)' : ''}`}>
                             <Box
@@ -193,22 +180,21 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     display: 'inline-flex',
                                     alignItems: 'center',
                                     ml: 1,
-                                    color: autoCreationStatus.isStaged 
-                                        ? '#ff9800' // Orange for staged changes
+                                    color: autoCreationStatus.isStaged
+                                        ? '#ff9800'
                                         : autoCreationStatus.status === 'flexible' ? '#10b981' : '#f59e0b',
                                     opacity: autoCreationStatus.isStaged ? 0.8 : 1,
                                 }}
                             >
                                 {autoCreationStatus.isStaged && '→'}
-                                {autoCreationStatus.status === 'flexible' ? 
-                                    <AutoIcon sx={{ fontSize: '14px' }} /> : 
+                                {autoCreationStatus.status === 'flexible' ?
+                                    <AutoIcon sx={{ fontSize: '14px' }} /> :
                                     <LegacyIcon sx={{ fontSize: '14px' }} />
                                 }
                             </Box>
                         </Tooltip>
                     )}
-                    
-                    {/* Comparison checkbox */}
+
                     <Checkbox
                         checked={isSelectedForComparison}
                         onChange={handleComparisonToggle}
@@ -224,10 +210,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                 </Box>
 
                 <CardContent sx={{ p: 0, height: 'calc(100% - 40px)' }}>
-                    {/* Badges section */}
                     <Box sx={{ p: '8px 16px 0 16px' }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                            {/* Capacity mode badge */}
                             <Box
                                 sx={{
                                     display: 'inline-flex',
@@ -253,7 +237,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 </Typography>
                             </Box>
 
-                            {/* State badge */}
                             <Box
                                 sx={{
                                     display: 'inline-flex',
@@ -278,7 +261,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 </Typography>
                             </Box>
 
-                            {/* Staged state badge if applicable */}
                             {stagedState && (
                                 <Box
                                     sx={{
@@ -307,7 +289,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 </Box>
                             )}
 
-                            {/* Staged status badge if applicable */}
                             {stagedStatus && (
                                 <Box
                                     sx={{
@@ -315,7 +296,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         alignItems: 'center',
                                         px: 1,
                                         py: 0.25,
-                                        backgroundColor: 
+                                        backgroundColor:
                                             stagedStatus === 'new' ? '#dcfce7' :
                                             stagedStatus === 'modified' ? '#fef3c7' :
                                             '#fee2e2',
@@ -332,7 +313,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         sx={{
                                             fontWeight: 'bold',
                                             fontSize: '10px',
-                                            color: 
+                                            color:
                                                 stagedStatus === 'new' ? '#22c55e' :
                                                 stagedStatus === 'modified' ? '#f59e0b' :
                                                 '#ef4444',
@@ -346,7 +327,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                             )}
                         </Box>
 
-                        {/* Capacity info - Display CONFIG STRING for editing, use LIVE DATA for visualization */}
                         <Box sx={{ mb: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 0.5 }}>
                                 <Typography
@@ -359,13 +339,11 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 >
                                     {(() => {
                                         const parsed = parseCapacityValue(capacityConfig);
-                                        // Display the raw configured value for editing
                                         if (parsed.mode === 'weight') {
-                                            return capacityConfig; // e.g., "2w"
+                                            return capacityConfig;
                                         } else if (parsed.mode === 'absolute') {
-                                            return capacityConfig; // e.g., "[memory=1024,vcores=2]"
+                                            return capacityConfig;
                                         } else {
-                                            // For percentage, add % if not present
                                             return capacityConfig.endsWith('%') ? capacityConfig : `${capacityConfig}%`;
                                         }
                                     })()}
@@ -380,8 +358,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     capacity
                                 </Typography>
                             </Box>
-                            
-                            {/* Capacity bar - Using LIVE DATA for visualization */}
+
                             <Box
                                 sx={{
                                     position: 'relative',
@@ -393,7 +370,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     overflow: 'hidden',
                                 }}
                             >
-                                {/* Max capacity background */}
                                 {maxCapacity > capacity && (
                                     <Box
                                         sx={{
@@ -408,7 +384,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     />
                                 )}
 
-                                {/* Current capacity */}
                                 <Box
                                     sx={{
                                         position: 'absolute',
@@ -421,7 +396,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     }}
                                 />
 
-                                {/* Used capacity */}
                                 {usedCapacity > 0 && capacity > 0 && (
                                     <Box
                                         sx={{
@@ -437,7 +411,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 )}
                             </Box>
 
-                            {/* Usage text */}
                             <Box sx={{ display: 'flex', justifyContent: 'space-between', mt: 0.5 }}>
                                 <Typography
                                     sx={{
@@ -457,13 +430,11 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 >
                                     {(() => {
                                         const parsed = parseCapacityValue(maxCapacityConfig);
-                                        // Display the raw configured max value
                                         if (parsed.mode === 'weight') {
-                                            return `${maxCapacityConfig} max`; // e.g., "5w max"
+                                            return `${maxCapacityConfig} max`;
                                         } else if (parsed.mode === 'absolute') {
-                                            return `${maxCapacityConfig} max`; // e.g., "[memory=2048,vcores=4] max"
+                                            return `${maxCapacityConfig} max`;
                                         } else {
-                                            // For percentage
                                             const value = maxCapacityConfig.endsWith('%') ? maxCapacityConfig : `${maxCapacityConfig}%`;
                                             return `${value} max`;
                                         }
@@ -472,10 +443,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                             </Box>
                         </Box>
 
-                        {/* Resources section - only show if there are resources used */}
                         {(resourcesUsed && (resourcesUsed.memory > 0 || resourcesUsed.vCores > 0)) || numApplications > 0 ? (
                             <>
-                                {/* Section divider */}
                                 <Box
                                     sx={{
                                         height: '1px',
@@ -484,7 +453,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         mb: 1,
                                     }}
                                 />
-                                
+
                                 <Typography
                                     sx={{
                                         fontSize: '12px',
@@ -496,8 +465,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         resourcesUsed?.memory && resourcesUsed.memory > 0
                                             ? `Memory: ${formatMemory(resourcesUsed.memory)}`
                                             : null,
-                                        resourcesUsed?.vCores && resourcesUsed.vCores > 0 
-                                            ? `vCores: ${resourcesUsed.vCores}` 
+                                        resourcesUsed?.vCores && resourcesUsed.vCores > 0
+                                            ? `vCores: ${resourcesUsed.vCores}`
                                             : null,
                                         numApplications > 0 ? `Apps: ${numApplications}` : null,
                                     ]
@@ -507,7 +476,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                             </>
                         ) : null}
 
-                        {/* Absolute used capacity if different from used capacity */}
                         {absoluteUsedCapacity !== usedCapacity && (
                             <Box sx={{ mt: 0.5 }}>
                                 <Typography
@@ -524,7 +492,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                     </Box>
                 </CardContent>
 
-                {/* React Flow handles */}
                 <Handle
                     type="target"
                     position={Position.Left}
@@ -547,7 +514,6 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                 />
             </Card>
 
-            {/* Context Menu */}
             <Menu
                 {...bindMenu(popupState)}
                 anchorOrigin={{

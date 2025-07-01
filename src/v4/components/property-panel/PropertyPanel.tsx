@@ -10,7 +10,7 @@ import {
     Button,
     CircularProgress,
 } from '@mui/material';
-import { 
+import {
     Close as CloseIcon,
     Save as SaveIcon,
     Refresh as RefreshIcon,
@@ -42,8 +42,8 @@ function TabPanel(props: TabPanelProps) {
             {...other}
         >
             {value === index && (
-                <Box sx={{ 
-                    height: '100%', 
+                <Box sx={{
+                    height: '100%',
                     // Configuration tab needs full height for its internal scrolling
                     // Other tabs can use auto overflow
                     overflow: index === 2 ? 'hidden' : 'auto',
@@ -58,17 +58,17 @@ function TabPanel(props: TabPanelProps) {
 }
 
 export const PropertyPanel: React.FC = () => {
-    const { 
-        selectedQueuePath, 
-        isPropertyPanelOpen, 
+    const {
+        selectedQueuePath,
+        isPropertyPanelOpen,
         setPropertyPanelOpen,
-        getQueueByPath 
+        getQueueByPath
     } = useSchedulerStore();
-    
+
     const [tabValue, setTabValue] = useState(0);
     const [hasChanges, setHasChanges] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
-    
+
     const propertyEditorRef = React.useRef<PropertyEditorTabHandle>(null);
 
     const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
@@ -134,9 +134,9 @@ export const PropertyPanel: React.FC = () => {
                         <CloseIcon />
                     </IconButton>
                 </Box>
-                
+
                 <Divider />
-                
+
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
                     <Tabs value={tabValue} onChange={handleTabChange} aria-label="property panel tabs">
                         <Tab label="Overview" />
@@ -144,9 +144,9 @@ export const PropertyPanel: React.FC = () => {
                         <Tab label="Configuration" />
                     </Tabs>
                 </Box>
-                
-                <Box sx={{ 
-                    flexGrow: 1, 
+
+                <Box sx={{
+                    flexGrow: 1,
                     overflow: 'hidden',
                     display: 'flex',
                     flexDirection: 'column',
@@ -164,7 +164,7 @@ export const PropertyPanel: React.FC = () => {
                         </Box>
                     </TabPanel>
                     <TabPanel value={tabValue} index={2}>
-                        <PropertyEditorTab 
+                        <PropertyEditorTab
                             ref={propertyEditorRef}
                             queue={selectedQueue}
                             onHasChangesChange={handleHasChangesChange}

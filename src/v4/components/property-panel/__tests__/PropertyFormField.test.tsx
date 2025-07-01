@@ -7,8 +7,8 @@ import { PropertyFormField } from '../PropertyFormField';
 import type { PropertyDescriptor } from '../../../types/property-descriptor';
 
 // Test wrapper component to provide form context
-const TestWrapper: React.FC<{ 
-    children: React.ReactNode; 
+const TestWrapper: React.FC<{
+    children: React.ReactNode;
     defaultValues?: Record<string, any>;
 }> = ({ children, defaultValues = {} }) => {
     const { control } = useForm({ defaultValues });
@@ -123,9 +123,9 @@ describe('PropertyFormField', () => {
     it('displays staged indicator when field is staged', () => {
         render(
             <TestWrapper>
-                <PropertyFormField 
-                    property={baseProperty} 
-                    control={null as any} 
+                <PropertyFormField
+                    property={baseProperty}
+                    control={null as any}
                     isStaged={true}
                 />
             </TestWrapper>
@@ -160,9 +160,9 @@ describe('PropertyFormField', () => {
 
         render(
             <TestWrapper>
-                <PropertyFormField 
-                    property={baseProperty} 
-                    control={null as any} 
+                <PropertyFormField
+                    property={baseProperty}
+                    control={null as any}
                     error={error}
                 />
             </TestWrapper>
@@ -181,8 +181,8 @@ describe('PropertyFormField', () => {
 
         render(
             <TestWrapper>
-                <PropertyFormField 
-                    property={property} 
+                <PropertyFormField
+                    property={property}
                     control={null as any}
                     dependentValues={{ 'other-property': 'disabled' }}
                 />
@@ -204,8 +204,8 @@ describe('PropertyFormField', () => {
 
         render(
             <TestWrapper>
-                <PropertyFormField 
-                    property={property} 
+                <PropertyFormField
+                    property={property}
                     control={null as any}
                     dependentValues={{ 'other-property': 'enabled' }}
                 />
@@ -265,7 +265,7 @@ describe('PropertyFormField', () => {
         expect(switchElement.checked).toBe(false);
 
         await user.click(switchElement);
-        
+
         // Re-render with updated value
         rerender(
             <TestWrapper defaultValues={{ 'test-property': 'true' }}>
@@ -291,14 +291,14 @@ describe('PropertyFormField', () => {
         // Check that enum options are rendered as buttons
         const runningButton = screen.getByRole('button', { name: 'RUNNING' });
         const stoppedButton = screen.getByRole('button', { name: 'STOPPED' });
-        
+
         expect(runningButton).toBeInTheDocument();
         expect(stoppedButton).toBeInTheDocument();
 
         // Test clicking a button
         await user.click(runningButton);
         expect(runningButton).toHaveAttribute('aria-pressed', 'true');
-        
+
         // Test clicking the same button to deselect
         await user.click(runningButton);
         expect(runningButton).toHaveAttribute('aria-pressed', 'false');

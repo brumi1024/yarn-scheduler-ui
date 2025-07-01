@@ -35,13 +35,13 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...runningProps} />);
-        
+
         const gradient = container.querySelector('linearGradient');
         expect(gradient).toBeInTheDocument();
-        
+
         const stops = gradient?.querySelectorAll('stop');
         expect(stops).toHaveLength(2);
-        
+
         // Check blue gradient colors
         expect(stops?.[0]).toHaveStyle({ stopColor: '#2196f3' });
         expect(stops?.[1]).toHaveStyle({ stopColor: '#64b5f6' });
@@ -54,10 +54,10 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...stoppedProps} />);
-        
+
         const gradient = container.querySelector('linearGradient');
         const stops = gradient?.querySelectorAll('stop');
-        
+
         // Check red gradient colors
         expect(stops?.[0]).toHaveStyle({ stopColor: '#f44336' });
         expect(stops?.[1]).toHaveStyle({ stopColor: '#e57373' });
@@ -70,10 +70,10 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...defaultProps} />);
-        
+
         const gradient = container.querySelector('linearGradient');
         const stops = gradient?.querySelectorAll('stop');
-        
+
         // Check gray gradient colors
         expect(stops?.[0]).toHaveStyle({ stopColor: '#9e9e9e' });
         expect(stops?.[1]).toHaveStyle({ stopColor: '#bdbdbd' });
@@ -94,7 +94,7 @@ describe('CustomFlowEdge', () => {
             };
 
             const { container } = render(<CustomFlowEdge {...props} />);
-            
+
             // The path should exist
             const path = container.querySelector('path[fill*="url(#gradient"]');
             expect(path).toBeInTheDocument();
@@ -108,7 +108,7 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...runningProps} />);
-        
+
         // Look for the animated stroke path
         const animatedPath = container.querySelector('path[stroke="rgba(255, 255, 255, 0.3)"]');
         expect(animatedPath).toBeInTheDocument();
@@ -122,7 +122,7 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...stoppedProps} />);
-        
+
         // No animated stroke path should exist
         const animatedPath = container.querySelector('path[stroke="rgba(255, 255, 255, 0.3)"]');
         expect(animatedPath).not.toBeInTheDocument();
@@ -130,10 +130,10 @@ describe('CustomFlowEdge', () => {
 
     it('should render shadow filter', () => {
         const { container } = render(<CustomFlowEdge {...mockEdgeProps} />);
-        
+
         const filter = container.querySelector('filter');
         expect(filter).toBeInTheDocument();
-        
+
         const dropShadow = filter?.querySelector('feDropShadow');
         expect(dropShadow).toBeInTheDocument();
         expect(dropShadow).toHaveAttribute('dx', '0');
@@ -147,7 +147,7 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...propsWithoutData} />);
-        
+
         // Should still render with default values
         expect(container.querySelector('g')).toBeInTheDocument();
         expect(container.querySelector('path')).toBeInTheDocument();
@@ -166,11 +166,11 @@ describe('CustomFlowEdge', () => {
         };
 
         const { container } = render(<CustomFlowEdge {...propsWithProportionalData} />);
-        
+
         // Path should be rendered with the custom Y positions
         const mainPath = container.querySelector('path[fill*="url(#gradient"]');
         expect(mainPath).toBeInTheDocument();
-        
+
         // The path data should include our custom Y coordinates
         const pathData = mainPath?.getAttribute('d');
         expect(pathData).toContain('90'); // sourceStartY

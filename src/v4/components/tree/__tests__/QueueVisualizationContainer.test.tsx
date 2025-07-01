@@ -92,7 +92,7 @@ describe('QueueVisualizationContainer', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         (useSchedulerStore as any).mockReturnValue(mockStoreState);
-        
+
         // Mock useQueueTreeData to return test data
         (useQueueTreeData as any).mockReturnValue({
             nodes: [
@@ -150,7 +150,7 @@ describe('QueueVisualizationContainer', () => {
 
     it('should render React Flow provider and components', () => {
         render(<QueueVisualizationContainer />);
-        
+
         expect(screen.getByTestId('react-flow-provider')).toBeInTheDocument();
         expect(screen.getByTestId('react-flow')).toBeInTheDocument();
         expect(screen.getByTestId('react-flow-background')).toBeInTheDocument();
@@ -167,7 +167,7 @@ describe('QueueVisualizationContainer', () => {
         });
 
         render(<QueueVisualizationContainer />);
-        
+
         expect(screen.getByRole('progressbar')).toBeInTheDocument();
     });
 
@@ -181,7 +181,7 @@ describe('QueueVisualizationContainer', () => {
         });
 
         render(<QueueVisualizationContainer />);
-        
+
         expect(screen.getByText(`Failed to load scheduler data: ${errorMessage}`)).toBeInTheDocument();
     });
 
@@ -202,7 +202,7 @@ describe('QueueVisualizationContainer', () => {
 
         // Get the onNodeClick handler from React Flow
         const onNodeClick = mockReactFlow.mock.calls[0][0].onNodeClick;
-        
+
         // Simulate clicking a node
         const mockNode = { id: 'root.default' };
         onNodeClick({}, mockNode);
@@ -213,7 +213,7 @@ describe('QueueVisualizationContainer', () => {
     it('should pass custom className prop', () => {
         const testClassName = 'custom-tree-class';
         render(<QueueVisualizationContainer className={testClassName} />);
-        
+
         const container = screen.getByTestId('queue-tree-container');
         expect(container).toHaveClass(testClassName);
     });

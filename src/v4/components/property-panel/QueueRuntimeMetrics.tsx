@@ -9,7 +9,7 @@ interface QueueRuntimeMetricsProps {
 
 export const QueueRuntimeMetrics: React.FC<QueueRuntimeMetricsProps> = ({ queue }) => {
     const resourcesUsed = queue.resourcesUsed || { memory: 0, vCores: 0 };
-    
+
     return (
         <>
             {/* Applications */}

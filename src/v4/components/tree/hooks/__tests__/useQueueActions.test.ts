@@ -64,7 +64,7 @@ describe('useQueueActions', () => {
     describe('addChildQueue', () => {
         it('should add a child queue with valid name and config', () => {
             mockStoreActions.getQueueByPath.mockReturnValue(mockQueueTree);
-            
+
             const { result } = renderHook(() => useQueueActions());
 
             act(() => {
@@ -94,7 +94,7 @@ describe('useQueueActions', () => {
 
         it('should throw error if parent queue does not exist', () => {
             mockStoreActions.getQueueByPath.mockReturnValue(null);
-            
+
             const { result } = renderHook(() => useQueueActions());
 
             expect(() => {
@@ -178,7 +178,7 @@ describe('useQueueActions', () => {
             mockStoreActions.getQueueByPath.mockReturnValue(mockQueueTree);
 
             const { result } = renderHook(() => useQueueActions());
-            
+
             expect(result.current.canAddChildQueue('root')).toBe(true);
         });
 
@@ -186,7 +186,7 @@ describe('useQueueActions', () => {
             mockStoreActions.getQueueByPath.mockReturnValue(null);
 
             const { result } = renderHook(() => useQueueActions());
-            
+
             expect(result.current.canAddChildQueue('root.nonexistent')).toBe(false);
         });
 
@@ -200,7 +200,7 @@ describe('useQueueActions', () => {
             });
 
             const { result } = renderHook(() => useQueueActions());
-            
+
             expect(result.current.canDeleteQueue('root.default')).toBe(true);
         });
 
@@ -214,13 +214,13 @@ describe('useQueueActions', () => {
             });
 
             const { result } = renderHook(() => useQueueActions());
-            
+
             expect(result.current.canDeleteQueue('root')).toBe(false);
         });
 
         it('canDeleteQueue should return false for root queue', () => {
             const { result } = renderHook(() => useQueueActions());
-            
+
             expect(result.current.canDeleteQueue('root')).toBe(false);
         });
     });

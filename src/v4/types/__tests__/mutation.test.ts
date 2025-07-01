@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import type { 
-    MutationResponse, 
-    MutationError, 
-    ValidationResponse, 
+import type {
+    MutationResponse,
+    MutationError,
+    ValidationResponse,
     ConfigVersionResponse,
     NodeLabelAddRequest,
     NodeLabelRemoveRequest,
-    NodeLabelReplaceRequest 
+    NodeLabelReplaceRequest
 } from '../mutation';
 
 describe('MutationResponse interface', () => {
@@ -188,7 +188,7 @@ describe('NodeLabelReplaceRequest interface', () => {
         const gpuNodes = Object.entries(bulkRequest.nodeToLabels)
             .filter(([_, labels]) => labels.includes('gpu'))
             .length;
-        
+
         expect(gpuNodes).toBe(3);
     });
 });

@@ -17,12 +17,12 @@ vi.mock('../hooks/useQueueActions');
 vi.mock('@xyflow/react', async () => {
     const actual = await vi.importActual('@xyflow/react');
     const React = await import('react');
-    
+
     return {
         ...actual,
         ReactFlow: ({ children, nodes, edges, onNodeClick, nodeTypes }: any) => {
             return React.createElement('div', { 'data-testid': 'react-flow' },
-                nodes.map((node: any) => 
+                nodes.map((node: any) =>
                     React.createElement('div', {
                         key: node.id,
                         'data-testid': `node-${node.id}`,
@@ -83,7 +83,7 @@ describe('QueueVisualizationContainer Integration', () => {
 
     beforeEach(() => {
         vi.clearAllMocks();
-        
+
         // Mock store implementation
         (useSchedulerStore as any).mockImplementation((selector: any) => {
             if (typeof selector === 'function') {
@@ -91,7 +91,7 @@ describe('QueueVisualizationContainer Integration', () => {
             }
             return mockStoreState;
         });
-        
+
         // Mock getQueueByPath to search the tree
         mockStoreState.getQueueByPath.mockImplementation((path: string) => {
             const findQueue = (node: any, targetPath: string): any => {
@@ -107,13 +107,13 @@ describe('QueueVisualizationContainer Integration', () => {
             // Return null for QueueInfo type since we're working with QueueNode
             return null;
         });
-        
+
         // Mock getChildQueues
         mockStoreState.getChildQueues.mockImplementation(() => {
             // Return empty array since this expects QueueInfo[]
             return [];
         });
-        
+
         // Mock useQueueActions to call the store methods
         (useQueueActions as any).mockReturnValue({
             canAddChildQueue: () => true,

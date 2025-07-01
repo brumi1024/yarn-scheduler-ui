@@ -20,14 +20,14 @@ describe('QueueVisualization', () => {
     it('should pass through className prop to container', () => {
         const testClassName = 'test-custom-class';
         render(<QueueVisualization className={testClassName} />);
-        
+
         const container = screen.getByTestId('queue-visualization-container');
         expect(container).toHaveClass(testClassName);
     });
 
     it('should render QueueVisualizationContainer', () => {
         render(<QueueVisualization />);
-        
+
         const container = screen.getByTestId('queue-visualization-container');
         expect(container).toBeInTheDocument();
         expect(container).toHaveTextContent('Mocked Container');

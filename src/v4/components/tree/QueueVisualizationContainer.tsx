@@ -22,34 +22,27 @@ export interface QueueVisualizationContainerProps {
     className?: string;
 }
 
-// Define custom node types
 const nodeTypes = {
     queueCard: QueueCardNode,
 };
 
-// Define custom edge types
 const edgeTypes = {
     sankeyFlow: CustomFlowEdge,
 };
 
-// Inner component that has access to React Flow instance
 const FlowInner: React.FC = () => {
     const selectQueue = useSchedulerStore(state => state.selectQueue);
-    
-    // Use the tree data hook
+
     const { nodes, edges, isLoading, error } = useQueueTreeData();
 
-    // Handle node changes (required by React Flow)
     const onNodesChange: OnNodesChange = useCallback(() => {
-        // No-op for now
+
     }, []);
 
-    // Handle edge changes (required by React Flow)
     const onEdgesChange: OnEdgesChange = useCallback(() => {
-        // No-op for now
+
     }, []);
 
-    // Handle node clicks for queue selection
     const onNodeClick: OnNodeClick = useCallback(
         (_, node) => {
             selectQueue?.(node.id);
@@ -57,7 +50,6 @@ const FlowInner: React.FC = () => {
         [selectQueue]
     );
 
-    // Handle loading state
     if (isLoading) {
         return (
             <Box
@@ -79,7 +71,6 @@ const FlowInner: React.FC = () => {
         );
     }
 
-    // Handle error state
     if (error) {
         return (
             <Box sx={{ p: 3 }}>

@@ -1,6 +1,6 @@
 /**
  * Property utilities for YARN Capacity Scheduler configuration
- * 
+ *
  * These utilities handle building and parsing property keys for:
  * - Queue properties: yarn.scheduler.capacity.<queue-path>.<property>
  * - Global properties: yarn.scheduler.capacity.<property>
@@ -57,17 +57,14 @@ export type ValidationResult = {
  * @returns Validation result with error message if invalid
  */
 export function validateQueueName(queueName: string): ValidationResult {
-    // Check for empty name
     if (!queueName || queueName.trim() === '') {
         return { valid: false, message: 'Queue name cannot be empty' };
     }
 
-    // Check for dots - YARN uses dots as path separators with no escaping
     if (queueName.includes('.')) {
         return { valid: false, message: 'Queue names cannot contain dots (.)' };
     }
 
-    // Check for valid characters (alphanumeric, hyphen, underscore)
     if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) {
         return { valid: false, message: 'Queue names should only contain letters, numbers, hyphens, and underscores' };
     }
@@ -145,8 +142,7 @@ export function isGlobalPropertyKey(propertyKey: string): boolean {
     }
 
     const suffix = propertyKey.substring(YARN_SCHEDULER_PREFIX.length + 1);
-    
-    // Global properties don't have 'root' as the first segment after the prefix
+
     return !suffix.startsWith('root.');
 }
 

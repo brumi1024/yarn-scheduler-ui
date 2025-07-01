@@ -10,14 +10,14 @@ interface QueueCapacityMetricsProps {
 
 export const QueueCapacityMetrics: React.FC<QueueCapacityMetricsProps> = ({ queue }) => {
     const { getQueueDisplayValue } = useSchedulerStore();
-    
+
     // Configuration values from store
     const { value: configCapacityStr } = getQueueDisplayValue(queue.queuePath, 'capacity');
     const { value: configMaxCapacityStr } = getQueueDisplayValue(queue.queuePath, 'maximum-capacity');
-    
+
     const configCapacity = parseFloat(configCapacityStr) || 0;
     const configMaxCapacity = parseFloat(configMaxCapacityStr) || 100;
-    
+
     // Runtime values from QueueInfo
     const usedCapacity = queue.usedCapacity || 0;
     const absoluteCapacity = queue.absoluteCapacity || 0;

@@ -21,7 +21,7 @@ interface DeleteQueueDialogProps {
 export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialogProps) {
     const { deleteQueue, canDeleteQueue } = useQueueActions();
     const queueName = queuePath.split('.').pop() || queuePath;
-    
+
     const canDelete = canDeleteQueue(queuePath);
     const isRoot = queuePath === 'root';
 
@@ -35,11 +35,11 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
     };
 
     return (
-        <Dialog 
-            open={open} 
-            onClose={onClose} 
-            maxWidth="sm" 
-            fullWidth 
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="sm"
+            fullWidth
             aria-labelledby="delete-queue-dialog-title"
         >
             <DialogTitle id="delete-queue-dialog-title">
@@ -58,7 +58,7 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
                     </Alert>
                 ) : !canDelete ? (
                     <Alert severity="warning" icon={<WarningIcon />}>
-                        This queue has child queues and cannot be deleted. 
+                        This queue has child queues and cannot be deleted.
                         Please delete all child queues first.
                     </Alert>
                 ) : (

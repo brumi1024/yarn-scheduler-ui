@@ -371,19 +371,19 @@ describe('Integration Tests - Complete API Responses', () => {
             expect(configResponse.property).toHaveLength(17);
 
             // Verify queue properties
-            const queueProperties = configResponse.property.filter(p => 
+            const queueProperties = configResponse.property.filter(p =>
                 p.name.includes('.root.') && !p.name.includes('accessible-node-labels')
             );
             expect(queueProperties.length).toBeGreaterThan(0);
 
             // Verify global properties
-            const globalProperties = configResponse.property.filter(p => 
+            const globalProperties = configResponse.property.filter(p =>
                 !p.name.includes('.root.')
             );
             expect(globalProperties).toHaveLength(3);
 
             // Verify node label properties
-            const labelProperties = configResponse.property.filter(p => 
+            const labelProperties = configResponse.property.filter(p =>
                 p.name.includes('accessible-node-labels')
             );
             expect(labelProperties).toHaveLength(3);
@@ -391,7 +391,7 @@ describe('Integration Tests - Complete API Responses', () => {
             // Verify capacity values sum to 100
             const rootQueues = ['production', 'development', 'marketing'];
             const capacities = rootQueues.map(queue => {
-                const prop = configResponse.property.find(p => 
+                const prop = configResponse.property.find(p =>
                     p.name === `yarn.scheduler.capacity.root.${queue}.capacity`
                 );
                 return parseInt(prop?.value || '0');
@@ -482,7 +482,7 @@ describe('Integration Tests - Complete API Responses', () => {
             expect(prodQueue.usedCapacity).toBe(45.5);
 
             // Verify config shows configured values
-            const capacityConfig = configData.property.find(p => 
+            const capacityConfig = configData.property.find(p =>
                 p.name.endsWith('.capacity')
             );
             expect(capacityConfig?.value).toBe('70');

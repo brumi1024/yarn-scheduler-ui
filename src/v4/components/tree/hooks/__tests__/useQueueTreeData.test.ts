@@ -138,18 +138,18 @@ describe('useQueueTreeData', () => {
         if (queue.queuePath === targetPath) {
             return queue;
         }
-        
+
         if (queue.queues?.queue) {
-            const children = Array.isArray(queue.queues.queue) 
-                ? queue.queues.queue 
+            const children = Array.isArray(queue.queues.queue)
+                ? queue.queues.queue
                 : [queue.queues.queue];
-            
+
             for (const child of children) {
                 const found = findQueueInTree(child, targetPath);
                 if (found) return found;
             }
         }
-        
+
         return null;
     };
 
@@ -161,14 +161,14 @@ describe('useQueueTreeData', () => {
             const stagedChange = mockStagedChanges.find(
                 c => c.queuePath === queuePath && c.property === property
             );
-            
+
             if (stagedChange?.newValue !== undefined) {
                 return {
                     value: stagedChange.newValue,
                     isStaged: true,
                 };
             }
-            
+
             // Fallback to config data (simplified for test)
             if (property === 'capacity') {
                 const queue = findQueueInTree(mockSchedulerData, queuePath);
@@ -184,7 +184,7 @@ describe('useQueueTreeData', () => {
                     isStaged: false,
                 };
             }
-            
+
             return {
                 value: '',
                 isStaged: false,
@@ -240,7 +240,7 @@ describe('useQueueTreeData', () => {
 
         const { result } = renderHook(() => useQueueTreeData());
 
-        const rootToDefault = result.current.edges.find(e => 
+        const rootToDefault = result.current.edges.find(e =>
             e.source === 'root' && e.target === 'root.default'
         );
         expect(rootToDefault).toBeDefined();
@@ -341,7 +341,7 @@ describe('useQueueTreeData', () => {
         // Check relative positions (parent should be to the left of children in horizontal layout)
         const rootNode = result.current.nodes.find(n => n.id === 'root');
         const defaultNode = result.current.nodes.find(n => n.id === 'root.default');
-        
+
         expect(rootNode!.position.x).toBeLessThan(defaultNode!.position.x);
     });
 
