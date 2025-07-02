@@ -1,245 +1,54 @@
-import React, { Component } from 'react';
-import type { ReactNode } from 'react';
-import { Box, Alert, AlertTitle, Button, Typography, Collapse } from '@mui/material';
-import { ErrorOutline, ExpandMore, ExpandLess, Refresh } from '@mui/icons-material';
+import React from 'react';
+import { Alert, AlertTitle, Box, Button, Typography } from '@mui/material';
 
 interface ErrorBoundaryState {
     hasError: boolean;
-    error: Error | null;
-    errorInfo: React.ErrorInfo | null;
-    showDetails: boolean;
+    error?: Error;
+    errorInfo?: React.ErrorInfo;
 }
 
 interface ErrorBoundaryProps {
-    children: ReactNode;
-    fallback?: ReactNode;
-    onError?: (error: Error, errorInfo: React.ErrorInfo) => void;
-    level?: 'app' | 'feature' | 'component';
-    context?: string;
+    children: React.ReactNode;
+    fallback?: React.ComponentType<{ error: Error; retry: () => void }>;
 }
 
-export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundaryState> {
+export class ErrorBoundary extends React.Component<ErrorBoundaryProps, ErrorBoundaryState> {
     constructor(props: ErrorBoundaryProps) {
         super(props);
-        this.state = {
-            hasError: false,
-            error: null,
-            errorInfo: null,
-            showDetails: false,
-        };
+        this.state = { hasError: false };
     }
 
-    static getDerivedStateFromError(error: Error): Partial<ErrorBoundaryState> {
-        return {
-            hasError: true,
-            error,
-        };
+    static getDerivedStateFromError(error: Error): ErrorBoundaryState {
+        return { hasError: true, error };
     }
 
     componentDidCatch(error: Error, errorInfo: React.ErrorInfo) {
-        console.error('ErrorBoundary caught an error:', {
-            error,
-            errorInfo,
-            context: this.props.context,
-            level: this.props.level,
-        });
-
-        this.setState({
-            errorInfo,
-        });
-
-        // Call optional error handler
-        if (this.props.onError) {
-            this.props.onError(error, errorInfo);
-        }
-
-        // Log to external service in production
-        if (process.env.NODE_ENV === 'production') {
-            // TODO: Add integration with error tracking service (e.g., Sentry)
-            console.error('Production error logged:', {
-                message: error.message,
-                stack: error.stack,
-                componentStack: errorInfo.componentStack,
-                context: this.props.context,
-            });
-        }
+        console.error('ErrorBoundary caught an error:', error, errorInfo);
+        this.setState({ error, errorInfo });
     }
 
     handleRetry = () => {
-        this.setState({
-            hasError: false,
-            error: null,
-            errorInfo: null,
-            showDetails: false,
-        });
-    };
-
-    handleReload = () => {
-        window.location.reload();
-    };
-
-    toggleDetails = () => {
-        this.setState((prev) => ({
-            showDetails: !prev.showDetails,
-        }));
+        this.setState({ hasError: false, error: undefined, errorInfo: undefined });
     };
 
     render() {
         if (this.state.hasError) {
-            // Use custom fallback if provided
             if (this.props.fallback) {
-                return this.props.fallback;
+                const FallbackComponent = this.props.fallback;
+                return <FallbackComponent error={this.state.error!} retry={this.handleRetry} />;
             }
 
-            const { error, errorInfo, showDetails } = this.state;
-            const { level = 'component', context } = this.props;
-
-            const getSeverityAndTitle = () => {
-                switch (level) {
-                    case 'app':
-                        return { severity: 'error' as const, title: 'Application Error' };
-                    case 'feature':
-                        return { severity: 'error' as const, title: 'Feature Error' };
-                    default:
-                        return { severity: 'warning' as const, title: 'Component Error' };
-                }
-            };
-
-            const { severity, title } = getSeverityAndTitle();
-
             return (
-                <Box
-                    sx={{
-                        p: 3,
-                        minHeight: level === 'app' ? '100vh' : 'auto',
-                        display: 'flex',
-                        alignItems: level === 'app' ? 'center' : 'flex-start',
-                        justifyContent: 'center',
-                    }}
-                >
-                    <Box sx={{ maxWidth: 600, width: '100%' }}>
-                        <Alert severity={severity} icon={<ErrorOutline />} sx={{ mb: 2 }}>
-                            <AlertTitle>{title}</AlertTitle>
-                            <Typography variant="body2" sx={{ mb: 2 }}>
-                                {context && `Context: ${context} - `}
-                                Something went wrong while rendering this {level === 'app' ? 'application' : level}.
-                                {level !== 'app' && ' The rest of the application should continue to work normally.'}
-                            </Typography>
-
-                            {process.env.NODE_ENV === 'development' && error && (
-                                <Typography
-                                    variant="body2"
-                                    sx={{ mb: 2, fontFamily: 'monospace', color: 'error.dark' }}
-                                >
-                                    {error.message}
-                                </Typography>
-                            )}
-
-                            <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
-                                <Button
-                                    variant="outlined"
-                                    size="small"
-                                    onClick={this.handleRetry}
-                                    startIcon={<Refresh />}
-                                >
-                                    Try Again
-                                </Button>
-
-                                {level === 'app' && (
-                                    <Button
-                                        variant="contained"
-                                        size="small"
-                                        onClick={this.handleReload}
-                                        startIcon={<Refresh />}
-                                    >
-                                        Reload Page
-                                    </Button>
-                                )}
-
-                                <Button
-                                    variant="text"
-                                    size="small"
-                                    onClick={this.toggleDetails}
-                                    startIcon={showDetails ? <ExpandLess /> : <ExpandMore />}
-                                >
-                                    {showDetails ? 'Hide' : 'Show'} Details
-                                </Button>
-                            </Box>
-                        </Alert>
-
-                        <Collapse in={showDetails}>
-                            <Alert severity="info" sx={{ mt: 2 }}>
-                                <AlertTitle>Error Details</AlertTitle>
-
-                                {error && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Error Message:
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily: 'monospace',
-                                                backgroundColor: 'grey.100',
-                                                p: 1,
-                                                borderRadius: 1,
-                                                whiteSpace: 'pre-wrap',
-                                                fontSize: '0.75rem',
-                                            }}
-                                        >
-                                            {error.message}
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {error?.stack && (
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Stack Trace:
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily: 'monospace',
-                                                backgroundColor: 'grey.100',
-                                                p: 1,
-                                                borderRadius: 1,
-                                                whiteSpace: 'pre-wrap',
-                                                fontSize: '0.75rem',
-                                                maxHeight: 200,
-                                                overflow: 'auto',
-                                            }}
-                                        >
-                                            {error.stack}
-                                        </Typography>
-                                    </Box>
-                                )}
-
-                                {errorInfo?.componentStack && (
-                                    <Box>
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Component Stack:
-                                        </Typography>
-                                        <Typography
-                                            variant="body2"
-                                            sx={{
-                                                fontFamily: 'monospace',
-                                                backgroundColor: 'grey.100',
-                                                p: 1,
-                                                borderRadius: 1,
-                                                whiteSpace: 'pre-wrap',
-                                                fontSize: '0.75rem',
-                                                maxHeight: 200,
-                                                overflow: 'auto',
-                                            }}
-                                        >
-                                            {errorInfo.componentStack}
-                                        </Typography>
-                                    </Box>
-                                )}
-                            </Alert>
-                        </Collapse>
-                    </Box>
+                <Box sx={{ p: 3 }}>
+                    <Alert severity="error">
+                        <AlertTitle>Something went wrong</AlertTitle>
+                        <Typography variant="body2" sx={{ mb: 2 }}>
+                            {this.state.error?.message || 'An unexpected error occurred'}
+                        </Typography>
+                        <Button variant="outlined" size="small" onClick={this.handleRetry}>
+                            Try Again
+                        </Button>
+                    </Alert>
                 </Box>
             );
         }
@@ -248,15 +57,25 @@ export class ErrorBoundary extends Component<ErrorBoundaryProps, ErrorBoundarySt
     }
 }
 
-// Convenience components for different levels
-export const AppErrorBoundary: React.FC<Omit<ErrorBoundaryProps, 'level'>> = (props) => (
-    <ErrorBoundary {...props} level="app" />
-);
+interface FeatureErrorBoundaryProps {
+    children: React.ReactNode;
+    context: string;
+}
 
-export const FeatureErrorBoundary: React.FC<Omit<ErrorBoundaryProps, 'level'>> = (props) => (
-    <ErrorBoundary {...props} level="feature" />
-);
+export function FeatureErrorBoundary({ children, context }: FeatureErrorBoundaryProps): React.ReactElement {
+    const fallback = ({ error, retry }: { error: Error; retry: () => void }) => (
+        <Box sx={{ p: 3 }}>
+            <Alert severity="error">
+                <AlertTitle>Error in {context}</AlertTitle>
+                <Typography variant="body2" sx={{ mb: 2 }}>
+                    {error.message || 'An unexpected error occurred in this feature'}
+                </Typography>
+                <Button variant="outlined" size="small" onClick={retry}>
+                    Retry
+                </Button>
+            </Alert>
+        </Box>
+    );
 
-export const ComponentErrorBoundary: React.FC<Omit<ErrorBoundaryProps, 'level'>> = (props) => (
-    <ErrorBoundary {...props} level="component" />
-);
+    return <ErrorBoundary fallback={fallback}>{children}</ErrorBoundary>;
+}

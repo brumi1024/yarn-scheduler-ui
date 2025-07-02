@@ -8,13 +8,133 @@ if (typeof globalThis.AbortController === 'undefined') {
     globalThis.AbortSignal = AbortSignal;
 }
 
+// Setup MSW for tests
+import { setupServer } from 'msw/node';
+import { http, HttpResponse } from 'msw';
+import { 
+    mockSchedulerResponse, 
+    mockConfigResponse, 
+    mockNodeLabelsResponse, 
+    mockVersionResponse 
+} from '../__mocks__/schedulerResponse';
+
+// Create test handlers using in-memory mock data
+const testHandlers = [
+    // Scheduler endpoints
+    http.get('/ws/v1/cluster/scheduler', () => {
+        return HttpResponse.json(mockSchedulerResponse);
+    }),
+
+    http.get('/ws/v1/cluster/scheduler-conf', () => {
+        return HttpResponse.json(mockConfigResponse);
+    }),
+
+    http.put('/ws/v1/cluster/scheduler-conf', async ({ request }) => {
+        const changes = await request.json();
+        console.log('Mock: Applying configuration changes:', changes);
+        return HttpResponse.json({
+            response: 'Configuration updated successfully',
+        });
+    }),
+
+    http.get('/ws/v1/cluster/scheduler-conf/version', () => {
+        return HttpResponse.json(mockVersionResponse);
+    }),
+
+    // Node endpoints
+    http.get('/ws/v1/cluster/nodes', () => {
+        return HttpResponse.json({
+            nodes: {
+                node: [
+                    { id: 'node1', state: 'RUNNING', nodeLabels: ['gpu', 'ssd'] },
+                    { id: 'node2', state: 'RUNNING', nodeLabels: ['cpu'] },
+                ]
+            }
+        });
+    }),
+
+    // Node labels endpoints
+    http.get('/ws/v1/cluster/get-node-labels', () => {
+        return HttpResponse.json(mockNodeLabelsResponse);
+    }),
+
+    http.get('/ws/v1/cluster/get-node-to-labels', () => {
+        return HttpResponse.json({
+            nodeToLabels: {
+                entry: [
+                    { key: 'node1', value: 'gpu,ssd' },
+                    { key: 'node2', value: 'cpu' },
+                ]
+            }
+        });
+    }),
+
+    http.get('/ws/v1/cluster/get-labels-to-nodes', () => {
+        return HttpResponse.json({
+            labelsToNodes: {
+                entry: [
+                    { key: 'gpu', value: 'node1' },
+                    { key: 'ssd', value: 'node1' },
+                    { key: 'cpu', value: 'node2' },
+                ]
+            }
+        });
+    }),
+
+    http.post('/ws/v1/cluster/add-node-labels', async ({ request }) => {
+        const body = await request.json();
+        console.log('Mock: Adding node labels:', body);
+        return HttpResponse.json({ message: 'Labels added successfully' });
+    }),
+
+    http.post('/ws/v1/cluster/replace-node-to-labels', async ({ request }) => {
+        const body = await request.json();
+        console.log('Mock: Replacing node labels:', body);
+        return HttpResponse.json({ message: 'Node labels replaced successfully' });
+    }),
+
+    http.post('/ws/v1/cluster/remove-node-labels', async ({ request }) => {
+        const body = await request.json();
+        console.log('Mock: Removing node labels:', body);
+        return HttpResponse.json({ message: 'Labels removed successfully' });
+    }),
+];
+
+// Create MSW server for tests
+export const server = setupServer(...testHandlers);
+
+// Start server before all tests (except API tests which have their own MSW setup)
+if (typeof global !== 'undefined' && global.beforeAll) {
+    global.beforeAll(() => {
+        // Skip MSW setup for API tests to avoid conflicts
+        const testFile = expect.getState()?.testPath;
+        if (testFile && testFile.includes('YarnApiClient.test.ts')) {
+            return;
+        }
+        server.listen({ onUnhandledRequest: 'warn' });
+    });
+}
+
+// Clean up after each test
+if (typeof global !== 'undefined' && global.afterEach) {
+    global.afterEach(() => {
+        server.resetHandlers();
+    });
+}
+
+// Close server after all tests
+if (typeof global !== 'undefined' && global.afterAll) {
+    global.afterAll(() => {
+        server.close();
+    });
+}
+
 // Mock the MSW browser module for tests
 vi.mock('../api/mocks/browser', () => ({
     worker: {
         start: vi.fn().mockResolvedValue(undefined),
         stop: vi.fn().mockResolvedValue(undefined),
     },
-    startMockService: vi.fn().mockResolvedValue(undefined),
 }));
 
 // Mock Canvas 2D Context
@@ -130,67 +250,26 @@ Object.defineProperty(window, 'location', {
     writable: true,
 });
 
-// Import all Zustand stores for global reset functionality
-import { useRuntimeStore } from '../store/runtimeStore';
-import { useConfigStore } from '../store/configStore';
-import { useUIStore } from '../store/uiStore';
-import { useActivityStore } from '../store/activityStore';
+// Import V4 scheduler store for global reset functionality
+import { useSchedulerStore } from '../store/schedulerStore';
 
 // Global store reset function for tests
 export const resetAllStores = () => {
-    // Reset runtime store
-    useRuntimeStore.setState({
-        scheduler: null,
-        rawScheduler: null,
-        nodes: [],
-        rawNodes: null,
+    // Reset V4 scheduler store to initial state
+    useSchedulerStore.setState({
+        schedulerData: null,
+        configData: new Map(),
         nodeLabels: [],
-        rawNodeLabels: null,
-        isLoadingScheduler: false,
-        isLoadingNodes: false,
-        isLoadingNodeLabels: false,
-        schedulerError: null,
-        nodesError: null,
-        nodeLabelsError: null,
-    });
-
-    // Reset config store
-    useConfigStore.setState({
-        original: null,
-        staged: new Map(),
-        computed: null,
-        computedVersion: 0,
-        rawConfiguration: null,
-        validationResults: new Map(),
-        validationStatus: 'idle',
-        serverVersion: '',
-        lastSync: null,
+        nodes: [],
+        nodeToLabels: [],
+        stagedChanges: [],
+        selectedNodeLabel: null,
+        selectedQueuePath: null,
+        comparisonQueues: [],
+        configVersion: 0,
         isLoading: false,
-        isApplying: false,
         error: null,
-    });
-
-    // Reset UI store
-    useUIStore.setState({
-        selectedQueuePath: undefined,
-        hoveredQueuePath: null,
-        expandedQueues: new Set<string>(),
-        viewSettings: {
-            showCapacityBars: true,
-            showUsageMetrics: true,
-            layout: 'tree',
-            zoomLevel: 1,
-            panPosition: { x: 0, y: 0 },
-        },
-        notifications: [],
-        modals: {},
-    });
-
-    // Reset activity store
-    useActivityStore.setState({
-        logs: [],
-        apiCalls: [],
-        maxEntries: 1000,
+        isPropertyPanelOpen: false,
     });
 };
 

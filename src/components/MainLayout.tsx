@@ -1,27 +1,43 @@
-import { Box, AppBar, Toolbar, Typography } from '@mui/material';
-import { useState } from 'react';
-import TabNavigation from './TabNavigation';
-import StatusBar from './StatusBar';
-import QueueEditor from '../features/queue-editor/QueueEditor';
-import GlobalSettings from '../features/GlobalSettings';
-import NodeLabels from '../features/NodeLabels';
-import Diagnostics from '../features/Diagnostics';
-import { V4Demo } from '../v4/demo/V4Demo';
-import { FeatureErrorBoundary } from './ErrorBoundary';
+import React, { useState } from 'react';
+import { Box, AppBar, Toolbar, Typography, Tabs, Tab } from '@mui/material';
+import { QueueVisualizationContainer } from './tree/QueueVisualizationContainer';
+import { GlobalSettings } from './global-settings';
+import { NodeLabels } from './node-labels';
 
-const TAB_COMPONENTS = [
-    { component: QueueEditor, name: 'Queue Editor' },
-    { component: GlobalSettings, name: 'Global Settings' },
-    { component: NodeLabels, name: 'Node Labels' },
-    { component: Diagnostics, name: 'Diagnostics' },
-    { component: V4Demo, name: 'V4 Preview' },
+interface TabPanelProps {
+    children?: React.ReactNode;
+    index: number;
+    value: number;
+}
+
+function TabPanel(props: TabPanelProps) {
+    const { children, value, index, ...other } = props;
+
+    return (
+        <div
+            role="tabpanel"
+            hidden={value !== index}
+            id={`tabpanel-${index}`}
+            aria-labelledby={`tab-${index}`}
+            {...other}
+        >
+            {value === index && children}
+        </div>
+    );
+}
+
+const TABS = [
+    { label: 'Queue Tree', component: QueueVisualizationContainer },
+    { label: 'Global Settings', component: GlobalSettings },
+    { label: 'Node Labels', component: NodeLabels },
 ];
 
-export default function MainLayout() {
+export default function MainLayout(): React.ReactElement {
     const [activeTab, setActiveTab] = useState(0);
 
-    const activeTabConfig = TAB_COMPONENTS[activeTab];
-    const ActiveComponent = activeTabConfig.component;
+    const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
+        setActiveTab(newValue);
+    };
 
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100vh' }}>
@@ -35,7 +51,13 @@ export default function MainLayout() {
             </AppBar>
 
             {/* Tab Navigation */}
-            <TabNavigation activeTab={activeTab} onTabChange={setActiveTab} />
+            <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
+                <Tabs value={activeTab} onChange={handleTabChange} aria-label="navigation tabs">
+                    {TABS.map((tab, index) => (
+                        <Tab key={index} label={tab.label} id={`tab-${index}`} aria-controls={`tabpanel-${index}`} />
+                    ))}
+                </Tabs>
+            </Box>
 
             {/* Content Area */}
             <Box
@@ -45,17 +67,13 @@ export default function MainLayout() {
                     backgroundColor: 'background.default',
                     minHeight: 0, // Allows flex child to shrink
                 }}
-                role="tabpanel"
-                id={`tabpanel-${activeTab}`}
-                aria-labelledby={`tab-${activeTab}`}
             >
-                <FeatureErrorBoundary context={activeTabConfig.name}>
-                    <ActiveComponent />
-                </FeatureErrorBoundary>
+                {TABS.map((tab, index) => (
+                    <TabPanel key={index} value={activeTab} index={index}>
+                        <tab.component />
+                    </TabPanel>
+                ))}
             </Box>
-
-            {/* Status Bar */}
-            <StatusBar />
         </Box>
     );
 }

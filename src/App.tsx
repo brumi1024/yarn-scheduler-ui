@@ -4,19 +4,17 @@ import { useEffect } from 'react';
 import { theme } from './theme';
 import MainLayout from './components/MainLayout';
 import { ErrorBoundary } from './components/ErrorBoundary';
-import { useConfigStore } from './store/configStore';
-import { useRuntimeStore } from './store/runtimeStore';
+import { useSchedulerStore } from './store/schedulerStore';
 
 function App() {
-    const loadConfiguration = useConfigStore((state) => state.loadConfiguration);
-    const loadAllRuntimeData = useRuntimeStore((state) => state.loadAllData);
+    const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
 
     useEffect(() => {
-        // Initialize both config and runtime data when app starts
-        Promise.all([loadConfiguration(), loadAllRuntimeData()]).catch((error) => {
+        // Initialize V4 scheduler store data when app starts
+        loadInitialData().catch((error) => {
             console.error('Failed to load initial data:', error);
         });
-    }, [loadConfiguration, loadAllRuntimeData]);
+    }, [loadInitialData]);
 
     return (
         <ErrorBoundary>

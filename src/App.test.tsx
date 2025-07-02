@@ -4,61 +4,32 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import App from './App';
 
-// Mock the TanStack Query hooks
-vi.mock('./hooks/useYarnApi', () => ({
-    useSchedulerQuery: vi.fn(() => ({
-        data: null,
-        isLoading: false,
-        error: null,
-        refetch: vi.fn(),
-    })),
-    useConfigurationQuery: vi.fn(() => ({
-        data: null,
-        isLoading: false,
-        error: null,
-        refetch: vi.fn(),
-    })),
-    useNodeLabelsQuery: vi.fn(() => ({
-        data: null,
-        isLoading: false,
-        error: null,
-        refetch: vi.fn(),
-    })),
-    useNodesQuery: vi.fn(() => ({
-        data: null,
-        isLoading: false,
-        error: null,
-        refetch: vi.fn(),
-    })),
-    useUpdateConfigurationMutation: vi.fn(() => ({
-        mutate: vi.fn(),
-        isPending: false,
-        error: null,
-    })),
-}));
-
-// Mock all store modules to prevent API calls and provide default states
-vi.mock('./store', () => ({
-    useRuntimeStore: vi.fn(),
-    useConfigStore: vi.fn(() => ({
-        staged: new Map(),
-        unstageChange: vi.fn(),
-        clearAllChanges: vi.fn(),
-        applyChanges: vi.fn(),
-        isApplying: false,
-        error: null,
-        stageChange: vi.fn(),
-        validationStatus: 'idle',
-        validateAll: vi.fn(() => ({ isValid: true, errors: [], warnings: [] })),
-    })),
-    useUIStore: vi.fn(),
-    useActivityStore: vi.fn(() => ({
-        addLogEntry: vi.fn(),
-        addApiCallLog: vi.fn(),
-    })),
-    useAllQueues: vi.fn(() => []),
-    useSelectedQueue: vi.fn(() => null),
-    useHasStagedChanges: vi.fn(() => false),
+// Mock the V4 scheduler store
+vi.mock('./store/schedulerStore', () => ({
+    useSchedulerStore: vi.fn((selector: any) => {
+        const state = {
+            schedulerData: null,
+            configData: new Map(),
+            nodeLabels: [],
+            nodes: [],
+            nodeToLabels: [],
+            stagedChanges: [],
+            selectedNodeLabel: null,
+            selectedQueuePath: null,
+            comparisonQueues: [],
+            configVersion: 0,
+            isLoading: false,
+            error: null,
+            isPropertyPanelOpen: false,
+            loadInitialData: vi.fn().mockResolvedValue(undefined),
+            selectQueue: vi.fn(),
+            selectNodeLabel: vi.fn(),
+            addNodeLabel: vi.fn(),
+            removeNodeLabel: vi.fn(),
+            assignNodeToLabel: vi.fn(),
+        };
+        return typeof selector === 'function' ? selector(state) : state;
+    }),
 }));
 
 // Test wrapper with QueryClient provider
@@ -87,20 +58,13 @@ describe('App', () => {
 
     it('renders the main navigation tabs', () => {
         renderWithQueryClient(<App />);
-        expect(screen.getByText('Queues')).toBeInTheDocument();
+        expect(screen.getByText('Queue Tree')).toBeInTheDocument();
         expect(screen.getByText('Global Settings')).toBeInTheDocument();
         expect(screen.getByText('Node Labels')).toBeInTheDocument();
-        expect(screen.getByText('Diagnostics')).toBeInTheDocument();
     });
 
-    it('renders the default Queue Visualization view', () => {
+    it('renders the queue tree container', () => {
         renderWithQueryClient(<App />);
-        expect(screen.getByText('Queue Visualization')).toBeInTheDocument();
-        expect(screen.getByText(/Interactive YARN Capacity Scheduler queue tree/)).toBeInTheDocument();
-    });
-
-    it('renders status bar', () => {
-        renderWithQueryClient(<App />);
-        expect(screen.getByText('YARN Scheduler UI v2.0')).toBeInTheDocument();
+        expect(screen.getByTestId('queue-tree-container')).toBeInTheDocument();
     });
 });

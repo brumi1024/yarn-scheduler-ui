@@ -11,8 +11,14 @@ const queryClient = new QueryClient();
 // Start mock service worker in development
 async function enableMocking() {
     if (process.env.NODE_ENV === 'development') {
-        const { startMockService } = await import('./api/mocks/browser');
-        return startMockService();
+        const { worker } = await import('./api/mocks/browser');
+        await worker.start({
+            onUnhandledRequest: 'warn',
+            serviceWorker: {
+                url: '/mockServiceWorker.js',
+            },
+        });
+        console.log('🔄 Mock Service Worker started');
     }
 }
 

@@ -1,264 +1,222 @@
-import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { apiService } from '../api/ApiService';
-import { useActivityStore } from '../store';
-import type { ConfigurationUpdateRequest } from '../types/Configuration';
+/**
+ * React Query hooks for YARN API
+ * Provides typed hooks for all YARN Scheduler endpoints with automatic
+ * caching, retries, and state management
+ *
+ * NOTE: Currently unused - this file provides an alternative React Query-based
+ * architecture that could be used instead of the current Zustand store pattern.
+ * Consider this for future migration to React Query state management.
+ */
 
-// Query for Scheduler data
-export const useSchedulerQuery = () => {
-    const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
+import { useQuery, useMutation, useQueryClient, UseQueryOptions, UseMutationOptions } from '@tanstack/react-query';
+import { YarnApiClient } from '../api/YarnApiClient';
+import type {
+    SchedulerResponse,
+    SchedulerConfResponse,
+    SchedConfUpdateInfo,
+    NodeLabelsResponse,
+    NodeToLabelsResponse,
+    VersionResponse,
+} from '../types';
 
+// Query keys for cache management
+export const queryKeys = {
+    all: ['yarn'] as const,
+    scheduler: () => [...queryKeys.all, 'scheduler'] as const,
+    schedulerConf: () => [...queryKeys.all, 'scheduler-conf'] as const,
+    schedulerConfVersion: () => [...queryKeys.all, 'scheduler-conf', 'version'] as const,
+    nodeLabels: () => [...queryKeys.all, 'node-labels'] as const,
+    nodeToLabels: () => [...queryKeys.all, 'node-to-labels'] as const,
+};
+
+// Create a singleton API client instance
+// In a real app, this would be provided via context or dependency injection
+let apiClient: YarnApiClient;
+
+export const initializeYarnApi = (baseUrl: string, config?: Parameters<typeof YarnApiClient>[1]): void => {
+    apiClient = new YarnApiClient(baseUrl, config);
+};
+
+// Ensure API client is initialized
+const getApiClient = (): YarnApiClient => {
+    if (!apiClient) {
+        throw new Error('YarnApiClient not initialized. Call initializeYarnApi first.');
+    }
+    return apiClient;
+};
+
+/**
+ * Hook to fetch scheduler data (queue hierarchy with live metrics)
+ */
+export const useSchedulerQuery = (options?: UseQueryOptions<SchedulerResponse>) => {
     return useQuery({
-        queryKey: ['scheduler'],
-        queryFn: async () => {
-            const startTime = Date.now();
-            try {
-                const result = await apiService.getScheduler();
-                const duration = Date.now() - startTime;
-
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded scheduler data',
-                    details: { timestamp: Date.now() },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/scheduler',
-                    status: 200,
-                    duration,
-                });
-
-                return result;
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load scheduler data',
-                    details: { error: errorMessage },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/scheduler',
-                    status: 0,
-                    duration,
-                    error: errorMessage,
-                });
-
-                throw error;
-            }
-        },
+        queryKey: queryKeys.scheduler(),
+        queryFn: () => getApiClient().getScheduler(),
+        ...options,
     });
 };
 
-// Query for Configuration data
-export const useConfigurationQuery = () => {
-    const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
-
+/**
+ * Hook to fetch scheduler configuration
+ */
+export const useSchedulerConfQuery = (options?: UseQueryOptions<SchedulerConfResponse>) => {
     return useQuery({
-        queryKey: ['configuration'],
-        queryFn: async () => {
-            const startTime = Date.now();
-            try {
-                const result = await apiService.getConfiguration();
-                const duration = Date.now() - startTime;
-
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded configuration data',
-                    details: { timestamp: Date.now() },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/scheduler-conf',
-                    status: 200,
-                    duration,
-                });
-
-                return result;
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load configuration data',
-                    details: { error: errorMessage },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/scheduler-conf',
-                    status: 0,
-                    duration,
-                    error: errorMessage,
-                });
-
-                throw error;
-            }
-        },
+        queryKey: queryKeys.schedulerConf(),
+        queryFn: () => getApiClient().getSchedulerConf(),
+        ...options,
     });
 };
 
-// Query for Node Labels
-export const useNodeLabelsQuery = () => {
-    const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
-
+/**
+ * Hook to fetch scheduler configuration version
+ */
+export const useSchedulerConfVersionQuery = (options?: UseQueryOptions<VersionResponse>) => {
     return useQuery({
-        queryKey: ['nodeLabels'],
-        queryFn: async () => {
-            const startTime = Date.now();
-            try {
-                const result = await apiService.getNodeLabels();
-                const duration = Date.now() - startTime;
-
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded node labels',
-                    details: { timestamp: Date.now() },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/get-node-labels',
-                    status: 200,
-                    duration,
-                });
-
-                return result;
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load node labels',
-                    details: { error: errorMessage },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/get-node-labels',
-                    status: 0,
-                    duration,
-                    error: errorMessage,
-                });
-
-                throw error;
-            }
-        },
+        queryKey: queryKeys.schedulerConfVersion(),
+        queryFn: () => getApiClient().getSchedulerConfVersion(),
+        ...options,
     });
 };
 
-// Query for Nodes
-export const useNodesQuery = () => {
-    const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
-
+/**
+ * Hook to fetch node labels
+ */
+export const useNodeLabelsQuery = (options?: UseQueryOptions<NodeLabelsResponse>) => {
     return useQuery({
-        queryKey: ['nodes'],
-        queryFn: async () => {
-            const startTime = Date.now();
-            try {
-                const result = await apiService.getNodes();
-                const duration = Date.now() - startTime;
-
-                addLogEntry({
-                    type: 'api_call',
-                    level: 'info',
-                    message: 'Successfully loaded node data',
-                    details: { timestamp: Date.now() },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/nodes',
-                    status: 200,
-                    duration,
-                });
-
-                return result;
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to load node data',
-                    details: { error: errorMessage },
-                });
-                addApiCallLog({
-                    method: 'GET',
-                    url: '/ws/v1/cluster/nodes',
-                    status: 0,
-                    duration,
-                    error: errorMessage,
-                });
-
-                throw error;
-            }
-        },
+        queryKey: queryKeys.nodeLabels(),
+        queryFn: () => getApiClient().getNodeLabels(),
+        ...options,
     });
 };
 
-// Mutation for updating the configuration
-export const useUpdateConfigurationMutation = () => {
+/**
+ * Hook to fetch node to label mappings
+ */
+export const useNodeToLabelsQuery = (options?: UseQueryOptions<NodeToLabelsResponse>) => {
+    return useQuery({
+        queryKey: queryKeys.nodeToLabels(),
+        queryFn: () => getApiClient().getNodeToLabels(),
+        ...options,
+    });
+};
+
+/**
+ * Mutation hook to update scheduler configuration
+ */
+export const useUpdateSchedulerConfMutation = (
+    options?: UseMutationOptions<void, Error, SchedConfUpdateInfo>
+) => {
     const queryClient = useQueryClient();
-    const addLogEntry = useActivityStore((state) => state.addLogEntry);
-    const addApiCallLog = useActivityStore((state) => state.addApiCallLog);
 
     return useMutation({
-        mutationFn: async (changes: ConfigurationUpdateRequest) => {
-            const startTime = Date.now();
-            try {
-                const result = await apiService.updateConfiguration(changes);
-                const duration = Date.now() - startTime;
-
-                addLogEntry({
-                    type: 'user_action',
-                    level: 'info',
-                    message: 'Successfully updated configuration',
-                    details: { success: true },
-                });
-                addApiCallLog({
-                    method: 'PUT',
-                    url: '/ws/v1/cluster/scheduler-conf',
-                    status: 200,
-                    duration,
-                });
-
-                return result;
-            } catch (error) {
-                const duration = Date.now() - startTime;
-                const errorMessage = error instanceof Error ? error.message : 'Unknown error';
-
-                addLogEntry({
-                    type: 'error',
-                    level: 'error',
-                    message: 'Failed to update configuration',
-                    details: { error: errorMessage },
-                });
-                addApiCallLog({
-                    method: 'PUT',
-                    url: '/ws/v1/cluster/scheduler-conf',
-                    status: 0,
-                    duration,
-                    error: errorMessage,
-                });
-
-                throw error;
-            }
-        },
+        mutationFn: (updateInfo: SchedConfUpdateInfo) => getApiClient().updateSchedulerConf(updateInfo),
         onSuccess: () => {
-            // Invalidate and refetch all relevant queries after a successful mutation
-            queryClient.invalidateQueries({ queryKey: ['scheduler'] });
-            queryClient.invalidateQueries({ queryKey: ['configuration'] });
+            // Invalidate related queries to trigger refetch
+            queryClient.invalidateQueries({ queryKey: queryKeys.scheduler() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.schedulerConf() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.schedulerConfVersion() });
         },
+        ...options,
     });
+};
+
+/**
+ * Mutation hook to validate scheduler configuration
+ */
+export const useValidateSchedulerConfMutation = (
+    options?: UseMutationOptions<void, Error, SchedConfUpdateInfo>
+) => {
+    return useMutation({
+        mutationFn: (updateInfo: SchedConfUpdateInfo) => getApiClient().validateSchedulerConf(updateInfo),
+        // Validation doesn't need to invalidate queries
+        ...options,
+    });
+};
+
+/**
+ * Mutation hook to add node labels
+ */
+export const useAddNodeLabelsMutation = (
+    options?: UseMutationOptions<void, Error, string[]>
+) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (labels: string[]) => getApiClient().addNodeLabels(labels),
+        onSuccess: () => {
+            // Invalidate node labels query
+            queryClient.invalidateQueries({ queryKey: queryKeys.nodeLabels() });
+        },
+        ...options,
+    });
+};
+
+/**
+ * Mutation hook to remove node labels
+ */
+export const useRemoveNodeLabelsMutation = (
+    options?: UseMutationOptions<void, Error, string[]>
+) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (labels: string[]) => getApiClient().removeNodeLabels(labels),
+        onSuccess: () => {
+            // Invalidate node labels queries
+            queryClient.invalidateQueries({ queryKey: queryKeys.nodeLabels() });
+            queryClient.invalidateQueries({ queryKey: queryKeys.nodeToLabels() });
+        },
+        ...options,
+    });
+};
+
+/**
+ * Mutation hook to replace node to label mappings
+ */
+export const useReplaceNodeToLabelsMutation = (
+    options?: UseMutationOptions<void, Error, Record<string, string[]>>
+) => {
+    const queryClient = useQueryClient();
+
+    return useMutation({
+        mutationFn: (nodeToLabels: Record<string, string[]>) =>
+            getApiClient().replaceNodeToLabels(nodeToLabels),
+        onSuccess: () => {
+            // Invalidate node to labels query
+            queryClient.invalidateQueries({ queryKey: queryKeys.nodeToLabels() });
+        },
+        ...options,
+    });
+};
+
+/**
+ * Combined hook to fetch both scheduler and configuration data
+ * Useful for initial page load
+ */
+export const useSchedulerAndConfig = () => {
+    const schedulerQuery = useSchedulerQuery();
+    const configQuery = useSchedulerConfQuery();
+
+    return {
+        scheduler: schedulerQuery,
+        config: configQuery,
+        isLoading: schedulerQuery.isLoading || configQuery.isLoading,
+        isError: schedulerQuery.isError || configQuery.isError,
+        error: schedulerQuery.error || configQuery.error,
+    };
+};
+
+/**
+ * Hook to prefetch scheduler data
+ * Useful for preloading data before navigation
+ */
+export const usePrefetchScheduler = () => {
+    const queryClient = useQueryClient();
+
+    return () => {
+        return queryClient.prefetchQuery({
+            queryKey: queryKeys.scheduler(),
+            queryFn: () => getApiClient().getScheduler(),
+        });
+    };
 };
