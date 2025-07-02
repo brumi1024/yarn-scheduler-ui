@@ -39,11 +39,9 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
 
     const { startColor, endColor, opacity } = getFlowColors();
 
-    // Calculate Sankey-style width based on capacity (min 8px, max 40px for visual clarity)
     const capacity = typeof data?.capacity === 'number' ? data.capacity : 0;
     const sankeyWidth = capacity > 0 ? Math.max(8, Math.min(40, capacity * 0.8)) : 12;
 
-    // Create Sankey-style path using proportional segments that span full card height
     const createSankeyPath = () => {
         const controlPointDistance = Math.abs(targetX - sourceX) * 0.5;
 
@@ -53,7 +51,6 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
         const targetStartY = data?.targetStartY ?? targetY - CARD_HEIGHT / 2;
         const targetEndY = data?.targetEndY ?? targetY + CARD_HEIGHT / 2;
 
-        // Create a thick flowing path using the proportional segments
         return [
             // Start at source (proportional segment start)
             `M ${sourceX} ${sourceStartY}`,
