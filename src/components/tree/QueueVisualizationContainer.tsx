@@ -117,7 +117,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
             sx={{ 
                 position: 'relative', 
                 width: '100%', 
-                height: 'calc(100vh - 120px)', // Full viewport minus app bar and tabs
+                height: 'calc(100vh - 140px)', // Account for header and any padding
                 bgcolor: 'background.default' 
             }}
             className={className}

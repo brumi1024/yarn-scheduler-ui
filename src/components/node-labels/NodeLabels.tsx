@@ -23,6 +23,7 @@ export const NodeLabels: React.FC = () => {
     const isLoading = useSchedulerStore(state => state.isLoading);
     const error = useSchedulerStore(state => state.error);
     const nodeLabels = useSchedulerStore(state => state.nodeLabels);
+    const selectedNodeLabel = useSchedulerStore(state => state.selectedNodeLabel);
     const refreshSchedulerData = useSchedulerStore(state => state.refreshSchedulerData);
     
     const handleRefresh = async () => {
@@ -66,6 +67,14 @@ export const NodeLabels: React.FC = () => {
                             onClick={handleRefresh}
                             disabled={isLoading}
                             size="small"
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                '&:hover': {
+                                    borderWidth: 2,
+                                },
+                            }}
                         >
                             Refresh
                         </Button>
@@ -112,12 +121,20 @@ export const NodeLabels: React.FC = () => {
                             <CardContent sx={{ height: '100%' }}>
                                 <Typography variant="h6" gutterBottom>
                                     Node Label Configuration
+                                    {selectedNodeLabel && (
+                                        <Chip 
+                                            label={selectedNodeLabel} 
+                                            size="small" 
+                                            color="primary" 
+                                            sx={{ ml: 2 }}
+                                        />
+                                    )}
                                 </Typography>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                    Configure queue capacity and maximum capacity for each node label
+                                    Assign nodes to labels for resource allocation
                                 </Typography>
                                 <Divider sx={{ mb: 2 }} />
-                                <NodesPanel />
+                                <NodesPanel selectedLabel={selectedNodeLabel} />
                             </CardContent>
                         </Card>
                     </Grid>

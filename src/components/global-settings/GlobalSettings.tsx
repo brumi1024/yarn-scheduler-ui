@@ -149,10 +149,6 @@ export const GlobalSettings: React.FC = () => {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>
-                Global Scheduler Settings
-            </Typography>
-
             {globalStagedChanges.length > 0 && (
                 <Alert severity="info" sx={{ mb: 3 }}>
                     You have {globalStagedChanges.length} unsaved global setting{globalStagedChanges.length !== 1 ? 's' : ''}. 

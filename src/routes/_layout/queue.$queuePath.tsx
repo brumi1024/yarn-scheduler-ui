@@ -1,15 +1,14 @@
 import { createFileRoute } from '@tanstack/react-router';
 import { z } from 'zod';
-import { QueueVisualizationContainer } from '../components/tree/QueueVisualizationContainer';
-import { AppLayout } from '../components/AppLayout';
+import { QueueVisualizationContainer } from '../../components/tree/QueueVisualizationContainer';
 import { useEffect } from 'react';
-import { useSchedulerStore } from '../store/schedulerStore';
+import { useSchedulerStore } from '../../store/schedulerStore';
 
 const queueSearchSchema = z.object({
   panel: z.coerce.boolean().optional().default(false),
 });
 
-export const Route = createFileRoute('/queue/$queuePath')({
+export const Route = createFileRoute('/_layout/queue/$queuePath')({
   validateSearch: queueSearchSchema,
   component: QueueComponent,
 });
@@ -50,9 +49,9 @@ function QueueComponent() {
   }, [queuePath, panel, selectQueue, setPropertyPanelOpen, selectedQueuePath, getQueueByPath, isLoading]);
 
   return (
-    <AppLayout>
+    <>
       <QueueVisualizationContainer />
       {/* PropertyPanel is rendered globally via the layout, URL state managed above */}
-    </AppLayout>
+    </>
   );
 }

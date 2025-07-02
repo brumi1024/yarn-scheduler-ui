@@ -9,109 +9,134 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
-import { Route as NodeLabelsRouteImport } from './routes/node-labels'
-import { Route as GlobalSettingsRouteImport } from './routes/global-settings'
-import { Route as IndexRouteImport } from './routes/index'
-import { Route as QueueQueuePathRouteImport } from './routes/queue.$queuePath'
+import { Route as LayoutRouteImport } from './routes/_layout'
+import { Route as LayoutIndexRouteImport } from './routes/_layout/index'
+import { Route as LayoutNodeLabelsRouteImport } from './routes/_layout/node-labels'
+import { Route as LayoutGlobalSettingsRouteImport } from './routes/_layout/global-settings'
+import { Route as LayoutQueueQueuePathRouteImport } from './routes/_layout/queue.$queuePath'
 
-const NodeLabelsRoute = NodeLabelsRouteImport.update({
-  id: '/node-labels',
-  path: '/node-labels',
+const LayoutRoute = LayoutRouteImport.update({
+  id: '/_layout',
   getParentRoute: () => rootRouteImport,
 } as any)
-const GlobalSettingsRoute = GlobalSettingsRouteImport.update({
-  id: '/global-settings',
-  path: '/global-settings',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const IndexRoute = IndexRouteImport.update({
+const LayoutIndexRoute = LayoutIndexRouteImport.update({
   id: '/',
   path: '/',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => LayoutRoute,
 } as any)
-const QueueQueuePathRoute = QueueQueuePathRouteImport.update({
+const LayoutNodeLabelsRoute = LayoutNodeLabelsRouteImport.update({
+  id: '/node-labels',
+  path: '/node-labels',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutGlobalSettingsRoute = LayoutGlobalSettingsRouteImport.update({
+  id: '/global-settings',
+  path: '/global-settings',
+  getParentRoute: () => LayoutRoute,
+} as any)
+const LayoutQueueQueuePathRoute = LayoutQueueQueuePathRouteImport.update({
   id: '/queue/$queuePath',
   path: '/queue/$queuePath',
-  getParentRoute: () => rootRouteImport,
+  getParentRoute: () => LayoutRoute,
 } as any)
 
 export interface FileRoutesByFullPath {
-  '/': typeof IndexRoute
-  '/global-settings': typeof GlobalSettingsRoute
-  '/node-labels': typeof NodeLabelsRoute
-  '/queue/$queuePath': typeof QueueQueuePathRoute
+  '/global-settings': typeof LayoutGlobalSettingsRoute
+  '/node-labels': typeof LayoutNodeLabelsRoute
+  '/': typeof LayoutIndexRoute
+  '/queue/$queuePath': typeof LayoutQueueQueuePathRoute
 }
 export interface FileRoutesByTo {
-  '/': typeof IndexRoute
-  '/global-settings': typeof GlobalSettingsRoute
-  '/node-labels': typeof NodeLabelsRoute
-  '/queue/$queuePath': typeof QueueQueuePathRoute
+  '/global-settings': typeof LayoutGlobalSettingsRoute
+  '/node-labels': typeof LayoutNodeLabelsRoute
+  '/': typeof LayoutIndexRoute
+  '/queue/$queuePath': typeof LayoutQueueQueuePathRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
-  '/': typeof IndexRoute
-  '/global-settings': typeof GlobalSettingsRoute
-  '/node-labels': typeof NodeLabelsRoute
-  '/queue/$queuePath': typeof QueueQueuePathRoute
+  '/_layout': typeof LayoutRouteWithChildren
+  '/_layout/global-settings': typeof LayoutGlobalSettingsRoute
+  '/_layout/node-labels': typeof LayoutNodeLabelsRoute
+  '/_layout/': typeof LayoutIndexRoute
+  '/_layout/queue/$queuePath': typeof LayoutQueueQueuePathRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/global-settings' | '/node-labels' | '/queue/$queuePath'
+  fullPaths: '/global-settings' | '/node-labels' | '/' | '/queue/$queuePath'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/global-settings' | '/node-labels' | '/queue/$queuePath'
+  to: '/global-settings' | '/node-labels' | '/' | '/queue/$queuePath'
   id:
     | '__root__'
-    | '/'
-    | '/global-settings'
-    | '/node-labels'
-    | '/queue/$queuePath'
+    | '/_layout'
+    | '/_layout/global-settings'
+    | '/_layout/node-labels'
+    | '/_layout/'
+    | '/_layout/queue/$queuePath'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
-  IndexRoute: typeof IndexRoute
-  GlobalSettingsRoute: typeof GlobalSettingsRoute
-  NodeLabelsRoute: typeof NodeLabelsRoute
-  QueueQueuePathRoute: typeof QueueQueuePathRoute
+  LayoutRoute: typeof LayoutRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
-    '/node-labels': {
-      id: '/node-labels'
-      path: '/node-labels'
-      fullPath: '/node-labels'
-      preLoaderRoute: typeof NodeLabelsRouteImport
+    '/_layout': {
+      id: '/_layout'
+      path: ''
+      fullPath: ''
+      preLoaderRoute: typeof LayoutRouteImport
       parentRoute: typeof rootRouteImport
     }
-    '/global-settings': {
-      id: '/global-settings'
-      path: '/global-settings'
-      fullPath: '/global-settings'
-      preLoaderRoute: typeof GlobalSettingsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/': {
-      id: '/'
+    '/_layout/': {
+      id: '/_layout/'
       path: '/'
       fullPath: '/'
-      preLoaderRoute: typeof IndexRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof LayoutIndexRouteImport
+      parentRoute: typeof LayoutRoute
     }
-    '/queue/$queuePath': {
-      id: '/queue/$queuePath'
+    '/_layout/node-labels': {
+      id: '/_layout/node-labels'
+      path: '/node-labels'
+      fullPath: '/node-labels'
+      preLoaderRoute: typeof LayoutNodeLabelsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/global-settings': {
+      id: '/_layout/global-settings'
+      path: '/global-settings'
+      fullPath: '/global-settings'
+      preLoaderRoute: typeof LayoutGlobalSettingsRouteImport
+      parentRoute: typeof LayoutRoute
+    }
+    '/_layout/queue/$queuePath': {
+      id: '/_layout/queue/$queuePath'
       path: '/queue/$queuePath'
       fullPath: '/queue/$queuePath'
-      preLoaderRoute: typeof QueueQueuePathRouteImport
-      parentRoute: typeof rootRouteImport
+      preLoaderRoute: typeof LayoutQueueQueuePathRouteImport
+      parentRoute: typeof LayoutRoute
     }
   }
 }
 
+interface LayoutRouteChildren {
+  LayoutGlobalSettingsRoute: typeof LayoutGlobalSettingsRoute
+  LayoutNodeLabelsRoute: typeof LayoutNodeLabelsRoute
+  LayoutIndexRoute: typeof LayoutIndexRoute
+  LayoutQueueQueuePathRoute: typeof LayoutQueueQueuePathRoute
+}
+
+const LayoutRouteChildren: LayoutRouteChildren = {
+  LayoutGlobalSettingsRoute: LayoutGlobalSettingsRoute,
+  LayoutNodeLabelsRoute: LayoutNodeLabelsRoute,
+  LayoutIndexRoute: LayoutIndexRoute,
+  LayoutQueueQueuePathRoute: LayoutQueueQueuePathRoute,
+}
+
+const LayoutRouteWithChildren =
+  LayoutRoute._addFileChildren(LayoutRouteChildren)
+
 const rootRouteChildren: RootRouteChildren = {
-  IndexRoute: IndexRoute,
-  GlobalSettingsRoute: GlobalSettingsRoute,
-  NodeLabelsRoute: NodeLabelsRoute,
-  QueueQueuePathRoute: QueueQueuePathRoute,
+  LayoutRoute: LayoutRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

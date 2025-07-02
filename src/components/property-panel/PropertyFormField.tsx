@@ -109,13 +109,24 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                 flexWrap: 'wrap',
                                 gap: 1,
                                 '& .MuiToggleButton-root': {
-                                    border: 1,
+                                    border: 1.5,
                                     borderColor: 'divider',
+                                    borderRadius: 1,
+                                    textTransform: 'none',
+                                    fontWeight: 500,
+                                    transition: 'all 0.2s ease-in-out',
+                                    '&:hover': {
+                                        borderColor: 'primary.main',
+                                        backgroundColor: 'primary.50',
+                                    },
                                     '&.Mui-selected': {
                                         backgroundColor: 'primary.main',
                                         color: 'primary.contrastText',
+                                        borderColor: 'primary.main',
+                                        fontWeight: 600,
                                         '&:hover': {
                                             backgroundColor: 'primary.dark',
+                                            borderColor: 'primary.dark',
                                         },
                                     },
                                 },
@@ -147,19 +158,33 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         label={property.displayName}
                         type="number"
                         onChange={(e) => createCustomOnChange(field.onChange)(e.target.value)}
-                        InputProps={{
-                            inputProps: {
-                                step: property.displayFormat?.decimals ? 0.01 : 1,
-                                min: property.validationRules?.find(r => r.type === 'range')?.min,
-                                max: property.validationRules?.find(r => r.type === 'range')?.max,
+                        slotProps={{
+                            input: {
+                                inputProps: {
+                                    step: property.displayFormat?.decimals ? 0.01 : 1,
+                                    min: property.validationRules?.find(r => r.type === 'range')?.min,
+                                    max: property.validationRules?.find(r => r.type === 'range')?.max,
+                                },
+                                endAdornment: property.displayFormat?.suffix && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ pr: 1 }}>
+                                        {property.displayFormat.suffix}
+                                    </Typography>
+                                ),
                             },
-                            endAdornment: property.displayFormat?.suffix && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {property.displayFormat.suffix}
-                                </Typography>
-                            ),
                         }}
                         value={field.value || ''}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: 2,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderWidth: 2,
+                                },
+                            },
+                        }}
                     />
                 );
 
@@ -174,14 +199,32 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         onChange={(e) => createCustomOnChange(field.onChange)(e.target.value)}
                         value={field.value || ''}
                         placeholder={property.defaultValue || undefined}
+                        sx={{
+                            '& .MuiOutlinedInput-root': {
+                                borderRadius: 2,
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: 'primary.main',
+                                    borderWidth: 2,
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderWidth: 2,
+                                },
+                            },
+                        }}
                     />
                 );
         }
     };
 
     return (
-        <Box sx={{ mb: 2 }}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+        <Box sx={{ mb: 3 }}>
+            <Box sx={{ 
+                display: 'flex', 
+                alignItems: 'center', 
+                gap: 1, 
+                mb: 1.5,
+                minHeight: 24, // Consistent height for better alignment
+            }}>
                 <Typography variant="subtitle2" component="label" sx={{ flexGrow: 1 }}>
                     {property.displayName}
                     {property.required && (
@@ -196,7 +239,14 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         size="small"
                         color="primary"
                         variant="outlined"
-                        sx={{ fontSize: '0.7rem', height: 20 }}
+                        sx={{ 
+                            fontSize: '0.7rem', 
+                            height: 20,
+                            fontWeight: 500,
+                            '& .MuiChip-label': {
+                                px: 1,
+                            },
+                        }}
                     />
                 )}
                 {property.deprecated && (
@@ -205,7 +255,14 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         size="small"
                         color="warning"
                         variant="outlined"
-                        sx={{ fontSize: '0.7rem', height: 20 }}
+                        sx={{ 
+                            fontSize: '0.7rem', 
+                            height: 20,
+                            fontWeight: 500,
+                            '& .MuiChip-label': {
+                                px: 1,
+                            },
+                        }}
                     />
                 )}
             </Box>

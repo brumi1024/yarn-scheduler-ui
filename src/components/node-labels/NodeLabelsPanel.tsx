@@ -25,11 +25,9 @@ import {
     Add as AddIcon,
     Delete as DeleteIcon,
     Security as SecurityIcon,
-    Computer as ComputerIcon,
 } from '@mui/icons-material';
 import { useSchedulerStore } from '../../store/schedulerStore';
-import { NodesPanel } from './NodesPanel';
-import { validateLabelName } from '../../utils/labelValidation';
+import { validateLabelName, validateLabelRemoval } from '../../utils/labelValidation';
 
 interface AddLabelDialogProps {
     open: boolean;
@@ -83,7 +81,7 @@ const AddLabelDialog: React.FC<AddLabelDialogProps> = ({
                             setError('');
                         }}
                         error={!!error}
-                        helperText={error || 'Label names should be lowercase with no spaces'}
+                        helperText={error || 'Use letters, numbers, hyphens, and underscores only'}
                         autoFocus
                         margin="normal"
                         placeholder="e.g., gpu, highmem, ssd"
@@ -111,8 +109,31 @@ const AddLabelDialog: React.FC<AddLabelDialogProps> = ({
                 </Box>
             </DialogContent>
             <DialogActions>
-                <Button onClick={handleClose} disabled={isLoading}>Cancel</Button>
-                <Button onClick={handleConfirm} variant="contained" disabled={isLoading}>
+                <Button 
+                    onClick={handleClose} 
+                    disabled={isLoading}
+                    sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                    }}
+                >
+                    Cancel
+                </Button>
+                <Button 
+                    onClick={handleConfirm} 
+                    variant="contained" 
+                    disabled={isLoading}
+                    sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 600,
+                        boxShadow: 2,
+                        '&:hover': {
+                            boxShadow: 4,
+                        },
+                    }}
+                >
                     Add Label
                 </Button>
             </DialogActions>
@@ -124,28 +145,11 @@ export const NodeLabelsPanel: React.FC = () => {
     const nodeLabels = useSchedulerStore(state => state.nodeLabels);
     const selectedNodeLabel = useSchedulerStore(state => state.selectedNodeLabel);
     const selectNodeLabel = useSchedulerStore(state => state.selectNodeLabel);
-    const stagedChanges = useSchedulerStore(state => state.stagedChanges);
     const addNodeLabel = useSchedulerStore(state => state.addNodeLabel);
     const removeNodeLabel = useSchedulerStore(state => state.removeNodeLabel);
     const isLoading = useSchedulerStore(state => state.isLoading);
 
     const [addDialogOpen, setAddDialogOpen] = useState(false);
-
-    // Get node label changes from staged changes
-    const labelChanges = useMemo(() => {
-        const changes = new Map<string, number>();
-        stagedChanges.forEach(change => {
-            if (change.property?.includes('accessible-node-labels')) {
-                // Extract label name from property like 'accessible-node-labels.gpu.capacity'
-                const parts = change.property.split('.');
-                if (parts.length >= 3) {
-                    const labelName = parts[2];
-                    changes.set(labelName, (changes.get(labelName) || 0) + 1);
-                }
-            }
-        });
-        return changes;
-    }, [stagedChanges]);
 
     const handleAddLabel = async (name: string, exclusivity: boolean) => {
         try {
@@ -158,6 +162,25 @@ export const NodeLabelsPanel: React.FC = () => {
 
     const handleRemoveLabel = async (labelName: string) => {
         try {
+            // Get nodeToLabels from store to create nodeAssignments Map for validation
+            const nodeToLabels = useSchedulerStore.getState().nodeToLabels;
+            const nodeAssignments = new Map<string, string[]>();
+            
+            // Convert nodeToLabels object to Map format expected by validation
+            Object.entries(nodeToLabels || {}).forEach(([nodeId, labels]) => {
+                nodeAssignments.set(nodeId, labels);
+            });
+            
+            // Validate that the label can be safely removed
+            const validation = validateLabelRemoval(labelName, nodeAssignments);
+            
+            if (!validation.valid) {
+                // Show error message through the store error system
+                const setError = useSchedulerStore.getState().setError;
+                setError(validation.error || 'Cannot remove label');
+                return;
+            }
+            
             await removeNodeLabel(labelName);
         } catch (error) {
             console.error('Failed to remove node label:', error);
@@ -186,6 +209,14 @@ export const NodeLabelsPanel: React.FC = () => {
                     startIcon={<AddIcon />}
                     onClick={() => setAddDialogOpen(true)}
                     disabled={isLoading}
+                    sx={{
+                        borderRadius: 2,
+                        textTransform: 'none',
+                        fontWeight: 500,
+                        '&:hover': {
+                            borderWidth: 2,
+                        },
+                    }}
                 >
                     Add
                 </Button>
@@ -195,7 +226,6 @@ export const NodeLabelsPanel: React.FC = () => {
             <List dense>
                 {nodeLabels.map((label) => {
                     const isSelected = selectedNodeLabel === label.name;
-                    const changeCount = labelChanges.get(label.name) || 0;
                     
                     return (
                         <ListItem
@@ -246,23 +276,9 @@ export const NodeLabelsPanel: React.FC = () => {
                                                     variant="outlined"
                                                 />
                                             )}
-                                            
-                                            {changeCount > 0 && (
-                                                <Chip 
-                                                    label={`${changeCount} change${changeCount !== 1 ? 's' : ''}`}
-                                                    size="small" 
-                                                    color="info"
-                                                    variant="filled"
-                                                />
-                                            )}
                                         </Box>
                                     }
-                                    secondary={
-                                        // Show basic resource info if available
-                                        'partitionInfo' in label && label.partitionInfo 
-                                            ? `${label.partitionInfo.resourceAvailable.memory}MB, ${label.partitionInfo.resourceAvailable.vCores} cores`
-                                            : undefined
-                                    }
+                                    secondary={undefined}
                                 />
                             </ListItemButton>
                         </ListItem>
@@ -286,19 +302,6 @@ export const NodeLabelsPanel: React.FC = () => {
                     </ListItem>
                 )}
             </List>
-
-            <Box sx={{ mt: 3 }}>
-                <Typography variant="h6" sx={{ mb: 2, display: 'flex', alignItems: 'center', gap: 1 }}>
-                    <ComputerIcon />
-                    Node Management
-                    {selectedNodeLabel && (
-                        <Typography variant="body2" color="primary" sx={{ ml: 2 }}>
-                            - {selectedNodeLabel} label
-                        </Typography>
-                    )}
-                </Typography>
-                <NodesPanel selectedLabel={selectedNodeLabel} />
-            </Box>
 
             <AddLabelDialog
                 open={addDialogOpen}

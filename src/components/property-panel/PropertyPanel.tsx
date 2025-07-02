@@ -156,6 +156,20 @@ export const PropertyPanel: React.FC = () => {
         }
     }, [isPropertyPanelOpen, selectedQueuePath]);
 
+    // Close panel when navigating away from queue management routes
+    useEffect(() => {
+        const currentPath = location.pathname;
+        
+        // Close panel when navigating to node-labels, global-settings, or other non-queue routes
+        if (isPropertyPanelOpen && (
+            currentPath === '/node-labels' || 
+            currentPath === '/global-settings' ||
+            (currentPath === '/' && !currentPath.includes('/queue/'))
+        )) {
+            setPropertyPanelOpen(false);
+        }
+    }, [location.pathname, isPropertyPanelOpen, setPropertyPanelOpen]);
+
     const handleIsSubmittingChange = (newIsSubmitting: boolean) => {
         setIsSubmitting(newIsSubmitting);
     };
@@ -176,21 +190,60 @@ export const PropertyPanel: React.FC = () => {
                 '& .MuiDrawer-paper': {
                     width: 450,
                     boxSizing: 'border-box',
+                    borderRadius: 2,
+                    backgroundImage: 'none',
+                    backgroundColor: 'background.paper',
+                    borderLeft: 1,
+                    borderColor: 'divider',
+                    top: '64px', // Position below Toolpad header
+                    height: 'calc(100vh - 64px)', // Adjust height to not overlap header
                 },
             }}
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
-                <Box sx={{ p: 2, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                    <Typography variant="h6">Queue Details</Typography>
-                    <IconButton onClick={handleClose} size="small">
+                <Box sx={{ 
+                    p: 2, 
+                    display: 'flex', 
+                    alignItems: 'center', 
+                    justifyContent: 'space-between',
+                    borderBottom: 1,
+                    borderColor: 'divider',
+                }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                        Queue Details
+                    </Typography>
+                    <IconButton 
+                        onClick={handleClose} 
+                        size="small"
+                        sx={{
+                            '&:hover': {
+                                backgroundColor: 'action.hover',
+                            },
+                        }}
+                    >
                         <CloseIcon />
                     </IconButton>
                 </Box>
 
-                <Divider />
-
                 <Box sx={{ borderBottom: 1, borderColor: 'divider' }}>
-                    <Tabs value={tabValue} onChange={handleTabChange} aria-label="property panel tabs">
+                    <Tabs 
+                        value={tabValue} 
+                        onChange={handleTabChange} 
+                        aria-label="property panel tabs"
+                        sx={{
+                            '& .MuiTab-root': {
+                                textTransform: 'none',
+                                fontWeight: 500,
+                                minHeight: 48,
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                },
+                                '&.Mui-selected': {
+                                    fontWeight: 600,
+                                },
+                            },
+                        }}
+                    >
                         <Tab label="Overview" />
                         <Tab label="Statistics" />
                         <Tab label="Configuration" />
@@ -247,6 +300,11 @@ export const PropertyPanel: React.FC = () => {
                             onClick={handleReset}
                             disabled={isSubmitting || !hasChanges}
                             startIcon={<RefreshIcon />}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 500,
+                            }}
                         >
                             Reset
                         </Button>
@@ -255,6 +313,15 @@ export const PropertyPanel: React.FC = () => {
                             onClick={handleSubmit}
                             disabled={isSubmitting || !hasChanges}
                             startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
+                            sx={{
+                                borderRadius: 2,
+                                textTransform: 'none',
+                                fontWeight: 600,
+                                boxShadow: 2,
+                                '&:hover': {
+                                    boxShadow: 4,
+                                },
+                            }}
                         >
                             {isSubmitting ? 'Applying...' : 'Apply Changes'}
                         </Button>
