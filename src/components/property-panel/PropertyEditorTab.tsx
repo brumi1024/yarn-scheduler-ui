@@ -97,16 +97,21 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
         queuePath: queue.queuePath,
     });
 
+    // Check if form is still initializing
+    const isFormInitializing = !control || !propertiesByCategory || Object.keys(propertiesByCategory).length === 0;
+
     // Determine which labels this queue has access to
     const getAccessibleLabels = React.useCallback(() => {
-        const accessibleLabelsValue = watchedValues?.['accessible-node-labels'] || '';
-        if (!accessibleLabelsValue.trim()) {
+        const accessibleLabelsValue = watchedValues?.['accessible-node-labels'];
+        const accessibleLabelsString = typeof accessibleLabelsValue === 'string' ? accessibleLabelsValue : '';
+        
+        if (!accessibleLabelsString.trim()) {
             return []; // Default partition only
         }
-        if (accessibleLabelsValue.trim() === '*') {
+        if (accessibleLabelsString.trim() === '*') {
             return ['*']; // All labels
         }
-        return accessibleLabelsValue.split(',').map(l => l.trim()).filter(l => l.length > 0);
+        return accessibleLabelsString.split(',').map(l => l.trim()).filter(l => l.length > 0);
     }, [watchedValues]);
 
     const accessibleLabels = getAccessibleLabels();
@@ -184,8 +189,16 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                     </Alert>
                 )}
 
+                {/* Loading State */}
+                {isFormInitializing && (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
+                        <CircularProgress size={40} />
+                    </Box>
+                )}
+
                 {/* Property Categories */}
-                {categoryOrder.map((category) => {
+                {!isFormInitializing && 
+                categoryOrder.map((category) => {
                     const categoryProps = propertiesByCategory[category];
                     if (!categoryProps || categoryProps.length === 0) return null;
 

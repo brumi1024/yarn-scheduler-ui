@@ -6,6 +6,7 @@
  */
 
 import type { StagedChange, SchedConfUpdateInfo } from '../types';
+import { groupBy } from 'es-toolkit';
 
 /**
  * Builds a complete mutation request from staged changes
@@ -24,36 +25,47 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
         'global-updates': {},
     };
 
+    // Separate global changes from queue-specific changes
+    const globalChanges = stagedChanges.filter(change => change.queuePath === 'global');
+    const queueChanges = stagedChanges.filter(change => change.queuePath !== 'global');
+
+    // Group queue changes by path for efficient processing
+    const changesByQueue = groupBy(queueChanges, change => change.queuePath);
+
     const updatesByQueue = new Map<string, Record<string, string>>();
     const addsByQueue = new Map<string, Record<string, string>>();
     const removals: string[] = [];
     const globalUpdates: Record<string, string> = {};
 
-    for (const change of stagedChanges) {
-        if (change.queuePath === 'global') {
-            if (change.property && change.newValue !== undefined) {
-                globalUpdates[change.property] = change.newValue;
-            }
-        } else {
+    // Process global changes
+    for (const change of globalChanges) {
+        if (change.property && change.newValue !== undefined) {
+            globalUpdates[change.property] = change.newValue;
+        }
+    }
+
+    // Process queue changes efficiently using grouped data
+    for (const [queuePath, changes] of Object.entries(changesByQueue)) {
+        for (const change of changes) {
             switch (change.type) {
                 case 'update': {
                     if (!change.property || change.newValue === undefined) continue;
 
-                    const updates = updatesByQueue.get(change.queuePath) || {};
+                    const updates = updatesByQueue.get(queuePath) || {};
                     updates[change.property] = change.newValue;
-                    updatesByQueue.set(change.queuePath, updates);
+                    updatesByQueue.set(queuePath, updates);
                     break;
                 }
                 case 'add': {
                     if (!change.property || change.newValue === undefined) continue;
 
-                    const adds = addsByQueue.get(change.queuePath) || {};
+                    const adds = addsByQueue.get(queuePath) || {};
                     adds[change.property] = change.newValue;
-                    addsByQueue.set(change.queuePath, adds);
+                    addsByQueue.set(queuePath, adds);
                     break;
                 }
                 case 'remove': {
-                    removals.push(change.queuePath);
+                    removals.push(queuePath);
                     break;
                 }
             }
@@ -172,15 +184,8 @@ export function buildRemoveQueueMutation(changes: StagedChange[]): string[] {
  * @returns Map of queue paths to their changes
  */
 export function groupChangesByQueue(changes: StagedChange[]): Map<string, StagedChange[]> {
-    const grouped = new Map<string, StagedChange[]>();
-
-    for (const change of changes) {
-        const queueChanges = grouped.get(change.queuePath) || [];
-        queueChanges.push(change);
-        grouped.set(change.queuePath, queueChanges);
-    }
-
-    return grouped;
+    const grouped = groupBy(changes, change => change.queuePath);
+    return new Map(Object.entries(grouped));
 }
 
 /**

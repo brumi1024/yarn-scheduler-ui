@@ -86,7 +86,7 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     const form = useForm({
         resolver: zodResolver(formSchema),
         defaultValues: {},
-        mode: 'onChange',
+        mode: 'onBlur', // Changed from 'onChange' for better performance
     });
 
     const { control, handleSubmit, reset, setValue, formState: { errors, isValid } } = form;

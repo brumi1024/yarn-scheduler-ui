@@ -45,16 +45,19 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     }, [property.enableWhen, dependentValues]);
 
     // Create a custom onChange handler that triggers both form and staging
-    const createCustomOnChange = (originalOnChange: (value: any) => void) => (value: any) => {
-        // Update form state
-        originalOnChange(value);
+    const createCustomOnChange = React.useCallback(
+        (originalOnChange: (value: any) => void) => (value: any) => {
+            // Update form state
+            originalOnChange(value);
 
-        // Trigger staging if callback provided
-        if (onFieldChange) {
-            const stringValue = typeof value === 'boolean' ? (value ? 'true' : '') : String(value || '');
-            onFieldChange(property.name, stringValue);
-        }
-    };
+            // Trigger staging if callback provided
+            if (onFieldChange) {
+                const stringValue = typeof value === 'boolean' ? (value ? 'true' : '') : String(value || '');
+                onFieldChange(property.name, stringValue);
+            }
+        },
+        [onFieldChange, property.name]
+    );
 
     // Render different input types based on property type
     const renderInput = (field: any) => {

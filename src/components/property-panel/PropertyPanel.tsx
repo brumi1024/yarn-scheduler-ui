@@ -1,4 +1,5 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import clsx from 'clsx';
 import {
     Drawer,
     Box,
@@ -15,6 +16,7 @@ import {
     Save as SaveIcon,
     Refresh as RefreshIcon,
 } from '@mui/icons-material';
+import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useSchedulerStore } from '../../store/schedulerStore';
 import { QueueOverview } from './QueueOverview';
 import { PropertyEditorTab, PropertyEditorTabHandle } from './PropertyEditorTab';
@@ -34,6 +36,10 @@ function TabPanel(props: TabPanelProps) {
             hidden={value !== index}
             id={`property-tabpanel-${index}`}
             aria-labelledby={`property-tab-${index}`}
+            className={clsx('tab-panel-content', {
+                'config-tab': index === 2,
+                'standard-tab': index !== 2,
+            })}
             style={{
                 height: '100%',
                 display: 'flex',
@@ -57,7 +63,19 @@ function TabPanel(props: TabPanelProps) {
     );
 }
 
+// Tab configuration mapping URL search params to tab indices
+const TAB_CONFIG = {
+    overview: 0,
+    statistics: 1,
+    configuration: 2,
+} as const;
+
+const TAB_NAMES = Object.keys(TAB_CONFIG) as Array<keyof typeof TAB_CONFIG>;
+
 export const PropertyPanel: React.FC = () => {
+    const navigate = useNavigate();
+    const location = useLocation();
+    
     const {
         selectedQueuePath,
         isPropertyPanelOpen,
@@ -73,12 +91,39 @@ export const PropertyPanel: React.FC = () => {
 
     const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
 
+    // Reset tab to overview when panel opens
+    useEffect(() => {
+        if (isPropertyPanelOpen) {
+            setTabValue(0); // Start with Overview tab when panel opens
+        }
+    }, [isPropertyPanelOpen]);
+
+    const updateURLState = (panelOpen: boolean) => {
+        if (!selectedQueuePath) return;
+        
+        const encodedQueuePath = encodeURIComponent(selectedQueuePath);
+        
+        navigate({
+            to: '/queue/$queuePath',
+            params: { queuePath: encodedQueuePath },
+            search: {
+                panel: panelOpen,
+            },
+            replace: true, // Use replace to avoid cluttering browser history
+        }).catch((error) => {
+            console.error('Failed to update URL state:', error);
+        });
+    };
+
     const handleClose = () => {
         setPropertyPanelOpen(false);
+        updateURLState(false);
     };
 
     const handleTabChange = (_event: React.SyntheticEvent, newValue: number) => {
         setTabValue(newValue);
+        // Tab state is now local-only for instant performance
+        // URL only tracks panel open/close state
     };
 
     const handleSubmit = async () => {
@@ -98,9 +143,16 @@ export const PropertyPanel: React.FC = () => {
     };
 
     // Reset hasChanges state when panel opens/closes or queue changes
-    React.useEffect(() => {
+    useEffect(() => {
         if (!isPropertyPanelOpen || !selectedQueuePath) {
             setHasChanges(false);
+        }
+    }, [isPropertyPanelOpen, selectedQueuePath]);
+
+    // Update URL when panel opens (from tree interaction)
+    useEffect(() => {
+        if (isPropertyPanelOpen && selectedQueuePath) {
+            updateURLState(true);
         }
     }, [isPropertyPanelOpen, selectedQueuePath]);
 

@@ -3,6 +3,7 @@ import { Handle, Position, type NodeProps } from '@xyflow/react';
 import { Box, Typography, Card, CardContent, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Tooltip } from '@mui/material';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, PlayArrow as PlayIcon, Stop as StopIcon, AutoFixHigh as AutoIcon, Loop as LegacyIcon } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
+import { useNavigate } from '@tanstack/react-router';
 import type { QueueCardData } from './hooks/useQueueTreeData';
 import { useQueueActions } from './hooks/useQueueActions';
 import { useSchedulerStore } from '../../store/schedulerStore';
@@ -23,6 +24,7 @@ const parseCapacityValue = (input: string) => {
 import { formatMemory } from '../../utils/formatUtils';
 
 export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected, id }) => {
+    const navigate = useNavigate();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
 
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
@@ -105,8 +107,21 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
 
     const handleClick = (event: React.MouseEvent) => {
         event.stopPropagation();
-        selectQueue(queuePath);
-        setPropertyPanelOpen(true);
+        
+        // Navigate to the queue route with property panel open
+        const encodedQueuePath = encodeURIComponent(queuePath);
+        navigate({
+            to: '/queue/$queuePath',
+            params: { queuePath: encodedQueuePath },
+            search: {
+                panel: true,
+            },
+        }).catch((error) => {
+            console.error('Failed to navigate to queue:', error);
+            // Fallback to store-only updates
+            selectQueue(queuePath);
+            setPropertyPanelOpen(true);
+        });
     };
 
     const handleComparisonToggle = (event: React.MouseEvent) => {
@@ -131,8 +146,20 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
     };
 
     const handleEditProperties = () => {
-        selectQueue(queuePath);
-        setPropertyPanelOpen(true);
+        // Navigate to the queue route with configuration tab open
+        const encodedQueuePath = encodeURIComponent(queuePath);
+        navigate({
+            to: '/queue/$queuePath',
+            params: { queuePath: encodedQueuePath },
+            search: {
+                panel: true,
+            },
+        }).catch((error) => {
+            console.error('Failed to navigate to queue configuration:', error);
+            // Fallback to store-only updates
+            selectQueue(queuePath);
+            setPropertyPanelOpen(true);
+        });
         popupState.close();
     };
 
