@@ -1,6 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { Box, Typography, Card, CardContent, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Tooltip } from '@mui/material';
+import { Box, Typography, Card, CardContent, Checkbox, Menu, MenuItem, ListItemIcon, ListItemText, Divider, Tooltip, useTheme } from '@mui/material';
+import { useColorScheme } from '@mui/material/styles';
 import { Add as AddIcon, Delete as DeleteIcon, Edit as EditIcon, PlayArrow as PlayIcon, Stop as StopIcon, AutoFixHigh as AutoIcon, Loop as LegacyIcon } from '@mui/icons-material';
 import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-state/hooks';
 import { useNavigate } from '@tanstack/react-router';
@@ -23,9 +24,20 @@ const parseCapacityValue = (input: string) => {
 };
 import { formatMemory } from '../../utils/formatUtils';
 
-export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected, id }) => {
+export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected }) => {
+    const theme = useTheme();
+    const { mode } = useColorScheme();
+    const [mounted, setMounted] = useState(false);
     const navigate = useNavigate();
     const popupState = usePopupState({ variant: 'popover', popupId: `queue-menu-${data.queueName}` });
+
+    // Handle SSR - mode is undefined on first render
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    // Helper function to determine if current mode is light
+    const isLightMode = mounted && mode ? mode === 'light' : true; // Default to light during SSR
 
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
     const selectedQueuePath = useSchedulerStore(state => state.selectedQueuePath);
@@ -190,8 +202,10 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                 <Box
                     sx={{
                         padding: '8px 16px',
-                        backgroundColor: '#f8fafc',
-                        borderBottom: '1px solid #e5e7eb',
+                        backgroundColor: isLightMode
+                            ? '#f8fafc'
+                            : '#2d2d2d',
+                        borderBottom: `1px solid ${theme.palette.divider}`,
                         height: 40,
                         display: 'flex',
                         alignItems: 'center',
@@ -202,7 +216,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                         sx={{
                             fontWeight: 'bold',
                             fontSize: '16px',
-                            color: '#333333',
+                            color: 'text.primary',
                             fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -258,8 +272,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     alignItems: 'center',
                                     px: 1,
                                     py: 0.25,
-                                    backgroundColor: '#dbeafe',
-                                    border: '1px solid rgba(59, 130, 246, 0.2)',
+                                    backgroundColor: isLightMode ? '#dbeafe' : 'rgba(59, 130, 246, 0.1)',
+                                    border: `1px solid ${isLightMode ? 'rgba(59, 130, 246, 0.2)' : 'rgba(59, 130, 246, 0.3)'}`,
                                     borderRadius: '6px',
                                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                                 }}
@@ -283,8 +297,13 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     alignItems: 'center',
                                     px: 1,
                                     py: 0.25,
-                                    backgroundColor: state === 'RUNNING' ? '#d1fae5' : '#fee2e2',
-                                    border: `1px solid ${state === 'RUNNING' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)'}`,
+                                    backgroundColor: state === 'RUNNING' 
+                                        ? (isLightMode ? '#d1fae5' : 'rgba(16, 185, 129, 0.1)')
+                                        : (isLightMode ? '#fee2e2' : 'rgba(239, 68, 68, 0.1)'),
+                                    border: `1px solid ${state === 'RUNNING' 
+                                        ? (isLightMode ? 'rgba(16, 185, 129, 0.2)' : 'rgba(16, 185, 129, 0.3)')
+                                        : (isLightMode ? 'rgba(239, 68, 68, 0.2)' : 'rgba(239, 68, 68, 0.3)')
+                                    }`,
                                     borderRadius: '6px',
                                     boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                                 }}
@@ -308,8 +327,8 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         alignItems: 'center',
                                         px: 0.5,
                                         py: 0.25,
-                                        backgroundColor: '#fff7ed',
-                                        border: '1px solid rgba(251, 146, 60, 0.3)',
+                                        backgroundColor: isLightMode ? '#fff7ed' : 'rgba(251, 146, 60, 0.1)',
+                                        border: `1px solid ${isLightMode ? 'rgba(251, 146, 60, 0.3)' : 'rgba(251, 146, 60, 0.4)'}`,
                                         borderRadius: '6px',
                                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
                                     }}
@@ -336,14 +355,20 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         alignItems: 'center',
                                         px: 1,
                                         py: 0.25,
-                                        backgroundColor:
-                                            stagedStatus === 'new' ? '#dcfce7' :
-                                            stagedStatus === 'modified' ? '#fef3c7' :
-                                            '#fee2e2',
-                                        border: `1px solid ${
-                                            stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.2)' :
-                                            stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.2)' :
-                                            'rgba(239, 68, 68, 0.2)'
+                                        backgroundColor: isLightMode
+                                            ? (stagedStatus === 'new' ? '#dcfce7' :
+                                               stagedStatus === 'modified' ? '#fef3c7' :
+                                               '#fee2e2')
+                                            : (stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.1)' :
+                                               stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.1)' :
+                                               'rgba(239, 68, 68, 0.1)'),    
+                                        border: `1px solid ${isLightMode
+                                            ? (stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.2)' :
+                                               stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.2)' :
+                                               'rgba(239, 68, 68, 0.2)')
+                                            : (stagedStatus === 'new' ? 'rgba(34, 197, 94, 0.3)' :
+                                               stagedStatus === 'modified' ? 'rgba(245, 158, 11, 0.3)' :
+                                               'rgba(239, 68, 68, 0.3)')
                                         }`,
                                         borderRadius: '6px',
                                         boxShadow: '0 1px 2px rgba(0, 0, 0, 0.1)',
@@ -373,7 +398,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                     sx={{
                                         fontSize: '24px',
                                         fontWeight: 'bold',
-                                        color: '#333333',
+                                        color: 'text.primary',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
@@ -391,7 +416,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Typography
                                     sx={{
                                         fontSize: '12px',
-                                        color: '#666666',
+                                        color: 'text.secondary',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
@@ -403,7 +428,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 sx={{
                                     position: 'relative',
                                     height: 6,
-                                    backgroundColor: '#f0f0f0',
+                                    backgroundColor: isLightMode ? '#f0f0f0' : '#424242',
                                     borderRadius: 3,
                                     mt: 0.5,
                                     mb: 1.25,
@@ -418,7 +443,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                             top: 0,
                                             height: '100%',
                                             width: `${Math.min(maxCapacity, 100)}%`,
-                                            backgroundColor: '#e8f4ff',
+                                            backgroundColor: isLightMode ? '#e8f4ff' : 'rgba(59, 130, 246, 0.1)',
                                             borderRadius: 3,
                                         }}
                                     />
@@ -431,7 +456,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                         top: 0,
                                         height: '100%',
                                         width: `${Math.min(capacity, 100)}%`,
-                                        backgroundColor: '#bfdbfe',
+                                        backgroundColor: isLightMode ? '#bfdbfe' : 'rgba(59, 130, 246, 0.2)',
                                         borderRadius: 3,
                                     }}
                                 />
@@ -455,7 +480,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Typography
                                     sx={{
                                         fontSize: '11px',
-                                        color: '#666666',
+                                        color: 'text.secondary',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
@@ -464,7 +489,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Typography
                                     sx={{
                                         fontSize: '11px',
-                                        color: '#666666',
+                                        color: 'text.secondary',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
@@ -488,7 +513,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Box
                                     sx={{
                                         height: '1px',
-                                        backgroundColor: '#e5e7eb',
+                                        backgroundColor: theme.palette.divider,
                                         mt: 1,
                                         mb: 1,
                                     }}
@@ -497,7 +522,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Typography
                                     sx={{
                                         fontSize: '12px',
-                                        color: '#6b7280',
+                                        color: 'text.secondary',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
@@ -521,7 +546,7 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                                 <Typography
                                     sx={{
                                         fontSize: '10px',
-                                        color: '#999999',
+                                        color: 'text.disabled',
                                         fontFamily: '-apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif',
                                     }}
                                 >
