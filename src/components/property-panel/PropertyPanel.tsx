@@ -86,6 +86,7 @@ export const PropertyPanel: React.FC = () => {
     const [tabValue, setTabValue] = useState(0);
     const [hasChanges, setHasChanges] = useState(false);
     const [isSubmitting, setIsSubmitting] = useState(false);
+    const [isFormDirty, setIsFormDirty] = useState(false);
 
     const propertyEditorRef = React.useRef<PropertyEditorTabHandle>(null);
 
@@ -128,7 +129,9 @@ export const PropertyPanel: React.FC = () => {
 
     const handleSubmit = async () => {
         if (propertyEditorRef.current) {
-            await propertyEditorRef.current.submit();
+            if (isFormDirty) {
+                await propertyEditorRef.current.submit();
+            }
         }
     };
 
@@ -142,10 +145,15 @@ export const PropertyPanel: React.FC = () => {
         setHasChanges(newHasChanges);
     };
 
-    // Reset hasChanges state when panel opens/closes or queue changes
+    const handleFormDirtyChange = (newIsFormDirty: boolean) => {
+        setIsFormDirty(newIsFormDirty);
+    };
+
+    // Reset hasChanges and form dirty state when panel opens/closes or queue changes
     useEffect(() => {
         if (!isPropertyPanelOpen || !selectedQueuePath) {
             setHasChanges(false);
+            setIsFormDirty(false);
         }
     }, [isPropertyPanelOpen, selectedQueuePath]);
 
@@ -274,6 +282,7 @@ export const PropertyPanel: React.FC = () => {
                             queue={selectedQueue}
                             onHasChangesChange={handleHasChangesChange}
                             onIsSubmittingChange={handleIsSubmittingChange}
+                            onFormDirtyChange={handleFormDirtyChange}
                         />
                     </TabPanel>
                 </Box>
@@ -298,7 +307,7 @@ export const PropertyPanel: React.FC = () => {
                         <Button
                             variant="outlined"
                             onClick={handleReset}
-                            disabled={isSubmitting || !hasChanges}
+                            disabled={isSubmitting || (!hasChanges && !isFormDirty)}
                             startIcon={<RefreshIcon />}
                             sx={{
                                 borderRadius: 2,
@@ -311,7 +320,7 @@ export const PropertyPanel: React.FC = () => {
                         <Button
                             variant="contained"
                             onClick={handleSubmit}
-                            disabled={isSubmitting || !hasChanges}
+                            disabled={isSubmitting || (!hasChanges && !isFormDirty)}
                             startIcon={isSubmitting ? <CircularProgress size={20} /> : <SaveIcon />}
                             sx={{
                                 borderRadius: 2,
@@ -323,7 +332,7 @@ export const PropertyPanel: React.FC = () => {
                                 },
                             }}
                         >
-                            {isSubmitting ? 'Applying...' : 'Apply Changes'}
+                            {isSubmitting ? 'Staging...' : isFormDirty ? 'Stage Changes' : 'No Changes'}
                         </Button>
                     </Box>
                 )}

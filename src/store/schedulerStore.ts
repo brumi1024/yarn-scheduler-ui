@@ -348,6 +348,9 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             },
 
             stageLabelQueueChange: (queuePath, label, property, value) => {
+                // Defensive string conversion
+                const stringValue = typeof value === 'string' ? value : String(value);
+
                 set((state) => {
                     const fullProperty = `accessible-node-labels.${label}.${property}`;
                     const propertyKey = buildNodeLabelPropertyKey(queuePath, label, property);
@@ -357,7 +360,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                     );
 
                     if (existingIndex >= 0) {
-                        state.stagedChanges[existingIndex].newValue = value;
+                        state.stagedChanges[existingIndex].newValue = stringValue;
                     } else {
                         const change: StagedChange = {
                             id: nanoid(),
@@ -365,7 +368,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                             queuePath,
                             property: fullProperty,
                             oldValue: state.configData.get(propertyKey),
-                            newValue: value,
+                            newValue: stringValue,
                             timestamp: Date.now(),
                             label,
                         };
@@ -616,12 +619,12 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                         value: stagedChange.newValue,
                         isStaged: true,
                     };
+                } else {
+                    return {
+                        value: state.configData.get(propertyKey) || '',
+                        isStaged: false,
+                    };
                 }
-
-                return {
-                    value: state.configData.get(propertyKey) || '',
-                    isStaged: false,
-                };
             },
 
             getGlobalDisplayValue: (property) => {

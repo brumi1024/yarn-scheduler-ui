@@ -200,7 +200,7 @@ describe('usePropertyEditor', () => {
         expect(result.current.hasChanges).toBe(true);
     });
 
-    it('stages changes for required fields', () => {
+    it('does not auto-stage changes - only updates form state', () => {
         const { result } = renderHook(() =>
             usePropertyEditor({
                 queuePath: 'root.test-queue',
@@ -213,7 +213,7 @@ describe('usePropertyEditor', () => {
             changeHandler('50.0');
         });
 
-        expect(mockStoreActions.stageQueueChange).toHaveBeenCalledWith('root.test-queue', 'capacity', '50.0');
+        expect(mockStoreActions.stageQueueChange).not.toHaveBeenCalled();
     });
 
     it('does not stage empty values for optional fields', () => {
@@ -232,7 +232,7 @@ describe('usePropertyEditor', () => {
         expect(mockStoreActions.stageQueueChange).not.toHaveBeenCalled();
     });
 
-    it('stages non-empty values for optional fields', () => {
+    it('does not auto-stage optional field changes - only updates form state', () => {
         const { result } = renderHook(() =>
             usePropertyEditor({
                 queuePath: 'root.test-queue',
@@ -245,12 +245,10 @@ describe('usePropertyEditor', () => {
             changeHandler('2.0');
         });
 
-        expect(mockStoreActions.stageQueueChange).toHaveBeenCalledWith('root.test-queue', 'user-limit-factor', '2.0');
+        expect(mockStoreActions.stageQueueChange).not.toHaveBeenCalled();
     });
 
-    it('handles form submission correctly', async () => {
-        mockStoreActions.applyChanges.mockResolvedValue(undefined);
-
+    it('field changes do not auto-stage, explicit staging required', () => {
         const { result } = renderHook(() =>
             usePropertyEditor({
                 queuePath: 'root.test-queue',
@@ -258,17 +256,21 @@ describe('usePropertyEditor', () => {
             })
         );
 
-        await act(async () => {
-            await result.current.handleSubmit();
+        // Field changes should not auto-stage
+        act(() => {
+            const capacityHandler = result.current.handleFieldChange('capacity');
+            capacityHandler('50');
+            
+            const userLimitHandler = result.current.handleFieldChange('user-limit-factor');
+            userLimitHandler('2.0');
         });
 
-        expect(mockStoreActions.applyChanges).toHaveBeenCalled();
+        // Should not auto-stage field changes
+        expect(mockStoreActions.stageQueueChange).not.toHaveBeenCalled();
+        expect(mockStoreActions.applyChanges).not.toHaveBeenCalled();
     });
 
-    it('handles form submission errors', async () => {
-        const error = new Error('Network error');
-        mockStoreActions.applyChanges.mockRejectedValue(error);
-
+    it('stages changes only when explicitly using stageChange function', () => {
         const { result } = renderHook(() =>
             usePropertyEditor({
                 queuePath: 'root.test-queue',
@@ -276,11 +278,16 @@ describe('usePropertyEditor', () => {
             })
         );
 
-        await expect(async () => {
-            await act(async () => {
-                await result.current.handleSubmit();
-            });
-        }).rejects.toThrow('Network error');
+        act(() => {
+            // Direct calls to stageChange should still work (for form submission)
+            result.current.stageChange('capacity', '40');
+            result.current.stageChange('state', 'RUNNING');
+            result.current.stageChange('user-limit-factor', '1.5');
+        });
+
+        // Direct stageChange calls should work, but applyChanges should never be called automatically
+        expect(mockStoreActions.stageQueueChange).toHaveBeenCalledTimes(3);
+        expect(mockStoreActions.applyChanges).not.toHaveBeenCalled();
     });
 
     it('handles form reset correctly', () => {

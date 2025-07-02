@@ -1,13 +1,13 @@
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCallback, useEffect, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSchedulerStore } from '../store/schedulerStore';
 import type { PropertyDescriptor, LabelPropertyDescriptor } from '../types/property-descriptor';
 import { queuePropertyDefinitions } from '../config/propertyDefinitions';
 import { generateLabelPropertyDescriptors, isLabelProperty, extractLabelFromPropertyName, extractBasePropertyFromLabelProperty } from '../utils/labelPropertyUtils';
 
-function createFormSchema(properties: PropertyDescriptor[]) {
+function createFormSchema(properties: any[]) {
     const schemaFields: Record<string, z.ZodType> = {};
 
     properties.forEach((property) => {
@@ -48,7 +48,9 @@ function createFormSchema(properties: PropertyDescriptor[]) {
             fieldSchema = fieldSchema.optional().or(z.literal(''));
         }
 
-        schemaFields[property.name] = fieldSchema;
+        // Use escaped field name for React Hook Form to prevent dot notation conflicts
+        const fieldName = property.formFieldName || property.name;
+        schemaFields[fieldName] = fieldSchema;
     });
 
     return z.object(schemaFields);
@@ -78,7 +80,16 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
     
     // Combine base properties with label properties
     const allProperties = useMemo(() => {
-        return [...properties, ...labelProperties];
+        const combined = [...properties, ...labelProperties];
+        
+        // Fix: Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
+        const escapedProperties = combined.map(property => ({
+            ...property,
+            formFieldName: property.name.replace(/\./g, '__DOT__'), // Escape dots for React Hook Form
+            originalName: property.name // Keep original name for staging
+        }));
+        
+        return escapedProperties;
     }, [properties, labelProperties]);
 
     const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
@@ -91,18 +102,22 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
 
     const { control, handleSubmit, reset, setValue, formState: { errors, isValid } } = form;
 
+
     const watchedValues = useWatch({ control });
+
 
     useEffect(() => {
         const initialValues: Record<string, string> = {};
 
         allProperties.forEach((property) => {
-            const { value } = getQueueDisplayValue(queuePath, property.name);
-            initialValues[property.name] = value;
+            const { value, isStaged } = getQueueDisplayValue(queuePath, property.originalName || property.name);
+            
+            // Use escaped field name for React Hook Form
+            const fieldName = property.formFieldName || property.name;
+            initialValues[fieldName] = value;
         });
-
         reset(initialValues);
-    }, [queuePath, allProperties, getQueueDisplayValue, reset]);
+    }, [queuePath, allProperties, getQueueDisplayValue, reset, stagedChanges]);
 
     const getStagedStatus = useCallback((propertyName: string) => {
         const { isStaged } = getQueueDisplayValue(queuePath, propertyName);
@@ -130,23 +145,50 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
 
     const handleFieldChange = useCallback((propertyName: string) => (value: string) => {
         setValue(propertyName, value);
-        stageChange(propertyName, value);
-    }, [setValue, stageChange]);
+        // Note: No auto-staging - only update form state
+    }, [setValue]);
 
     const onSubmit = useCallback(async (data: Record<string, string>) => {
         try {
-            Object.entries(data).forEach(([propertyName, value]) => {
+            // Create mapping from escaped field names back to original property names
+            const fieldNameMapping: Record<string, string> = {};
+            allProperties.forEach(property => {
+                const escapedName = property.formFieldName || property.name;
+                const originalName = property.originalName || property.name;
+                fieldNameMapping[escapedName] = originalName;
+            });
+            
+            // Only stage fields that are actually dirty (changed by user)
+            const dirtyFields = form.formState.dirtyFields;
+            let stagedCount = 0;
+            
+            Object.entries(dirtyFields).forEach(([escapedFieldName, isDirty]) => {
+                if (!isDirty) return; // Skip non-dirty fields
+                
+                const value = data[escapedFieldName];
+                const originalPropertyName = fieldNameMapping[escapedFieldName] || escapedFieldName;
+                
+                // Type safety check - only stage string values
+                if (typeof value !== 'string') {
+                    console.error(`❌ NON-STRING VALUE DETECTED for "${escapedFieldName}":`, value);
+                    return; // Skip this property
+                }
+                
                 if (value !== undefined && value !== null) {
-                    stageChange(propertyName, value);
+                    stageChange(originalPropertyName, value);
+                    stagedCount++;
                 }
             });
 
-            await applyChanges();
+            return { 
+                success: true, 
+                message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!` 
+            };
         } catch (error) {
-            console.error('Failed to apply changes:', error);
+            console.error('Failed to stage changes:', error);
             throw error;
         }
-    }, [stageChange, applyChanges]);
+    }, [stageChange, allProperties, form.formState.dirtyFields]);
 
     const handleReset = useCallback(() => {
         if (Array.isArray(stagedChanges)) {
@@ -205,5 +247,6 @@ export function usePropertyEditor({ queuePath, properties = queuePropertyDefinit
 
         properties: allProperties,
         labelProperties,
+        formState: form.formState,
     };
 }
