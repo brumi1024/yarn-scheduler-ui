@@ -209,28 +209,110 @@ function createNodes(
     return nodes;
 }
 
-function createEdges(queueInfo: QueueInfo): Edge[] {
+function createEdges(
+    queueInfo: QueueInfo, 
+    positions: Map<string, { x: number; y: number; width: number; height: number }>
+): Edge[] {
     const edges: Edge[] = [];
+    const CARD_HEIGHT = 220;
+    const MIN_SEGMENT_HEIGHT = 4; // Minimum visible height for very small capacity percentages
 
     if (queueInfo.queues?.queue) {
         const children = Array.isArray(queueInfo.queues.queue)
             ? queueInfo.queues.queue
             : [queueInfo.queues.queue];
 
-        children.forEach((child) => {
-            const edge: Edge = {
-                id: `${queueInfo.queuePath}-${child.queuePath}`,
-                source: queueInfo.queuePath,
-                target: child.queuePath,
-                type: 'sankeyFlow',
-                data: {
-                    capacity: child.capacity,
-                    targetState: child.state,
-                },
-            };
-            edges.push(edge);
+        // Calculate total capacity of all children for proportional allocation
+        const totalChildCapacity = children.reduce((sum, child) => sum + (child.capacity || 0), 0);
+        
+        // Get source position for the parent queue
+        const sourcePos = positions.get(queueInfo.queuePath);
+        
+        if (sourcePos && totalChildCapacity > 0) {
+            let cumulativeCapacity = 0;
+            
+            children.forEach((child) => {
+                const targetPos = positions.get(child.queuePath);
+                
+                if (targetPos) {
+                    // Calculate proportional segment for this child on parent's side
+                    const childCapacity = child.capacity || 0;
+                    const childPercentage = childCapacity / totalChildCapacity;
+                    
+                    // Calculate segment boundaries (0.0 to 1.0 scale)
+                    const segmentStart = cumulativeCapacity / totalChildCapacity;
+                    const segmentEnd = (cumulativeCapacity + childCapacity) / totalChildCapacity;
+                    
+                    // Ensure minimum segment height for visibility
+                    const segmentHeight = Math.max(
+                        (segmentEnd - segmentStart) * CARD_HEIGHT,
+                        MIN_SEGMENT_HEIGHT
+                    );
+                    const adjustedSegmentEnd = segmentStart + (segmentHeight / CARD_HEIGHT);
+                    
+                    // Parent side: proportional segment based on capacity
+                    const parentCenterY = sourcePos.y + sourcePos.height / 2;
+                    const sourceStartY = parentCenterY - CARD_HEIGHT / 2 + (segmentStart * CARD_HEIGHT);
+                    const sourceEndY = parentCenterY - CARD_HEIGHT / 2 + (adjustedSegmentEnd * CARD_HEIGHT);
+                    
+                    // Target side: full height (child receives the full connector)
+                    const targetCenterY = targetPos.y + targetPos.height / 2;
+                    const targetStartY = targetCenterY - CARD_HEIGHT / 2;
+                    const targetEndY = targetCenterY + CARD_HEIGHT / 2;
 
-            edges.push(...createEdges(child));
+                    const edge: Edge = {
+                        id: `${queueInfo.queuePath}-${child.queuePath}`,
+                        source: queueInfo.queuePath,
+                        target: child.queuePath,
+                        type: 'sankeyFlow',
+                        data: {
+                            capacity: child.capacity,
+                            targetState: child.state,
+                            // Proportional positioning data for true Sankey visualization
+                            sourceStartY,
+                            sourceEndY,
+                            targetStartY,
+                            targetEndY,
+                            // Additional metadata for debugging/visualization
+                            childPercentage,
+                            segmentStart,
+                            segmentEnd: adjustedSegmentEnd,
+                        },
+                    };
+                    edges.push(edge);
+                    
+                    cumulativeCapacity += childCapacity;
+                }
+            });
+        } else {
+            // Fallback for cases without proper capacity data or positioning
+            children.forEach((child) => {
+                const targetPos = positions.get(child.queuePath);
+                
+                if (sourcePos && targetPos) {
+                    const edge: Edge = {
+                        id: `${queueInfo.queuePath}-${child.queuePath}`,
+                        source: queueInfo.queuePath,
+                        target: child.queuePath,
+                        type: 'sankeyFlow',
+                        data: {
+                            capacity: child.capacity,
+                            targetState: child.state,
+                            // Fallback to full height
+                            sourceStartY: sourcePos.y + sourcePos.height / 2 - CARD_HEIGHT / 2,
+                            sourceEndY: sourcePos.y + sourcePos.height / 2 + CARD_HEIGHT / 2,
+                            targetStartY: targetPos.y + targetPos.height / 2 - CARD_HEIGHT / 2,
+                            targetEndY: targetPos.y + targetPos.height / 2 + CARD_HEIGHT / 2,
+                        },
+                    };
+                    edges.push(edge);
+                }
+            });
+        }
+
+        // Recursively create edges for child queues
+        children.forEach((child) => {
+            edges.push(...createEdges(child, positions));
         });
     }
 
@@ -257,7 +339,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
 
             const flowNodes = createNodes(flatQueues, positions, stagedChanges);
 
-            const flowEdges = createEdges(rootQueue);
+            const flowEdges = createEdges(rootQueue, positions);
 
             return { nodes: flowNodes, edges: flowEdges };
         } catch (err) {

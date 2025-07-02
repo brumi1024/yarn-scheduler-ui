@@ -23,9 +23,9 @@ export class DagreLayout {
         this.options = {
             nodeWidth: 280,
             nodeHeight: 220,
-            horizontalSpacing: 50,
-            verticalSpacing: 100,
-            orientation: 'vertical',
+            horizontalSpacing: 80,
+            verticalSpacing: 150,
+            orientation: 'horizontal',
             ...options,
         };
     }

@@ -505,24 +505,31 @@ export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, select
                     </Box>
                 </CardContent>
 
+                {/* Full-height invisible handles for Sankey connections */}
                 <Handle
                     type="target"
                     position={Position.Left}
                     style={{
-                        background: '#1976d2',
-                        border: '2px solid #fff',
+                        background: 'transparent',
+                        border: 'none',
                         width: 8,
-                        height: 8,
+                        height: 220, // Full card height
+                        top: '0px',
+                        left: '-4px',
+                        opacity: 0,
                     }}
                 />
                 <Handle
                     type="source"
                     position={Position.Right}
                     style={{
-                        background: '#1976d2',
-                        border: '2px solid #fff',
+                        background: 'transparent',
+                        border: 'none',
                         width: 8,
-                        height: 8,
+                        height: 220, // Full card height
+                        top: '0px',
+                        right: '-4px',
+                        opacity: 0,
                     }}
                 />
             </Card>
