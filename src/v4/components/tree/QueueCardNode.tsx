@@ -6,7 +6,20 @@ import { usePopupState, bindContextMenu, bindMenu } from 'material-ui-popup-stat
 import type { QueueCardData } from './hooks/useQueueTreeData';
 import { useQueueActions } from './hooks/useQueueActions';
 import { useSchedulerStore } from '../../store/schedulerStore';
-import { parseCapacityValue } from '../../../utils/capacity';
+// Simple capacity parsing for display purposes
+const parseCapacityValue = (input: string) => {
+    const trimmed = input.trim();
+    
+    if (trimmed.endsWith('w')) {
+        return { mode: 'weight' as const, value: trimmed };
+    }
+    
+    if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+        return { mode: 'absolute' as const, value: trimmed };
+    }
+    
+    return { mode: 'percentage' as const, value: trimmed };
+};
 import { formatMemory } from '../../utils/formatUtils';
 
 export const QueueCardNode: React.FC<NodeProps<QueueCardData>> = ({ data, selected, id }) => {
