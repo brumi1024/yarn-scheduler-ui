@@ -28,7 +28,7 @@ A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler 
 
     ```bash
     git clone https://github.com/brumi1024/yarn-scheduler-ui.git
-    cd yarn-scheduler-ui
+    cd yarn-scheduler-ui/dashboard
     ```
 
 2. Install dependencies:
@@ -41,7 +41,7 @@ A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler 
 Start the development server:
 
 ```bash
-npm start
+npm run dev
 ```
 
 This will start a local HTTP server on port 8080. Open your browser and navigate to:
@@ -53,10 +53,14 @@ The application will automatically load with mock data for development and testi
 
 ### Available Scripts
 
-- `npm start` - Start the development server
+- `npm run dev` - Start the development server
+- `npm run build` - Build the application for production
+- `npm test` - Run tests
+- `npm run typecheck` - Run TypeScript type checking
 - `npm run lint` - Run ESLint to check code quality
 - `npm run lint:fix` - Automatically fix ESLint issues
 - `npm run format` - Format code with Prettier
+- `npm run format:check` - Check code formatting with Prettier
 
 ## Important
 

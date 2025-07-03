@@ -1,1 +1,0 @@
-export { StagedChangesPanel } from './StagedChangesPanel';
