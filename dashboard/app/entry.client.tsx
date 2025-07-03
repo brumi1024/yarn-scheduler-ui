@@ -1,13 +1,13 @@
-import { RemixBrowser } from "react-router";
+import { HydratedRouter } from "react-router/dom";
 import { startTransition, StrictMode } from "react";
 import { hydrateRoot } from "react-dom/client";
 
 async function enableMocking() {
-  if (process.env.NODE_ENV !== 'development') {
+  if (!import.meta.env.DEV) {
     return;
   }
 
-  const { worker } = await import('~/lib/api/mocks/browser');
+  const { worker } = await import('~/mocks/browser');
   
   // Start the worker
   return worker.start({
@@ -20,7 +20,7 @@ enableMocking().then(() => {
     hydrateRoot(
       document,
       <StrictMode>
-        <RemixBrowser />
+        <HydratedRouter />
       </StrictMode>
     );
   });

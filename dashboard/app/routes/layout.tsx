@@ -7,7 +7,8 @@ import {
   GitCommit
 } from "lucide-react";
 import { Button } from "~/components/ui/button";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useSchedulerStore } from "~/store/schedulerStore";
 
 const navigation = [
   {
@@ -30,6 +31,14 @@ const navigation = [
 export default function Layout() {
   const location = useLocation();
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
+  const loadInitialData = useSchedulerStore(state => state.loadInitialData);
+  const stagedChanges = useSchedulerStore(state => state.stagedChanges);
+
+  useEffect(() => {
+    loadInitialData().catch(err => {
+      console.error('Failed to load initial data:', err);
+    });
+  }, [loadInitialData]);
 
   return (
     <div className="flex h-screen bg-background">
@@ -69,14 +78,21 @@ export default function Layout() {
       </div>
 
       {/* Staged Changes Floating Button */}
-      <Button
-        variant="default"
-        size="icon"
-        className="fixed bottom-4 right-4 h-14 w-14 rounded-full shadow-lg"
-        onClick={() => setStagedChangesPanelOpen(true)}
-      >
-        <GitCommit className="h-6 w-6" />
-      </Button>
+      <div className="fixed bottom-4 right-4">
+        <Button
+          variant="default"
+          size="icon"
+          className="relative h-14 w-14 rounded-full shadow-lg"
+          onClick={() => setStagedChangesPanelOpen(true)}
+        >
+          <GitCommit className="h-6 w-6" />
+          {stagedChanges.length > 0 && (
+            <span className="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-destructive text-xs text-destructive-foreground">
+              {stagedChanges.length}
+            </span>
+          )}
+        </Button>
+      </div>
       
       {/* TODO: Add StagedChangesPanel component */}
     </div>

@@ -53,6 +53,12 @@ body {
   --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
   --color-sidebar-border: var(--sidebar-border);
   --color-sidebar-ring: var(--sidebar-ring);
+  --color-queue-new: var(--queue-new);
+  --color-queue-modified: var(--queue-modified);
+  --color-queue-deleted: var(--queue-deleted);
+  --color-queue-running: var(--queue-running);
+  --color-queue-stopped: var(--queue-stopped);
+  --color-queue-draining: var(--queue-draining);
 }
 
 :root {
@@ -88,6 +94,14 @@ body {
   --sidebar-accent-foreground: oklch(0.205 0 0);
   --sidebar-border: oklch(0.922 0 0);
   --sidebar-ring: oklch(0.708 0 0);
+  
+  /* Queue state colors */
+  --queue-new: oklch(0.596 0.189 142.495); /* Green */
+  --queue-modified: oklch(0.646 0.222 41.116); /* Orange */
+  --queue-deleted: oklch(0.577 0.245 27.325); /* Red */
+  --queue-running: oklch(0.596 0.189 142.495); /* Green */
+  --queue-stopped: oklch(0.577 0.245 27.325); /* Red */
+  --queue-draining: oklch(0.646 0.222 41.116); /* Orange */
 }
 
 .dark {
@@ -122,6 +136,14 @@ body {
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
   --sidebar-ring: oklch(0.556 0 0);
+  
+  /* Queue state colors for dark mode */
+  --queue-new: oklch(0.696 0.17 162.48); /* Green */
+  --queue-modified: oklch(0.769 0.188 70.08); /* Orange */
+  --queue-deleted: oklch(0.704 0.191 22.216); /* Red */
+  --queue-running: oklch(0.696 0.17 162.48); /* Green */
+  --queue-stopped: oklch(0.704 0.191 22.216); /* Red */
+  --queue-draining: oklch(0.769 0.188 70.08); /* Orange */
 }
 
 @layer base {
