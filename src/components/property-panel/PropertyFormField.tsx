@@ -13,6 +13,7 @@ import {
     Chip,
     ToggleButtonGroup,
     ToggleButton,
+    Tooltip,
 } from '@mui/material';
 import { Controller, Control, FieldError } from 'react-hook-form';
 import type { PropertyDescriptor } from '../../types/property-descriptor';
@@ -54,6 +55,33 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         },
         [property.name]
     );
+
+    // Tooltip wrapper for fields with descriptions
+    const wrapWithTooltip = React.useCallback((fieldComponent: React.ReactElement, description?: string) => {
+        if (!description?.trim()) return fieldComponent;
+        
+        return (
+            <Tooltip
+                title={description}
+                placement="top-start"
+                arrow
+                enterDelay={500}
+                leaveDelay={200}
+                sx={{
+                    '& .MuiTooltip-tooltip': {
+                        fontSize: '0.75rem',
+                        maxWidth: 300,
+                        backgroundColor: 'grey.800',
+                        '& .MuiTooltip-arrow': {
+                            color: 'grey.800',
+                        },
+                    },
+                }}
+            >
+                <div>{fieldComponent}</div>
+            </Tooltip>
+        );
+    }, []);
 
     // Create styling for different field states
     const getFieldStyling = React.useCallback(() => {
@@ -113,18 +141,26 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     }, [isStaged, isDirty]);
 
     // Render different input types based on property type
-    const renderInput = (field: any) => {
+    const renderInput = (field: any, label: string) => {
         
         const commonProps = {
             fullWidth: true,
             disabled: !isFieldEnabled,
             error: !!error,
-            helperText: error?.message || property.description,
+            helperText: error?.message || undefined,
+            size: "small" as const,
+            sx: {
+                ...getFieldStyling(),
+                '& .MuiFormHelperText-root': {
+                    fontSize: '0.7rem',
+                    marginTop: '2px',
+                },
+            },
         };
 
         switch (property.type) {
             case 'boolean':
-                return (
+                return wrapWithTooltip(
                     <FormControl component="fieldset" fullWidth>
                         <FormControlLabel
                             control={
@@ -134,20 +170,22 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                     onChange={(e) => createCustomOnChange(field.onChange)(e.target.checked ? 'true' : '')}
                                     onBlur={field.onBlur}
                                     disabled={!isFieldEnabled}
+                                    size="small"
                                 />
                             }
                             label=""
                         />
-                        {(error?.message || property.description) && (
-                            <FormHelperText error={!!error}>
-                                {error?.message || property.description}
+                        {error?.message && (
+                            <FormHelperText error={!!error} sx={{ fontSize: '0.7rem', mt: 0.5 }}>
+                                {error.message}
                             </FormHelperText>
                         )}
-                    </FormControl>
+                    </FormControl>,
+                    property.description
                 );
 
             case 'enum':
-                return (
+                return wrapWithTooltip(
                     <FormControl fullWidth disabled={!isFieldEnabled} error={!!error}>
                         <ToggleButtonGroup
                             value={field.value || null}
@@ -157,18 +195,22 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                 const value = newValue || '';
                                 createCustomOnChange(field.onChange)(value);
                             }}
-                            aria-label={property.displayName}
+                            aria-label={label}
                             disabled={!isFieldEnabled}
+                            size="small"
                             sx={{
                                 display: 'flex',
                                 flexWrap: 'wrap',
-                                gap: 1,
+                                gap: 0.5,
                                 '& .MuiToggleButton-root': {
-                                    border: 1.5,
+                                    border: 1,
                                     borderColor: 'divider',
                                     borderRadius: 1,
                                     textTransform: 'none',
                                     fontWeight: 500,
+                                    fontSize: '0.75rem',
+                                    padding: '4px 8px',
+                                    minHeight: '24px',
                                     transition: 'all 0.2s ease-in-out',
                                     '&:hover': {
                                         borderColor: 'primary.main',
@@ -191,22 +233,22 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                 <ToggleButton
                                     key={option}
                                     value={option}
-                                    size="small"
                                 >
                                     {option}
                                 </ToggleButton>
                             ))}
                         </ToggleButtonGroup>
-                        {(error?.message || property.description) && (
-                            <FormHelperText>
-                                {error?.message || property.description}
+                        {error?.message && (
+                            <FormHelperText error={!!error} sx={{ fontSize: '0.7rem', mt: 0.5 }}>
+                                {error.message}
                             </FormHelperText>
                         )}
-                    </FormControl>
+                    </FormControl>,
+                    property.description
                 );
 
             case 'number':
-                return (
+                return wrapWithTooltip(
                     <TextField
                         name={field.name}
                         value={field.value || ''}
@@ -214,7 +256,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         onBlur={field.onBlur}
                         ref={field.ref}
                         {...commonProps}
-                        label={property.displayName}
+                        label={label}
                         type="number"
                         slotProps={{
                             input: {
@@ -224,18 +266,18 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                     max: property.validationRules?.find(r => r.type === 'range')?.max,
                                 },
                                 endAdornment: property.displayFormat?.suffix && (
-                                    <Typography variant="body2" color="text.secondary" sx={{ pr: 1 }}>
+                                    <Typography variant="caption" color="text.secondary" sx={{ pr: 0.5, fontSize: '0.75rem' }}>
                                         {property.displayFormat.suffix}
                                     </Typography>
                                 ),
                             },
                         }}
-                        sx={getFieldStyling()}
-                    />
+                    />,
+                    property.description
                 );
 
             default: // string and capacity types
-                return (
+                return wrapWithTooltip(
                     <TextField
                         name={field.name}
                         value={field.value || ''}
@@ -243,83 +285,71 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         onBlur={field.onBlur}
                         ref={field.ref}
                         {...commonProps}
-                        label={property.displayName}
+                        label={label}
                         multiline={property.name.includes('acl')} // ACLs might be longer
                         rows={property.name.includes('acl') ? 2 : 1}
                         placeholder={property.defaultValue || undefined}
-                        sx={getFieldStyling()}
-                    />
+                    />,
+                    property.description
                 );
         }
     };
 
-    return (
-        <Box sx={{ mb: 3 }}>
-            <Box sx={{ 
-                display: 'flex', 
-                alignItems: 'center', 
-                gap: 1, 
-                mb: 1.5,
-                minHeight: 24, // Consistent height for better alignment
-            }}>
-                <Typography variant="subtitle2" component="label" sx={{ flexGrow: 1 }}>
-                    {property.displayName}
-                    {property.required && (
-                        <Typography component="span" color="error.main" sx={{ ml: 0.5 }}>
-                            *
-                        </Typography>
-                    )}
-                </Typography>
-                {isStaged && (
-                    <Chip
-                        label="Modified"
-                        size="small"
-                        color="primary"
-                        variant="outlined"
-                        sx={{ 
-                            fontSize: '0.7rem', 
-                            height: 20,
-                            fontWeight: 500,
-                            '& .MuiChip-label': {
-                                px: 1,
-                            },
-                        }}
-                    />
-                )}
-                {property.deprecated && (
-                    <Chip
-                        label="Deprecated"
-                        size="small"
-                        color="warning"
-                        variant="outlined"
-                        sx={{ 
-                            fontSize: '0.7rem', 
-                            height: 20,
-                            fontWeight: 500,
-                            '& .MuiChip-label': {
-                                px: 1,
-                            },
-                        }}
-                    />
-                )}
-            </Box>
+    // Create the label with required indicator
+    const fieldLabel = `${property.displayName}${property.required ? ' *' : ''}`;
 
+    return (
+        <Box sx={{ mb: 0.75 }}>
             <Controller
                 name={property.formFieldName || property.name}
                 control={control}
-                render={({ field }) => renderInput(field)}
+                render={({ field }) => renderInput(field, fieldLabel)}
             />
 
-            {property.deprecated && property.deprecationMessage && (
-                <FormHelperText sx={{ color: 'warning.main', mt: 1 }}>
-                    <strong>Deprecated:</strong> {property.deprecationMessage}
-                </FormHelperText>
-            )}
-
-            {!isFieldEnabled && (
-                <FormHelperText sx={{ color: 'text.disabled', mt: 1 }}>
-                    This field is disabled based on current configuration
-                </FormHelperText>
+            {/* Status chips and helper text below field */}
+            {(isStaged || property.deprecated || property.deprecationMessage || !isFieldEnabled) && (
+                <Box sx={{ mt: 0.25, display: 'flex', alignItems: 'center', flexWrap: 'wrap', gap: 0.5 }}>
+                    {isStaged && (
+                        <Chip
+                            label="Modified"
+                            color="primary"
+                            variant="outlined"
+                            sx={{ 
+                                fontSize: '0.65rem', 
+                                height: 16,
+                                fontWeight: 500,
+                                '& .MuiChip-label': {
+                                    px: 0.5,
+                                },
+                            }}
+                        />
+                    )}
+                    {property.deprecated && (
+                        <Chip
+                            label="Deprecated"
+                            color="warning"
+                            variant="outlined"
+                            sx={{ 
+                                fontSize: '0.65rem', 
+                                height: 16,
+                                fontWeight: 500,
+                                '& .MuiChip-label': {
+                                    px: 0.5,
+                                },
+                            }}
+                        />
+                    )}
+                    {property.deprecated && property.deprecationMessage && (
+                        <Typography variant="caption" sx={{ color: 'warning.main', fontSize: '0.7rem', ml: 0.5 }}>
+                            <strong>Deprecated:</strong> {property.deprecationMessage}
+                        </Typography>
+                    )}
+                    {!isFieldEnabled && (
+                        <Typography variant="caption" sx={{ color: 'text.disabled', fontSize: '0.7rem', ml: 0.5 }}>
+                            This field is disabled based on current configuration
+                        </Typography>
+                    )}
+                </Box>
             )}
         </Box>
     );

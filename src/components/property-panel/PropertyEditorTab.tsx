@@ -17,7 +17,15 @@ import {
     Refresh as RefreshIcon,
     Edit as EditIcon,
     Save as SaveIcon,
+    Settings as SettingsIcon,
+    Memory as MemoryIcon,
+    Speed as SpeedIcon,
+    Security as SecurityIcon,
+    Schedule as ScheduleIcon,
+    Label as LabelIcon,
+    AdminPanelSettings as AdminIcon,
 } from '@mui/icons-material';
+import { useColorScheme } from '@mui/material/styles';
 import { useNotifications } from '../../hooks/useNotifications';
 import { usePropertyEditor } from '../../hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
@@ -38,42 +46,54 @@ interface PropertyEditorTabProps {
     ref?: React.Ref<PropertyEditorTabHandle>;
 }
 
-// Category display configuration
-const categoryConfig: Record<PropertyCategory, { label: string; description: string; defaultExpanded: boolean }> = {
+// Category display configuration with icons and enhanced styling
+const categoryConfig: Record<PropertyCategory, { 
+    label: string; 
+    description: string; 
+    defaultExpanded: boolean;
+    icon: React.ReactElement;
+}> = {
     general: {
         label: 'General Configuration',
         description: 'Basic queue settings including capacity, state, and hierarchy',
         defaultExpanded: true,
+        icon: <SettingsIcon fontSize="small" color="primary" />,
     },
     resource: {
         label: 'Resource Allocation',
         description: 'Memory, CPU, and other resource allocation settings',
         defaultExpanded: false,
+        icon: <MemoryIcon fontSize="small" color="primary" />,
     },
     limits: {
         label: 'Application Limits',
         description: 'User limits, application counts, and resource constraints',
         defaultExpanded: false,
+        icon: <SpeedIcon fontSize="small" color="primary" />,
     },
     scheduling: {
         label: 'Scheduling Policy',
         description: 'Application ordering and priority settings',
         defaultExpanded: false,
+        icon: <ScheduleIcon fontSize="small" color="primary" />,
     },
     security: {
         label: 'Security & Access Control',
         description: 'User and group access permissions (ACLs)',
         defaultExpanded: false,
+        icon: <SecurityIcon fontSize="small" color="primary" />,
     },
     advanced: {
         label: 'Advanced Features',
         description: 'Preemption, auto-queue creation, and other advanced settings',
         defaultExpanded: false,
+        icon: <AdminIcon fontSize="small" color="primary" />,
     },
     nodeLabels: {
         label: 'Node Labels',
         description: 'Capacity allocation per node label partition',
         defaultExpanded: false,
+        icon: <LabelIcon fontSize="small" color="primary" />,
     },
 };
 
@@ -84,6 +104,8 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
     onFormDirtyChange,
     ref
 }) => {
+    const { mode } = useColorScheme();
+    const isLightMode = mode === 'light';
     const [isSubmitting, setIsSubmitting] = useState(false);
     const { showSuccess, showError } = useNotifications();
 
@@ -177,9 +199,9 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
     return (
         <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%' }}>
             {/* Header */}
-            <Box sx={{ p: 2, pb: 1 }}>
+            <Box sx={{ p: 1.5, pb: 1 }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-                    <Typography variant="h6">
+                    <Typography variant="body1">
                         Queue Configuration
                     </Typography>
                     {formState.isDirty && (
@@ -201,7 +223,7 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                         />
                     )}
                 </Box>
-                <Typography variant="body2" color="text.secondary">
+                <Typography variant="caption" color="text.secondary">
                     Configure properties for queue: <strong>{queue.queuePath}</strong>
                 </Typography>
                 {hasChanges && (
@@ -214,7 +236,7 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
             <Divider />
 
             {/* Form Content - Scrollable */}
-            <Box sx={{ flexGrow: 1, overflow: 'auto', p: 2 }}>
+            <Box sx={{ flexGrow: 1, overflow: 'auto', p: 1.5 }}>
                 {/* Loading State */}
                 {isFormInitializing && (
                     <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: 200 }}>
@@ -247,26 +269,41 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                             <Accordion
                                 key={category}
                                 defaultExpanded={config.defaultExpanded}
-                                sx={{ mb: 1 }}
+                                sx={{ 
+                                    mb: 1, 
+                                    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+                                    '&:before': { display: 'none' },
+                                    borderRadius: 2,
+                                }}
                             >
-                                <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                    <Box>
-                                        <Typography variant="subtitle1" fontWeight="medium">
-                                            {config.label}
-                                        </Typography>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Per-label capacity configuration for accessible labels
-                                        </Typography>
+                                <AccordionSummary 
+                                    expandIcon={<ExpandMoreIcon />}
+                                    sx={{ 
+                                        backgroundColor: isLightMode ? '#f8fafc' : '#2d2d2d',
+                                        borderRadius: '8px 8px 0 0',
+                                        minHeight: 36,
+                                    }}
+                                >
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                        {config.icon}
+                                        <Box>
+                                            <Typography variant="body2" fontWeight="medium">
+                                                {config.label}
+                                            </Typography>
+                                            <Typography variant="caption" color="text.secondary">
+                                                Per-label capacity configuration for accessible labels
+                                            </Typography>
+                                        </Box>
                                     </Box>
                                 </AccordionSummary>
                                 <AccordionDetails>
-                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                         {filteredLabelGroups.map(([labelName, labelProps]) => (
-                                            <Box key={labelName} sx={{ mb: 2 }}>
-                                                <Typography variant="subtitle2" fontWeight="medium" sx={{ mb: 1 }}>
+                                            <Box key={labelName} sx={{ mb: 1.5 }}>
+                                                <Typography variant="body2" fontWeight="medium" sx={{ mb: 0.5 }}>
                                                     Label: {labelName}
                                                 </Typography>
-                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2, pl: 2 }}>
+                                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5, pl: 1 }}>
                                                     {labelProps.map((property) => (
                                                         <PropertyFormField
                                                             key={property.name}
@@ -292,20 +329,35 @@ export const PropertyEditorTab: React.FC<PropertyEditorTabProps> = ({
                         <Accordion
                             key={category}
                             defaultExpanded={config.defaultExpanded}
-                            sx={{ mb: 1 }}
+                            sx={{ 
+                                mb: 1, 
+                                boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+                                '&:before': { display: 'none' },
+                                borderRadius: 2,
+                            }}
                         >
-                            <AccordionSummary expandIcon={<ExpandMoreIcon />}>
-                                <Box>
-                                    <Typography variant="subtitle1" fontWeight="medium">
-                                        {config.label}
-                                    </Typography>
-                                    <Typography variant="body2" color="text.secondary">
-                                        {config.description}
-                                    </Typography>
+                            <AccordionSummary 
+                                expandIcon={<ExpandMoreIcon />}
+                                sx={{ 
+                                    backgroundColor: isLightMode ? '#f8fafc' : '#2d2d2d',
+                                    borderRadius: '8px 8px 0 0',
+                                    minHeight: 36,
+                                }}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+                                    {config.icon}
+                                    <Box>
+                                        <Typography variant="body2" fontWeight="medium">
+                                            {config.label}
+                                        </Typography>
+                                        <Typography variant="caption" color="text.secondary">
+                                            {config.description}
+                                        </Typography>
+                                    </Box>
                                 </Box>
                             </AccordionSummary>
                             <AccordionDetails>
-                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
                                     {categoryProps.map((property) => (
                                         <PropertyFormField
                                             key={property.name}

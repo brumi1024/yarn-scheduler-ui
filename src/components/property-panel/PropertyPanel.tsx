@@ -15,10 +15,14 @@ import {
     Close as CloseIcon,
     Save as SaveIcon,
     Refresh as RefreshIcon,
+    AccountTree as OverviewIcon,
+    Info as InfoIcon,
+    Settings as SettingsIcon,
 } from '@mui/icons-material';
 import { useNavigate, useLocation } from '@tanstack/react-router';
 import { useSchedulerStore } from '../../store/schedulerStore';
 import { QueueOverview } from './QueueOverview';
+import { QueueInfoTab } from './QueueInfoTab';
 import { PropertyEditorTab, PropertyEditorTabHandle } from './PropertyEditorTab';
 
 interface TabPanelProps {
@@ -66,7 +70,7 @@ function TabPanel(props: TabPanelProps) {
 // Tab configuration mapping URL search params to tab indices
 const TAB_CONFIG = {
     overview: 0,
-    statistics: 1,
+    info: 1,
     configuration: 2,
 } as const;
 
@@ -193,10 +197,10 @@ export const PropertyPanel: React.FC = () => {
             onClose={handleClose}
             variant="persistent"
             sx={{
-                width: 450,
+                width: 420,
                 flexShrink: 0,
                 '& .MuiDrawer-paper': {
-                    width: 450,
+                    width: 420,
                     boxSizing: 'border-box',
                     borderRadius: 2,
                     backgroundImage: 'none',
@@ -210,14 +214,14 @@ export const PropertyPanel: React.FC = () => {
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', height: '100%', position: 'relative' }}>
                 <Box sx={{ 
-                    p: 2, 
+                    p: 1.5, 
                     display: 'flex', 
                     alignItems: 'center', 
                     justifyContent: 'space-between',
                     borderBottom: 1,
                     borderColor: 'divider',
                 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
                         Queue Details
                     </Typography>
                     <IconButton 
@@ -242,7 +246,8 @@ export const PropertyPanel: React.FC = () => {
                             '& .MuiTab-root': {
                                 textTransform: 'none',
                                 fontWeight: 500,
-                                minHeight: 48,
+                                minHeight: 36,
+                                fontSize: '0.875rem',
                                 '&:hover': {
                                     backgroundColor: 'action.hover',
                                 },
@@ -252,9 +257,21 @@ export const PropertyPanel: React.FC = () => {
                             },
                         }}
                     >
-                        <Tab label="Overview" />
-                        <Tab label="Statistics" />
-                        <Tab label="Configuration" />
+                        <Tab 
+                            icon={<OverviewIcon />} 
+                            label="Overview" 
+                            iconPosition="start"
+                        />
+                        <Tab 
+                            icon={<InfoIcon />} 
+                            label="Info" 
+                            iconPosition="start"
+                        />
+                        <Tab 
+                            icon={<SettingsIcon />} 
+                            label="Settings" 
+                            iconPosition="start"
+                        />
                     </Tabs>
                 </Box>
 
@@ -269,12 +286,7 @@ export const PropertyPanel: React.FC = () => {
                         <QueueOverview queue={selectedQueue} />
                     </TabPanel>
                     <TabPanel value={tabValue} index={1}>
-                        {/* TODO: Implement Statistics tab */}
-                        <Box sx={{ p: 2 }}>
-                            <Typography variant="body2" color="text.secondary">
-                                Statistics view coming soon...
-                            </Typography>
-                        </Box>
+                        <QueueInfoTab queue={selectedQueue} />
                     </TabPanel>
                     <TabPanel value={tabValue} index={2}>
                         <PropertyEditorTab
@@ -295,7 +307,7 @@ export const PropertyPanel: React.FC = () => {
                             bottom: 0,
                             left: 0,
                             right: 0,
-                            p: 2,
+                            p: 1.5,
                             bgcolor: 'background.paper',
                             borderTop: 1,
                             borderColor: 'divider',
