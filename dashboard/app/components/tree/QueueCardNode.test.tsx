@@ -1,10 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '~/test-utils/setup';
 import { QueueCardNode } from './QueueCardNode';
-import { getMockQueueInfo } from '~/test-utils/factories';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/store/schedulerStore';
 import type { QueueCardData } from './hooks/useQueueTreeData';
+import { TooltipProvider } from '~/components/ui/tooltip';
 
 // Mock the store
 vi.mock('~/store/schedulerStore');
@@ -20,9 +20,28 @@ vi.mock('./dialogs/DeleteQueueDialog', () => ({
     open ? <div data-testid="delete-queue-dialog">Delete Queue Dialog</div> : null,
 }));
 
+// Mock React Flow Handle components
+vi.mock('@xyflow/react', () => ({
+  Handle: ({ type, position }: any) => <div data-testid={`handle-${type}-${position}`} />,
+  Position: {
+    Top: 'top',
+    Bottom: 'bottom',
+    Left: 'left',
+    Right: 'right',
+  },
+}));
+
 const mockSelectQueue = vi.fn();
 const mockSetPropertyPanelOpen = vi.fn();
 const mockToggleComparisonQueue = vi.fn();
+
+const renderWithProviders = (ui: React.ReactElement) => {
+  return render(
+    <TooltipProvider>
+      {ui}
+    </TooltipProvider>
+  );
+};
 
 describe('QueueCardNode', () => {
   const defaultNodeData: QueueCardData = {
@@ -43,26 +62,34 @@ describe('QueueCardNode', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: [],
-      selectedQueuePath: null,
-      selectQueue: mockSelectQueue,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      toggleComparisonQueue: mockToggleComparisonQueue,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+      };
+      return selector ? selector(state) : state;
     });
   });
 
   it('should display queue name and path', () => {
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
     expect(screen.getByText('default')).toBeInTheDocument();
     expect(screen.getByText('root.default')).toBeInTheDocument();
   });
 
   it('should display capacity information', () => {
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    expect(screen.getByText('10%')).toBeInTheDocument();
+    const capacityDisplay = screen.getAllByText('10%').find(el =>
+      el.className.includes('text-2xl')
+    );
+    expect(capacityDisplay).toBeInTheDocument();
     expect(screen.getByText('capacity')).toBeInTheDocument();
     expect(screen.getByText('Maximum capacity: 100%')).toBeInTheDocument();
   });
@@ -74,25 +101,33 @@ describe('QueueCardNode', () => {
       maxCapacityConfig: '5w',
     };
     
-    render(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode data={nodeData} />);
     
     expect(screen.getByText('2w')).toBeInTheDocument();
     expect(screen.getByText('Maximum capacity: 5w')).toBeInTheDocument();
   });
 
   it('should display queue status badges', () => {
-    render(<QueueCardNode data={defaultNodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    // The QueueStatusBadges component should render the appropriate badges
-    const runningBadge = screen.getByRole('img', { name: /running/i });
-    expect(runningBadge).toBeInTheDocument();
+    const svgIcons = container.querySelectorAll('svg.lucide');
+    expect(svgIcons.length).toBeGreaterThanOrEqual(2); // At least capacity mode and state badges
+    
+    // Verify we have the percentage icon (capacity mode)
+    const percentIcon = container.querySelector('svg.lucide-percent');
+    expect(percentIcon).toBeInTheDocument();
+    
+    // Verify we have the play icon (running state)
+    const playIcon = container.querySelector('svg.lucide-play');
+    expect(playIcon).toBeInTheDocument();
   });
 
   it('should open property panel on click', async () => {
     const user = userEvent.setup();
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    const card = screen.getByRole('button');
+    const card = screen.getByText('default').closest('.relative');
+    if (!card) throw new Error('Card not found');
     await user.click(card);
     
     expect(mockSelectQueue).toHaveBeenCalledWith('root.default');
@@ -106,9 +141,10 @@ describe('QueueCardNode', () => {
       stagedStatus: 'new' as const,
     };
     
-    render(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode data={nodeData} />);
     
-    const card = screen.getByRole('button');
+    const card = screen.getByText('default').closest('.relative');
+    if (!card) throw new Error('Card not found');
     await user.click(card);
     
     expect(mockSelectQueue).not.toHaveBeenCalled();
@@ -122,17 +158,19 @@ describe('QueueCardNode', () => {
       stagedStatus: 'new' as const,
     };
     
-    render(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode data={nodeData} />);
     
-    const card = screen.getByRole('button');
+    const card = screen.getByText('default').closest('.relative');
+    if (!card) throw new Error('Card not found');
     await user.hover(card);
     
-    expect(await screen.findByText('This queue must be applied before it can be edited')).toBeInTheDocument();
+    const tooltips = await screen.findAllByText('This queue must be applied before it can be edited');
+    expect(tooltips.length).toBeGreaterThan(0);
   });
 
   it('should toggle comparison checkbox', async () => {
     const user = userEvent.setup();
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
     const checkbox = screen.getByRole('checkbox');
     await user.click(checkbox);
@@ -141,30 +179,41 @@ describe('QueueCardNode', () => {
   });
 
   it('should show selected state when queue is selected', () => {
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: [],
-      selectedQueuePath: 'root.default',
-      selectQueue: mockSelectQueue,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      toggleComparisonQueue: mockToggleComparisonQueue,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: 'root.default',
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+      };
+      return selector ? selector(state) : state;
     });
     
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    const card = screen.getByRole('button');
+    const card = screen.getByText('default').closest('.relative');
+    if (!card) throw new Error('Card not found');
     expect(card).toHaveClass('bg-accent');
   });
 
   it('should show comparison state when queue is in comparison', () => {
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: ['root.default'],
-      selectedQueuePath: null,
-      selectQueue: mockSelectQueue,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      toggleComparisonQueue: mockToggleComparisonQueue,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: ['root.default'],
+        selectedQueuePath: null,
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+      };
+      return selector ? selector(state) : state;
     });
     
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
@@ -172,9 +221,12 @@ describe('QueueCardNode', () => {
 
   it('should show context menu on right click', async () => {
     const user = userEvent.setup();
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    const card = screen.getByRole('button');
+    // Find the card by its queue name
+    const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+    if (!card) throw new Error('Card not found');
+    
     await user.pointer({ keys: '[MouseRight]', target: card });
     
     expect(await screen.findByText('Edit Properties')).toBeInTheDocument();
@@ -182,20 +234,21 @@ describe('QueueCardNode', () => {
     expect(screen.getByText('Add Child Queue')).toBeInTheDocument();
   });
 
-  it('should disable edit properties for new queues in context menu', async () => {
-    const user = userEvent.setup();
+  it('should show new queue status with tooltip', () => {
     const nodeData = {
       ...defaultNodeData,
       stagedStatus: 'new' as const,
     };
     
-    render(<QueueCardNode data={nodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode data={nodeData} />);
     
-    const card = screen.getByRole('button');
-    await user.pointer({ keys: '[MouseRight]', target: card });
+    const card = screen.getByText('default').closest('.relative');
+    expect(card).toHaveClass('ring-queue-new');
+    expect(card).toHaveClass('cursor-not-allowed');
+    expect(card).toHaveClass('opacity-75');
     
-    const editMenuItem = await screen.findByText('Edit Properties');
-    expect(editMenuItem.closest('[role="menuitem"]')).toHaveAttribute('aria-disabled', 'true');
+    const tooltipTrigger = container.querySelector('[data-slot="tooltip-trigger"]');
+    expect(tooltipTrigger).toBeInTheDocument();
   });
 
   it('should show different status badges based on staged changes', () => {
@@ -204,9 +257,10 @@ describe('QueueCardNode', () => {
       stagedStatus: 'modified' as const,
     };
     
-    render(<QueueCardNode data={nodeData} />);
-    
-    const card = screen.getByRole('button');
+    renderWithProviders(<QueueCardNode data={nodeData} />);
+
+    const card = screen.getByText('default').closest('.relative');
+    if (!card) throw new Error('Card not found');
     expect(card).toHaveClass('ring-queue-modified');
   });
 
@@ -214,22 +268,28 @@ describe('QueueCardNode', () => {
     const nodeData = {
       ...defaultNodeData,
       numApplications: 5,
-      numActiveApplications: 3,
-      numPendingApplications: 2,
+      resourcesUsed: {
+        memory: 1024,
+        vCores: 4,
+      },
     };
     
-    render(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode data={nodeData} />);
     
-    expect(screen.getByText('5')).toBeInTheDocument(); // Total apps
-    expect(screen.getByText('3')).toBeInTheDocument(); // Active
-    expect(screen.getByText('2')).toBeInTheDocument(); // Pending
+    // QueueResourceStats shows total apps, memory and vCores
+    expect(screen.getByText('Apps: 5')).toBeInTheDocument();
+    expect(screen.getByText('Memory: 1 GB')).toBeInTheDocument(); // formatMemory should convert 1024 MB to 1 GB
+    expect(screen.getByText('vCores: 4')).toBeInTheDocument();
   });
 
   it('should open add queue dialog from context menu', async () => {
     const user = userEvent.setup();
-    render(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
-    const card = screen.getByRole('button');
+    // Find the card by queue name
+    const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+    if (!card) throw new Error('Card not found');
+    
     await user.pointer({ keys: '[MouseRight]', target: card });
     
     const addMenuItem = await screen.findByText('Add Child Queue');
@@ -240,22 +300,32 @@ describe('QueueCardNode', () => {
 
   it('should deselect queue when context menu closes', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
-      comparisonQueues: [],
-      selectedQueuePath: 'root.default',
-      selectQueue: mockSelectQueue,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      toggleComparisonQueue: mockToggleComparisonQueue,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        comparisonQueues: [],
+        selectedQueuePath: 'root.default',
+        selectQueue: mockSelectQueue,
+        setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        toggleComparisonQueue: mockToggleComparisonQueue,
+        getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
+        getChildQueues: vi.fn().mockReturnValue([]),
+      };
+      return selector ? selector(state) : state;
     });
     
-    render(<QueueCardNode data={defaultNodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode data={defaultNodeData} />);
     
     // Open context menu
-    const card = screen.getByRole('button');
+    const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+    if (!card) throw new Error('Card not found');
+    
     await user.pointer({ keys: '[MouseRight]', target: card });
     
-    // Close by clicking outside
-    await user.click(document.body);
+    // Wait for context menu to open
+    await screen.findByText('Edit Properties');
+    
+    // Close by pressing escape
+    await user.keyboard('{Escape}');
     
     expect(mockSelectQueue).toHaveBeenCalledWith(null);
   });

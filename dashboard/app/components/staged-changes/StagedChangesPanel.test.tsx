@@ -64,20 +64,27 @@ const mockApplyChanges = vi.fn();
 describe('StagedChangesPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSchedulerStore as any).mockReturnValue({
-      stagedChanges: [],
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+    // Mock the selector pattern used by the component
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        stagedChanges: [],
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
   });
 
   it('should show floating button when closed with staged changes', () => {
-    (useSchedulerStore as any).mockReturnValue({
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     const onOpen = vi.fn();
@@ -108,11 +115,14 @@ describe('StagedChangesPanel', () => {
 
   it('should open panel when floating button is clicked', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     const onOpen = vi.fn();
@@ -129,11 +139,14 @@ describe('StagedChangesPanel', () => {
   });
 
   it('should render staged changes grouped by queue', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -163,11 +176,14 @@ describe('StagedChangesPanel', () => {
 
   it('should revert individual change', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -185,11 +201,14 @@ describe('StagedChangesPanel', () => {
 
   it('should clear all changes', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -208,11 +227,14 @@ describe('StagedChangesPanel', () => {
   it('should apply all changes successfully', async () => {
     const user = userEvent.setup();
     mockApplyChanges.mockResolvedValue(undefined);
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     const onClose = vi.fn();
@@ -238,11 +260,14 @@ describe('StagedChangesPanel', () => {
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockApplyChanges.mockRejectedValue(new Error('Network error'));
     
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -266,11 +291,14 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     mockApplyChanges.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
     
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -293,11 +321,14 @@ describe('StagedChangesPanel', () => {
 
   it('should toggle drawer state', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: mockStagedChanges,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     const { container } = render(
@@ -307,14 +338,16 @@ describe('StagedChangesPanel', () => {
       />
     );
     
-    // Should start collapsed
-    const sheetContent = container.querySelector('[role="dialog"]');
+    // The Sheet component renders content in a portal, so we need to look in the document body
+    const sheetContent = document.querySelector('[data-slot="sheet-content"]');
+    expect(sheetContent).toBeTruthy();
     expect(sheetContent).toHaveClass('h-[200px]');
     
-    // Click toggle button
+    // Click toggle button - find the button with ChevronUp icon
     const toggleButton = screen.getAllByRole('button').find(
-      btn => btn.querySelector('[class*="ChevronUp"]')
+      btn => btn.querySelector('svg.lucide-chevron-up')
     );
+    expect(toggleButton).toBeDefined();
     await user.click(toggleButton!);
     
     // Should expand
@@ -350,11 +383,14 @@ describe('StagedChangesPanel', () => {
       },
     ];
     
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: changes,
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(
@@ -368,11 +404,14 @@ describe('StagedChangesPanel', () => {
   });
 
   it('should display singular form for one change', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
       stagedChanges: [mockStagedChanges[0]],
       revertChange: mockRevertChange,
       clearAllChanges: mockClearAllChanges,
       applyChanges: mockApplyChanges,
+      };
+      return selector ? selector(state) : state;
     });
 
     render(

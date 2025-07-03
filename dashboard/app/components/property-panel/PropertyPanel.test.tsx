@@ -32,33 +32,38 @@ vi.mock('./QueueInfoTab', () => ({
   ),
 }));
 
-// Mock PropertyEditorTab with ref handling
-const mockSubmit = vi.fn();
-const mockReset = vi.fn();
-const mockIsValid = vi.fn();
-const mockGetErrors = vi.fn();
+// Create mock functions that will be hoisted
+let mockSubmit = vi.fn();
+let mockReset = vi.fn();
+let mockIsValid = vi.fn();
+let mockGetErrors = vi.fn();
 
-vi.mock('./PropertyEditorTab', () => ({
-  PropertyEditorTab: vi.fn().mockImplementation(
-    React.forwardRef<any, any>(({ onFormDirtyChange, onHasChangesChange, onErrorsChange }, ref) => {
-      React.useImperativeHandle(ref, () => ({
-        submit: mockSubmit,
-        reset: mockReset,
-        isValid: mockIsValid,
-        getErrors: mockGetErrors,
-      }));
-      
-      return (
-        <div data-testid="property-editor">
-          <button onClick={() => onFormDirtyChange?.(true)}>Make Dirty</button>
-          <button onClick={() => onFormDirtyChange?.(false)}>Make Clean</button>
-          <button onClick={() => onHasChangesChange?.(true)}>Add Changes</button>
-          <button onClick={() => onErrorsChange?.({ capacity: 'Invalid value' })}>Add Error</button>
-        </div>
-      );
-    })
-  ),
-}));
+// Mock PropertyEditorTab with ref handling
+vi.mock('./PropertyEditorTab', () => {
+  const React = require('react');
+  
+  const PropertyEditorTab = React.forwardRef(({ onFormDirtyChange, onHasChangesChange, onErrorsChange }: any, ref: any) => {
+    React.useImperativeHandle(ref, () => ({
+      submit: () => mockSubmit(),
+      reset: () => mockReset(),
+      isValid: () => mockIsValid(),
+      getErrors: () => mockGetErrors(),
+    }));
+    
+    return (
+      <div data-testid="property-editor">
+        <button onClick={() => onFormDirtyChange?.(true)}>Make Dirty</button>
+        <button onClick={() => onFormDirtyChange?.(false)}>Make Clean</button>
+        <button onClick={() => onHasChangesChange?.(true)}>Add Changes</button>
+        <button onClick={() => onErrorsChange?.({ capacity: 'Invalid value' })}>Add Error</button>
+      </div>
+    );
+  });
+  
+  PropertyEditorTab.displayName = 'PropertyEditorTab';
+  
+  return { PropertyEditorTab };
+});
 
 vi.mock('./UnsavedChangesDialog', () => ({
   UnsavedChangesDialog: ({ open, onSave, onDiscard }: any) => 
@@ -82,8 +87,11 @@ const mockSelectQueue = vi.fn();
 describe('PropertyPanel', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockIsValid.mockReturnValue(true);
-    mockGetErrors.mockReturnValue({});
+    // Reinitialize mock functions
+    mockSubmit = vi.fn();
+    mockReset = vi.fn();
+    mockIsValid = vi.fn().mockReturnValue(true);
+    mockGetErrors = vi.fn().mockReturnValue({});
     mockSubmit.mockResolvedValue(undefined);
     
     (useSchedulerStore as any).mockReturnValue({
@@ -270,7 +278,11 @@ describe('PropertyPanel', () => {
     // Click to expand error details
     await user.click(errorBadge);
     expect(screen.getByText('Validation Errors:')).toBeInTheDocument();
-    expect(screen.getByText(/capacity.*Invalid value/)).toBeInTheDocument();
+    // The error text is combined with the bullet point, so we need to look for the full text
+    const errorText = screen.getByText((content, element) => {
+      return element?.textContent === '• capacity: Invalid value';
+    });
+    expect(errorText).toBeInTheDocument();
   });
 
   it('should handle submit with validation errors', async () => {

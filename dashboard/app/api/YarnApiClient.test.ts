@@ -426,11 +426,15 @@ describe('YarnApiClient', () => {
                 );
 
                 const client = new YarnApiClient('/ws/v1/cluster');
-                await expect(client.addNodeLabels(['gpu', 'ssd', 'nvme'])).resolves.not.toThrow();
+                await expect(client.addNodeLabels([
+                    { name: 'gpu', exclusivity: true },
+                    { name: 'ssd', exclusivity: false },
+                    { name: 'nvme', exclusivity: true }
+                ])).resolves.not.toThrow();
             });
 
             it('should send labels in correct format', async () => {
-                let capturedBody: { nodeLabels: string[] } | undefined;
+                let capturedBody: any | undefined;
 
                 server.use(
                     http.post('*/ws/v1/cluster/add-node-labels', async ({ request }) => {
@@ -440,10 +444,16 @@ describe('YarnApiClient', () => {
                 );
 
                 const client = new YarnApiClient('/ws/v1/cluster');
-                await client.addNodeLabels(['label1', 'label2']);
+                await client.addNodeLabels([
+                    { name: 'label1', exclusivity: true },
+                    { name: 'label2', exclusivity: false }
+                ]);
 
                 expect(capturedBody).toEqual({
-                    nodeLabels: ['label1', 'label2'],
+                    nodeLabels: [
+                        { name: 'label1', exclusivity: true },
+                        { name: 'label2', exclusivity: false }
+                    ],
                 });
             });
         });
@@ -516,16 +526,16 @@ describe('YarnApiClient', () => {
                 );
 
                 const client = new YarnApiClient('/ws/v1/cluster');
-                const mapping = {
-                    'node1.cluster.com:8041': ['gpu', 'highmem'],
-                    'node2.cluster.com:8041': ['ssd'],
-                };
+                const mapping = [
+                    { nodeId: 'node1.cluster.com:8041', labels: ['gpu', 'highmem'] },
+                    { nodeId: 'node2.cluster.com:8041', labels: ['ssd'] },
+                ];
 
                 await expect(client.replaceNodeToLabels(mapping)).resolves.not.toThrow();
             });
 
             it('should send mapping in correct format', async () => {
-                let capturedBody: { nodeToLabels: Record<string, string[]> } | undefined;
+                let capturedBody: any | undefined;
 
                 server.use(
                     http.post('*/ws/v1/cluster/replace-node-to-labels', async ({ request }) => {
@@ -535,15 +545,17 @@ describe('YarnApiClient', () => {
                 );
 
                 const client = new YarnApiClient('/ws/v1/cluster');
-                const mapping = {
-                    node1: ['label1'],
-                    node2: ['label2', 'label3'],
-                };
+                const mapping = [
+                    { nodeId: 'node1', labels: ['label1'] },
+                    { nodeId: 'node2', labels: ['label2', 'label3'] },
+                ];
 
                 await client.replaceNodeToLabels(mapping);
 
                 expect(capturedBody).toEqual({
-                    nodeToLabels: mapping,
+                    nodeToLabels: {
+                        nodeLabels: mapping
+                    }
                 });
             });
         });

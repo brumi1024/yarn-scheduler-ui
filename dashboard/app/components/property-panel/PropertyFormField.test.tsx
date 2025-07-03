@@ -4,6 +4,7 @@ import { PropertyFormField } from './PropertyFormField';
 import { useForm, FormProvider } from 'react-hook-form';
 import { getMockPropertyDescriptor } from '~/test-utils/factories';
 import userEvent from '@testing-library/user-event';
+import { TooltipProvider } from '~/components/ui/tooltip';
 
 // Helper component to wrap PropertyFormField with form context
 function FormWrapper({ 
@@ -14,7 +15,11 @@ function FormWrapper({
   defaultValues?: Record<string, string>;
 }) {
   const methods = useForm({ defaultValues });
-  return <FormProvider {...methods}>{children}</FormProvider>;
+  return (
+    <TooltipProvider>
+      <FormProvider {...methods}>{children}</FormProvider>
+    </TooltipProvider>
+  );
 }
 
 describe('PropertyFormField', () => {
@@ -121,23 +126,20 @@ describe('PropertyFormField', () => {
       type: 'string',
     });
 
-    render(
+    const { container } = render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
       </FormWrapper>
     );
 
-    // Find the help icon by looking for HelpCircle icon
-    const helpIcon = screen.getAllByRole('button').find(
-      btn => btn.querySelector('[class*="lucide-help-circle"]')
-    );
+    const helpIcon = container.querySelector('svg[class*="lucide"]');
     
     if (helpIcon) {
       await user.hover(helpIcon);
-      expect(await screen.findByText('This is the capacity description')).toBeInTheDocument();
+      const tooltipText = await screen.findAllByText('This is the capacity description');
+      expect(tooltipText.length).toBeGreaterThan(0);
     } else {
-      // If no help icon is rendered, that's okay - it might be conditional
-      expect(true).toBe(true);
+      throw new Error('Help icon not found');
     }
   });
 

@@ -625,8 +625,8 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
         defaultValue: 'DefaultResourceCalculator',
         required: false,
         enumValues: [
-            'DefaultResourceCalculator',
-            'DominantResourceCalculator'
+            'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+            'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator'
         ]
     },
     {
@@ -814,6 +814,24 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
                 message: 'Must be between 1 and 1000',
                 min: 1,
                 max: 1000
+            }
+        ]
+    },
+    {
+        name: 'maximum-am-resource-percent',
+        displayName: 'Maximum AM Resource Percent',
+        description: 'Maximum percentage of resources that can be used for Application Masters (0.0-1.0)',
+        type: 'number' as PropertyType,
+        category: 'resource' as PropertyCategory,
+        defaultValue: '0.1',
+        required: false,
+        validationRules: [
+            {
+                type: 'range',
+                message: 'Must be between 0 and 1',
+                min: 0,
+                max: 1,
+                step: 0.01
             }
         ]
     }

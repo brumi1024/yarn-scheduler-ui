@@ -2,24 +2,23 @@ import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '~/test-utils/setup';
 import { DeleteQueueDialog } from './DeleteQueueDialog';
 import userEvent from '@testing-library/user-event';
-import { useSchedulerStore } from '~/store/schedulerStore';
 
-// Mock the store
-vi.mock('~/store/schedulerStore');
+// Mock the useQueueActions hook
+const mockDeleteQueue = vi.fn();
+const mockCanDeleteQueue = vi.fn();
 
-const mockStageQueueRemoval = vi.fn();
-const mockGetChildQueues = vi.fn();
+vi.mock('../hooks/useQueueActions', () => ({
+  useQueueActions: () => ({
+    deleteQueue: mockDeleteQueue,
+    canDeleteQueue: mockCanDeleteQueue,
+  }),
+}));
 
 describe('DeleteQueueDialog', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    (useSchedulerStore as any).mockReturnValue({
-      stageQueueRemoval: mockStageQueueRemoval,
-      getChildQueues: mockGetChildQueues,
-    });
-    
-    // Default: queue has no children
-    mockGetChildQueues.mockReturnValue([]);
+    // Default: queue can be deleted
+    mockCanDeleteQueue.mockReturnValue(true);
   });
 
   it('should not render when closed', () => {
@@ -27,7 +26,6 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={false} 
         queuePath="root.default" 
-        queueName="default"
         onClose={vi.fn()} 
       />
     );
@@ -40,15 +38,17 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.production.team1" 
-        queueName="team1"
         onClose={vi.fn()} 
       />
     );
     
     expect(screen.getByRole('dialog')).toBeInTheDocument();
-    expect(screen.getByText('Delete Queue')).toBeInTheDocument();
-    expect(screen.getByText(/Are you sure you want to delete queue "team1"\?/)).toBeInTheDocument();
-    expect(screen.getByText('This action cannot be undone.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: /delete queue/i })).toBeInTheDocument();
+    expect(screen.getByText((content, element) => {
+      return content.includes('Are you sure you want to delete the queue') && 
+             element?.textContent?.includes('team1');
+    })).toBeInTheDocument();
+    expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
   });
 
   it('should stage queue removal on confirmation', async () => {
@@ -59,15 +59,14 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.production.team1" 
-        queueName="team1"
         onClose={onClose} 
       />
     );
     
-    const deleteButton = screen.getByRole('button', { name: 'Delete' });
+    const deleteButton = screen.getByRole('button', { name: /delete queue/i });
     await user.click(deleteButton);
     
-    expect(mockStageQueueRemoval).toHaveBeenCalledWith('root.production.team1');
+    expect(mockDeleteQueue).toHaveBeenCalledWith('root.production.team1');
     expect(onClose).toHaveBeenCalled();
   });
 
@@ -79,7 +78,6 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.production.team1" 
-        queueName="team1"
         onClose={onClose} 
       />
     );
@@ -87,30 +85,26 @@ describe('DeleteQueueDialog', () => {
     const cancelButton = screen.getByRole('button', { name: 'Cancel' });
     await user.click(cancelButton);
     
-    expect(mockStageQueueRemoval).not.toHaveBeenCalled();
+    expect(mockDeleteQueue).not.toHaveBeenCalled();
     expect(onClose).toHaveBeenCalled();
   });
 
   it('should show error for queues with children', () => {
-    mockGetChildQueues.mockReturnValue([
-      { queueName: 'child1', queuePath: 'root.parent.child1' },
-      { queueName: 'child2', queuePath: 'root.parent.child2' },
-    ]);
+    mockCanDeleteQueue.mockReturnValue(false);
     
     render(
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.parent" 
-        queueName="parent"
         onClose={vi.fn()} 
       />
     );
     
-    expect(screen.getByText('Cannot delete queue with child queues')).toBeInTheDocument();
-    expect(screen.getByText('This queue has 2 child queue(s). Please delete them first.')).toBeInTheDocument();
+    expect(screen.getByText(/This queue has child queues and cannot be deleted/)).toBeInTheDocument();
+    expect(screen.getByText(/Please delete all child queues first/)).toBeInTheDocument();
     
-    const deleteButton = screen.getByRole('button', { name: 'Delete' });
-    expect(deleteButton).toBeDisabled();
+    // Delete button should not exist when queue cannot be deleted
+    expect(screen.queryByRole('button', { name: /delete queue/i })).not.toBeInTheDocument();
   });
 
   it('should handle root queue specially', () => {
@@ -118,16 +112,14 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root" 
-        queueName="root"
         onClose={vi.fn()} 
       />
     );
     
-    expect(screen.getByText(/Are you sure you want to delete queue "root"\?/)).toBeInTheDocument();
+    expect(screen.getByText('The root queue cannot be deleted.')).toBeInTheDocument();
     
-    // Even though it's root, if it has no children in our mock, delete should be enabled
-    const deleteButton = screen.getByRole('button', { name: 'Delete' });
-    expect(deleteButton).not.toBeDisabled();
+    // Root queue should not have a delete button, only cancel
+    expect(screen.queryByRole('button', { name: /delete queue/i })).not.toBeInTheDocument();
   });
 
   it('should close on escape key', async () => {
@@ -138,7 +130,6 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.default" 
-        queueName="default"
         onClose={onClose} 
       />
     );
@@ -146,26 +137,21 @@ describe('DeleteQueueDialog', () => {
     await user.keyboard('{Escape}');
     
     expect(onClose).toHaveBeenCalled();
-    expect(mockStageQueueRemoval).not.toHaveBeenCalled();
+    expect(mockDeleteQueue).not.toHaveBeenCalled();
   });
 
   it('should show correct child queue names', () => {
-    mockGetChildQueues.mockReturnValue([
-      { queueName: 'dev-team', queuePath: 'root.production.dev-team' },
-      { queueName: 'qa-team', queuePath: 'root.production.qa-team' },
-      { queueName: 'ops-team', queuePath: 'root.production.ops-team' },
-    ]);
+    mockCanDeleteQueue.mockReturnValue(false);
     
     render(
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.production" 
-        queueName="production"
         onClose={vi.fn()} 
       />
     );
     
-    expect(screen.getByText('This queue has 3 child queue(s). Please delete them first.')).toBeInTheDocument();
+    expect(screen.getByText(/This queue has child queues and cannot be deleted/)).toBeInTheDocument();
   });
 
   it('should use danger variant for delete button', () => {
@@ -173,12 +159,11 @@ describe('DeleteQueueDialog', () => {
       <DeleteQueueDialog 
         open={true} 
         queuePath="root.default" 
-        queueName="default"
         onClose={vi.fn()} 
       />
     );
     
-    const deleteButton = screen.getByRole('button', { name: 'Delete' });
-    expect(deleteButton).toHaveClass('destructive');
+    const deleteButton = screen.getByRole('button', { name: /delete queue/i });
+    expect(deleteButton).toHaveClass('bg-destructive');
   });
 });

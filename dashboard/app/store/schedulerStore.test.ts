@@ -8,14 +8,233 @@ import type { YarnApiClient } from '~/api/YarnApiClient';
 import type {
     QueueInfo,
     StagedChange,
+    SchedulerInfo,
+    ConfigInfo,
+    NodeLabelsInfo,
+    VersionResponse,
 } from '~/types';
 
-import {
-    mockSchedulerResponse,
-    mockConfigResponse,
-    mockNodeLabelsResponse,
-    mockVersionResponse,
-} from '../__mocks__/schedulerResponse';
+// Mock data for tests
+const mockSchedulerResponse: SchedulerInfo = {
+  scheduler: {
+    schedulerInfo: {
+      type: 'capacityScheduler',
+      capacity: 100,
+      usedCapacity: 50,
+      maxCapacity: 100,
+      queueName: 'root',
+      queuePath: 'root',
+      queues: {
+        queue: [
+          {
+            queueName: 'default',
+            capacity: 10,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 10,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            queuePath: 'root.default',
+            queues: { queue: [] },
+            resourcesUsed: {
+              memory: 0,
+              vCores: 0,
+            },
+            state: 'RUNNING',
+          },
+          {
+            queueName: 'production',
+            capacity: 60,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 60,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            queuePath: 'root.production',
+            queues: {
+              queue: [
+                {
+                  queueName: 'batch',
+                  capacity: 50,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 30,
+                  absoluteMaxCapacity: 60,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  queuePath: 'root.production.batch',
+                  queues: { queue: [] },
+                  resourcesUsed: {
+                    memory: 0,
+                    vCores: 0,
+                  },
+                  state: 'RUNNING',
+                },
+                {
+                  queueName: 'interactive',
+                  capacity: 50,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 30,
+                  absoluteMaxCapacity: 60,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  queuePath: 'root.production.interactive',
+                  queues: { queue: [] },
+                  resourcesUsed: {
+                    memory: 0,
+                    vCores: 0,
+                  },
+                  state: 'RUNNING',
+                },
+              ],
+            },
+            state: 'RUNNING',
+          },
+          {
+            queueName: 'development',
+            capacity: 30,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 30,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            queuePath: 'root.development',
+            queues: { queue: [] },
+            resourcesUsed: {
+              memory: 0,
+              vCores: 0,
+            },
+            state: 'RUNNING',
+          },
+        ],
+      },
+    },
+  },
+};
+
+const mockConfigResponse: ConfigInfo = {
+  property: [
+    {
+      name: 'yarn.scheduler.capacity.root.queues',
+      value: 'default,production,development',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.default.capacity',
+      value: '10',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.default.maximum-capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.capacity',
+      value: '60',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.maximum-capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.queues',
+      value: 'batch,interactive',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.batch.capacity',
+      value: '50',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.batch.maximum-capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.interactive.capacity',
+      value: '50',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.production.interactive.maximum-capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.development.capacity',
+      value: '30',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.development.maximum-capacity',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.maximum-applications',
+      value: '10000',
+    },
+    {
+      name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
+      value: '0.1',
+    },
+    {
+      name: 'yarn.scheduler.capacity.resource-calculator',
+      value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.default.user-limit-factor',
+      value: '1',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.default.minimum-user-limit-percent',
+      value: '100',
+    },
+    {
+      name: 'yarn.scheduler.capacity.root.default.state',
+      value: 'RUNNING',
+    },
+  ],
+};
+
+const mockNodeLabelsResponse: NodeLabelsInfo = {
+  nodeLabelsInfo: {
+    nodeLabelInfo: [
+      { name: 'gpu', exclusivity: true },
+      { name: 'ssd', exclusivity: false },
+      { name: 'high-memory', exclusivity: true },
+    ],
+  },
+};
+
+const mockNodesResponse = {
+  nodes: {
+    node: [
+      {
+        id: 'node1.example.com:8041',
+        rack: '/default-rack',
+        state: 'RUNNING',
+        nodeHTTPAddress: 'node1.example.com:8042',
+        version: '3.4.0',
+      },
+    ],
+  },
+};
+
+const mockNodeToLabelsResponse = {
+  nodeToLabelsInfo: {
+    nodeToLabels: [
+      {
+        nodeId: 'node1.example.com:8041',
+        nodeLabels: ['gpu', 'high-memory'],
+      },
+    ],
+  },
+};
+
+const mockVersionResponse: VersionResponse = {
+  versionID: 1234567890,
+};
 
 // Mock the YARN API client
 vi.mock('~/api/YarnApiClient');
@@ -25,6 +244,8 @@ const createMockApiClient = () => ({
     getScheduler: vi.fn(),
     getSchedulerConf: vi.fn(),
     getNodeLabels: vi.fn(),
+    getNodes: vi.fn(),
+    getNodeToLabels: vi.fn(),
     getSchedulerConfVersion: vi.fn(),
     updateSchedulerConf: vi.fn(),
 });
@@ -42,6 +263,8 @@ async function setupStoreWithData(store: ReturnType<typeof createSchedulerStore>
     mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
     mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
     mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+    mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+    mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
     mockApiClient.getSchedulerConfVersion.mockResolvedValue(mockVersionResponse);
 
     await store.getState().loadInitialData();
@@ -93,9 +316,8 @@ describe('schedulerStore', () => {
             const store = createTestStore();
             const state = store.getState();
 
-            expect(typeof state.getQueueConfiguredCapacity).toBe('function');
-            expect(typeof state.getQueueDisplayValue).toBe('function');
-            expect(typeof state.getGlobalDisplayValue).toBe('function');
+            expect(typeof state.getQueuePropertyValue).toBe('function');
+            expect(typeof state.getGlobalPropertyValue).toBe('function');
             expect(typeof state.getLabelChangesForQueue).toBe('function');
         });
     });
@@ -108,6 +330,8 @@ describe('schedulerStore', () => {
             mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
             mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
             mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+            mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+            mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
             mockApiClient.getSchedulerConfVersion.mockResolvedValue(mockVersionResponse);
 
             await store.getState().loadInitialData();
@@ -391,6 +615,8 @@ describe('schedulerStore', () => {
             mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
             mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
             mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+            mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+            mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
             mockApiClient.getSchedulerConfVersion.mockResolvedValue({ versionID: 1234567891 });
 
             await store.getState().applyChanges();
@@ -433,40 +659,12 @@ describe('schedulerStore', () => {
     });
 
     describe('computed values', () => {
-        describe('getQueueConfiguredCapacity', () => {
-            it('should return configured capacity from config data', async () => {
-                const store = createTestStore();
-                await setupStoreWithData(store);
-
-                const capacity = store.getState().getQueueConfiguredCapacity('root.default');
-                expect(capacity).toBe('10');
-            });
-
-            it('should return staged value if change is staged', async () => {
-                const store = createTestStore();
-                await setupStoreWithData(store);
-
-                store.getState().stageQueueChange('root.default', 'capacity', '60');
-
-                const capacity = store.getState().getQueueConfiguredCapacity('root.default');
-                expect(capacity).toBe('60');
-            });
-
-            it('should return default value for unconfigured queue', async () => {
-                const store = createTestStore();
-                await setupStoreWithData(store);
-
-                const capacity = store.getState().getQueueConfiguredCapacity('root.nonexistent');
-                expect(capacity).toBe('0');
-            });
-        });
-
-        describe('getQueueDisplayValue', () => {
+        describe('getQueuePropertyValue', () => {
             it('should return configured value with staged flag false', async () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
 
-                const displayValue = store.getState().getQueueDisplayValue('root.default', 'capacity');
+                const displayValue = store.getState().getQueuePropertyValue('root.default', 'capacity');
                 expect(displayValue).toEqual({
                     value: '10',
                     isStaged: false,
@@ -479,9 +677,35 @@ describe('schedulerStore', () => {
 
                 store.getState().stageQueueChange('root.default', 'capacity', '60');
 
-                const displayValue = store.getState().getQueueDisplayValue('root.default', 'capacity');
+                const displayValue = store.getState().getQueuePropertyValue('root.default', 'capacity');
                 expect(displayValue).toEqual({
                     value: '60',
+                    isStaged: true,
+                });
+            });
+        });
+
+        describe('getGlobalPropertyValue', () => {
+            it('should return configured value with staged flag false', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+                expect(displayValue).toEqual({
+                    value: '10000',
+                    isStaged: false,
+                });
+            });
+
+            it('should return staged value with staged flag true', async () => {
+                const store = createTestStore();
+                await setupStoreWithData(store);
+
+                store.getState().stageGlobalChange('maximum-applications', '15000');
+
+                const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+                expect(displayValue).toEqual({
+                    value: '15000',
                     isStaged: true,
                 });
             });
@@ -492,7 +716,7 @@ describe('schedulerStore', () => {
                 const store = createTestStore();
                 await setupStoreWithData(store);
 
-                const displayValue = store.getState().getGlobalDisplayValue('non-existent-property');
+                const displayValue = store.getState().getGlobalPropertyValue('non-existent-property');
                 expect(displayValue).toEqual({
                     value: '',
                     isStaged: false,
@@ -504,7 +728,7 @@ describe('schedulerStore', () => {
                 await setupStoreWithData(store);
 
                 // The mockConfigResponse already includes 'yarn.scheduler.capacity.maximum-applications': '10000'
-                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
                 expect(displayValue).toEqual({
                     value: '10000',
                     isStaged: false,
@@ -518,7 +742,7 @@ describe('schedulerStore', () => {
                 // Stage a global change
                 store.getState().stageGlobalChange('maximum-applications', '15000');
 
-                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
                 expect(displayValue).toEqual({
                     value: '15000',
                     isStaged: true,
@@ -533,7 +757,7 @@ describe('schedulerStore', () => {
                 // Stage a different value
                 store.getState().stageGlobalChange('maximum-applications', '20000');
 
-                const displayValue = store.getState().getGlobalDisplayValue('maximum-applications');
+                const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
                 expect(displayValue).toEqual({
                     value: '20000',
                     isStaged: true,
@@ -548,8 +772,8 @@ describe('schedulerStore', () => {
                 // Stage a change for a different property
                 store.getState().stageGlobalChange('legacy-queue-mode.enabled', 'false');
 
-                const maxAppsValue = store.getState().getGlobalDisplayValue('maximum-applications');
-                const legacyModeValue = store.getState().getGlobalDisplayValue('legacy-queue-mode.enabled');
+                const maxAppsValue = store.getState().getGlobalPropertyValue('maximum-applications');
+                const legacyModeValue = store.getState().getGlobalPropertyValue('legacy-queue-mode.enabled');
 
                 expect(maxAppsValue).toEqual({
                     value: '10000',
