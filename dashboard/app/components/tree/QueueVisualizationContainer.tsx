@@ -7,7 +7,7 @@ import {
     ReactFlowProvider,
     type OnNodesChange,
     type OnEdgesChange,
-    type OnNodeClick,
+    type NodeMouseHandler,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
@@ -30,7 +30,7 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-    const selectQueue = useSchedulerStore(state => state.selectQueue);
+    const { selectQueue } = useSchedulerStore();
 
     const { nodes, edges, isLoading, error } = useQueueTreeData();
 
@@ -42,8 +42,8 @@ const FlowInner: React.FC = () => {
         // We don't allow edge changes
     }, []);
 
-    const onNodeClick: OnNodeClick = useCallback(
-        (_, node) => {
+    const onNodeClick: NodeMouseHandler = useCallback(
+        (event, node) => {
             selectQueue?.(node.id);
         },
         [selectQueue]

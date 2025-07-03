@@ -21,10 +21,12 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
     const [isApplying, setIsApplying] = useState(false);
     const [drawerState, setDrawerState] = useState<DrawerState>('collapsed');
     
-    const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
-    const revertChange = useSchedulerStore((state) => state.revertChange);
-    const clearAllChanges = useSchedulerStore((state) => state.clearAllChanges);
-    const applyChanges = useSchedulerStore((state) => state.applyChanges);
+    const {
+        stagedChanges,
+        revertChange,
+        clearAllChanges,
+        applyChanges
+    } = useSchedulerStore();
 
     // Group changes by queue path for organized display
     const changesByQueue = React.useMemo(() => {
@@ -58,7 +60,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
     };
 
     const handleRevertChange = (change: StagedChange) => {
-        revertChange(change);
+        revertChange(change.id);
         toast.info(`Reverted change: ${change.property}`);
     };
 

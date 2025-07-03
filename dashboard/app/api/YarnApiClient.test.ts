@@ -33,6 +33,8 @@ const mockSchedulerResponse: SchedulerResponse = {
                         absoluteMaxCapacity: 100,
                         absoluteUsedCapacity: 40,
                         numApplications: 5,
+                        numActiveApplications: 3,
+                        numPendingApplications: 2,
                         queueName: 'default',
                         queuePath: 'root.default',
                         state: 'RUNNING',
@@ -46,6 +48,8 @@ const mockSchedulerResponse: SchedulerResponse = {
                         absoluteMaxCapacity: 100,
                         absoluteUsedCapacity: 15.5,
                         numApplications: 3,
+                        numActiveApplications: 2,
+                        numPendingApplications: 1,
                         queueName: 'production',
                         queuePath: 'root.production',
                         state: 'RUNNING',
@@ -60,6 +64,8 @@ const mockSchedulerResponse: SchedulerResponse = {
                                     absoluteMaxCapacity: 50,
                                     absoluteUsedCapacity: 15,
                                     numApplications: 2,
+                                    numActiveApplications: 1,
+                                    numPendingApplications: 1,
                                     queueName: 'batch',
                                     queuePath: 'root.production.batch',
                                     state: 'RUNNING',
@@ -73,6 +79,8 @@ const mockSchedulerResponse: SchedulerResponse = {
                                     absoluteMaxCapacity: 50,
                                     absoluteUsedCapacity: 0.5,
                                     numApplications: 1,
+                                    numActiveApplications: 1,
+                                    numPendingApplications: 0,
                                     queueName: 'interactive',
                                     queuePath: 'root.production.interactive',
                                     state: 'RUNNING',
@@ -274,7 +282,7 @@ describe('YarnApiClient', () => {
 
             server.use(
                 http.put('*/ws/v1/cluster/scheduler-conf', async ({ request }) => {
-                    capturedBody = await request.json();
+                    capturedBody = await request.json() as SchedConfUpdateInfo;
                     return new HttpResponse(null, { status: 200 });
                 })
             );
@@ -341,7 +349,7 @@ describe('YarnApiClient', () => {
 
             server.use(
                 http.post('*/ws/v1/cluster/scheduler-conf/validate', async ({ request }) => {
-                    capturedBody = await request.json();
+                    capturedBody = await request.json() as SchedConfUpdateInfo;
                     return new HttpResponse(null, { status: 200 });
                 })
             );
@@ -495,10 +503,10 @@ describe('YarnApiClient', () => {
         describe('getNodeToLabels', () => {
             it('should fetch node to label mappings', async () => {
                 const mockMappings: NodeToLabelsResponse = {
-                    nodeToLabels: {
+                    nodeToLabelsInfo: {
                         nodeToLabels: [
-                            { nodeId: 'node1.cluster.com:8041', labels: ['gpu', 'ssd'] },
-                            { nodeId: 'node2.cluster.com:8041', labels: ['ssd'] },
+                            { nodeId: 'node1.cluster.com:8041', nodeLabels: ['gpu', 'ssd'] },
+                            { nodeId: 'node2.cluster.com:8041', nodeLabels: ['ssd'] },
                         ],
                     },
                 };
@@ -512,8 +520,8 @@ describe('YarnApiClient', () => {
                 const client = new YarnApiClient('/ws/v1/cluster');
                 const response = await client.getNodeToLabels();
 
-                expect(response.nodeToLabels?.nodeToLabels).toHaveLength(2);
-                expect(response.nodeToLabels?.nodeToLabels?.[0].labels).toContain('gpu');
+                expect(response.nodeToLabelsInfo?.nodeToLabels).toHaveLength(2);
+                expect(response.nodeToLabelsInfo?.nodeToLabels?.[0].nodeLabels).toContain('gpu');
             });
         });
 
@@ -663,6 +671,8 @@ describe('YarnApiClient', () => {
                                     absoluteMaxCapacity: 100,
                                     absoluteUsedCapacity: 0,
                                     numApplications: 0,
+                                    numActiveApplications: 0,
+                                    numPendingApplications: 0,
                                     queueName: 'queue-with-dash',
                                     queuePath: 'root.queue-with-dash',
                                     state: 'RUNNING',

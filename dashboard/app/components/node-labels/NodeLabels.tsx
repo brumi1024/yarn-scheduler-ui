@@ -9,11 +9,13 @@ import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { NodesPanel } from './NodesPanel';
 
 export const NodeLabels: React.FC = () => {
-    const isLoading = useSchedulerStore((state) => state.isLoading);
-    const error = useSchedulerStore((state) => state.error);
-    const nodeLabels = useSchedulerStore((state) => state.nodeLabels);
-    const selectedNodeLabel = useSchedulerStore((state) => state.selectedNodeLabel);
-    const refreshSchedulerData = useSchedulerStore((state) => state.refreshSchedulerData);
+    const {
+        isLoading,
+        error,
+        nodeLabels,
+        selectedNodeLabel,
+        refreshSchedulerData
+    } = useSchedulerStore();
     
     const handleRefresh = async () => {
         try {

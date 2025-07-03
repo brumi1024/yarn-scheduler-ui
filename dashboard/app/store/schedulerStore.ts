@@ -716,7 +716,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
         },
     }));
 
-export const createSchedulerStore = (apiClient: YarnApiClient): ReturnType<typeof create<SchedulerStore>> =>
+export const createSchedulerStore = (apiClient: YarnApiClient) =>
     create<SchedulerStore>()(createStoreImplementation(apiClient));
 
 const defaultApiClient = new YarnApiClient('/ws/v1/cluster');

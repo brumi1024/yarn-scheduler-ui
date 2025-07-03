@@ -7,17 +7,19 @@ import {
     buildRemoveQueueMutation,
     groupChangesByQueue,
     validateMutationRequest,
-    SchedConfUpdateInfo,
 } from './mutationBuilder';
-import type { StagedChange } from '~/types';
+import type { StagedChange, SchedConfUpdateInfo } from '~/types';
 
 describe('mutationBuilder', () => {
+    const now = Date.now();
+    
     describe('buildMutationRequest', () => {
         it('should build complete mutation request with all change types', () => {
             const stagedChanges: StagedChange[] = [
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -26,6 +28,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'maximum-capacity',
                     oldValue: '100',
@@ -34,6 +37,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -42,6 +46,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '4',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.test',
                     property: 'capacity',
                     oldValue: undefined,
@@ -50,6 +55,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '5',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.test',
                     property: 'state',
                     oldValue: undefined,
@@ -58,6 +64,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '6',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.old',
                     property: undefined,
                     oldValue: undefined,
@@ -114,6 +121,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -122,6 +130,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'maximum-capacity',
                     oldValue: '100',
@@ -130,6 +139,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'state',
                     oldValue: 'RUNNING',
@@ -155,6 +165,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'accessible-node-labels.gpu.capacity',
                     oldValue: '30',
@@ -163,6 +174,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'accessible-node-labels.gpu.maximum-capacity',
                     oldValue: '50',
@@ -171,6 +183,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'accessible-node-labels.ssd.capacity',
                     oldValue: '20',
@@ -196,6 +209,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -204,6 +218,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'resource-calculator',
                     oldValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
@@ -212,6 +227,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'user-metrics.enable',
                     oldValue: 'false',
@@ -235,6 +251,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -257,6 +274,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -265,6 +283,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'maximum-capacity',
                     oldValue: '100',
@@ -273,6 +292,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'user-limit-factor',
                     oldValue: '1',
@@ -297,6 +317,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'maximum-am-resource-percent',
                     oldValue: '0.1',
@@ -305,6 +326,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'minimum-user-limit-percent',
                     oldValue: '100',
@@ -330,6 +352,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -338,6 +361,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'resource-calculator',
                     oldValue: 'DefaultResourceCalculator',
@@ -358,6 +382,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -375,6 +400,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'user-metrics.enable',
                     oldValue: 'false',
@@ -383,6 +409,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'node-locality.enable',
                     oldValue: 'true',
@@ -405,6 +432,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.test',
                     property: 'capacity',
                     oldValue: undefined,
@@ -427,6 +455,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.team2',
                     property: 'capacity',
                     oldValue: undefined,
@@ -435,6 +464,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.team2',
                     property: 'maximum-capacity',
                     oldValue: undefined,
@@ -443,6 +473,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.team2',
                     property: 'state',
                     oldValue: undefined,
@@ -467,6 +498,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.ml',
                     property: 'capacity',
                     oldValue: undefined,
@@ -475,6 +507,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.ml',
                     property: 'accessible-node-labels.gpu.capacity',
                     oldValue: undefined,
@@ -500,6 +533,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.old',
                     property: undefined,
                     oldValue: undefined,
@@ -508,6 +542,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.deprecated',
                     property: undefined,
                     oldValue: undefined,
@@ -516,6 +551,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.production.legacy',
                     property: undefined,
                     oldValue: undefined,
@@ -533,6 +569,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -550,6 +587,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.duplicate',
                     property: undefined,
                     oldValue: undefined,
@@ -558,6 +596,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.duplicate',
                     property: undefined,
                     oldValue: undefined,
@@ -577,6 +616,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '50',
@@ -585,6 +625,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'capacity',
                     oldValue: '50',
@@ -593,6 +634,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'maximum-capacity',
                     oldValue: '100',
@@ -601,6 +643,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '4',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -626,6 +669,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.only',
                     property: 'capacity',
                     oldValue: '50',
@@ -838,6 +882,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.default',
                     property: 'capacity',
                     oldValue: '40',
@@ -846,6 +891,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'capacity',
                     oldValue: '40',
@@ -854,6 +900,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '3',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'root.production',
                     property: 'maximum-capacity',
                     oldValue: '60',
@@ -863,6 +910,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '4',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.ml',
                     property: 'capacity',
                     oldValue: undefined,
@@ -871,6 +919,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '5',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.ml',
                     property: 'state',
                     oldValue: undefined,
@@ -879,6 +928,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '6',
                     type: 'add',
+                    timestamp: now,
                     queuePath: 'root.ml',
                     property: 'accessible-node-labels.gpu.capacity',
                     oldValue: undefined,
@@ -888,6 +938,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '7',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.deprecated',
                     property: undefined,
                     oldValue: undefined,
@@ -897,6 +948,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '8',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -905,6 +957,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '9',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'resource-calculator',
                     oldValue: 'DefaultResourceCalculator',
@@ -957,6 +1010,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'update',
+                    timestamp: now,
                     queuePath: 'global',
                     property: 'maximum-applications',
                     oldValue: '10000',
@@ -981,6 +1035,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '1',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.old1',
                     property: undefined,
                     oldValue: undefined,
@@ -989,6 +1044,7 @@ describe('mutationBuilder', () => {
                 {
                     id: '2',
                     type: 'remove',
+                    timestamp: now,
                     queuePath: 'root.old2',
                     property: undefined,
                     oldValue: undefined,

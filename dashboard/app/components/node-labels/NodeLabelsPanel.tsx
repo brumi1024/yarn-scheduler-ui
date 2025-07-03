@@ -8,12 +8,14 @@ import { validateLabelRemoval } from '~/lib/utils/labelValidation';
 import { AddLabelDialog } from './AddLabelDialog';
 
 export const NodeLabelsPanel: React.FC = () => {
-    const nodeLabels = useSchedulerStore((state) => state.nodeLabels);
-    const selectedNodeLabel = useSchedulerStore((state) => state.selectedNodeLabel);
-    const selectNodeLabel = useSchedulerStore((state) => state.selectNodeLabel);
-    const addNodeLabel = useSchedulerStore((state) => state.addNodeLabel);
-    const removeNodeLabel = useSchedulerStore((state) => state.removeNodeLabel);
-    const isLoading = useSchedulerStore((state) => state.isLoading);
+    const {
+        nodeLabels,
+        selectedNodeLabel,
+        selectNodeLabel,
+        addNodeLabel,
+        removeNodeLabel,
+        isLoading
+    } = useSchedulerStore();
 
     const [addDialogOpen, setAddDialogOpen] = useState(false);
 
@@ -41,10 +43,8 @@ export const NodeLabelsPanel: React.FC = () => {
             const validation = validateLabelRemoval(labelName, nodeAssignments);
             
             if (!validation.valid) {
-                // Show error message through the store error system
-                const setError = useSchedulerStore.getState().setError;
-                setError(validation.error || 'Cannot remove label');
-                return;
+                // Show error message
+                throw new Error(validation.error || 'Cannot remove label');
             }
             
             await removeNodeLabel(labelName);

@@ -43,17 +43,40 @@ const renderWithProviders = (ui: React.ReactElement) => {
   );
 };
 
+const createNodeProps = (data: QueueCardData, overrides?: Partial<NodeProps>) => {
+  return {
+    id: '1',
+    data,
+    type: 'custom',
+    position: { x: 0, y: 0 },
+    selected: false,
+    draggable: true,
+    selectable: true,
+    deletable: true,
+    dragging: false,
+    zIndex: 0,
+    ...overrides
+  };
+};
+
 describe('QueueCardNode', () => {
   const defaultNodeData: QueueCardData = {
+    type: 'capacitySchedulerLeafQueueInfo',
     queuePath: 'root.default',
     queueName: 'default',
     capacity: 10,
     maxCapacity: 100,
     state: 'RUNNING',
     usedCapacity: 5,
+    absoluteCapacity: 10,
+    absoluteMaxCapacity: 100,
+    absoluteUsedCapacity: 5,
     numApplications: 2,
-    resourcesUsed: null,
+    numActiveApplications: 1,
+    numPendingApplications: 1,
+    resourcesUsed: undefined,
     stagedStatus: undefined,
+    isLeaf: true,
     capacityConfig: '10',
     maxCapacityConfig: '100',
     stagedState: undefined,
@@ -77,14 +100,14 @@ describe('QueueCardNode', () => {
   });
 
   it('should display queue name and path', () => {
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     expect(screen.getByText('default')).toBeInTheDocument();
     expect(screen.getByText('root.default')).toBeInTheDocument();
   });
 
   it('should display capacity information', () => {
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const capacityDisplay = screen.getAllByText('10%').find(el =>
       el.className.includes('text-2xl')
@@ -101,14 +124,14 @@ describe('QueueCardNode', () => {
       maxCapacityConfig: '5w',
     };
     
-    renderWithProviders(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
     
     expect(screen.getByText('2w')).toBeInTheDocument();
     expect(screen.getByText('Maximum capacity: 5w')).toBeInTheDocument();
   });
 
   it('should display queue status badges', () => {
-    const { container } = renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const svgIcons = container.querySelectorAll('svg.lucide');
     expect(svgIcons.length).toBeGreaterThanOrEqual(2); // At least capacity mode and state badges
@@ -124,7 +147,7 @@ describe('QueueCardNode', () => {
 
   it('should open property panel on click', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
@@ -141,7 +164,7 @@ describe('QueueCardNode', () => {
       stagedStatus: 'new' as const,
     };
     
-    renderWithProviders(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
     
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
@@ -158,7 +181,7 @@ describe('QueueCardNode', () => {
       stagedStatus: 'new' as const,
     };
     
-    renderWithProviders(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
     
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
@@ -170,7 +193,7 @@ describe('QueueCardNode', () => {
 
   it('should toggle comparison checkbox', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const checkbox = screen.getByRole('checkbox');
     await user.click(checkbox);
@@ -192,7 +215,7 @@ describe('QueueCardNode', () => {
       return selector ? selector(state) : state;
     });
     
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
@@ -213,7 +236,7 @@ describe('QueueCardNode', () => {
       return selector ? selector(state) : state;
     });
     
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     const checkbox = screen.getByRole('checkbox');
     expect(checkbox).toBeChecked();
@@ -221,7 +244,7 @@ describe('QueueCardNode', () => {
 
   it('should show context menu on right click', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     // Find the card by its queue name
     const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
@@ -240,7 +263,7 @@ describe('QueueCardNode', () => {
       stagedStatus: 'new' as const,
     };
     
-    const { container } = renderWithProviders(<QueueCardNode data={nodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
     
     const card = screen.getByText('default').closest('.relative');
     expect(card).toHaveClass('ring-queue-new');
@@ -257,7 +280,7 @@ describe('QueueCardNode', () => {
       stagedStatus: 'modified' as const,
     };
     
-    renderWithProviders(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
 
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
@@ -274,7 +297,7 @@ describe('QueueCardNode', () => {
       },
     };
     
-    renderWithProviders(<QueueCardNode data={nodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
     
     // QueueResourceStats shows total apps, memory and vCores
     expect(screen.getByText('Apps: 5')).toBeInTheDocument();
@@ -284,7 +307,7 @@ describe('QueueCardNode', () => {
 
   it('should open add queue dialog from context menu', async () => {
     const user = userEvent.setup();
-    renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     // Find the card by queue name
     const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
@@ -313,7 +336,7 @@ describe('QueueCardNode', () => {
       return selector ? selector(state) : state;
     });
     
-    const { container } = renderWithProviders(<QueueCardNode data={defaultNodeData} />);
+    const { container } = renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
     
     // Open context menu
     const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');

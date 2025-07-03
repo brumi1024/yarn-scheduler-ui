@@ -42,6 +42,9 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
                         <Trash2 className="h-5 w-5" />
                         Delete Queue
                     </DialogTitle>
+                    <DialogDescription>
+                        Remove a queue from the scheduler configuration
+                    </DialogDescription>
                 </DialogHeader>
 
                 <div className="space-y-4">

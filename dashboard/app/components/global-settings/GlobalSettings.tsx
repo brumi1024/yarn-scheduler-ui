@@ -15,9 +15,11 @@ import { PropertyInput } from './PropertyInput';
 import type { PropertyDescriptor } from '~/lib/types/property-descriptor';
 
 export const GlobalSettings: React.FC = () => {
-    const getGlobalPropertyValue = useSchedulerStore((state) => state.getGlobalPropertyValue);
-    const stageGlobalChange = useSchedulerStore((state) => state.stageGlobalChange);
-    const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
+    const {
+        getGlobalPropertyValue,
+        stageGlobalChange,
+        stagedChanges
+    } = useSchedulerStore();
 
     const getGlobalPropertyCategories = () => {
         const categories = new Set(globalPropertyDefinitions.map(prop => prop.category));

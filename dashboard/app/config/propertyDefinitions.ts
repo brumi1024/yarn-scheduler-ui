@@ -830,8 +830,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
                 type: 'range',
                 message: 'Must be between 0 and 1',
                 min: 0,
-                max: 1,
-                step: 0.01
+                max: 1
             }
         ]
     }

@@ -52,11 +52,13 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
-    const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
-    const selectedQueuePath = useSchedulerStore(state => state.selectedQueuePath);
-    const selectQueue = useSchedulerStore(state => state.selectQueue);
-    const setPropertyPanelOpen = useSchedulerStore(state => state.setPropertyPanelOpen);
-    const toggleComparisonQueue = useSchedulerStore(state => state.toggleComparisonQueue);
+    const {
+        comparisonQueues,
+        selectedQueuePath,
+        selectQueue,
+        setPropertyPanelOpen,
+        toggleComparisonQueue
+    } = useSchedulerStore();
 
     const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
 

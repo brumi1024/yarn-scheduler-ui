@@ -46,8 +46,3 @@ export type NodeToLabelMapping = {
     nodeLabels: string[];
 };
 
-export type NodeToLabelsResponse = {
-    nodeToLabelsInfo?: {
-        nodeToLabels?: NodeToLabelMapping[];
-    };
-};

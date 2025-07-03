@@ -46,7 +46,7 @@ describe('DeleteQueueDialog', () => {
     expect(screen.getByRole('heading', { name: /delete queue/i })).toBeInTheDocument();
     expect(screen.getByText((content, element) => {
       return content.includes('Are you sure you want to delete the queue') && 
-             element?.textContent?.includes('team1');
+             (element?.textContent?.includes('team1') || false);
     })).toBeInTheDocument();
     expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
   });

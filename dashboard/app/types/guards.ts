@@ -46,6 +46,7 @@ export function hasQueueChildren(obj: unknown): boolean {
     const q = obj as Record<string, unknown>;
     return (
         q.queues !== undefined &&
+        q.queues !== null &&
         typeof q.queues === 'object' &&
         'queue' in q.queues &&
         Array.isArray((q.queues as any).queue) &&

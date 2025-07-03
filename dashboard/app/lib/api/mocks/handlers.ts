@@ -1,7 +1,5 @@
 import { http, HttpResponse } from 'msw';
-
-import { http, HttpResponse } from 'msw';
-import type { ConfigUpdate } from '~/lib/types/api';
+import type { SchedConfUpdateInfo } from '~/lib/types/api';
 
 export const handlers = [
     // Scheduler endpoints - use actual mock files

@@ -6,7 +6,7 @@ import {
     extractLabelFromPropertyName,
     extractBasePropertyFromLabelProperty
 } from '../labelPropertyUtils';
-import type { NodeLabel } from '../~/types';
+import type { NodeLabel } from '~/types';
 
 describe('labelPropertyUtils', () => {
     const mockNodeLabels: NodeLabel[] = [

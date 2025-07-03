@@ -106,7 +106,6 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                             onChange={(e) => onChange(e.target.value)}
                             min={rangeValidation?.min}
                             max={rangeValidation?.max}
-                            step={rangeValidation?.step}
                         />
                         <p className="text-sm text-muted-foreground">
                             {property.description}

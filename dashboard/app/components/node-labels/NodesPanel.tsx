@@ -28,11 +28,13 @@ interface NodesPanelProps {
 }
 
 export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
-    const nodes = useSchedulerStore((state) => state.nodes);
-    const nodeToLabels = useSchedulerStore((state) => state.nodeToLabels);
-    const nodeLabels = useSchedulerStore((state) => state.nodeLabels);
-    const assignNodeToLabel = useSchedulerStore((state) => state.assignNodeToLabel);
-    const isLoading = useSchedulerStore((state) => state.isLoading);
+    const {
+        nodes,
+        nodeToLabels,
+        nodeLabels,
+        assignNodeToLabel,
+        isLoading
+    } = useSchedulerStore();
 
     // Create a map of nodeId -> labels for quick lookup
     const nodeLabelsMap = useMemo(() => {

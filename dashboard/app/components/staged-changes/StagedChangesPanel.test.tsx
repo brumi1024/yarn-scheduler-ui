@@ -195,7 +195,7 @@ describe('StagedChangesPanel', () => {
     
     await user.click(screen.getByTestId('revert-1'));
     
-    expect(mockRevertChange).toHaveBeenCalledWith(mockStagedChanges[0]);
+    expect(mockRevertChange).toHaveBeenCalledWith(mockStagedChanges[0].id);
     expect(toast.info).toHaveBeenCalledWith('Reverted change: capacity');
   });
 

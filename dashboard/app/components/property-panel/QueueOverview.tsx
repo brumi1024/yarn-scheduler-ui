@@ -17,8 +17,8 @@ interface QueueOverviewProps {
 }
 
 export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
-    const isParentQueue = queue.numChildQueues > 0;
-    const capacityPercent = parseFloat(queue.capacityConfig || '0');
+    const isParentQueue = !!queue.queues?.queue && queue.queues.queue.length > 0;
+    const capacityPercent = queue.capacity || 0;
     const usagePercent = queue.usedCapacity || 0;
 
     const getStateVariant = (state: string): "default" | "success" | "destructive" => {
@@ -53,7 +53,7 @@ export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
         },
         { 
             label: 'vCores', 
-            value: queue.resourcesUsed?.vcores || 0,
+            value: queue.resourcesUsed?.vCores || 0,
             icon: <RefreshCw className="h-3 w-3" />,
             color: 'text-purple-500'
         }
@@ -132,11 +132,11 @@ export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
                         </Badge>
                     </div>
                     
-                    {queue.autoCreationStatus && (
+                    {queue.autoCreationEligibility && (
                         <div className="flex items-center justify-between">
                             <span className="text-sm text-muted-foreground">Auto-Creation</span>
-                            <Badge variant={queue.autoCreationStatus.enabled ? 'success' : 'secondary'}>
-                                {queue.autoCreationStatus.enabled ? 'Enabled' : 'Disabled'}
+                            <Badge variant="outline">
+                                {queue.autoCreationEligibility}
                             </Badge>
                         </div>
                     )}
@@ -161,7 +161,7 @@ export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
                             {isParentQueue && (
                                 <div className="flex justify-between">
                                     <span className="text-muted-foreground">Child Queues</span>
-                                    <span>{queue.numChildQueues}</span>
+                                    <span>{queue.queues?.queue?.length || 0}</span>
                                 </div>
                             )}
                             <div className="flex justify-between">
