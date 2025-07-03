@@ -14,25 +14,38 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
     // Generate unique gradient ID for this edge
     const gradientId = `gradient-${id}`;
 
-    // Determine flow colors based on target queue state
+    // Determine flow colors based on target queue state using CSS variables
     const getFlowColors = () => {
+        const rootStyles = getComputedStyle(document.documentElement);
+        
         if (data?.targetState === 'RUNNING') {
+            const color = rootStyles.getPropertyValue('--color-queue-running').trim();
             return {
-                startColor: '#2196f3', // Running flow color
-                endColor: '#64b5f6', // Lighter blue for gradient effect
+                startColor: color,
+                endColor: color,
                 opacity: 0.8,
             };
         } else if (data?.targetState === 'STOPPED') {
+            const color = rootStyles.getPropertyValue('--color-queue-stopped').trim();
             return {
-                startColor: '#f44336', // Stopped flow color
-                endColor: '#e57373', // Lighter red for gradient effect
+                startColor: color,
+                endColor: color,
+                opacity: 0.8,
+            };
+        } else if (data?.targetState === 'DRAINING') {
+            const color = rootStyles.getPropertyValue('--color-queue-draining').trim();
+            return {
+                startColor: color,
+                endColor: color,
                 opacity: 0.8,
             };
         } else {
+            // Default to a neutral color for other states
+            const color = rootStyles.getPropertyValue('--color-muted').trim();
             return {
-                startColor: '#9e9e9e', // Default flow color
-                endColor: '#bdbdbd', // Lighter gray for gradient effect
-                opacity: 0.7,
+                startColor: color,
+                endColor: color,
+                opacity: 0.5,
             };
         }
     };

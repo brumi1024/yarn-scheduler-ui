@@ -19,7 +19,6 @@ export const handlers = [
         await new Promise((resolve) => setTimeout(resolve, 500));
 
         const changes = await request.json();
-        console.log('Mock: Applying configuration changes:', changes);
 
         return HttpResponse.json({
             response: 'Configuration updated successfully',
@@ -60,19 +59,16 @@ export const handlers = [
 
     http.post('/ws/v1/cluster/add-node-labels', async ({ request }) => {
         const body = await request.json();
-        console.log('Mock: Adding node labels:', body);
         return HttpResponse.json({ message: 'Labels added successfully' });
     }),
 
     http.post('/ws/v1/cluster/replace-node-to-labels', async ({ request }) => {
         const body = await request.json();
-        console.log('Mock: Replacing node labels:', body);
         return HttpResponse.json({ message: 'Node labels replaced successfully' });
     }),
 
     http.post('/ws/v1/cluster/remove-node-labels', async ({ request }) => {
         const body = await request.json();
-        console.log('Mock: Removing node labels:', body);
         return HttpResponse.json({ message: 'Labels removed successfully' });
     }),
 ];

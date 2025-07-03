@@ -12,24 +12,8 @@ export function meta({}: Route.MetaArgs) {
 export default function Home() {
   return (
     <>
-      <div className="flex h-full flex-col">
-        <div className="border-b bg-card px-6 py-4">
-          <h2 className="text-2xl font-semibold">Queue Hierarchy</h2>
-          <p className="text-sm text-muted-foreground">
-            Visualize and manage your YARN Capacity Scheduler queues
-          </p>
-        </div>
-        
-        <div className="flex-1 flex">
-          <div className="flex-1 p-6">
-            <QueueVisualizationContainer />
-          </div>
-        </div>
-      </div>
+      <QueueVisualizationContainer />
       <PropertyPanel />
     </>
   );
 }
-
-
-

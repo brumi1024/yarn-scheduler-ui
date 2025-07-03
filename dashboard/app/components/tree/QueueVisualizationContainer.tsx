@@ -16,6 +16,7 @@ import { useSchedulerStore } from '~/store/schedulerStore';
 import { useQueueTreeData } from './hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
+import { useTheme } from '~/components/theme-provider';
 
 export interface QueueVisualizationContainerProps {
     className?: string;
@@ -31,8 +32,14 @@ const edgeTypes = {
 
 const FlowInner: React.FC = () => {
     const { selectQueue } = useSchedulerStore();
+    const { theme } = useTheme();
 
     const { nodes, edges, isLoading, error } = useQueueTreeData();
+    
+    // Determine the color mode for React Flow
+    const colorMode = theme === 'system' 
+        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+        : theme;
 
     const onNodesChange: OnNodesChange = useCallback(() => {
         // We don't allow node position changes
@@ -105,16 +112,25 @@ const FlowInner: React.FC = () => {
             minZoom={0.1}
             maxZoom={2}
             defaultViewport={{ x: 0, y: 0, zoom: 1 }}
+            colorMode={colorMode}
         >
             <Background gap={16} />
             <Controls showInteractive={false} />
             <MiniMap 
                 nodeColor={(node) => {
                     const data = node.data as any;
-                    if (data.stagedStatus === 'new') return 'rgb(34, 197, 94)';
-                    if (data.stagedStatus === 'deleted') return 'rgb(239, 68, 68)';
-                    if (data.stagedStatus === 'modified') return 'rgb(245, 158, 11)';
-                    return 'rgb(148, 163, 184)';
+                    const rootStyles = getComputedStyle(document.documentElement);
+                    
+                    if (data.stagedStatus === 'new') {
+                        return rootStyles.getPropertyValue('--color-queue-new').trim();
+                    }
+                    if (data.stagedStatus === 'deleted') {
+                        return rootStyles.getPropertyValue('--color-queue-deleted').trim();
+                    }
+                    if (data.stagedStatus === 'modified') {
+                        return rootStyles.getPropertyValue('--color-queue-modified').trim();
+                    }
+                    return rootStyles.getPropertyValue('--color-muted-foreground').trim();
                 }}
                 pannable
                 zoomable
