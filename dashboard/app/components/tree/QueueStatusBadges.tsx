@@ -1,7 +1,21 @@
 import React from 'react';
 import { Badge } from '~/components/ui/badge';
-import { Sparkles, RefreshCw } from 'lucide-react';
+import { 
+    Sparkles, 
+    RefreshCw, 
+    Percent, 
+    Weight, 
+    Box, 
+    Play, 
+    Square, 
+    ArrowDownToLine,
+    ArrowRight,
+    PlusCircle,
+    Edit,
+    MinusCircle
+} from 'lucide-react';
 import { cn } from '~/lib/utils';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 
 interface QueueStatusBadgesProps {
     capacityMode: 'percentage' | 'weight' | 'absolute';
@@ -39,68 +53,132 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
         return 'secondary';
     };
 
+    const getCapacityModeIcon = () => {
+        switch (capacityMode) {
+            case 'weight':
+                return <Weight className="w-3.5 h-3.5" />;
+            case 'absolute':
+                return <Box className="w-3.5 h-3.5" />;
+            default:
+                return <Percent className="w-3.5 h-3.5" />;
+        }
+    };
+
+    const getStateIcon = (currentState: string) => {
+        if (currentState === 'RUNNING') return <Play className="w-3.5 h-3.5" />;
+        if (currentState === 'STOPPED') return <Square className="w-3.5 h-3.5" />;
+        if (currentState === 'DRAINING') return <ArrowDownToLine className="w-3.5 h-3.5" />;
+        return null;
+    };
+
+    const getModificationIcon = () => {
+        if (stagedStatus === 'new') return <PlusCircle className="w-3.5 h-3.5" />;
+        if (stagedStatus === 'modified') return <Edit className="w-3.5 h-3.5" />;
+        if (stagedStatus === 'deleted') return <MinusCircle className="w-3.5 h-3.5" />;
+        return null;
+    };
+
     return (
-        <div className="flex items-center gap-1.5 mb-3 flex-wrap">
+        <div className="flex items-center gap-1 mb-3">
             {/* Capacity Mode */}
-            <Badge 
-                variant="secondary" 
-                className={cn("text-xs px-2 py-0", getCapacityModeBadgeClass())}
-            >
-                {capacityMode === 'weight' ? 'WEIGHT' : capacityMode === 'absolute' ? 'ABSOLUTE' : 'PERCENT'}
-            </Badge>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Badge 
+                        variant="secondary" 
+                        className={cn("p-1", getCapacityModeBadgeClass())}
+                    >
+                        {getCapacityModeIcon()}
+                    </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                    {capacityMode === 'weight' ? 'Weight-based capacity' : 
+                     capacityMode === 'absolute' ? 'Absolute capacity' : 'Percentage capacity'}
+                </TooltipContent>
+            </Tooltip>
 
             {/* Queue State */}
-            <Badge 
-                variant={getStateVariant()}
-                className="text-xs px-2 py-0"
-            >
-                {state}
-            </Badge>
+            <Tooltip>
+                <TooltipTrigger asChild>
+                    <Badge 
+                        variant={getStateVariant()}
+                        className="p-1"
+                    >
+                        {getStateIcon(state)}
+                    </Badge>
+                </TooltipTrigger>
+                <TooltipContent>
+                    Queue is {state.toLowerCase()}
+                </TooltipContent>
+            </Tooltip>
 
             {/* Staged State (if different) */}
             {stagedState && stagedState !== state && (
-                <Badge 
-                    variant="outline" 
-                    className="text-xs px-2 py-0 text-queue-modified border-queue-modified/30"
-                >
-                    →{stagedState}
-                </Badge>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Badge 
+                            variant="outline" 
+                            className="p-1 text-queue-modified border-queue-modified/30 flex items-center gap-0.5"
+                        >
+                            <ArrowRight className="w-3 h-3" />
+                            {getStateIcon(stagedState)}
+                        </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        Will change to {stagedState.toLowerCase()}
+                    </TooltipContent>
+                </Tooltip>
             )}
 
             {/* Auto-Creation Status */}
             {autoCreationStatus && autoCreationStatus.status !== 'off' && (
-                <Badge 
-                    variant="outline" 
-                    className={cn(
-                        "text-xs px-2 py-0 flex items-center gap-1",
-                        autoCreationStatus.status === 'flexible' 
-                            ? 'text-queue-running border-queue-running/30' 
-                            : 'text-queue-modified border-queue-modified/30'
-                    )}
-                >
-                    {autoCreationStatus.status === 'flexible' ? (
-                        <Sparkles className="w-3 h-3" />
-                    ) : (
-                        <RefreshCw className="w-3 h-3" />
-                    )}
-                    {autoCreationStatus.status === 'flexible' ? 'Flexible' : 'Legacy'}
-                    {autoCreationStatus.isStaged && ' →'}
-                </Badge>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Badge 
+                            variant="outline" 
+                            className={cn(
+                                "p-1 flex items-center gap-0.5",
+                                autoCreationStatus.status === 'flexible' 
+                                    ? 'text-queue-running border-queue-running/30' 
+                                    : 'text-queue-modified border-queue-modified/30'
+                            )}
+                        >
+                            {autoCreationStatus.status === 'flexible' ? (
+                                <Sparkles className="w-3.5 h-3.5" />
+                            ) : (
+                                <RefreshCw className="w-3.5 h-3.5" />
+                            )}
+                            {autoCreationStatus.isStaged && <ArrowRight className="w-3 h-3" />}
+                        </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        {autoCreationStatus.status === 'flexible' ? 'Flexible auto-queue creation' : 'Legacy auto-queue creation'}
+                        {autoCreationStatus.isStaged && ' (staged)'}
+                    </TooltipContent>
+                </Tooltip>
             )}
 
             {/* Modification Status */}
             {stagedStatus && (
-                <Badge 
-                    variant="outline"
-                    className={cn(
-                        "text-xs px-2 py-0",
-                        stagedStatus === 'new' ? 'text-queue-new border-queue-new/30' :
-                        stagedStatus === 'modified' ? 'text-queue-modified border-queue-modified/30' :
-                        'text-queue-deleted border-queue-deleted/30'
-                    )}
-                >
-                    {stagedStatus.toUpperCase()}
-                </Badge>
+                <Tooltip>
+                    <TooltipTrigger asChild>
+                        <Badge 
+                            variant="outline"
+                            className={cn(
+                                "p-1",
+                                stagedStatus === 'new' ? 'text-queue-new border-queue-new/30' :
+                                stagedStatus === 'modified' ? 'text-queue-modified border-queue-modified/30' :
+                                'text-queue-deleted border-queue-deleted/30'
+                            )}
+                        >
+                            {getModificationIcon()}
+                        </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                        Queue {stagedStatus === 'new' ? 'will be created' : 
+                               stagedStatus === 'modified' ? 'has modifications' : 
+                               'will be deleted'}
+                    </TooltipContent>
+                </Tooltip>
             )}
         </div>
     );

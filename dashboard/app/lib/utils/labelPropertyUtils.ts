@@ -1,6 +1,6 @@
-import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/lib/types/property-descriptor';
-import type { NodeLabel } from '~/lib/types';
-import { capacityValueSchema } from '~/lib/config/propertyDefinitions';
+import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/types/property-descriptor';
+import type { NodeLabel } from '~/types';
+import { capacityValueSchema } from '~/config/propertyDefinitions';
 
 /**
  * Base property definitions for node label properties.

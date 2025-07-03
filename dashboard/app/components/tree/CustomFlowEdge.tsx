@@ -39,13 +39,10 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
 
     const { startColor, endColor, opacity } = getFlowColors();
 
-    const capacity = typeof data?.capacity === 'number' ? data.capacity : 0;
-    const sankeyWidth = capacity > 0 ? Math.max(8, Math.min(40, capacity * 0.8)) : 12;
-
     const createSankeyPath = () => {
         const controlPointDistance = Math.abs(targetX - sourceX) * 0.5;
 
-        const CARD_HEIGHT = 260; // Updated to match actual card height
+        const CARD_HEIGHT = 300; // Updated to match actual card height
         const sourceStartY = data?.sourceStartY ?? sourceY - CARD_HEIGHT / 2;
         const sourceEndY = data?.sourceEndY ?? sourceY + CARD_HEIGHT / 2;
         const targetStartY = data?.targetStartY ?? targetY - CARD_HEIGHT / 2;

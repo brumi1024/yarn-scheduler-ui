@@ -377,7 +377,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     {
         name: 'default-application-lifetime',
         displayName: 'Default Application Lifetime',
-        description: 'Default application lifetime in seconds. Cannot exceed maximum-application-lifetime.',
+        description: 'Default application lifetime in seconds. Cannot exceed maximum-application-lifetime. 0 means no limit.',
         type: 'number' as PropertyType,
         category: 'advanced' as PropertyCategory,
         defaultValue: '',
@@ -385,11 +385,11 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         validationRules: [
             {
                 type: 'custom',
-                message: 'Must be positive integer or -1',
+                message: 'Must be a non-negative integer or -1',
                 validator: (value: string) => {
                     if (!value.trim()) return true;
                     const num = parseInt(value, 10);
-                    return !isNaN(num) && Number.isInteger(num) && (num > 0 || num === -1);
+                    return !isNaN(num) && Number.isInteger(num) && (num >= 0 || num === -1);
                 }
             }
         ]

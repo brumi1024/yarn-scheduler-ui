@@ -24,8 +24,8 @@ export type UseQueueTreeDataResult = {
 };
 
 const layoutEngine = new DagreLayout({
-    nodeWidth: 360,
-    nodeHeight: 260,
+    nodeWidth: 400,
+    nodeHeight: 300,
     horizontalSpacing: 120,
     verticalSpacing: 80,
     orientation: 'horizontal',
@@ -61,7 +61,8 @@ function getStagedStatus(queuePath: string, stagedChanges: StagedChange[]): 'new
     if (changes.some(c => c.type === 'remove')) {
         return 'deleted';
     }
-    if (changes.some(c => c.type === 'add' && !c.property)) {
+    // Check if any change is type 'add' (indicating new queue)
+    if (changes.some(c => c.type === 'add')) {
         return 'new';
     }
     if (changes.length > 0) {
@@ -107,12 +108,12 @@ function getAutoCreationStatus(
 }
 
 function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]): QueueCardData {
-    const getQueueDisplayValue = useSchedulerStore.getState().getQueueDisplayValue;
+    const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
 
-    const capacityDisplay = getQueueDisplayValue(queueInfo.queuePath, 'capacity');
-    const maxCapacityDisplay = getQueueDisplayValue(queueInfo.queuePath, 'maximum-capacity');
+    const capacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'capacity');
+    const maxCapacityDisplay = getQueuePropertyValue(queueInfo.queuePath, 'maximum-capacity');
 
-    const stateDisplay = getQueueDisplayValue(queueInfo.queuePath, 'state');
+    const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
     return {
         ...queueInfo,
@@ -173,19 +174,26 @@ function createNodes(
         }
     }
 
-    const newQueues = stagedChanges.filter(
-        c => c.type === 'add' && !c.property
+    // Get all unique queue paths from 'add' type changes
+    const newQueuePaths = new Set(
+        stagedChanges
+            .filter(c => c.type === 'add')
+            .map(c => c.queuePath)
     );
 
-    newQueues.forEach(change => {
-        const depth = change.queuePath.split('.').length - 1;
-        const queueName = change.queuePath.split('.').pop() || '';
+    // For each new queue path, create a node if it doesn't already exist
+    newQueuePaths.forEach(queuePath => {
+        if (!nodes.find(n => n.id === queuePath)) {
+            const position = positions.get(queuePath);
+            const queueName = queuePath.split('.').pop() || '';
+            
+            // Get the staged values for this new queue
+            const getQueuePropertyValue = useSchedulerStore.getState().getQueuePropertyValue;
+            const capacityDisplay = getQueuePropertyValue(queuePath, 'capacity');
+            const maxCapacityDisplay = getQueuePropertyValue(queuePath, 'maximum-capacity');
+            const stateDisplay = getQueuePropertyValue(queuePath, 'state');
 
-        nodes.push({
-            id: change.queuePath,
-            type: 'queueCard',
-            position: { x: 0, y: depth * 320 },
-            data: {
+            const nodeData: QueueCardData = {
                 type: 'capacitySchedulerLeafQueueInfo',
                 capacity: 0,
                 usedCapacity: 0,
@@ -197,17 +205,38 @@ function createNodes(
                 numActiveApplications: 0,
                 numPendingApplications: 0,
                 queueName,
-                queuePath: change.queuePath,
-                state: 'RUNNING' as const,
-
+                queuePath,
+                state: (stateDisplay.value || 'RUNNING') as QueueStateValue,
+                
                 stagedStatus: 'new' as const,
                 isLeaf: true,
-                capacityConfig: '0',
-                maxCapacityConfig: '100',
-            },
-            width: 360,
-            height: 260,
-        });
+                capacityConfig: capacityDisplay.value || '0',
+                maxCapacityConfig: maxCapacityDisplay.value || '100',
+                stagedState: stateDisplay.value,
+            };
+
+            if (position) {
+                nodes.push({
+                    id: queuePath,
+                    type: 'queueCard',
+                    position: { x: position.x, y: position.y },
+                    data: nodeData,
+                    width: position.width,
+                    height: position.height,
+                });
+            } else {
+                // Fallback position if not in layout
+                const depth = queuePath.split('.').length - 1;
+                nodes.push({
+                    id: queuePath,
+                    type: 'queueCard',
+                    position: { x: depth * 520, y: 0 },
+                    data: nodeData,
+                    width: 400,
+                    height: 300,
+                });
+            }
+        }
     });
 
     return nodes;
@@ -215,7 +244,8 @@ function createNodes(
 
 function createEdges(
     queueInfo: QueueInfo, 
-    positions: Map<string, { x: number; y: number; width: number; height: number }>
+    positions: Map<string, { x: number; y: number; width: number; height: number }>,
+    stagedChanges?: StagedChange[]
 ): Edge[] {
     const edges: Edge[] = [];
     const CARD_HEIGHT = 260; // Updated to match actual card height
@@ -316,11 +346,87 @@ function createEdges(
 
         // Recursively create edges for child queues
         children.forEach((child) => {
-            edges.push(...createEdges(child, positions));
+            edges.push(...createEdges(child, positions, stagedChanges));
         });
     }
 
     return edges;
+}
+
+// Function to augment the queue tree with staged new queues
+function augmentQueueTreeWithStagedQueues(rootQueue: QueueInfo, stagedChanges: StagedChange[]): QueueInfo {
+    // Deep clone the root queue to avoid mutations
+    const augmentedRoot = JSON.parse(JSON.stringify(rootQueue)) as QueueInfo;
+    
+    // Get all unique new queue paths
+    const newQueuePaths = new Set(
+        stagedChanges
+            .filter(c => c.type === 'add')
+            .map(c => c.queuePath)
+    );
+    
+    // For each new queue, add it to its parent in the tree
+    newQueuePaths.forEach(queuePath => {
+        const pathParts = queuePath.split('.');
+        const queueName = pathParts[pathParts.length - 1];
+        const parentPath = pathParts.slice(0, -1).join('.');
+        
+        // Find the parent queue in the tree
+        const findAndAddQueue = (queue: QueueInfo): boolean => {
+            if (queue.queuePath === parentPath) {
+                // Create the new queue info
+                const newQueue: QueueInfo = {
+                    type: 'capacitySchedulerLeafQueueInfo',
+                    capacity: 0,
+                    usedCapacity: 0,
+                    maxCapacity: 100,
+                    absoluteCapacity: 0,
+                    absoluteMaxCapacity: 100,
+                    absoluteUsedCapacity: 0,
+                    numApplications: 0,
+                    numActiveApplications: 0,
+                    numPendingApplications: 0,
+                    queueName,
+                    queuePath,
+                    state: 'RUNNING' as QueueStateValue,
+                };
+                
+                // Add to parent's queues
+                if (!queue.queues) {
+                    queue.queues = { queue: [] };
+                } else if (!queue.queues.queue) {
+                    queue.queues.queue = [];
+                } else if (!Array.isArray(queue.queues.queue)) {
+                    queue.queues.queue = [queue.queues.queue];
+                }
+                
+                if (Array.isArray(queue.queues.queue)) {
+                    queue.queues.queue.push(newQueue);
+                }
+                
+                return true;
+            }
+            
+            // Recursively search in children
+            if (queue.queues?.queue) {
+                const children = Array.isArray(queue.queues.queue) 
+                    ? queue.queues.queue 
+                    : [queue.queues.queue];
+                
+                for (const child of children) {
+                    if (findAndAddQueue(child)) {
+                        return true;
+                    }
+                }
+            }
+            
+            return false;
+        };
+        
+        findAndAddQueue(augmentedRoot);
+    });
+    
+    return augmentedRoot;
 }
 
 export function useQueueTreeData(): UseQueueTreeDataResult {
@@ -336,14 +442,17 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
 
         try {
             const rootQueue = convertSchedulerInfoToQueueInfo(schedulerData);
+            
+            // Augment the tree with staged new queues
+            const augmentedRootQueue = augmentQueueTreeWithStagedQueues(rootQueue, stagedChanges);
 
-            const flatQueues = flattenQueueTree(rootQueue, stagedChanges);
+            const flatQueues = flattenQueueTree(augmentedRootQueue, stagedChanges);
 
-            const positions = layoutEngine.calculatePositions(rootQueue);
+            const positions = layoutEngine.calculatePositions(augmentedRootQueue);
 
             const flowNodes = createNodes(flatQueues, positions, stagedChanges);
 
-            const flowEdges = createEdges(rootQueue, positions);
+            const flowEdges = createEdges(augmentedRootQueue, positions, stagedChanges);
 
             return { nodes: flowNodes, edges: flowEdges };
         } catch (err) {

@@ -54,6 +54,7 @@ export type SchedulerStore = {
     applyChanges: () => Promise<void>;
     revertChange: (changeId: string) => void;
     clearAllChanges: () => void;
+    clearQueueChanges: (queuePath: string) => void;
     selectNodeLabel: (label: string | null) => void;
     selectQueue: (queuePath: string | null) => void;
     toggleComparisonQueue: (queuePath: string) => void;
@@ -64,10 +65,8 @@ export type SchedulerStore = {
     removeNodeLabel: (name: string) => Promise<void>;
     assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;
 
-    getQueueConfiguredCapacity: (queuePath: string) => string;
-    // TODO rename these
-    getQueueDisplayValue: (queuePath: string, property: string) => { value: string; isStaged: boolean };
-    getGlobalDisplayValue: (property: string) => { value: string; isStaged: boolean };
+    getQueuePropertyValue: (queuePath: string, property: string) => { value: string; isStaged: boolean };
+    getGlobalPropertyValue: (property: string) => { value: string; isStaged: boolean };
     getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
     getQueueByPath: (queuePath: string) => QueueInfo | null;
     getChildQueues: (parentPath: string) => QueueInfo[];
@@ -237,20 +236,26 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
 
             set((state) => {
                 const propertyKey = buildPropertyKey(queuePath, property);
+                const originalValue = state.configData.get(propertyKey);
 
                 const existingIndex = state.stagedChanges.findIndex(
                     (c) => c.queuePath === queuePath && c.property === property
                 );
 
-                if (existingIndex >= 0) {
+                // If the new value matches the original value, remove the staged change
+                if (value === originalValue && existingIndex >= 0) {
+                    state.stagedChanges.splice(existingIndex, 1);
+                } else if (existingIndex >= 0) {
+                    // Update existing staged change
                     state.stagedChanges[existingIndex].newValue = value;
-                } else {
+                } else if (value !== originalValue) {
+                    // Only create a new staged change if the value differs from the original
                     const change: StagedChange = {
                         id: nanoid(),
                         type: 'update',
                         queuePath,
                         property,
-                        oldValue: state.configData.get(propertyKey),
+                        oldValue: originalValue,
                         newValue: value,
                         timestamp: Date.now(),
                     };
@@ -262,20 +267,26 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
         stageGlobalChange: (property, value) => {
             set((state) => {
                 const propertyKey = buildGlobalPropertyKey(property);
+                const originalValue = state.configData.get(propertyKey);
 
                 const existingIndex = state.stagedChanges.findIndex(
                     (c) => c.queuePath === 'global' && c.property === property
                 );
 
-                if (existingIndex >= 0) {
+                // If the new value matches the original value, remove the staged change
+                if (value === originalValue && existingIndex >= 0) {
+                    state.stagedChanges.splice(existingIndex, 1);
+                } else if (existingIndex >= 0) {
+                    // Update existing staged change
                     state.stagedChanges[existingIndex].newValue = value;
-                } else {
+                } else if (value !== originalValue) {
+                    // Only create a new staged change if the value differs from the original
                     const change: StagedChange = {
                         id: nanoid(),
                         type: 'update',
                         queuePath: 'global',
                         property,
-                        oldValue: state.configData.get(propertyKey),
+                        oldValue: originalValue,
                         newValue: value,
                         timestamp: Date.now(),
                     };
@@ -353,20 +364,26 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             set((state) => {
                 const fullProperty = `accessible-node-labels.${label}.${property}`;
                 const propertyKey = buildNodeLabelPropertyKey(queuePath, label, property);
+                const originalValue = state.configData.get(propertyKey);
 
                 const existingIndex = state.stagedChanges.findIndex(
                     (c) => c.queuePath === queuePath && c.property === fullProperty
                 );
 
-                if (existingIndex >= 0) {
+                // If the new value matches the original value, remove the staged change
+                if (stringValue === originalValue && existingIndex >= 0) {
+                    state.stagedChanges.splice(existingIndex, 1);
+                } else if (existingIndex >= 0) {
+                    // Update existing staged change
                     state.stagedChanges[existingIndex].newValue = stringValue;
-                } else {
+                } else if (stringValue !== originalValue) {
+                    // Only create a new staged change if the value differs from the original
                     const change: StagedChange = {
                         id: nanoid(),
                         type: 'update',
                         queuePath,
                         property: fullProperty,
-                        oldValue: state.configData.get(propertyKey),
+                        oldValue: originalValue,
                         newValue: stringValue,
                         timestamp: Date.now(),
                         label,
@@ -430,6 +447,14 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
         clearAllChanges: () => {
             set((state) => {
                 state.stagedChanges = [];
+            });
+        },
+
+        clearQueueChanges: (queuePath) => {
+            set((state) => {
+                state.stagedChanges = state.stagedChanges.filter(
+                    (c) => c.queuePath !== queuePath
+                );
             });
         },
 
@@ -589,23 +614,8 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                 );
             }
         },
-        // TODO can be removed
-        getQueueConfiguredCapacity: (queuePath) => {
-            const state = get();
-            const propertyKey = buildPropertyKey(queuePath, 'capacity');
 
-            const stagedChange = state.stagedChanges.find(
-                (c) => c.queuePath === queuePath && c.property === 'capacity'
-            );
-
-            if (stagedChange?.newValue !== undefined) {
-                return stagedChange.newValue;
-            }
-
-            return state.configData.get(propertyKey) || '0';
-        },
-
-        getQueueDisplayValue: (queuePath, property) => {
+        getQueuePropertyValue: (queuePath, property) => {
             const state = get();
             const propertyKey = buildPropertyKey(queuePath, property);
 
@@ -626,7 +636,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             }
         },
 
-        getGlobalDisplayValue: (property) => {
+        getGlobalPropertyValue: (property) => {
             const state = get();
             const propertyKey = buildGlobalPropertyKey(property);
 

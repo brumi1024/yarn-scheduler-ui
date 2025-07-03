@@ -15,7 +15,7 @@ import { useState } from 'react';
 const NAVIGATION: Navigation = [
   {
     kind: 'header',
-    title: 'YARN Scheduler',
+    title: 'YARN Scheduler UI',
   },
   {
     segment: '',

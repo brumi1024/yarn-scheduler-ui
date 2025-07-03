@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
-import { useNavigate } from 'react-router';
-import { Card, CardContent, CardHeader, CardTitle, CardAction } from '~/components/ui/card';
+
+import { Card, CardContent, CardHeader, CardDescription, CardTitle, CardAction } from '~/components/ui/card';
 import { Checkbox } from '~/components/ui/checkbox';
 import {
     ContextMenu,
@@ -10,6 +10,12 @@ import {
     ContextMenuSeparator,
     ContextMenuTrigger,
 } from '~/components/ui/context-menu';
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '~/components/ui/tooltip';
 import {
     Plus,
     Trash2,
@@ -43,12 +49,13 @@ const parseCapacityValue = (input: string) => {
 };
 
 export const QueueCardNode = ({ data }: NodeProps) => {
-    const navigate = useNavigate();
     const [addDialogOpen, setAddDialogOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
     const comparisonQueues = useSchedulerStore(state => state.comparisonQueues);
     const selectedQueuePath = useSchedulerStore(state => state.selectedQueuePath);
+    const selectQueue = useSchedulerStore(state => state.selectQueue);
+    const setPropertyPanelOpen = useSchedulerStore(state => state.setPropertyPanelOpen);
     const toggleComparisonQueue = useSchedulerStore(state => state.toggleComparisonQueue);
 
     const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
@@ -89,9 +96,14 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     const handleClick = (event: React.MouseEvent) => {
         event.stopPropagation();
         
-        // Navigate to the queue route with property panel open
-        const encodedQueuePath = encodeURIComponent(queuePath);
-        navigate(`/queue/${encodedQueuePath}?panel=true`);
+        // Don't allow clicking on newly added queues that haven't been applied yet
+        if (stagedStatus === 'new') {
+            return;
+        }
+        
+        // Set selected queue and open property panel
+        selectQueue(queuePath);
+        setPropertyPanelOpen(true);
     };
 
     const handleComparisonToggle = () => {
@@ -103,28 +115,40 @@ export const QueueCardNode = ({ data }: NodeProps) => {
         updateQueueProperty(queuePath, 'state', newState);
     };
 
-    return (
-        <>
-            <ContextMenu>
-                <ContextMenuTrigger asChild>
-                    <Card
-                        className={cn(
-                            "relative w-[360px] h-[260px] cursor-pointer transition-all duration-200 hover:shadow-md",
-                            // Border styling based on status
-                            stagedStatus === 'new' && "ring-2 ring-queue-new",
-                            stagedStatus === 'deleted' && "ring-2 ring-queue-deleted",
-                            stagedStatus === 'modified' && "ring-2 ring-queue-modified",
-                            !stagedStatus && isSelectedQueue && "ring-2 ring-primary",
-                            // Background styling
-                            isSelectedQueue && "bg-primary/5",
-                            isSelectedForComparison && !isSelectedQueue && "bg-muted/50"
-                        )}
-                        onClick={handleClick}
-                    >
+    const cardContent = (
+        <Card
+            className={cn(
+                "relative w-[400px] h-[300px] transition-all duration-200 flex flex-col",
+                // Cursor styling - not clickable for new queues
+                stagedStatus === 'new' ? "cursor-not-allowed opacity-75" : "cursor-pointer hover:shadow-md",
+                // Border styling based on status
+                stagedStatus === 'new' && "ring-2 ring-queue-new",
+                stagedStatus === 'deleted' && "ring-2 ring-queue-deleted",
+                stagedStatus === 'modified' && "ring-2 ring-queue-modified",
+                !stagedStatus && isSelectedQueue && "ring-2 ring-primary",
+                // Background styling
+                isSelectedQueue && "bg-accent",
+                isSelectedForComparison && !isSelectedQueue && "bg-muted"
+            )}
+            onClick={handleClick}
+        >
                         <CardHeader>
                             <CardTitle className="text-base truncate">
                                 {queueName}
                             </CardTitle>
+                            <CardDescription>
+                                {queuePath}
+                            </CardDescription>
+
+                            <CardDescription>
+                                <QueueStatusBadges
+                                    capacityMode={capacityMode}
+                                    state={state}
+                                    stagedState={stagedState}
+                                    stagedStatus={stagedStatus}
+                                    autoCreationStatus={autoCreationStatus}
+                                />
+                            </CardDescription>
                             
                             <CardAction>
                                 <div className={cn(
@@ -142,14 +166,7 @@ export const QueueCardNode = ({ data }: NodeProps) => {
                             </CardAction>
                         </CardHeader>
 
-                        <CardContent className="!pt-1">
-                            <QueueStatusBadges
-                                capacityMode={capacityMode}
-                                state={state}
-                                stagedState={stagedState}
-                                stagedStatus={stagedStatus}
-                                autoCreationStatus={autoCreationStatus}
-                            />
+                        <CardContent>
 
                             {/* Capacity info */}
                             <div className="mb-3">
@@ -188,12 +205,40 @@ export const QueueCardNode = ({ data }: NodeProps) => {
                             className="!bg-transparent !border-none !w-0.5 h-full !right-[-1px] !top-1/2 !-translate-y-1/2"
                         />
                     </Card>
+    );
+
+    return (
+        <>
+            <ContextMenu onOpenChange={(open) => {
+                // Deselect queue when context menu closes
+                if (!open && isSelectedQueue) {
+                    selectQueue(null);
+                }
+            }}>
+                <ContextMenuTrigger asChild>
+                    {stagedStatus === 'new' ? (
+                        <TooltipProvider>
+                            <Tooltip>
+                                <TooltipTrigger asChild>
+                                    {cardContent}
+                                </TooltipTrigger>
+                                <TooltipContent>
+                                    <p>This queue must be applied before it can be edited</p>
+                                </TooltipContent>
+                            </Tooltip>
+                        </TooltipProvider>
+                    ) : (
+                        cardContent
+                    )}
                 </ContextMenuTrigger>
 
                 <ContextMenuContent className="w-48">
-                    <ContextMenuItem onClick={() => {
-                        handleClick(new MouseEvent('click') as any);
-                    }}>
+                    <ContextMenuItem 
+                        onClick={() => {
+                            handleClick(new MouseEvent('click') as any);
+                        }}
+                        disabled={stagedStatus === 'new'}
+                    >
                         <Edit className="mr-2 h-4 w-4" />
                         Edit Properties
                     </ContextMenuItem>
