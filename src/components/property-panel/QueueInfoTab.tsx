@@ -45,9 +45,6 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
         return value ? `${value.toFixed(2)}%` : 'N/A';
     };
 
-    const formatNumber = (value: number | undefined) => {
-        return value !== undefined ? value.toString() : 'N/A';
-    };
 
     return (
         <Box sx={{ p: 1.5 }}>

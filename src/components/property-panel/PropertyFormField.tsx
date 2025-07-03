@@ -4,9 +4,6 @@ import {
     FormControl,
     FormControlLabel,
     FormHelperText,
-    InputLabel,
-    Select,
-    MenuItem,
     Switch,
     Box,
     Typography,
@@ -25,7 +22,6 @@ interface PropertyFormFieldProps {
     isStaged?: boolean;
     isDirty?: boolean;
     dependentValues?: Record<string, any>;
-    onFieldChange?: (propertyName: string, value: string) => void;
 }
 
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
@@ -35,7 +31,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     isStaged = false,
     isDirty = false,
     dependentValues = {},
-    onFieldChange,
 }) => {
     // Check if field should be enabled based on dependencies
     const isFieldEnabled = React.useMemo(() => {
@@ -47,14 +42,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         });
     }, [property.enableWhen, dependentValues]);
 
-    // Create a custom onChange handler that only updates form state
-    const createCustomOnChange = React.useCallback(
-        (originalOnChange: (value: any) => void) => (value: any) => {
-            // Only update form state - no auto-staging
-            originalOnChange(value);
-        },
-        [property.name]
-    );
 
     // Tooltip wrapper for fields with descriptions
     const wrapWithTooltip = React.useCallback((fieldComponent: React.ReactElement, description?: string) => {
@@ -85,59 +72,34 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
 
     // Create styling for different field states
     const getFieldStyling = React.useCallback(() => {
-        const baseSx = {
+        let borderColor = undefined;
+        let backgroundColor = undefined;
+
+        if (isStaged) {
+            borderColor = 'primary.main';
+            backgroundColor = 'primary.50';
+        } else if (isDirty) {
+            borderColor = 'warning.main';
+            backgroundColor = 'warning.50';
+        }
+
+        return {
             '& .MuiOutlinedInput-root': {
                 borderRadius: 2,
+                ...(backgroundColor && { backgroundColor }),
+                '& .MuiOutlinedInput-notchedOutline': {
+                    ...(borderColor && { borderColor }),
+                },
                 '&:hover .MuiOutlinedInput-notchedOutline': {
                     borderWidth: 2,
+                    ...(borderColor && { borderColor }),
                 },
                 '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
                     borderWidth: 2,
+                    ...(borderColor && { borderColor }),
                 },
             },
         };
-
-        // Add state-specific styling
-        if (isStaged) {
-            // Staged state: blue border and subtle background
-            return {
-                ...baseSx,
-                '& .MuiOutlinedInput-root': {
-                    ...baseSx['& .MuiOutlinedInput-root'],
-                    borderColor: 'primary.main',
-                    backgroundColor: 'primary.50',
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                        ...baseSx['& .MuiOutlinedInput-root']['&:hover .MuiOutlinedInput-notchedOutline'],
-                        borderColor: 'primary.main',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused .MuiOutlinedInput-notchedOutline'],
-                        borderColor: 'primary.main',
-                    },
-                },
-            };
-        } else if (isDirty) {
-            // Dirty state: orange border and subtle background
-            return {
-                ...baseSx,
-                '& .MuiOutlinedInput-root': {
-                    ...baseSx['& .MuiOutlinedInput-root'],
-                    borderColor: 'warning.main',
-                    backgroundColor: 'warning.50',
-                    '&:hover .MuiOutlinedInput-notchedOutline': {
-                        ...baseSx['& .MuiOutlinedInput-root']['&:hover .MuiOutlinedInput-notchedOutline'],
-                        borderColor: 'warning.main',
-                    },
-                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                        ...baseSx['& .MuiOutlinedInput-root']['&.Mui-focused .MuiOutlinedInput-notchedOutline'],
-                        borderColor: 'warning.main',
-                    },
-                },
-            };
-        }
-
-        // Clean state: default styling
-        return baseSx;
     }, [isStaged, isDirty]);
 
     // Render different input types based on property type
@@ -167,7 +129,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                                 <Switch
                                     name={field.name}
                                     checked={field.value === 'true' || field.value === true}
-                                    onChange={(e) => createCustomOnChange(field.onChange)(e.target.checked ? 'true' : '')}
+                                    onChange={(e) => field.onChange(e.target.checked ? 'true' : '')}
                                     onBlur={field.onBlur}
                                     disabled={!isFieldEnabled}
                                     size="small"
@@ -193,7 +155,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                             onChange={(_, newValue) => {
                                 // Allow deselection by clicking the same button
                                 const value = newValue || '';
-                                createCustomOnChange(field.onChange)(value);
+                                field.onChange(value);
                             }}
                             aria-label={label}
                             disabled={!isFieldEnabled}
@@ -252,7 +214,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     <TextField
                         name={field.name}
                         value={field.value || ''}
-                        onChange={(e) => createCustomOnChange(field.onChange)(e.target.value)}
+                        onChange={(e) => field.onChange(e.target.value)}
                         onBlur={field.onBlur}
                         ref={field.ref}
                         {...commonProps}
@@ -281,7 +243,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     <TextField
                         name={field.name}
                         value={field.value || ''}
-                        onChange={(e) => createCustomOnChange(field.onChange)(e.target.value)}
+                        onChange={(e) => field.onChange(e.target.value)}
                         onBlur={field.onBlur}
                         ref={field.ref}
                         {...commonProps}

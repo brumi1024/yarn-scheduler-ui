@@ -4,9 +4,9 @@
 
 This is the single authoritative tracking document for the v4 implementation of the YARN Scheduler UI. V4 is now the **PRIMARY AND ONLY** implementation after successful V2/V3 removal and TanStack Router migration.
 
-**Last Updated**: 2025-07-02
+**Last Updated**: 2025-07-03
 
-## Current Status: ✅ V4-ONLY PRODUCTION READY
+## Current Status: ✅ V4-ONLY PRODUCTION READY + STAGED CHANGES COMPLETE
 
 ### What's Done (100%)
 
@@ -50,7 +50,22 @@ This is the single authoritative tracking document for the v4 implementation of 
 - ✅ Computed properties (queueTree)
 - ✅ Staged changes tracking
 
-#### 6. Testing Infrastructure
+#### 6. Staged Changes System
+- ✅ **Bottom drawer UI** with collapsible states (collapsed/expanded)
+- ✅ **Git-style diff visualization** showing before/after comparisons with color coding
+- ✅ **Queue-grouped changes** with summary chips and expandable details
+- ✅ **Floating pill notification** when changes exist but panel is closed
+- ✅ **Notification system integration** with MUI Snackbar for user feedback
+- ✅ **Simplified architecture** - reduced from 3 states to 2, consolidated styling
+- ✅ **Property editor integration** - staging workflow with visual indicators
+
+#### 7. UI Enhancements
+- ✅ **Queue Info Tab** - New tab showing queue statistics and usage information
+- ✅ **Property Panel Improvements** - Icons for all tabs, better visual hierarchy
+- ✅ **Compact Design** - Reduced panel width and optimized spacing
+- ✅ **Enhanced PropertyEditorTab** - Category icons and improved styling
+
+#### 8. Testing Infrastructure
 - ✅ MSW testing setup with conflict resolution
 - ✅ Global test configuration for V4-only architecture
 - ✅ Store reset functionality for isolated test runs
@@ -118,16 +133,18 @@ console.log('Queue Tree:', store.queueTree);
 
 ## Remaining Work (Future Phases)
 
-### **IMMEDIATE PRIORITY: Staged Changes Implementation**
-- [ ] **Staged Changes Preview Component** - Build UI to show all pending changes
+### **COMPLETED: Staged Changes Implementation** ✅
+- ✅ **Staged Changes Preview Component** - Complete bottom drawer UI with diff visualization
+- ✅ **PropertyEditorTab Staging Workflow** - Changed from immediate apply to staging with visual indicators
+- ✅ **Apply Changes Flow with Confirmation** - Added confirmation dialog and proper apply workflow
+- ✅ **UI/UX Fixes** - Fixed React errors, conflicting buttons, and overlapping icons
+- ✅ **Code Simplification** - Reduced complexity and improved maintainability
 - [ ] **Optional Validation Before Apply** - Add optional "Validate Changes" button using YARN validation API
-- [ ] **PropertyEditorTab Staging Workflow** - Change from immediate apply to staging with visual indicators
-- [ ] **Apply Changes Flow with Confirmation** - Add confirmation dialog and proper apply workflow
 
 ### Phase 2: Enhanced Change Management
 - [ ] **Change Comparison & Conflict Detection** - Detect conflicting changes (capacity totals > 100%)
 - [ ] **Batch Operations** - Apply selected changes, bulk revert options
-- [ ] **Better UX** - Optimistic UI updates, change debouncing, loading states
+- [x] **Better UX** - ✅ Implemented staged changes UI, notifications, and improved loading states
 
 ### Phase 3: Feature Enhancements
 - [ ] **Search functionality** - Search across queue names and properties
@@ -205,16 +222,29 @@ The current implementation focuses on core functionality. These features from th
 - **Impact**: Application crashes during property editing
 - **Fix Applied**: Added proper type checking before calling string methods on form values
 
-### Staged Changes Implementation Gap (Identified 2025-07-02)
-- **Issue**: Staged changes system is partially implemented but missing core preview/review workflow
-- **Impact**: Users cannot see what changes are staged before applying them to YARN
-- **Current State**: 
-  - ✅ Basic staging functions exist (`stageQueueChange`, `applyChanges`)
-  - ❌ No staged changes preview UI
-  - ❌ No optional validation before apply
-  - ❌ PropertyEditor applies changes immediately instead of staging
-  - ❌ No confirmation dialog for applying changes
-- **Required Fix**: Implement complete staged changes workflow from design document
+### Staged Changes Implementation (Completed 2025-07-03) ✅
+- **Issue**: Staged changes system was partially implemented but missing core preview/review workflow
+- **Impact**: Users now have complete visibility into staged changes before applying them to YARN
+- **Completed Implementation**: 
+  - ✅ Basic staging functions (`stageQueueChange`, `applyChanges`)
+  - ✅ **Complete staged changes preview UI** - Bottom drawer with diff visualization
+  - ✅ **PropertyEditor staging workflow** - Now stages changes instead of immediate apply
+  - ✅ **Apply changes flow with confirmation** - Complete workflow with notifications
+  - ✅ **UI/UX improvements** - Fixed React errors, button conflicts, and layout issues
+  - ✅ **Code simplification** - Reduced complexity by ~100+ lines, improved maintainability
+  - [ ] Optional validation before apply (remaining item)
+- **Architecture**: Bottom drawer pattern with collapsed/expanded states, git-style diff visualization
+
+### UI Enhancements (Completed 2025-07-03)
+- **Issue**: Property Panel needed better visual hierarchy and information display
+- **Impact**: Improved user experience with clearer information architecture
+- **Enhancements Applied**:
+  - Added **QueueInfoTab** component for detailed queue statistics and usage metrics
+  - Enhanced Property Panel with icons for all tabs (Overview, Info, Settings)
+  - Reduced panel width from 450px to 420px for better space utilization
+  - Improved typography and spacing throughout the panel
+  - Added category icons in PropertyEditorTab for better visual grouping
+  - Better light/dark mode support with conditional styling
 
 ## Technical Debt
 
@@ -229,7 +259,9 @@ src/
 ├── api/               # YARN API client and React Query hooks
 ├── components/        # UI components
 │   ├── tree/         # Queue tree visualization
-│   ├── property-panel/ # Queue property editing
+│   ├── property-panel/ # Queue property editing (includes QueueInfoTab)
+│   ├── staged-changes/ # Staged changes review and apply system
+│   ├── notifications/ # User notification system
 │   ├── global-settings/ # Global scheduler settings
 │   └── node-labels/  # Node label management
 ├── store/            # Zustand store and transformations
@@ -248,18 +280,19 @@ src/
 - **Types**: `src/types/queue.ts`, `src/types/api.ts`
 - **Main Component**: `src/components/tree/QueueVisualizationContainer.tsx`
 - **Property Editor**: `src/components/property-panel/PropertyEditorTab.tsx`
+- **Queue Info**: `src/components/property-panel/QueueInfoTab.tsx`
+- **Staged Changes**: `src/components/staged-changes/StagedChangesPanel.tsx`
+- **Notifications**: `src/components/notifications/NotificationProvider.tsx`
 - **Routes**: `src/routes/` (TanStack Router configuration)
 - **Tests**: `src/**/__tests__/`
 
 ## Next Immediate Steps
 
-1. **PRIORITY: Complete Staged Changes Implementation** - Fix the gap between design and current implementation
-   - Create staged changes preview UI component
-   - Add optional validation before apply
-   - Modify PropertyEditorTab workflow to stage instead of immediately apply
-   - Implement proper apply changes flow with confirmation
-2. **Test with real YARN cluster** - Validate against production data
-3. **Gather user feedback** - Identify priority features for Phase 3
+1. **OPTIONAL: Add Validation Before Apply** - Add optional "Validate Changes" button using YARN validation API
+2. **Fix Test Integration** - Update PropertyEditorTab and PropertyPanel tests to include NotificationProvider wrapper
+3. **Add Validation Error Display** - Show validation errors in StagedChangesPanel
+4. **Test with real YARN cluster** - Validate against production data
+5. **Enhanced Change Management** - Implement change comparison and conflict detection
 
 ## Success Metrics
 
