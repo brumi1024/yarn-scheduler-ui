@@ -3,7 +3,7 @@ import {
     createSchedulerStore,
     traverseQueueTree,
 } from './schedulerStore';
-import { buildMutationRequest } from '~/utils/mutationBuilder';
+import { buildMutationRequest } from '~/lib/utils/mutationBuilder';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
     QueueInfo,

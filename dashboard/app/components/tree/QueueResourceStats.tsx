@@ -1,5 +1,5 @@
 import React from 'react';
-import { formatMemory } from '~/utils/formatUtils';
+import { formatMemory } from '~/lib/utils/formatUtils';
 import { cn } from '~/lib/utils';
 
 interface QueueResourceStatsProps {

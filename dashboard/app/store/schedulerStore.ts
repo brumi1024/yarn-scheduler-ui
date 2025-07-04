@@ -11,8 +11,8 @@ import type {
     SchedulerInfo,
     StagedChange,
 } from '~/lib/types';
-import {buildGlobalPropertyKey, buildNodeLabelPropertyKey, buildPropertyKey,} from '~/utils/propertyUtils';
-import {buildMutationRequest} from '~/utils/mutationBuilder';
+import {buildGlobalPropertyKey, buildNodeLabelPropertyKey, buildPropertyKey,} from '~/lib/utils/propertyUtils';
+import {buildMutationRequest} from '~/lib/utils/mutationBuilder';
 import {YarnApiClient} from '~/lib/api/YarnApiClient';
 import {
     createDetailedErrorMessage,
@@ -20,7 +20,7 @@ import {
     ERROR_CODES,
     extractErrorMessage,
     isNetworkError
-} from '~/utils/errorUtils';
+} from '~/lib/utils/errorUtils';
 import {isValidQueueName} from '~/lib/types/guards';
 
 enableMapSet();
