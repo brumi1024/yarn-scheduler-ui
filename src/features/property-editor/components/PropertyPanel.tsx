@@ -104,7 +104,7 @@ export const PropertyPanel: React.FC = () => {
     setIsSubmitting(newIsSubmitting);
   };
 
-  const handleErrorsChange = (errors: Record<string, any>) => {
+  const handleErrorsChange = (errors: Record<string, unknown>) => {
     setValidationErrors(errors);
   };
 
@@ -200,7 +200,7 @@ export const PropertyPanel: React.FC = () => {
                       <div key={field} className="text-xs text-muted-foreground pl-2">
                         • <span className="font-medium">{field}:</span>{' '}
                         {typeof error === 'object' && error && 'message' in error
-                          ? (error as any).message
+                          ? (error as { message: string }).message
                           : String(error)}
                       </div>
                     ))}

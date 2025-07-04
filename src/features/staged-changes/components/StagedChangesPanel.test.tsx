@@ -278,8 +278,6 @@ describe('StagedChangesPanel', () => {
       return selector ? selector(state) : state;
     });
 
-    const { container } = render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
-
     // The Sheet component renders content in a portal, so we need to look in the document body
     const sheetContent = document.querySelector('[data-slot="sheet-content"]');
     expect(sheetContent).toBeTruthy();
@@ -297,7 +295,6 @@ describe('StagedChangesPanel', () => {
   });
 
   it('should close panel when clicking close button', async () => {
-    const user = userEvent.setup();
     const onClose = vi.fn();
 
     render(<StagedChangesPanel open={true} onClose={onClose} />);

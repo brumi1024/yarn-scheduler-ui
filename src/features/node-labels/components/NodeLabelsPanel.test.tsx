@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { validateLabelRemoval, validateLabelName } from '~/utils/labelValidation';
+import { validateLabelRemoval } from '~/utils/labelValidation';
 import { getMockNodeLabel } from '~/testing/factories/factories';
 import type { NodeLabel } from '~/types';
 

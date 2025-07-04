@@ -19,7 +19,6 @@ interface QueueOverviewProps {
 export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
   const isParentQueue = !!queue.queues?.queue && queue.queues.queue.length > 0;
   const capacityPercent = queue.capacity || 0;
-  const usagePercent = queue.usedCapacity || 0;
 
   const getStateVariant = (state: string): 'default' | 'success' | 'destructive' => {
     switch (state) {
@@ -30,12 +29,6 @@ export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
       default:
         return 'default';
     }
-  };
-
-  const getUsageColor = (percent: number): string => {
-    if (percent >= 90) return 'bg-destructive';
-    if (percent >= 70) return 'bg-warning';
-    return 'bg-primary';
   };
 
   const resourceStats = [

@@ -58,8 +58,8 @@ export function hasQueueChildren(obj: unknown): boolean {
     q.queues !== null &&
     typeof q.queues === 'object' &&
     'queue' in q.queues &&
-    Array.isArray((q.queues as any).queue) &&
-    ((q.queues as any).queue as unknown[]).length > 0
+    Array.isArray((q.queues as { queue: unknown[] }).queue) &&
+    (q.queues as { queue: unknown[] }).queue.length > 0
   );
 }
 
@@ -82,7 +82,7 @@ export function isValidPropertyValue(
   descriptor: Pick<PropertyDescriptor, 'type' | 'validationRules' | 'enumValues'>,
 ): boolean {
   switch (descriptor.type) {
-    case 'number':
+    case 'number': {
       const num = parseFloat(value);
       if (isNaN(num)) {
         return false;
@@ -101,6 +101,7 @@ export function isValidPropertyValue(
         }
       }
       return true;
+    }
 
     case 'boolean':
       return value.toLowerCase() === 'true' || value.toLowerCase() === 'false';
@@ -173,8 +174,11 @@ export function isMutationError(obj: unknown): obj is MutationError {
     e.RemoteException !== undefined &&
     typeof e.RemoteException === 'object' &&
     e.RemoteException !== null &&
-    typeof (e.RemoteException as any).exception === 'string' &&
-    typeof (e.RemoteException as any).message === 'string' &&
-    typeof (e.RemoteException as any).javaClassName === 'string'
+    typeof (e.RemoteException as { exception: unknown; message: unknown; javaClassName: unknown })
+      .exception === 'string' &&
+    typeof (e.RemoteException as { exception: unknown; message: unknown; javaClassName: unknown })
+      .message === 'string' &&
+    typeof (e.RemoteException as { exception: unknown; message: unknown; javaClassName: unknown })
+      .javaClassName === 'string'
   );
 }

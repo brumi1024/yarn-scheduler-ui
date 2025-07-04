@@ -120,7 +120,7 @@ const FlowInner: React.FC = () => {
       <Controls showInteractive={false} />
       <MiniMap
         nodeColor={(node) => {
-          const data = node.data as any;
+          const data = node.data as { queue: QueueInfo };
 
           // Use default colors during SSR
           if (typeof window === 'undefined') {

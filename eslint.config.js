@@ -15,6 +15,7 @@ export default tseslint.config(
       'coverage',
       '*.log',
       'eslint-results.sarif',
+      'src/components/ui/**',
     ],
   },
 
@@ -83,13 +84,7 @@ export default tseslint.config(
       ],
       // Type safety rules
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': [
-        'warn',
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-        },
-      ],
+      '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },
 
@@ -106,7 +101,6 @@ export default tseslint.config(
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },
 

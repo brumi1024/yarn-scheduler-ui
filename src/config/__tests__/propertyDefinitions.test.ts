@@ -8,7 +8,6 @@ import {
   capacityValueSchema,
   percentageSchema,
   positiveNumberSchema,
-  nonNegativeNumberSchema,
   integerSchema,
   aclFormatSchema,
 } from '../propertyDefinitions';

@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import React from 'react';
-import { render, screen, waitFor } from '~/testing/setup/setup';
+import { render, screen } from '~/testing/setup/setup';
 import { DeleteQueueDialog } from './DeleteQueueDialog';
 import userEvent from '@testing-library/user-event';
 

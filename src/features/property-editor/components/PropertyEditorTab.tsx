@@ -20,7 +20,7 @@ export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
   reset: () => void;
   isValid: () => boolean;
-  getErrors: () => Record<string, any>;
+  getErrors: () => Record<string, unknown>;
 }
 
 interface PropertyEditorTabProps {
@@ -28,7 +28,7 @@ interface PropertyEditorTabProps {
   onHasChangesChange?: (hasChanges: boolean) => void;
   onIsSubmittingChange?: (isSubmitting: boolean) => void;
   onFormDirtyChange?: (isDirty: boolean) => void;
-  onErrorsChange?: (errors: Record<string, any>) => void;
+  onErrorsChange?: (errors: Record<string, unknown>) => void;
 }
 
 // Category display configuration with icons and enhanced styling
@@ -101,7 +101,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       watchedValues,
       propertiesByCategory,
       getStagedStatus,
-      labelProperties,
       formState,
     } = usePropertyEditor({
       queuePath: queue.queuePath,

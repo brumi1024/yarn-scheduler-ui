@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, within, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabels } from './NodeLabels';
@@ -207,7 +207,7 @@ describe('NodeLabels', () => {
       render(<NodeLabels />);
 
       const configCard = screen.getByText('Node Label Configuration').closest('[data-slot="card"]');
-      const badge = configCard?.querySelector('.bg-primary\/10');
+      const badge = configCard?.querySelector('.bg-primary\\/10');
       expect(badge).not.toBeInTheDocument();
     });
 
