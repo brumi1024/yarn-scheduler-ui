@@ -11,8 +11,8 @@
     "test:ui": "vitest --ui",
     "test:run": "vitest run",
     "test:coverage": "vitest run --coverage",
-    "lint": "eslint dashboard --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
-    "lint:fix": "eslint dashboard --ext ts,tsx --fix",
+    "lint": "eslint src --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
+    "lint:fix": "eslint src --ext ts,tsx --fix",
     "format": "prettier --write \"app/**/*.{ts,tsx,js,jsx,json,css,md}\"",
     "format:check": "prettier --check \"app/**/*.{ts,tsx,js,jsx,json,css,md}\""
   },

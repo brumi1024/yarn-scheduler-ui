@@ -1,0 +1,135 @@
+import React from 'react';
+import { type EdgeProps } from '@xyflow/react';
+
+/**
+ * Custom Sankey-like edge component that creates flowing connections between queue nodes.
+ *
+ * This component creates thick, flowing connections where the width represents the capacity
+ * flow between parent and child queues, similar to a Sankey diagram. The connections
+ * use gradients and proper curve handling for a professional appearance.
+ * 
+ * Enhanced to span the full height of queue cards for true Sankey visualization.
+ */
+function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
+    // Generate unique gradient ID for this edge
+    const gradientId = `gradient-${id}`;
+
+    // Determine flow colors based on target queue state using CSS variables
+    const getFlowColors = () => {
+        const rootStyles = getComputedStyle(document.documentElement);
+        
+        if (data?.targetState === 'RUNNING') {
+            const color = rootStyles.getPropertyValue('--color-queue-running').trim();
+            return {
+                startColor: color,
+                endColor: color,
+                opacity: 0.8,
+            };
+        } else if (data?.targetState === 'STOPPED') {
+            const color = rootStyles.getPropertyValue('--color-queue-stopped').trim();
+            return {
+                startColor: color,
+                endColor: color,
+                opacity: 0.8,
+            };
+        } else if (data?.targetState === 'DRAINING') {
+            const color = rootStyles.getPropertyValue('--color-queue-draining').trim();
+            return {
+                startColor: color,
+                endColor: color,
+                opacity: 0.8,
+            };
+        } else {
+            // Default to a neutral color for other states
+            const color = rootStyles.getPropertyValue('--color-muted').trim();
+            return {
+                startColor: color,
+                endColor: color,
+                opacity: 0.5,
+            };
+        }
+    };
+
+    const { startColor, endColor, opacity } = getFlowColors();
+
+    const createSankeyPath = () => {
+        const controlPointDistance = Math.abs(targetX - sourceX) * 0.5;
+
+        const CARD_HEIGHT = 300; // Updated to match actual card height
+        const sourceStartY = data?.sourceStartY ?? sourceY - CARD_HEIGHT / 2;
+        const sourceEndY = data?.sourceEndY ?? sourceY + CARD_HEIGHT / 2;
+        const targetStartY = data?.targetStartY ?? targetY - CARD_HEIGHT / 2;
+        const targetEndY = data?.targetEndY ?? targetY + CARD_HEIGHT / 2;
+
+        return [
+            // Start at source (proportional segment start)
+            `M ${sourceX} ${sourceStartY}`,
+
+            // Top curve to target
+            `C ${sourceX + controlPointDistance} ${sourceStartY}`,
+            `${targetX - controlPointDistance} ${targetStartY}`,
+            `${targetX} ${targetStartY}`,
+
+            // Line to bottom of target segment
+            `L ${targetX} ${targetEndY}`,
+
+            // Bottom curve back to source
+            `C ${targetX - controlPointDistance} ${targetEndY}`,
+            `${sourceX + controlPointDistance} ${sourceEndY}`,
+            `${sourceX} ${sourceEndY}`,
+
+            // Close the path
+            'Z',
+        ].join(' ');
+    };
+
+    const sankeyPath = createSankeyPath();
+
+    return (
+        <g>
+            <defs>
+                <linearGradient id={gradientId} x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" style={{ stopColor: startColor, stopOpacity: opacity }} />
+                    <stop offset="100%" style={{ stopColor: endColor, stopOpacity: opacity }} />
+                </linearGradient>
+
+                {/* Add a subtle shadow for depth */}
+                <filter id={`shadow-${id}`} x="-20%" y="-20%" width="140%" height="140%">
+                    <feDropShadow dx="0" dy="2" stdDeviation="2" floodOpacity="0.1" />
+                </filter>
+            </defs>
+
+            {/* Shadow path */}
+            <path d={sankeyPath} fill="rgba(0, 0, 0, 0.1)" transform="translate(2, 2)" />
+
+            {/* Main Sankey flow path */}
+            <path
+                d={sankeyPath}
+                fill={`url(#${gradientId})`}
+                filter={`url(#shadow-${id})`}
+                style={{
+                    transition: 'all 0.2s ease-in-out',
+                }}
+            />
+
+            {/* Optional animated flow indication for running queues */}
+            {data?.targetState === 'RUNNING' && (
+                <path
+                    d={sankeyPath}
+                    fill="none"
+                />
+            )}
+
+            <style>
+                {`
+                    @keyframes flow {
+                        0% { stroke-dashoffset: 0; }
+                        100% { stroke-dashoffset: 20; }
+                    }
+                `}
+            </style>
+        </g>
+    );
+}
+
+export default CustomFlowEdge;
