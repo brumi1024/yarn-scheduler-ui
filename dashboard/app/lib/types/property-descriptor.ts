@@ -37,6 +37,8 @@ export type PropertyDescriptor = {
     displayFormat?: DisplayFormat;
     deprecated?: boolean;
     deprecationMessage?: string;
+    formFieldName?: string; // Escaped name for React Hook Form
+    originalName?: string; // Original name before escaping
 };
 
 export type LabelPropertyDescriptor = PropertyDescriptor & {

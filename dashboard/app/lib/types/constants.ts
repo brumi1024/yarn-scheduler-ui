@@ -41,24 +41,6 @@ export const GLOBAL_CONFIG_PROPS = {
     PER_NODE_HEARTBEAT_MAX_OFFSWITCH_ASSIGNMENTS: 'per-node-heartbeat.maximum-offswitch-assignments',
 } as const;
 
-export const QUEUE_CONFIG_PROPS = {
-    CAPACITY: 'capacity',
-    MAXIMUM_CAPACITY: 'maximum-capacity',
-    USER_LIMIT_FACTOR: 'user-limit-factor',
-    MINIMUM_USER_LIMIT_PERCENT: 'minimum-user-limit-percent',
-    MAXIMUM_APPLICATIONS: 'maximum-applications',
-    MAXIMUM_APPLICATIONS_PER_USER: 'maximum-applications-per-user',
-    STATE: 'state',
-    QUEUES: 'queues',
-    ACL_SUBMIT_APPLICATIONS: 'acl-submit-applications',
-    ACL_ADMINISTER_QUEUE: 'acl-administer-queue',
-    ORDERING_POLICY: 'ordering-policy',
-    PRIORITY: 'priority',
-    INTRA_QUEUE_PREEMPTION_DISABLED: 'intra-queue-preemption-disabled',
-    ACCESSIBLE_NODE_LABELS: 'accessible-node-labels',
-    DEFAULT_NODE_LABEL_EXPRESSION: 'default-node-label-expression',
-    MAXIMUM_AM_RESOURCE_PERCENT: 'maximum-am-resource-percent',
-} as const;
 
 export const AUTO_CREATION_PROPS = {
     ELIGIBILITY: 'autoCreationEligibility',
@@ -67,33 +49,6 @@ export const AUTO_CREATION_PROPS = {
     ELIGIBILITY_FLEXIBLE: 'flexible',
     LEGACY_ENABLED: 'auto-create-child-queue.enabled',
     FLEXIBLE_ENABLED: 'auto-queue-creation-v2.enabled',
-} as const;
-
-export const RESOURCE_TYPES = {
-    COUNTABLE: 'COUNTABLE',
-} as const;
-
-export const RESOURCE_UNITS = {
-    MEMORY: 'Mi',
-    VCORES: '',
-    GPU: 'gpu',
-} as const;
-
-export const RESOURCE_NAMES = {
-    MEMORY_MB: 'memory-mb',
-    VCORES: 'vcores',
-    GPU: 'gpu',
-    FPGA: 'fpga',
-} as const;
-
-export const ORDERING_POLICIES = {
-    FIFO: 'fifo',
-    FAIR: 'fair',
-} as const;
-
-export const ACL_TYPES = {
-    SUBMIT_APP: 'SUBMIT_APP',
-    ADMINISTER_QUEUE: 'ADMINISTER_QUEUE',
 } as const;
 
 export const EXCEPTION_TYPES = {

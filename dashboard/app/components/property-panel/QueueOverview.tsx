@@ -10,7 +10,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from '~/components/ui/accordion';
-import type { QueueInfo } from '~/types';
+import type { QueueInfo } from '~/lib/types';
 
 interface QueueOverviewProps {
     queue: QueueInfo;

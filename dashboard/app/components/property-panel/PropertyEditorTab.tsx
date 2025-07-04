@@ -20,8 +20,8 @@ import {
 } from '~/components/ui/accordion';
 import { usePropertyEditor } from '~/hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
-import type { QueueInfo } from '~/types/queue';
-import type { PropertyCategory, LabelPropertyDescriptor } from '~/types/property-descriptor';
+import type { QueueInfo } from '~/lib/types/queue';
+import type { PropertyCategory, LabelPropertyDescriptor } from '~/lib/types/property-descriptor';
 import { groupLabelPropertiesByLabel } from '~/lib/utils/labelPropertyUtils';
 import { toast } from 'sonner';
 import { Form } from '~/components/ui/form';

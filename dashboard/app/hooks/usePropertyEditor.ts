@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSchedulerStore } from '~/store/schedulerStore';
-import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/types/property-descriptor';
+import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/lib/types/property-descriptor';
 import { queuePropertyDefinitions } from '~/config/propertyDefinitions';
 import { generateLabelPropertyDescriptors, isLabelProperty, extractLabelFromPropertyName, extractBasePropertyFromLabelProperty } from '~/lib/utils/labelPropertyUtils';
 import { toast } from 'sonner';

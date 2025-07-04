@@ -1,5 +1,5 @@
 import dagre from 'dagre';
-import type { QueueInfo } from '~/types';
+import type { QueueInfo } from '~/lib/types';
 
 export type LayoutPosition = {
     x: number;

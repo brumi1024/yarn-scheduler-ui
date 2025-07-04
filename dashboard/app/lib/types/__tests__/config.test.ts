@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ConfigData, ConfigProperty, SchedConfUpdateInfo, QueueUpdateParams, GlobalUpdateParams } from '~/lib/config';
+import type { ConfigData, ConfigProperty, SchedConfUpdateInfo, QueueUpdateParams, GlobalUpdateParams } from '../config';
 
 describe('ConfigData interface', () => {
     it('should accept valid scheduler configuration response', () => {

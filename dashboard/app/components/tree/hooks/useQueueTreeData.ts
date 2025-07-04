@@ -1,9 +1,9 @@
 import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useSchedulerStore } from '~/store/schedulerStore';
-import type { QueueInfo, StagedChange, SchedulerInfo, CapacitySchedulerInfo } from '~/types';
-import type { QueueStateValue } from '~/types/constants';
-import { AUTO_CREATION_PROPS } from '~/types/constants';
+import type { QueueInfo, StagedChange, SchedulerInfo, CapacitySchedulerInfo } from '~/lib/types';
+import type { QueueStateValue } from '~/lib/types/constants';
+import { AUTO_CREATION_PROPS } from '~/lib/types/constants';
 import { DagreLayout } from '../utils/DagreLayout';
 
 export type QueueCardData = QueueInfo & {

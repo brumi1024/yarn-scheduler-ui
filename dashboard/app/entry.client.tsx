@@ -7,7 +7,7 @@ async function enableMocking() {
     return;
   }
 
-  const { worker } = await import('~/api/mocks/browser');
+  const { worker } = await import('~/lib/api/mocks/browser');
   
   // Start the worker
   return worker.start({

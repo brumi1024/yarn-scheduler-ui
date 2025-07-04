@@ -8,7 +8,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '~/components/ui/collapsible';
-import type { StagedChange } from '~/types';
+import type { StagedChange } from '~/lib/types';
 import { DiffView } from './DiffView';
 
 interface QueueChangeGroupProps {

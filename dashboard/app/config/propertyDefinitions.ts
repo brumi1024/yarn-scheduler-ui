@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/types/property-descriptor';
+import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/lib/types/property-descriptor';
 
 export const capacityValueSchema = z
     .string()

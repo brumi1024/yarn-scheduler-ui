@@ -19,7 +19,7 @@ import {
     FormMessage,
 } from '~/components/ui/form';
 import { HelpCircle } from 'lucide-react';
-import type { PropertyDescriptor } from '~/types/property-descriptor';
+import type { PropertyDescriptor } from '~/lib/types/property-descriptor';
 
 interface PropertyFormFieldProps {
     property: PropertyDescriptor;

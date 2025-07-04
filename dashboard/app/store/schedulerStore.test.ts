@@ -4,7 +4,7 @@ import {
     traverseQueueTree,
 } from './schedulerStore';
 import { buildMutationRequest } from '~/utils/mutationBuilder';
-import type { YarnApiClient } from '~/api/YarnApiClient';
+import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
     QueueInfo,
     StagedChange,
@@ -12,7 +12,7 @@ import type {
     ConfigInfo,
     NodeLabelsInfo,
     VersionResponse,
-} from '~/types';
+} from '~/lib/types';
 
 // Mock data for tests
 const mockSchedulerResponse: SchedulerInfo = {
@@ -237,7 +237,7 @@ const mockVersionResponse: VersionResponse = {
 };
 
 // Mock the YARN API client
-vi.mock('~/api/YarnApiClient');
+vi.mock('~/lib/api/YarnApiClient');
 
 // Create mock API client
 const createMockApiClient = () => ({

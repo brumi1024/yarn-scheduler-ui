@@ -5,7 +5,7 @@
  * to be sent to the YARN REST API for applying configuration updates.
  */
 
-import type { StagedChange, SchedConfUpdateInfo } from '~/types';
+import type { StagedChange, SchedConfUpdateInfo } from '~/lib/types';
 import { groupBy } from 'es-toolkit';
 
 /**

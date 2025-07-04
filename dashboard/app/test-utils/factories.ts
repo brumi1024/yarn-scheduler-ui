@@ -1,4 +1,4 @@
-import type { QueueInfo, PropertyDescriptor, StagedChange, NodeLabel } from '~/types';
+import type { QueueInfo, PropertyDescriptor, StagedChange, NodeLabel } from '~/lib/types';
 
 // Factory functions for test data following CLAUDE.md pattern
 

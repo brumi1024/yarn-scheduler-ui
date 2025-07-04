@@ -10,10 +10,10 @@ import type {
     QueueInfo,
     SchedulerInfo,
     StagedChange,
-} from '~/types';
+} from '~/lib/types';
 import {buildGlobalPropertyKey, buildNodeLabelPropertyKey, buildPropertyKey,} from '~/utils/propertyUtils';
 import {buildMutationRequest} from '~/utils/mutationBuilder';
-import {YarnApiClient} from '~/api/YarnApiClient';
+import {YarnApiClient} from '~/lib/api/YarnApiClient';
 import {
     createDetailedErrorMessage,
     createStoreError,
@@ -21,7 +21,7 @@ import {
     extractErrorMessage,
     isNetworkError
 } from '~/utils/errorUtils';
-import {isValidQueueName} from '~/types/guards';
+import {isValidQueueName} from '~/lib/types/guards';
 
 enableMapSet();
 
@@ -60,7 +60,6 @@ export type SchedulerStore = {
     toggleComparisonQueue: (queuePath: string) => void;
     setPropertyPanelOpen: (isOpen: boolean) => void;
 
-    // Direct node label operations (not staged)
     addNodeLabel: (name: string, exclusivity: boolean) => Promise<void>;
     removeNodeLabel: (name: string) => Promise<void>;
     assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;

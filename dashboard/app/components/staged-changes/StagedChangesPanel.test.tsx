@@ -4,7 +4,7 @@ import { StagedChangesPanel } from './StagedChangesPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/store/schedulerStore';
 import { toast } from 'sonner';
-import type { StagedChange } from '~/types';
+import type { StagedChange } from '~/lib/types';
 
 // Mock the store
 vi.mock('~/store/schedulerStore');

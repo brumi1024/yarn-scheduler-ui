@@ -49,12 +49,6 @@ export type NodeToLabelsResponse = {
     };
 };
 
-export type HealthCheckResponse = {
-    status: 'ok' | 'error';
-    message?: string;
-    timestamp: number;
-};
-
 // API client configuration
 export type ApiClientConfig = {
     timeout?: number;

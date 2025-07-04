@@ -16,7 +16,7 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from '~/components/ui/accordion';
-import type { QueueInfo } from '~/types';
+import type { QueueInfo } from '~/lib/types';
 import { formatMemory } from '~/lib/utils/formatUtils';
 
 interface QueueInfoTabProps {

@@ -10,7 +10,7 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from '~/components/ui/tooltip';
-import type { StagedChange } from '~/types';
+import type { StagedChange } from '~/lib/types';
 
 interface DiffViewProps {
     change: StagedChange;

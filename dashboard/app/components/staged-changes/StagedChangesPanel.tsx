@@ -5,7 +5,7 @@ import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '~/com
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { useSchedulerStore } from '~/store/schedulerStore';
-import type { StagedChange } from '~/types';
+import type { StagedChange } from '~/lib/types';
 import { QueueChangeGroup } from './QueueChangeGroup';
 import { toast } from 'sonner';
 

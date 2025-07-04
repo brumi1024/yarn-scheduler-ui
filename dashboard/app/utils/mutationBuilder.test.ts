@@ -8,7 +8,7 @@ import {
     groupChangesByQueue,
     validateMutationRequest,
 } from './mutationBuilder';
-import type { StagedChange, SchedConfUpdateInfo } from '~/types';
+import type { StagedChange, SchedConfUpdateInfo } from '~/lib/types';
 
 describe('mutationBuilder', () => {
     const now = Date.now();

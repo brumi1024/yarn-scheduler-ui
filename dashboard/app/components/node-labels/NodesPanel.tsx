@@ -243,7 +243,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
                                                             </Button>
                                                         </TooltipTrigger>
                                                         <TooltipContent>
-                                                            <p>Remove all labels</p>
+                                                            <p>Remove label</p>
                                                         </TooltipContent>
                                                     </Tooltip>
                                                 )}

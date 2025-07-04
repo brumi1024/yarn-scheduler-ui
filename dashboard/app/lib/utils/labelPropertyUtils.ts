@@ -1,5 +1,5 @@
-import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/types/property-descriptor';
-import type { NodeLabel } from '~/types';
+import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/lib/types/property-descriptor';
+import type { NodeLabel } from '~/lib/types';
 import { capacityValueSchema } from '~/config/propertyDefinitions';
 
 /**
