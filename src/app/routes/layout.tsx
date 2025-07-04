@@ -1,22 +1,18 @@
-import { Outlet, useLocation } from "react-router";
-import { useState, useEffect } from "react";
-import { useSchedulerStore } from "~/stores/schedulerStore";
-import { StagedChangesPanel } from "~/features/staged-changes/components/StagedChangesPanel";
-import { AppSidebar } from "~/components/layouts/app-sidebar";
-import { ModeToggle } from "~/components/elements/mode-toggle";
-import {
-  SidebarProvider,
-  SidebarInset,
-  SidebarTrigger,
-} from "~/components/ui/sidebar";
+import { Outlet, useLocation } from 'react-router';
+import { useState, useEffect } from 'react';
+import { useSchedulerStore } from '~/stores/schedulerStore';
+import { StagedChangesPanel } from '~/features/staged-changes/components/StagedChangesPanel';
+import { AppSidebar } from '~/components/layouts/app-sidebar';
+import { ModeToggle } from '~/components/elements/mode-toggle';
+import { SidebarProvider, SidebarInset, SidebarTrigger } from '~/components/ui/sidebar';
 
 export default function Layout() {
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
-  const loadInitialData = useSchedulerStore(state => state.loadInitialData);
+  const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
   const location = useLocation();
 
   useEffect(() => {
-    loadInitialData().catch(err => {
+    loadInitialData().catch((err) => {
       console.error('Failed to load initial data:', err);
     });
   }, [loadInitialData]);
@@ -26,23 +22,23 @@ export default function Layout() {
     if (location.pathname === '/') {
       return {
         title: 'Queue Hierarchy',
-        description: 'Visualize and manage your YARN Capacity Scheduler queues'
+        description: 'Visualize and manage your YARN Capacity Scheduler queues',
       };
     } else if (location.pathname === '/global-settings') {
       return {
         title: 'Global Settings',
-        description: 'Configure scheduler-wide settings and properties'
+        description: 'Configure scheduler-wide settings and properties',
       };
     } else if (location.pathname === '/node-labels') {
       return {
         title: 'Node Labels',
-        description: 'Manage node labels and node-to-label mappings'
+        description: 'Manage node labels and node-to-label mappings',
       };
     } else if (location.pathname.startsWith('/queue/')) {
       const queuePath = location.pathname.replace('/queue/', '');
       return {
         title: `Queue: ${queuePath}`,
-        description: 'View and edit queue properties'
+        description: 'View and edit queue properties',
       };
     }
     return { title: '', description: '' };
@@ -52,9 +48,11 @@ export default function Layout() {
 
   return (
     <SidebarProvider
-      style={{
-        "--sidebar-width": "16rem",
-      } as React.CSSProperties}
+      style={
+        {
+          '--sidebar-width': '16rem',
+        } as React.CSSProperties
+      }
     >
       <AppSidebar />
       <SidebarInset>
@@ -70,7 +68,7 @@ export default function Layout() {
               </div>
               <ModeToggle />
             </header>
-            
+
             {/* Page content */}
             <div className="flex-1 overflow-hidden">
               <Outlet />
@@ -78,9 +76,9 @@ export default function Layout() {
           </div>
         </div>
       </SidebarInset>
-      
-      <StagedChangesPanel 
-        open={stagedChangesPanelOpen} 
+
+      <StagedChangesPanel
+        open={stagedChangesPanelOpen}
         onClose={() => setStagedChangesPanelOpen(false)}
         onOpen={() => setStagedChangesPanelOpen(true)}
       />

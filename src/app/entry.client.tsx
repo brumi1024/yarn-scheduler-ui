@@ -1,6 +1,6 @@
-import { HydratedRouter } from "react-router/dom";
-import { startTransition, StrictMode } from "react";
-import { hydrateRoot } from "react-dom/client";
+import { HydratedRouter } from 'react-router/dom';
+import { startTransition, StrictMode } from 'react';
+import { hydrateRoot } from 'react-dom/client';
 
 async function enableMocking() {
   if (!import.meta.env.DEV) {
@@ -8,7 +8,7 @@ async function enableMocking() {
   }
 
   const { worker } = await import('~/lib/api/mocks/browser');
-  
+
   // Start the worker
   return worker.start({
     onUnhandledRequest: 'bypass',
@@ -21,7 +21,7 @@ enableMocking().then(() => {
       document,
       <StrictMode>
         <HydratedRouter />
-      </StrictMode>
+      </StrictMode>,
     );
   });
 });

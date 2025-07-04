@@ -23,28 +23,28 @@ describe('ModeToggle', () => {
   describe('Display and Accessibility', () => {
     it('should render the toggle button with proper accessibility label', () => {
       render(<ModeToggle />);
-      
+
       const button = screen.getByRole('button', { name: /toggle theme/i });
       expect(button).toBeInTheDocument();
     });
 
     it('should display both sun and moon icons', () => {
       render(<ModeToggle />);
-      
+
       // Both icons should be in the DOM
       const sunIcon = document.querySelector('.lucide-sun');
       const moonIcon = document.querySelector('.lucide-moon');
-      
+
       expect(sunIcon).toBeInTheDocument();
       expect(moonIcon).toBeInTheDocument();
     });
 
     it('should show sun icon in light mode with correct classes', () => {
       render(<ModeToggle />);
-      
+
       const sunIcon = document.querySelector('.lucide-sun');
       const moonIcon = document.querySelector('.lucide-moon');
-      
+
       // Sun should be visible in light mode
       expect(sunIcon).toHaveClass('rotate-0', 'scale-100');
       // Moon should be hidden in light mode
@@ -59,10 +59,10 @@ describe('ModeToggle', () => {
       });
 
       render(<ModeToggle />);
-      
+
       const sunIcon = document.querySelector('.lucide-sun');
       const moonIcon = document.querySelector('.lucide-moon');
-      
+
       // In dark mode, these classes control visibility through CSS
       expect(sunIcon).toHaveClass('dark:-rotate-90', 'dark:scale-0');
       expect(moonIcon).toHaveClass('dark:rotate-0', 'dark:scale-100');
@@ -72,17 +72,17 @@ describe('ModeToggle', () => {
   describe('Dropdown Menu Functionality', () => {
     it('should not show dropdown menu initially', () => {
       render(<ModeToggle />);
-      
+
       expect(screen.queryByRole('menu')).not.toBeInTheDocument();
     });
 
     it('should open dropdown menu when button is clicked', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Check that all menu items are visible
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
       expect(screen.getByRole('menuitem', { name: /dark/i })).toBeInTheDocument();
@@ -92,18 +92,18 @@ describe('ModeToggle', () => {
     it('should close dropdown menu after interaction', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
-      
+
       // Select an item to close the menu
       await user.click(screen.getByRole('menuitem', { name: /light/i }));
-      
+
       // Menu should be closed after selection
       expect(screen.queryByRole('menuitem', { name: /light/i })).not.toBeInTheDocument();
-      
+
       // Verify we can open it again
       await user.click(button);
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
@@ -112,15 +112,15 @@ describe('ModeToggle', () => {
     it('should close dropdown menu when escape key is pressed', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
-      
+
       // Press escape
       await user.keyboard('{Escape}');
-      
+
       // Menu should be closed
       expect(screen.queryByRole('menuitem', { name: /light/i })).not.toBeInTheDocument();
     });
@@ -130,15 +130,15 @@ describe('ModeToggle', () => {
     it('should call setTheme with "light" when Light option is clicked', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Click Light option
       const lightOption = screen.getByRole('menuitem', { name: /light/i });
       await user.click(lightOption);
-      
+
       expect(mockSetTheme).toHaveBeenCalledWith('light');
       expect(mockSetTheme).toHaveBeenCalledTimes(1);
     });
@@ -146,15 +146,15 @@ describe('ModeToggle', () => {
     it('should call setTheme with "dark" when Dark option is clicked', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Click Dark option
       const darkOption = screen.getByRole('menuitem', { name: /dark/i });
       await user.click(darkOption);
-      
+
       expect(mockSetTheme).toHaveBeenCalledWith('dark');
       expect(mockSetTheme).toHaveBeenCalledTimes(1);
     });
@@ -162,15 +162,15 @@ describe('ModeToggle', () => {
     it('should call setTheme with "system" when System option is clicked', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Click System option
       const systemOption = screen.getByRole('menuitem', { name: /system/i });
       await user.click(systemOption);
-      
+
       expect(mockSetTheme).toHaveBeenCalledWith('system');
       expect(mockSetTheme).toHaveBeenCalledTimes(1);
     });
@@ -178,15 +178,15 @@ describe('ModeToggle', () => {
     it('should close menu after selecting a theme option', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Click Light option
       const lightOption = screen.getByRole('menuitem', { name: /light/i });
       await user.click(lightOption);
-      
+
       // Menu should be closed
       expect(screen.queryByRole('menuitem', { name: /light/i })).not.toBeInTheDocument();
     });
@@ -195,7 +195,7 @@ describe('ModeToggle', () => {
   describe('Integration with ThemeProvider', () => {
     it('should use the useTheme hook from theme provider', () => {
       render(<ModeToggle />);
-      
+
       // The component renders successfully, which means useTheme hook is being used
       expect(screen.getByRole('button', { name: /toggle theme/i })).toBeInTheDocument();
     });
@@ -225,24 +225,24 @@ describe('ModeToggle', () => {
     it('should handle multiple theme changes in sequence', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       const button = screen.getByRole('button', { name: /toggle theme/i });
-      
+
       // First interaction - set to dark
       await user.click(button);
       await user.click(screen.getByRole('menuitem', { name: /dark/i }));
       expect(mockSetTheme).toHaveBeenCalledWith('dark');
-      
+
       // Second interaction - set to system
       await user.click(button);
       await user.click(screen.getByRole('menuitem', { name: /system/i }));
       expect(mockSetTheme).toHaveBeenCalledWith('system');
-      
+
       // Third interaction - set to light
       await user.click(button);
       await user.click(screen.getByRole('menuitem', { name: /light/i }));
       expect(mockSetTheme).toHaveBeenCalledWith('light');
-      
+
       // Verify all calls were made
       expect(mockSetTheme).toHaveBeenCalledTimes(3);
     });
@@ -250,36 +250,36 @@ describe('ModeToggle', () => {
     it('should handle theme changes while menu is open', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu
       const button = screen.getByRole('button', { name: /toggle theme/i });
       await user.click(button);
-      
+
       // Change theme while menu is open
       mockUseTheme.mockReturnValue({
         theme: 'dark',
         setTheme: mockSetTheme,
       });
-      
+
       // Click dark option
       await user.click(screen.getByRole('menuitem', { name: /dark/i }));
-      
+
       expect(mockSetTheme).toHaveBeenCalledWith('dark');
     });
 
     it('should maintain button focus after closing menu with escape', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       const button = screen.getByRole('button', { name: /toggle theme/i });
-      
+
       // Focus and open menu
       button.focus();
       await user.click(button);
-      
+
       // Close with escape
       await user.keyboard('{Escape}');
-      
+
       // Button should still have focus
       expect(button).toHaveFocus();
     });
@@ -289,22 +289,22 @@ describe('ModeToggle', () => {
     it('should support keyboard navigation in dropdown menu', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       // Open menu with keyboard
       const button = screen.getByRole('button', { name: /toggle theme/i });
       button.focus();
       await user.keyboard('{Enter}');
-      
+
       // Menu should be open
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
-      
+
       // Navigate with arrow keys
       await user.keyboard('{ArrowDown}');
       expect(screen.getByRole('menuitem', { name: /dark/i })).toHaveFocus();
-      
+
       await user.keyboard('{ArrowDown}');
       expect(screen.getByRole('menuitem', { name: /system/i })).toHaveFocus();
-      
+
       // Select with Enter
       await user.keyboard('{Enter}');
       expect(mockSetTheme).toHaveBeenCalledWith('system');
@@ -313,11 +313,11 @@ describe('ModeToggle', () => {
     it('should support space key to open menu', async () => {
       const user = userEvent.setup();
       render(<ModeToggle />);
-      
+
       const button = screen.getByRole('button', { name: /toggle theme/i });
       button.focus();
       await user.keyboard(' ');
-      
+
       expect(screen.getByRole('menuitem', { name: /light/i })).toBeInTheDocument();
     });
   });

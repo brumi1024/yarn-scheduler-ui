@@ -43,7 +43,7 @@ describe('ThemeProvider', () => {
     render(
       <ThemeProvider>
         <TestComponent />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     expect(screen.getByText('Current theme: system')).toBeInTheDocument();
@@ -142,10 +142,10 @@ describe('ThemeProvider', () => {
   it('should apply light theme when system prefers light mode', async () => {
     // Ensure localStorage is not returning any stored value
     localStorageMock.getItem.mockReturnValue(null);
-    
+
     // Reset document classes before test
     document.documentElement.className = '';
-    
+
     // Mock system prefers light mode
     matchMediaMock.mockReturnValue({
       matches: false, // light mode
@@ -161,7 +161,7 @@ describe('ThemeProvider', () => {
     await waitFor(() => {
       expect(document.documentElement.classList.contains('light')).toBe(true);
     });
-    
+
     expect(document.documentElement.classList.contains('dark')).toBe(false);
     expect(result.current.theme).toBe('system');
   });

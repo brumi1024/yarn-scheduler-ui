@@ -19,7 +19,7 @@ const NODE_LABELS_SEGMENT = 'accessible-node-labels';
  * @returns The full property key (e.g. 'yarn.scheduler.capacity.root.production.team1.capacity')
  */
 export function buildPropertyKey(queuePath: string, property: string): string {
-    return `${YARN_SCHEDULER_PREFIX}.${queuePath}.${property}`;
+  return `${YARN_SCHEDULER_PREFIX}.${queuePath}.${property}`;
 }
 
 /**
@@ -28,7 +28,7 @@ export function buildPropertyKey(queuePath: string, property: string): string {
  * @returns The full property key (e.g. 'yarn.scheduler.capacity.maximum-applications')
  */
 export function buildGlobalPropertyKey(property: string): string {
-    return `${YARN_SCHEDULER_PREFIX}.${property}`;
+  return `${YARN_SCHEDULER_PREFIX}.${property}`;
 }
 
 /**
@@ -38,16 +38,20 @@ export function buildGlobalPropertyKey(property: string): string {
  * @param property The property name (e.g. 'capacity')
  * @returns The full property key (e.g. 'yarn.scheduler.capacity.root.production.accessible-node-labels.gpu.capacity')
  */
-export function buildNodeLabelPropertyKey(queuePath: string, label: string, property: string): string {
-    return `${YARN_SCHEDULER_PREFIX}.${queuePath}.${NODE_LABELS_SEGMENT}.${label}.${property}`;
+export function buildNodeLabelPropertyKey(
+  queuePath: string,
+  label: string,
+  property: string,
+): string {
+  return `${YARN_SCHEDULER_PREFIX}.${queuePath}.${NODE_LABELS_SEGMENT}.${label}.${property}`;
 }
 
 /**
  * Result of queue name validation
  */
 export type ValidationResult = {
-    valid: boolean;
-    message?: string;
+  valid: boolean;
+  message?: string;
 };
 
 /**
@@ -59,19 +63,22 @@ export type ValidationResult = {
  * @returns Validation result with error message if invalid
  */
 export function validateQueueName(queueName: string): ValidationResult {
-    if (!queueName || queueName.trim() === '') {
-        return { valid: false, message: 'Queue name cannot be empty' };
-    }
+  if (!queueName || queueName.trim() === '') {
+    return { valid: false, message: 'Queue name cannot be empty' };
+  }
 
-    if (queueName.includes('.')) {
-        return { valid: false, message: 'Queue names cannot contain dots (.)' };
-    }
+  if (queueName.includes('.')) {
+    return { valid: false, message: 'Queue names cannot contain dots (.)' };
+  }
 
-    if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) {
-        return { valid: false, message: 'Queue names should only contain letters, numbers, hyphens, and underscores' };
-    }
+  if (!/^[a-zA-Z0-9_-]+$/.test(queueName)) {
+    return {
+      valid: false,
+      message: 'Queue names should only contain letters, numbers, hyphens, and underscores',
+    };
+  }
 
-    return { valid: true };
+  return { valid: true };
 }
 
 /**
@@ -80,10 +87,10 @@ export function validateQueueName(queueName: string): ValidationResult {
  * @returns Array of path segments (e.g. ['root', 'production', 'team1'])
  */
 export function splitQueuePath(queuePath: string): string[] {
-    if (!queuePath) {
-        return [];
-    }
-    return queuePath.split('.');
+  if (!queuePath) {
+    return [];
+  }
+  return queuePath.split('.');
 }
 
 /**
@@ -92,7 +99,7 @@ export function splitQueuePath(queuePath: string): string[] {
  * @returns The joined queue path (e.g. 'root.production.team1')
  */
 export function joinQueuePath(segments: string[]): string {
-    return segments.join('.');
+  return segments.join('.');
 }
 
 /**
@@ -101,11 +108,11 @@ export function joinQueuePath(segments: string[]): string {
  * @returns The queue name (e.g. 'team1')
  */
 export function getQueueNameFromPath(queuePath: string): string {
-    if (!queuePath) {
-        return '';
-    }
-    const segments = splitQueuePath(queuePath);
-    return segments[segments.length - 1] || '';
+  if (!queuePath) {
+    return '';
+  }
+  const segments = splitQueuePath(queuePath);
+  return segments[segments.length - 1] || '';
 }
 
 /**
@@ -114,14 +121,14 @@ export function getQueueNameFromPath(queuePath: string): string {
  * @returns The parent queue path (e.g. 'root.production') or null if no parent
  */
 export function getParentQueuePath(queuePath: string): string | null {
-    if (!queuePath) {
-        return null;
-    }
-    const segments = splitQueuePath(queuePath);
-    if (segments.length <= 1) {
-        return null;
-    }
-    return joinQueuePath(segments.slice(0, -1));
+  if (!queuePath) {
+    return null;
+  }
+  const segments = splitQueuePath(queuePath);
+  if (segments.length <= 1) {
+    return null;
+  }
+  return joinQueuePath(segments.slice(0, -1));
 }
 
 /**
@@ -130,7 +137,7 @@ export function getParentQueuePath(queuePath: string): string | null {
  * @returns True if this is the root queue
  */
 export function isRootQueue(queuePath: string): boolean {
-    return queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
+  return queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
 }
 
 /**
@@ -139,12 +146,11 @@ export function isRootQueue(queuePath: string): boolean {
  * @returns True if this is a global property
  */
 export function isGlobalPropertyKey(propertyKey: string): boolean {
-    if (!propertyKey.startsWith(YARN_SCHEDULER_PREFIX + '.')) {
-        return false;
-    }
+  if (!propertyKey.startsWith(YARN_SCHEDULER_PREFIX + '.')) {
+    return false;
+  }
 
-    const suffix = propertyKey.substring(YARN_SCHEDULER_PREFIX.length + 1);
+  const suffix = propertyKey.substring(YARN_SCHEDULER_PREFIX.length + 1);
 
-    return !suffix.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME + '.');
+  return !suffix.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME + '.');
 }
-
