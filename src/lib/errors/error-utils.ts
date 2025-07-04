@@ -1,17 +1,4 @@
-/**
- * Error handling utilities for the Scheduler Store
- */
-
-export class SchedulerStoreError extends Error {
-  constructor(
-    message: string,
-    public readonly code: string,
-    public readonly details?: unknown,
-  ) {
-    super(message);
-    this.name = 'SchedulerStoreError';
-  }
-}
+import { SchedulerStoreError } from './scheduler-store-error';
 
 export function createStoreError(
   code: string,
@@ -20,23 +7,6 @@ export function createStoreError(
 ): SchedulerStoreError {
   return new SchedulerStoreError(message, code, details);
 }
-
-/**
- * Error codes for better error handling
- */
-export const ERROR_CODES = {
-  LOAD_INITIAL_DATA_FAILED: 'LOAD_INITIAL_DATA_FAILED',
-  REFRESH_SCHEDULER_FAILED: 'REFRESH_SCHEDULER_FAILED',
-  APPLY_CHANGES_FAILED: 'APPLY_CHANGES_FAILED',
-  INVALID_QUEUE_PATH: 'INVALID_QUEUE_PATH',
-  INVALID_PROPERTY_NAME: 'INVALID_PROPERTY_NAME',
-  INVALID_PROPERTY_VALUE: 'INVALID_PROPERTY_VALUE',
-  INVALID_QUEUE_NAME: 'INVALID_QUEUE_NAME',
-  EMPTY_STAGED_CHANGES: 'EMPTY_STAGED_CHANGES',
-  API_ERROR: 'API_ERROR',
-  NETWORK_ERROR: 'NETWORK_ERROR',
-  VALIDATION_ERROR: 'VALIDATION_ERROR',
-} as const;
 
 /**
  * Extract a user-friendly error message from various error types

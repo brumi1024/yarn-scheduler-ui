@@ -1,7 +1,7 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { globalPropertyDefinitions } from '~/config/propertyDefinitions';
+import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { SPECIAL_VALUES } from '~/types';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Card, CardContent } from '~/components/ui/card';

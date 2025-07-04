@@ -12,7 +12,7 @@ import { Label } from '~/components/ui/label';
 import { Switch } from '~/components/ui/switch';
 import { Button } from '~/components/ui/button';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { validateLabelName } from '~/utils/labelValidation';
+import { validateLabelName } from '~/features/node-labels/utils/labelValidation';
 
 interface AddLabelDialogProps {
   open: boolean;

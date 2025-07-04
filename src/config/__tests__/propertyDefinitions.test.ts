@@ -1,16 +1,18 @@
 import { describe, it, expect } from 'vitest';
+import { queuePropertyDefinitions } from '../properties/queue-properties';
 import {
-  queuePropertyDefinitions,
-  globalPropertyDefinitions,
   getPropertiesByCategory,
   getPropertyCategories,
   getPropertyDefinition,
+} from '../properties/helpers';
+import { globalPropertyDefinitions } from '../properties/global-properties';
+import {
   capacityValueSchema,
   percentageSchema,
   positiveNumberSchema,
   integerSchema,
   aclFormatSchema,
-} from '../propertyDefinitions';
+} from '../schemas/validation';
 
 describe('propertyDefinitions', () => {
   describe('queuePropertyDefinitions', () => {

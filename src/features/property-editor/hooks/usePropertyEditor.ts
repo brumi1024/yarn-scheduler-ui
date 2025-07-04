@@ -2,19 +2,19 @@ import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import React, { useCallback, useEffect, useMemo } from 'react';
-import { useSchedulerStore } from '../stores/schedulerStore';
+import { useSchedulerStore } from '~/stores/schedulerStore';
 import type {
   PropertyDescriptor,
   LabelPropertyDescriptor,
   ValidationRule,
-} from '../types/property-descriptor';
-import { queuePropertyDefinitions } from '../config/propertyDefinitions';
+} from '~/types/property-descriptor';
+import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
 import {
   generateLabelPropertyDescriptors,
   isLabelProperty,
   extractLabelFromPropertyName,
   extractBasePropertyFromLabelProperty,
-} from '../utils/labelPropertyUtils';
+} from '~/features/node-labels/utils/labelPropertyUtils';
 import { toast } from 'sonner';
 
 function createFormSchema(

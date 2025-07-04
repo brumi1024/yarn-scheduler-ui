@@ -7,11 +7,11 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '~/components/ui/accordion';
-import { usePropertyEditor } from '~/hooks/usePropertyEditor';
+import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
 import type { QueueInfo } from '~/types';
 import type { PropertyCategory, LabelPropertyDescriptor } from '~/types';
-import { groupLabelPropertiesByLabel } from '~/utils/labelPropertyUtils';
+import { groupLabelPropertiesByLabel } from '~/features/node-labels/utils/labelPropertyUtils';
 import { SPECIAL_VALUES } from '~/types';
 import { toast } from 'sonner';
 import { Form } from '~/components/ui/form';

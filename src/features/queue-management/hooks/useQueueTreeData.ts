@@ -8,8 +8,8 @@ import type {
   SchedulerInfo,
   CapacitySchedulerInfo,
 } from '~/types';
-import type { QueueStateValue } from '~/types/constants';
-import { AUTO_CREATION_PROPS } from '~/types/constants';
+import type { QueueStateValue } from '~/types/constants/queue';
+import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { DagreLayout } from '../utils/DagreLayout';
 
 export type QueueCardData = QueueInfo & {

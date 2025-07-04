@@ -5,7 +5,7 @@
  * to be sent to the YARN REST API for applying configuration updates.
  */
 
-import type { StagedChange, SchedConfUpdateInfo } from '../types';
+import type { StagedChange, SchedConfUpdateInfo } from '~/types';
 import { SPECIAL_VALUES, MUTATION_OPERATIONS } from '~/types';
 import { groupBy } from 'es-toolkit';
 
@@ -62,11 +62,10 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
           break;
         }
         case 'add': {
-          if (!change.property || change.newValue === undefined) continue;
-
-          const adds = addsByQueue.get(queuePath) || {};
-          adds[change.property] = change.newValue;
-          addsByQueue.set(queuePath, adds);
+          // Handle config object for queue additions
+          if (change.config) {
+            addsByQueue.set(queuePath, change.config);
+          }
           break;
         }
         case 'remove': {
@@ -164,22 +163,14 @@ export function buildAddQueueMutation(
   queuePath: string,
   changes: StagedChange[],
 ): { 'queue-name': string; params: Record<string, string> } {
-  const params: Record<string, string> = {};
-
-  for (const change of changes) {
-    if (
-      change.queuePath === queuePath &&
-      change.type === 'add' &&
-      change.property &&
-      change.newValue !== undefined
-    ) {
-      params[change.property] = change.newValue;
-    }
-  }
+  // Find the add change with config for this queue
+  const addChange = changes.find(
+    (change) => change.queuePath === queuePath && change.type === 'add' && change.config,
+  );
 
   return {
     'queue-name': queuePath,
-    params,
+    params: addChange?.config || {},
   };
 }
 
