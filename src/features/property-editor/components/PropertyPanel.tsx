@@ -38,7 +38,7 @@ export const PropertyPanel: React.FC = () => {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, string>>({});
+  const [validationErrors, setValidationErrors] = useState<Record<string, unknown>>({});
   const [showErrorDetails, setShowErrorDetails] = useState(false);
 
   const propertyEditorRef = useRef<PropertyEditorTabHandle>(null);

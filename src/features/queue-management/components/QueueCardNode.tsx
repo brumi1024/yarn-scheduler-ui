@@ -228,7 +228,7 @@ export const QueueCardNode = ({ data }: NodeProps) => {
         <ContextMenuContent className="w-48">
           <ContextMenuItem
             onClick={() => {
-              handleClick(new MouseEvent('click') as React.MouseEvent);
+              handleClick(new MouseEvent('click') as unknown as React.MouseEvent);
             }}
             disabled={stagedStatus === 'new'}
           >

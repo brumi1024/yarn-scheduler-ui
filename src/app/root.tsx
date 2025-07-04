@@ -4,6 +4,7 @@ import { ThemeProvider } from '~/components/providers/theme-provider';
 
 import './app.css';
 
+// eslint-disable-next-line react-refresh/only-export-components
 export { links } from './root.links';
 
 export function Layout({ children }: { children: React.ReactNode }) {

@@ -37,7 +37,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   const renderInput = (
     field: ControllerRenderProps<Record<string, string>, string>,
     formState: FormState<Record<string, string>>,
-  ): JSX.Element => {
+  ): React.ReactElement => {
     const fieldName = property.formFieldName || property.name;
     const error = formState.errors?.[fieldName];
 
@@ -81,7 +81,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             </div>
             <FormControl>
               <Switch
-                checked={field.value === 'true' || field.value === true}
+                checked={field.value === 'true'}
                 onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
                 disabled={!isFieldEnabled}
               />

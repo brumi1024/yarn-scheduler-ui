@@ -50,7 +50,7 @@ describe('NodeLabelsPanel', () => {
       render(<NodeLabelsPanel />);
 
       expect(screen.getByText('No node labels found')).toBeInTheDocument();
-      expect(screen.getByText("Click 'Add' to create the first label")).toBeInTheDocument();
+      expect(screen.getByText('Click "Add" to create the first label')).toBeInTheDocument();
     });
 
     it('should show correct label count for empty state', () => {
