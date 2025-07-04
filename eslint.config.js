@@ -15,6 +15,7 @@ export default tseslint.config(
       'coverage',
       '*.log',
       'eslint-results.sarif',
+      'src/components/ui/**',
     ],
   },
 
@@ -55,7 +56,7 @@ export default tseslint.config(
       'react/no-is-mounted': 'error',
       'react/no-render-return-value': 'error',
       'react/no-string-refs': 'error',
-      'react/no-unescaped-entities': 'warn',
+      'react/no-unescaped-entities': 'off',
       'react/no-unknown-property': 'error',
       'react/require-render-return': 'error',
       'react/jsx-no-target-blank': 'warn',
@@ -83,13 +84,7 @@ export default tseslint.config(
       ],
       // Type safety rules
       '@typescript-eslint/no-explicit-any': 'error',
-      '@typescript-eslint/explicit-function-return-type': [
-        'warn',
-        {
-          allowExpressions: true,
-          allowTypedFunctionExpressions: true,
-        },
-      ],
+      '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },
 
@@ -106,7 +101,6 @@ export default tseslint.config(
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
       '@typescript-eslint/no-explicit-any': 'off',
-      '@typescript-eslint/explicit-function-return-type': 'off',
     },
   },
 

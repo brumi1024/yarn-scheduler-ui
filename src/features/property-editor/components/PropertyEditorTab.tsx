@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, forwardRef } from 'react';
+import React, { useState, useImperativeHandle, forwardRef, useCallback } from 'react';
 import { Settings, HardDrive, Gauge, Calendar, Shield, Sliders, Tag } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import {
@@ -20,7 +20,7 @@ export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
   reset: () => void;
   isValid: () => boolean;
-  getErrors: () => Record<string, any>;
+  getErrors: () => Record<string, unknown>;
 }
 
 interface PropertyEditorTabProps {
@@ -28,7 +28,7 @@ interface PropertyEditorTabProps {
   onHasChangesChange?: (hasChanges: boolean) => void;
   onIsSubmittingChange?: (isSubmitting: boolean) => void;
   onFormDirtyChange?: (isDirty: boolean) => void;
-  onErrorsChange?: (errors: Record<string, any>) => void;
+  onErrorsChange?: (errors: Record<string, unknown>) => void;
 }
 
 // Category display configuration with icons and enhanced styling
@@ -85,6 +85,16 @@ const categoryConfig: Record<
   },
 };
 
+// Base category order for consistent display
+const baseCategoryOrder: PropertyCategory[] = [
+  'general',
+  'resource',
+  'limits',
+  'scheduling',
+  'security',
+  'advanced',
+];
+
 export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEditorTabProps>(
   ({ queue, onHasChangesChange, onIsSubmittingChange, onFormDirtyChange, onErrorsChange }, ref) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
@@ -101,7 +111,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       watchedValues,
       propertiesByCategory,
       getStagedStatus,
-      labelProperties,
       formState,
     } = usePropertyEditor({
       queuePath: queue.queuePath,
@@ -167,10 +176,10 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     }, [handleSubmit]);
 
     // Handle form reset
-    const onReset = () => {
+    const onReset = useCallback(() => {
       handleReset();
       toast.success('Form reset to current values');
-    };
+    }, [handleReset]);
 
     // Expose handlers to parent via ref
     useImperativeHandle(
@@ -183,16 +192,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       }),
       [onSubmit, onReset, isValid, errors],
     );
-
-    // Get category order for consistent display
-    const baseCategoryOrder: PropertyCategory[] = [
-      'general',
-      'resource',
-      'limits',
-      'scheduling',
-      'security',
-      'advanced',
-    ];
 
     // Only show nodeLabels category if queue has accessible labels
     const categoryOrder: PropertyCategory[] = React.useMemo(

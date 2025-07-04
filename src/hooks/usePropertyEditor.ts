@@ -17,7 +17,14 @@ import {
 } from '../utils/labelPropertyUtils';
 import { toast } from 'sonner';
 
-function createFormSchema(properties: any[]) {
+function createFormSchema(
+  properties: Array<
+    (PropertyDescriptor | LabelPropertyDescriptor) & {
+      formFieldName?: string;
+      originalName?: string;
+    }
+  >,
+) {
   const schemaFields: Record<string, z.ZodType> = {};
 
   properties.forEach((property) => {
@@ -82,7 +89,6 @@ export function usePropertyEditor({
     stageQueueChange,
     stageLabelQueueChange,
     clearQueueChanges,
-    applyChanges,
     nodeLabels,
   } = useSchedulerStore();
 
@@ -130,10 +136,7 @@ export function usePropertyEditor({
     const initialValues: Record<string, string> = {};
 
     allProperties.forEach((property) => {
-      const { value, isStaged } = getQueuePropertyValue(
-        queuePath,
-        property.originalName || property.name,
-      );
+      const { value } = getQueuePropertyValue(queuePath, property.originalName || property.name);
 
       // Use escaped field name for React Hook Form
       const fieldName = property.formFieldName || property.name;

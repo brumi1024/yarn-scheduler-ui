@@ -96,28 +96,6 @@ const mockSchedulerResponse: SchedulerResponse = {
   },
 };
 
-const mockConfigResponse: SchedulerConfResponse = {
-  property: [
-    { name: 'yarn.scheduler.capacity.root.queues', value: 'default,production' },
-    { name: 'yarn.scheduler.capacity.root.default.capacity', value: '50' },
-    { name: 'yarn.scheduler.capacity.root.default.maximum-capacity', value: '100' },
-    { name: 'yarn.scheduler.capacity.root.production.capacity', value: '50' },
-    { name: 'yarn.scheduler.capacity.root.production.maximum-capacity', value: '100' },
-    { name: 'yarn.scheduler.capacity.root.production.queues', value: 'batch,interactive' },
-    { name: 'yarn.scheduler.capacity.root.production.batch.capacity', value: '60' },
-    { name: 'yarn.scheduler.capacity.root.production.interactive.capacity', value: '40' },
-  ],
-};
-
-const mockNodeLabelsResponse: NodeLabelsResponse = {
-  nodeLabelsInfo: {
-    nodeLabelInfo: [
-      { name: 'gpu', exclusivity: true },
-      { name: 'ssd', exclusivity: false },
-    ],
-  },
-};
-
 const mockVersionResponse: VersionResponse = {
   versionID: 1234567890,
 };

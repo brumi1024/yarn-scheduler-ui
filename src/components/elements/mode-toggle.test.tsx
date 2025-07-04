@@ -11,7 +11,7 @@ const mockUseTheme = vi.fn(() => ({
   setTheme: mockSetTheme,
 }));
 
-vi.mock('~/components/providers/theme-provider', () => ({
+vi.mock('~/components/providers/use-theme', () => ({
   useTheme: () => mockUseTheme(),
 }));
 

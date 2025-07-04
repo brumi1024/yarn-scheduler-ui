@@ -12,12 +12,12 @@ vi.mock('~/stores/schedulerStore');
 
 // Mock the dialog components
 vi.mock('./dialogs/AddQueueDialog', () => ({
-  AddQueueDialog: ({ open, onClose }: any) =>
+  AddQueueDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="add-queue-dialog">Add Queue Dialog</div> : null,
 }));
 
 vi.mock('./dialogs/DeleteQueueDialog', () => ({
-  DeleteQueueDialog: ({ open, onClose }: any) =>
+  DeleteQueueDialog: ({ open }: { open: boolean }) =>
     open ? <div data-testid="delete-queue-dialog">Delete Queue Dialog</div> : null,
 }));
 
@@ -340,9 +340,7 @@ describe('QueueCardNode', () => {
       return selector ? selector(state) : state;
     });
 
-    const { container } = renderWithProviders(
-      <QueueCardNode {...createNodeProps(defaultNodeData)} />,
-    );
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
 
     // Open context menu
     const card = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');

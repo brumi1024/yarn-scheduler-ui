@@ -1,6 +1,6 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '~/testing/setup/setup';
+import { render, screen } from '~/testing/setup/setup';
 import { PropertyPanel } from './PropertyPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -37,8 +37,8 @@ let mockIsValid = vi.fn();
 let mockGetErrors = vi.fn();
 
 // Mock PropertyEditorTab with ref handling
-vi.mock('./PropertyEditorTab', () => {
-  const React = require('react');
+vi.mock('./PropertyEditorTab', async () => {
+  const React = await import('react');
 
   const PropertyEditorTab = React.forwardRef(
     ({ onFormDirtyChange, onHasChangesChange, onErrorsChange }: any, ref: any) => {

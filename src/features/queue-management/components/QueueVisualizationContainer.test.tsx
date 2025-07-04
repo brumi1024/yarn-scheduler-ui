@@ -51,6 +51,7 @@ vi.mock('d3-selection', () => ({
 // Mock factory for QueueCardData
 const getMockQueueCardData = (overrides?: Partial<QueueCardData>): QueueCardData => {
   return {
+    queueType: 'leaf' as const,
     queueName: 'test-queue',
     queuePath: 'root.test-queue',
     absoluteCapacity: 50,
@@ -60,8 +61,10 @@ const getMockQueueCardData = (overrides?: Partial<QueueCardData>): QueueCardData
     maxCapacity: 100,
     usedCapacity: 25,
     numApplications: 5,
+    numActiveApplications: 3,
+    numPendingApplications: 2,
     state: 'RUNNING',
-    queues: null,
+    queues: undefined,
     resourcesUsed: {
       memory: 1024,
       vCores: 2,
@@ -180,7 +183,7 @@ describe('QueueVisualizationContainer', () => {
   });
 
   it('should render queue hierarchy when data is available', async () => {
-    const mockNodes: Node[] = [
+    const mockNodes: Node<QueueCardData>[] = [
       {
         id: 'root',
         type: 'queueCard',
@@ -239,7 +242,7 @@ describe('QueueVisualizationContainer', () => {
     const mockSetPropertyPanelOpen = vi.fn();
 
     // Update the mock implementation to return the new functions
-    vi.mocked(useSchedulerStore).mockImplementation((selector) => {
+    vi.mocked(useSchedulerStore).mockImplementation((selector: any) => {
       const state = {
         selectQueue: mockSelectQueue,
         selectedQueuePath: null,
@@ -261,7 +264,7 @@ describe('QueueVisualizationContainer', () => {
       return state;
     });
 
-    const mockNodes: Node[] = [
+    const mockNodes: Node<QueueCardData>[] = [
       {
         id: 'root.queue1',
         type: 'queueCard',
@@ -304,7 +307,7 @@ describe('QueueVisualizationContainer', () => {
   });
 
   it('should apply correct color mode based on theme', async () => {
-    const mockNodes: Node[] = [
+    const mockNodes: Node<QueueCardData>[] = [
       {
         id: 'root',
         type: 'queueCard',

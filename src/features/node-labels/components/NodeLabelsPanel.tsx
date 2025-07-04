@@ -146,7 +146,7 @@ export const NodeLabelsPanel: React.FC = () => {
               <div className="py-8 text-center">
                 <p className="text-sm text-muted-foreground">No node labels found</p>
                 <p className="text-xs text-muted-foreground">
-                  Click 'Add' to create the first label
+                  Click "Add" to create the first label
                 </p>
               </div>
             </li>

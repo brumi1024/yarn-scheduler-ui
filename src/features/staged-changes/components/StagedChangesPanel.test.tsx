@@ -278,11 +278,15 @@ describe('StagedChangesPanel', () => {
       return selector ? selector(state) : state;
     });
 
-    const { container } = render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} onOpen={vi.fn()} />);
 
     // The Sheet component renders content in a portal, so we need to look in the document body
+    await waitFor(() => {
+      const sheetContent = document.querySelector('[data-slot="sheet-content"]');
+      expect(sheetContent).toBeTruthy();
+    });
+
     const sheetContent = document.querySelector('[data-slot="sheet-content"]');
-    expect(sheetContent).toBeTruthy();
     expect(sheetContent).toHaveClass('h-[200px]');
 
     // Click toggle button - find the button with ChevronUp icon
@@ -297,7 +301,6 @@ describe('StagedChangesPanel', () => {
   });
 
   it('should close panel when clicking close button', async () => {
-    const user = userEvent.setup();
     const onClose = vi.fn();
 
     render(<StagedChangesPanel open={true} onClose={onClose} />);

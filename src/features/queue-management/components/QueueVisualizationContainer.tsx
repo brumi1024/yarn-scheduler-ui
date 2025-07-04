@@ -13,10 +13,10 @@ import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { AlertCircle } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { useQueueTreeData } from '../hooks/useQueueTreeData';
+import { useQueueTreeData, type QueueCardData } from '../hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
-import { useTheme } from '~/components/providers/theme-provider';
+import { useTheme } from '~/components/providers/use-theme';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -120,7 +120,7 @@ const FlowInner: React.FC = () => {
       <Controls showInteractive={false} />
       <MiniMap
         nodeColor={(node) => {
-          const data = node.data as any;
+          const data = node.data as QueueCardData;
 
           // Use default colors during SSR
           if (typeof window === 'undefined') {

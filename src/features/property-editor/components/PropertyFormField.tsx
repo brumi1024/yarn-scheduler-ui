@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Control } from 'react-hook-form';
+import type { Control, ControllerRenderProps, FormState } from 'react-hook-form';
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
 import { Switch } from '~/components/ui/switch';
@@ -14,7 +14,7 @@ interface PropertyFormFieldProps {
   property: PropertyDescriptor;
   control: Control<Record<string, string>>;
   stagedStatus?: 'new' | 'modified' | 'deleted';
-  dependentValues?: Record<string, any>;
+  dependentValues?: Record<string, string>;
 }
 
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
@@ -34,7 +34,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   }, [property.enableWhen, dependentValues]);
 
   // Render different input types based on property type
-  const renderInput = (field: any, formState: any) => {
+  const renderInput = (
+    field: ControllerRenderProps<Record<string, string>, string>,
+    formState: FormState<Record<string, string>>,
+  ): React.ReactElement => {
     const fieldName = property.formFieldName || property.name;
     const error = formState.errors?.[fieldName];
 
@@ -78,7 +81,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             </div>
             <FormControl>
               <Switch
-                checked={field.value === 'true' || field.value === true}
+                checked={field.value === 'true'}
                 onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
                 disabled={!isFieldEnabled}
               />

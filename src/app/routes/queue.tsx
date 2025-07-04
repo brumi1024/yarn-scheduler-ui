@@ -1,9 +1,6 @@
-import { useParams } from 'react-router';
 import { PropertyPanel } from '~/features/property-editor/components/PropertyPanel';
 
 export default function QueueDetails() {
-  const { queuePath } = useParams();
-
   return (
     <>
       <div className="p-6">
