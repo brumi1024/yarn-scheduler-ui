@@ -96,10 +96,10 @@ body {
   --sidebar-ring: oklch(0.723 0.219 149.579);
   
   /* Queue state colors for light mode */
-  --queue-new: oklch(0.596 0.189 142.495); /* Green */
+  --queue-new: oklch(0.72 0.19 150); /* Green */
   --queue-modified: oklch(0.646 0.222 41.116); /* Orange */
   --queue-deleted: oklch(0.577 0.245 27.325); /* Red */
-  --queue-running: oklch(0.596 0.189 142.495); /* Green */
+  --queue-running: oklch(0.72 0.19 150); /* Green */
   --queue-stopped: oklch(0.577 0.245 27.325); /* Red */
   --queue-draining: oklch(0.646 0.222 41.116); /* Orange */
 }

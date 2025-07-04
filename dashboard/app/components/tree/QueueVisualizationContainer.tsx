@@ -36,10 +36,8 @@ const FlowInner: React.FC = () => {
 
     const { nodes, edges, isLoading, error } = useQueueTreeData();
     
-    // Determine the color mode for React Flow
-    const colorMode = theme === 'system' 
-        ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
-        : theme;
+    const colorMode = theme === 'system'
+        ? window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light' : theme;
 
     const onNodesChange: OnNodesChange = useCallback(() => {
         // We don't allow node position changes
@@ -119,6 +117,15 @@ const FlowInner: React.FC = () => {
             <MiniMap 
                 nodeColor={(node) => {
                     const data = node.data as any;
+                    
+                    // Use default colors during SSR
+                    if (typeof window === "undefined") {
+                        if (data.stagedStatus === 'new') return '#22c55e';
+                        if (data.stagedStatus === 'deleted') return '#ef4444';
+                        if (data.stagedStatus === 'modified') return '#f59e0b';
+                        return '#94a3b8';
+                    }
+                    
                     const rootStyles = getComputedStyle(document.documentElement);
                     
                     if (data.stagedStatus === 'new') {

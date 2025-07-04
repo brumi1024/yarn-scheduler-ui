@@ -117,12 +117,6 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
                 <path
                     d={sankeyPath}
                     fill="none"
-                    stroke="rgba(255, 255, 255, 0.3)"
-                    strokeWidth="2"
-                    strokeDasharray="10 10"
-                    style={{
-                        animation: 'flow 3s linear infinite',
-                    }}
                 />
             )}
 
