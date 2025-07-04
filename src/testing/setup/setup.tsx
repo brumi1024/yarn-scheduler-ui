@@ -3,10 +3,7 @@ import { render as rtlRender } from '@testing-library/react';
 import type { RenderOptions } from '@testing-library/react';
 
 // Create a custom render function that includes providers
-function render(
-  ui: React.ReactElement,
-  renderOptions: RenderOptions = {}
-) {
+function render(ui: React.ReactElement, renderOptions: RenderOptions = {}) {
   function Wrapper({ children }: { children: React.ReactNode }) {
     return <>{children}</>;
   }

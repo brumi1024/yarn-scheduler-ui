@@ -1,9 +1,5 @@
-import { Link, useLocation } from "react-router";
-import {
-  LayoutDashboard,
-  Tag,
-  Settings,
-} from "lucide-react";
+import { Link, useLocation } from 'react-router';
+import { LayoutDashboard, Tag, Settings } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -11,22 +7,22 @@ import {
   SidebarMenu,
   SidebarMenuItem,
   SidebarMenuButton,
-} from "~/components/ui/sidebar";
+} from '~/components/ui/sidebar';
 
 const navigation = [
   {
-    path: "/",
-    title: "Queues",
+    path: '/',
+    title: 'Queues',
     icon: LayoutDashboard,
   },
   {
-    path: "/node-labels",
-    title: "Node Labels",
+    path: '/node-labels',
+    title: 'Node Labels',
     icon: Tag,
   },
   {
-    path: "/global-settings",
-    title: "Global Settings",
+    path: '/global-settings',
+    title: 'Global Settings',
     icon: Settings,
   },
 ];
@@ -45,9 +41,10 @@ export function AppSidebar() {
         <SidebarMenu>
           {navigation.map((item) => {
             const Icon = item.icon;
-            const isActive = location.pathname === item.path || 
-                           (item.path === "/" && location.pathname.startsWith("/queue/"));
-            
+            const isActive =
+              location.pathname === item.path ||
+              (item.path === '/' && location.pathname.startsWith('/queue/'));
+
             return (
               <SidebarMenuItem key={item.path}>
                 <SidebarMenuButton asChild isActive={isActive}>

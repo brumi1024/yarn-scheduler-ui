@@ -88,28 +88,16 @@ describe('StagedChangesPanel', () => {
     });
 
     const onOpen = vi.fn();
-    render(
-      <StagedChangesPanel 
-        open={false} 
-        onClose={vi.fn()} 
-        onOpen={onOpen}
-      />
-    );
-    
+    render(<StagedChangesPanel open={false} onClose={vi.fn()} onOpen={onOpen} />);
+
     const button = screen.getByRole('button', { name: /view staged changes/i });
     expect(button).toBeInTheDocument();
     expect(screen.getByText('2')).toBeInTheDocument(); // Badge count
   });
 
   it('should not show floating button when no staged changes', () => {
-    render(
-      <StagedChangesPanel 
-        open={false} 
-        onClose={vi.fn()} 
-        onOpen={vi.fn()}
-      />
-    );
-    
+    render(<StagedChangesPanel open={false} onClose={vi.fn()} onOpen={vi.fn()} />);
+
     expect(screen.queryByRole('button')).not.toBeInTheDocument();
   });
 
@@ -117,23 +105,17 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
     const onOpen = vi.fn();
-    render(
-      <StagedChangesPanel 
-        open={false} 
-        onClose={vi.fn()} 
-        onOpen={onOpen}
-      />
-    );
-    
+    render(<StagedChangesPanel open={false} onClose={vi.fn()} onOpen={onOpen} />);
+
     await user.click(screen.getByRole('button', { name: /view staged changes/i }));
     expect(onOpen).toHaveBeenCalled();
   });
@@ -141,21 +123,16 @@ describe('StagedChangesPanel', () => {
   it('should render staged changes grouped by queue', () => {
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     expect(screen.getByText('Staged Changes')).toBeInTheDocument();
     expect(screen.getByText('2 changes')).toBeInTheDocument();
     expect(screen.getByTestId('queue-group-root.default')).toBeInTheDocument();
@@ -163,13 +140,8 @@ describe('StagedChangesPanel', () => {
   });
 
   it('should show empty state when no staged changes', () => {
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     expect(screen.getByText('No staged changes')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /apply all changes/i })).not.toBeInTheDocument();
   });
@@ -178,23 +150,18 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     await user.click(screen.getByTestId('revert-1'));
-    
+
     expect(mockRevertChange).toHaveBeenCalledWith(mockStagedChanges[0].id);
     expect(toast.info).toHaveBeenCalledWith('Reverted change: capacity');
   });
@@ -203,23 +170,18 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     await user.click(screen.getByRole('button', { name: /clear all/i }));
-    
+
     expect(mockClearAllChanges).toHaveBeenCalled();
     expect(toast.info).toHaveBeenCalledWith('All staged changes cleared');
   });
@@ -229,26 +191,21 @@ describe('StagedChangesPanel', () => {
     mockApplyChanges.mockResolvedValue(undefined);
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
     const onClose = vi.fn();
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={onClose} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={onClose} />);
+
     await user.click(screen.getByRole('button', { name: /apply all changes/i }));
-    
+
     expect(mockApplyChanges).toHaveBeenCalled();
-    
+
     await waitFor(() => {
       expect(toast.success).toHaveBeenCalledWith('All changes applied successfully');
       expect(onClose).toHaveBeenCalled();
@@ -259,60 +216,50 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     const consoleErrorSpy = vi.spyOn(console, 'error').mockImplementation(() => {});
     mockApplyChanges.mockRejectedValue(new Error('Network error'));
-    
+
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     await user.click(screen.getByRole('button', { name: /apply all changes/i }));
-    
+
     await waitFor(() => {
       expect(toast.error).toHaveBeenCalledWith('Failed to apply changes');
       expect(consoleErrorSpy).toHaveBeenCalledWith('Failed to apply changes:', expect.any(Error));
     });
-    
+
     consoleErrorSpy.mockRestore();
   });
 
   it('should disable actions while applying changes', async () => {
     const user = userEvent.setup();
-    mockApplyChanges.mockImplementation(() => new Promise(resolve => setTimeout(resolve, 100)));
-    
+    mockApplyChanges.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
+
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     const applyButton = screen.getByRole('button', { name: /apply all changes/i });
     const clearButton = screen.getByRole('button', { name: /clear all/i });
-    
+
     await user.click(applyButton);
-    
+
     // Should show loading state
     expect(screen.getByText('Applying...')).toBeInTheDocument();
     expect(applyButton).toBeDisabled();
@@ -323,33 +270,28 @@ describe('StagedChangesPanel', () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: mockStagedChanges,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    const { container } = render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    const { container } = render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     // The Sheet component renders content in a portal, so we need to look in the document body
     const sheetContent = document.querySelector('[data-slot="sheet-content"]');
     expect(sheetContent).toBeTruthy();
     expect(sheetContent).toHaveClass('h-[200px]');
-    
+
     // Click toggle button - find the button with ChevronUp icon
-    const toggleButton = screen.getAllByRole('button').find(
-      btn => btn.querySelector('svg.lucide-chevron-up')
-    );
+    const toggleButton = screen
+      .getAllByRole('button')
+      .find((btn) => btn.querySelector('svg.lucide-chevron-up'));
     expect(toggleButton).toBeDefined();
     await user.click(toggleButton!);
-    
+
     // Should expand
     expect(sheetContent).toHaveClass('h-[60vh]');
   });
@@ -357,14 +299,9 @@ describe('StagedChangesPanel', () => {
   it('should close panel when clicking close button', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
-    
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={onClose} 
-      />
-    );
-    
+
+    render(<StagedChangesPanel open={true} onClose={onClose} />);
+
     // The Sheet component would normally handle this through onOpenChange
     // We test that the onClose prop is passed correctly
     expect(onClose).toBeDefined();
@@ -382,45 +319,35 @@ describe('StagedChangesPanel', () => {
         timestamp: Date.now(),
       },
     ];
-    
+
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: changes,
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: changes,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     expect(screen.getByText('3 changes')).toBeInTheDocument();
   });
 
   it('should display singular form for one change', () => {
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
-      stagedChanges: [mockStagedChanges[0]],
-      revertChange: mockRevertChange,
-      clearAllChanges: mockClearAllChanges,
-      applyChanges: mockApplyChanges,
+        stagedChanges: [mockStagedChanges[0]],
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
       };
       return selector ? selector(state) : state;
     });
 
-    render(
-      <StagedChangesPanel 
-        open={true} 
-        onClose={vi.fn()} 
-      />
-    );
-    
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
     expect(screen.getByText('1 change')).toBeInTheDocument();
   });
 });

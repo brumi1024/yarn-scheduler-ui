@@ -24,18 +24,18 @@ vi.mock('~/stores/schedulerStore', () => ({
       getQueueByPath: mockGetQueueByPath,
       stageQueueAddition: mockStageQueueAddition,
     };
-    
+
     if (typeof selector === 'function') {
       return selector(state);
     }
-    
+
     return state;
   }),
 }));
 
 describe('AddQueueDialog', () => {
   const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
-  
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsoleError.mockClear();
@@ -44,7 +44,7 @@ describe('AddQueueDialog', () => {
     // Default: parent queue exists
     mockGetQueueByPath.mockReturnValue({ queuePath: 'root.production', queueName: 'production' });
   });
-  
+
   afterAll(() => {
     mockConsoleError.mockRestore();
   });
@@ -145,15 +145,15 @@ describe('AddQueueDialog', () => {
     // Clear and type capacity (default is 10)
     await user.clear(capacityInput);
     await user.type(capacityInput, '25');
-    
+
     // Clear and type max capacity (default is 100)
     await user.clear(maxCapacityInput);
     await user.type(maxCapacityInput, '100');
-    
+
     // Submit the form
     const submitButton = screen.getByRole('button', { name: /add queue/i });
     expect(submitButton).not.toBeDisabled();
-    
+
     await user.click(submitButton);
 
     await waitFor(() => {
