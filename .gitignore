@@ -64,6 +64,10 @@ jspm_packages/
 # Stores VSCode versions used for testing VSCode extensions
 .vscode-test
 
+# React Router
+/.react-router/
+/build/
+
 # Temporary directories
 .temp-vite/
 temp-vite/

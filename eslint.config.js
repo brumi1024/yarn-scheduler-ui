@@ -6,7 +6,7 @@ import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
 
 export default tseslint.config(
-    { ignores: ['dist', 'build', 'node_modules', 'temp-vite', 'coverage', '*.log', 'eslint-results.sarif'] },
+    { ignores: ['build', '.react-router', 'node_modules', 'coverage', '*.log', 'eslint-results.sarif'] },
 
     // TypeScript and React files
     {
@@ -56,32 +56,12 @@ export default tseslint.config(
         },
     },
 
-    // Legacy JavaScript files
+    // Test files - relax some rules
     {
-        files: ['**/*.js'],
-        languageOptions: {
-            ecmaVersion: 2022,
-            sourceType: 'module',
-            globals: {
-                ...globals.browser,
-                ...globals.node,
-                app: 'writable',
-            },
-        },
+        files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
         rules: {
-            'no-unused-vars': [
-                'error',
-                {
-                    vars: 'local',
-                    args: 'after-used',
-                    varsIgnorePattern: '^_|^[A-Z_][A-Z0-9_]*$|^[A-Z][a-zA-Z0-9]*$',
-                },
-            ],
-            'no-console': 'warn',
-            'no-debugger': 'warn',
-            curly: ['error', 'all'],
-            'no-var': 'error',
-            'prefer-const': ['warn', { destructuring: 'all' }],
+            '@typescript-eslint/no-explicit-any': 'off',
+            '@typescript-eslint/explicit-function-return-type': 'off',
         },
     },
 
