@@ -1,16 +1,16 @@
-import { describe, it, expect, vi } from 'vitest';
-import { render, screen } from '../../test-utils/setup';
+import { describe, it, expect } from 'vitest';
+import { render, screen } from '~/testing/setup';
 import { PropertyFormField } from './PropertyFormField';
 import { useForm, FormProvider } from 'react-hook-form';
-import { getMockPropertyDescriptor } from '../../test-utils/factories';
+import { getMockPropertyDescriptor } from '~/testing/factories';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '~/components/ui/tooltip';
 
 // Helper component to wrap PropertyFormField with form context
-function FormWrapper({ 
-  children, 
-  defaultValues = {} 
-}: { 
+function FormWrapper({
+  children,
+  defaultValues = {},
+}: {
   children: React.ReactNode;
   defaultValues?: Record<string, string>;
 }) {
@@ -34,7 +34,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const input = screen.getByRole('textbox');
@@ -53,7 +53,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const input = screen.getByRole('spinbutton');
@@ -72,7 +72,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper defaultValues={{ 'enable-preemption': 'true' }}>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const switchElement = screen.getByRole('switch');
@@ -92,7 +92,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper defaultValues={{ state: 'RUNNING' }}>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     expect(screen.getByRole('radio', { name: 'RUNNING' })).toBeInTheDocument();
@@ -111,7 +111,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     expect(screen.getByText('Capacity *')).toBeInTheDocument();
@@ -129,11 +129,11 @@ describe('PropertyFormField', () => {
     const { container } = render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const helpIcon = container.querySelector('svg[class*="lucide"]');
-    
+
     if (helpIcon) {
       await user.hover(helpIcon);
       const tooltipText = await screen.findAllByText('This is the capacity description');
@@ -152,12 +152,8 @@ describe('PropertyFormField', () => {
 
     render(
       <FormWrapper>
-        <PropertyFormField 
-          property={property} 
-          control={undefined as any}
-          stagedStatus="modified"
-        />
-      </FormWrapper>
+        <PropertyFormField property={property} control={undefined as any} stagedStatus="modified" />
+      </FormWrapper>,
     );
 
     expect(screen.getByText('Staged')).toBeInTheDocument();
@@ -175,17 +171,19 @@ describe('PropertyFormField', () => {
 
     render(
       <FormWrapper>
-        <PropertyFormField 
-          property={property} 
+        <PropertyFormField
+          property={property}
           control={undefined as any}
           dependentValues={{ 'node-labels-enabled': 'false' }}
         />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const input = screen.getByRole('textbox');
     expect(input).toBeDisabled();
-    expect(screen.getByText('This field is disabled based on current configuration')).toBeInTheDocument();
+    expect(
+      screen.getByText('This field is disabled based on current configuration'),
+    ).toBeInTheDocument();
   });
 
   it('should show deprecation warning for deprecated properties', () => {
@@ -200,7 +198,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     expect(screen.getByText('Deprecated')).toBeInTheDocument();
@@ -217,7 +215,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const textarea = screen.getByRole('textbox');
@@ -236,15 +234,15 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper defaultValues={{ state: 'RUNNING' }}>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     const runningToggle = screen.getByRole('radio', { name: 'RUNNING' });
     expect(runningToggle).toHaveAttribute('data-state', 'on');
-    
+
     // Try to click the already selected toggle
     await user.click(runningToggle);
-    
+
     // Should still be selected
     expect(runningToggle).toHaveAttribute('data-state', 'on');
   });
@@ -263,7 +261,7 @@ describe('PropertyFormField', () => {
     render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
-      </FormWrapper>
+      </FormWrapper>,
     );
 
     expect(screen.getByText('(0.0-1.0)')).toBeInTheDocument();

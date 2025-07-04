@@ -1,10 +1,9 @@
 import React from 'react';
 import { render, screen, waitFor, fireEvent } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { QueueVisualizationContainer } from './QueueVisualizationContainer';
 import { ThemeProvider } from '~/components/providers/theme-provider';
-import { useQueueTreeData } from './hooks/useQueueTreeData';
+import { useQueueTreeData } from '../hooks/useQueueTreeData';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { Node, Edge } from '@xyflow/react';
 import type { QueueCardData } from '~/types/queue';
@@ -107,12 +106,12 @@ vi.mock('~/store/schedulerStore', () => ({
       stageQueueRemoval: vi.fn(),
       stageQueueChange: vi.fn(),
     };
-    
+
     // If selector is provided, call it with state
     if (typeof selector === 'function') {
       return selector(state);
     }
-    
+
     // Otherwise return the whole state
     return state;
   }),
@@ -132,7 +131,7 @@ const renderWithProviders = (component: React.ReactElement) => {
   return render(
     <ThemeProvider defaultTheme="light" storageKey="test-theme">
       {component}
-    </ThemeProvider>
+    </ThemeProvider>,
   );
 };
 
@@ -143,7 +142,7 @@ describe('QueueVisualizationContainer', () => {
 
   it('should show loading state while fetching queue data', () => {
     renderWithProviders(<QueueVisualizationContainer />);
-    
+
     expect(screen.getByText('Loading queue hierarchy...')).toBeInTheDocument();
   });
 
@@ -156,7 +155,7 @@ describe('QueueVisualizationContainer', () => {
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
-    
+
     expect(screen.getByText('Error Loading Queue Data')).toBeInTheDocument();
     expect(screen.getByText('Failed to fetch queue data')).toBeInTheDocument();
   });
@@ -170,9 +169,13 @@ describe('QueueVisualizationContainer', () => {
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
-    
+
     expect(screen.getByText('No Queue Data')).toBeInTheDocument();
-    expect(screen.getByText('No queue hierarchy data is available. Please check your scheduler configuration.')).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        'No queue hierarchy data is available. Please check your scheduler configuration.',
+      ),
+    ).toBeInTheDocument();
   });
 
   it('should render queue hierarchy when data is available', async () => {
@@ -218,13 +221,13 @@ describe('QueueVisualizationContainer', () => {
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
-    
+
     // React Flow renders asynchronously, so we need to wait
     await waitFor(() => {
       // There will be multiple elements with 'root' text (title and description)
       const rootElements = screen.getAllByText('root');
       expect(rootElements.length).toBeGreaterThan(0);
-      
+
       const queue1Elements = screen.getAllByText('queue1');
       expect(queue1Elements.length).toBeGreaterThan(0);
     });
@@ -233,7 +236,7 @@ describe('QueueVisualizationContainer', () => {
   it('should handle queue selection on node click', async () => {
     const mockSelectQueue = vi.fn();
     const mockSetPropertyPanelOpen = vi.fn();
-    
+
     // Update the mock implementation to return the new functions
     vi.mocked(useSchedulerStore).mockImplementation((selector) => {
       const state = {
@@ -249,11 +252,11 @@ describe('QueueVisualizationContainer', () => {
         stageQueueRemoval: vi.fn(),
         stageQueueChange: vi.fn(),
       };
-      
+
       if (typeof selector === 'function') {
         return selector(state);
       }
-      
+
       return state;
     });
 
@@ -279,7 +282,7 @@ describe('QueueVisualizationContainer', () => {
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
-    
+
     // Wait for the node to be rendered
     await waitFor(() => {
       expect(screen.getByText('queue1')).toBeInTheDocument();
@@ -288,10 +291,10 @@ describe('QueueVisualizationContainer', () => {
     // Find the card element and use fireEvent instead of userEvent
     const cardElement = screen.getByText('queue1').closest('.cursor-pointer');
     expect(cardElement).toBeInTheDocument();
-    
+
     // Use fireEvent.click to avoid d3 event handling issues
     fireEvent.click(cardElement!);
-    
+
     // Wait for the click to be processed
     await waitFor(() => {
       expect(mockSelectQueue).toHaveBeenCalledWith('root.queue1');
@@ -325,7 +328,7 @@ describe('QueueVisualizationContainer', () => {
     render(
       <ThemeProvider defaultTheme="dark" storageKey="test-theme">
         <QueueVisualizationContainer />
-      </ThemeProvider>
+      </ThemeProvider>,
     );
 
     // React Flow component should receive colorMode prop
@@ -334,7 +337,7 @@ describe('QueueVisualizationContainer', () => {
       const rootElements = screen.getAllByText('root');
       expect(rootElements.length).toBeGreaterThan(0);
     });
-    
+
     // Check that React Flow has dark mode class
     expect(screen.getByTestId('rf__wrapper')).toHaveClass('react-flow', 'dark');
   });
