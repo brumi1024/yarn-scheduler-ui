@@ -18,7 +18,7 @@ import type {
 const mockSchedulerResponse: SchedulerInfo = {
   scheduler: {
     schedulerInfo: {
-      type: 'capacityScheduler',
+      queueType: 'parent',
       capacity: 100,
       usedCapacity: 50,
       maxCapacity: 100,
@@ -959,7 +959,7 @@ describe('utility functions', () => {
     describe('traverseQueueTree', () => {
         it('should traverse queue tree and combine with config data', () => {
             const queueInfo: QueueInfo = {
-                type: 'capacityScheduler',
+                queueType: 'parent',
                 capacity: 100,
                 usedCapacity: 45,
                 maxCapacity: 100,
@@ -973,7 +973,7 @@ describe('utility functions', () => {
                 queues: {
                     queue: [
                         {
-                            type: 'capacitySchedulerLeafQueueInfo',
+                            queueType: 'leaf',
                             capacity: 50,
                             usedCapacity: 80,
                             maxCapacity: 100,
@@ -981,6 +981,8 @@ describe('utility functions', () => {
                             absoluteMaxCapacity: 100,
                             absoluteUsedCapacity: 40,
                             numApplications: 3,
+                            numActiveApplications: 2,
+                            numPendingApplications: 1,
                             queueName: 'default',
                             queuePath: 'root.default',
                             state: 'RUNNING',

@@ -1,5 +1,4 @@
 import type { ResourceInfo } from './resource';
-import type { LabelConfig } from './node-label';
 import type { QueueTypeValue, QueueStateValue } from './constants';
 
 export type QueueType = QueueTypeValue;
@@ -17,7 +16,7 @@ export type QueueMetrics = {
 
 
 export type QueueInfo = {
-    type: string;
+    queueType: QueueType;
     capacity: number;
     usedCapacity: number;
     maxCapacity: number;
@@ -36,3 +35,4 @@ export type QueueInfo = {
         queue: QueueInfo[];
     };
 };
+

@@ -14,8 +14,9 @@ import {
     Edit,
     MinusCircle
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
+import { cn } from '~/lib/utils';
 import { Tooltip, TooltipContent, TooltipTrigger } from '../ui/tooltip';
+import { QUEUE_STATES } from '~/lib/types';
 
 interface QueueStatusBadgesProps {
     capacityMode: 'percentage' | 'weight' | 'absolute';
@@ -47,9 +48,9 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
     };
 
     const getStateVariant = (): "default" | "secondary" | "destructive" | "outline" | "success" | "warning" => {
-        if (state === 'RUNNING') return 'success';
-        if (state === 'STOPPED') return 'destructive';
-        if (state === 'DRAINING') return 'warning';
+        if (state === QUEUE_STATES.RUNNING) return 'success';
+        if (state === QUEUE_STATES.STOPPED) return 'destructive';
+        if (state === QUEUE_STATES.DRAINING) return 'warning';
         return 'secondary';
     };
 
@@ -65,9 +66,9 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
     };
 
     const getStateIcon = (currentState: string) => {
-        if (currentState === 'RUNNING') return <Play className="w-3.5 h-3.5" />;
-        if (currentState === 'STOPPED') return <Square className="w-3.5 h-3.5" />;
-        if (currentState === 'DRAINING') return <ArrowDownToLine className="w-3.5 h-3.5" />;
+        if (currentState === QUEUE_STATES.RUNNING) return <Play className="w-3.5 h-3.5" />;
+        if (currentState === QUEUE_STATES.STOPPED) return <Square className="w-3.5 h-3.5" />;
+        if (currentState === QUEUE_STATES.DRAINING) return <ArrowDownToLine className="w-3.5 h-3.5" />;
         return null;
     };
 

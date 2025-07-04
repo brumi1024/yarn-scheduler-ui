@@ -11,6 +11,7 @@ import { Button } from '../../ui/button';
 import { Alert, AlertDescription } from '../../ui/alert';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useQueueActions } from '../hooks/useQueueActions';
+import { SPECIAL_VALUES } from '~/lib/types';
 
 interface DeleteQueueDialogProps {
     open: boolean;
@@ -23,7 +24,7 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
     const queueName = queuePath.split('.').pop() || queuePath;
 
     const canDelete = canDeleteQueue(queuePath);
-    const isRoot = queuePath === 'root';
+    const isRoot = queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
 
     const handleDelete = () => {
         try {

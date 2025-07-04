@@ -13,10 +13,10 @@
     "moduleResolution": "bundler",
     "jsx": "react-jsx",
     "rootDirs": [
-      "./dashboard", "./.react-router/types"],
-    "baseUrl": "./dashboard",
+      ".", "./.react-router/types"],
+    "baseUrl": "./app",
     "paths": {
-      "~/*": ["./app/*"]
+      "~/*": ["./*"]
     },
     "esModuleInterop": true,
     "verbatimModuleSyntax": true,

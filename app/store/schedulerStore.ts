@@ -1,4 +1,5 @@
 import {create} from 'zustand';
+import {SPECIAL_VALUES, CONFIG_PREFIXES} from '~/lib/types';
 import {immer} from 'zustand/middleware/immer';
 import {enableMapSet} from 'immer';
 import {nanoid} from 'nanoid';
@@ -10,18 +11,18 @@ import type {
     QueueInfo,
     SchedulerInfo,
     StagedChange,
-} from '../lib/types';
-import {buildGlobalPropertyKey, buildNodeLabelPropertyKey, buildPropertyKey,} from '../lib/utils/propertyUtils';
-import {buildMutationRequest} from '../lib/utils/mutationBuilder';
-import {YarnApiClient} from '../lib/api/YarnApiClient';
+} from '~/lib/types';
+import {buildGlobalPropertyKey, buildNodeLabelPropertyKey, buildPropertyKey,} from '~/lib/utils/propertyUtils';
+import {buildMutationRequest} from '~/lib/utils/mutationBuilder';
+import {YarnApiClient} from '~/lib/api/YarnApiClient';
 import {
     createDetailedErrorMessage,
     createStoreError,
     ERROR_CODES,
     extractErrorMessage,
     isNetworkError
-} from '../lib/utils/errorUtils';
-import {isValidQueueName} from '../lib/types/guards';
+} from '~/lib/utils/errorUtils';
+import {isValidQueueName} from '~/lib/types';
 
 enableMapSet();
 
@@ -97,7 +98,7 @@ export function traverseQueueTree(
 ): void {
     const configured: Record<string, string> = {};
 
-    const prefix = `yarn.scheduler.capacity.${queueInfo.queuePath}.`;
+    const prefix = `${CONFIG_PREFIXES.BASE}.${queueInfo.queuePath}.`;
     for (const [key, value] of configData.entries()) {
         if (key.startsWith(prefix)) {
             const property = key.substring(prefix.length);
@@ -219,10 +220,10 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
         },
 
         stageQueueChange: (queuePath, property, value) => {
-            if (!queuePath || !queuePath.startsWith('root')) {
+            if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
                 throw createStoreError(
                     ERROR_CODES.INVALID_QUEUE_PATH,
-                    `Invalid queue path: ${queuePath}. Queue paths must start with 'root'`
+                    `Invalid queue path: ${queuePath}. Queue paths must start with '${SPECIAL_VALUES.ROOT_QUEUE_NAME}'`
                 );
             }
 
@@ -269,7 +270,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                 const originalValue = state.configData.get(propertyKey);
 
                 const existingIndex = state.stagedChanges.findIndex(
-                    (c) => c.queuePath === 'global' && c.property === property
+                    (c) => c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH && c.property === property
                 );
 
                 // If the new value matches the original value, remove the staged change
@@ -283,7 +284,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                     const change: StagedChange = {
                         id: nanoid(),
                         type: 'update',
-                        queuePath: 'global',
+                        queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
                         property,
                         oldValue: originalValue,
                         newValue: value,
@@ -295,10 +296,10 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
         },
 
         stageQueueAddition: (parentPath, queueName, config) => {
-            if (!parentPath || !parentPath.startsWith('root')) {
+            if (!parentPath || !parentPath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
                 throw createStoreError(
                     ERROR_CODES.INVALID_QUEUE_PATH,
-                    `Invalid parent path: ${parentPath}. Queue paths must start with 'root'`
+                    `Invalid parent path: ${parentPath}. Queue paths must start with '${SPECIAL_VALUES.ROOT_QUEUE_NAME}'`
                 );
             }
 
@@ -640,7 +641,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
             const propertyKey = buildGlobalPropertyKey(property);
 
             const stagedChange = state.stagedChanges.find(
-                (c) => c.queuePath === 'global' && c.property === property
+                (c) => c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH && c.property === property
             );
 
             if (stagedChange?.newValue !== undefined) {

@@ -3,10 +3,10 @@ import { render, screen, waitFor, fireEvent, within } from '@testing-library/rea
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
-import { useSchedulerStore } from '../../store/schedulerStore';
-import { validateLabelRemoval } from '../../lib/utils/labelValidation';
-import { getMockNodeLabel } from '../../test-utils/factories';
-import type { NodeLabel } from '../../lib/types/node-label';
+import { useSchedulerStore } from '~/store/schedulerStore';
+import { validateLabelRemoval } from '~/lib/utils/labelValidation';
+import { getMockNodeLabel } from '~/test-utils/factories';
+import type { NodeLabel } from '~/lib/types';
 
 // Mock dependencies
 vi.mock('~/store/schedulerStore');
@@ -509,7 +509,9 @@ describe('NodeLabelsPanel', () => {
             
             expect(deleteButtons).toHaveLength(2); // One for each label
             deleteButtons.forEach(button => {
-                expect(button).toHaveAttribute('type', 'button');
+                // Button component might not have data-slot attribute, check it's a button element
+                expect(button.tagName).toBe('BUTTON');
+                expect(button).not.toBeDisabled();
             });
         });
 

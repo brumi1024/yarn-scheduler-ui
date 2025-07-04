@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SchedulerData, ConfigData, NodeLabelsInfo, QueueInfo, CapacitySchedulerInfo } from '../index';
 import { isQueueInfo, isCapacitySchedulerInfo, isLeafQueue, isParentQueue } from '../guards';
-import { QUEUE_STATES, SCHEDULER_TYPES, QUEUE_INFO_TYPES } from '../constants';
+import { QUEUE_STATES, SCHEDULER_TYPES } from '../constants';
 
 describe('Integration Tests - Complete API Responses', () => {
     describe('Scheduler API Response', () => {
@@ -17,7 +17,7 @@ describe('Integration Tests - Complete API Responses', () => {
                         queues: {
                             queue: [
                                 {
-                                    type: QUEUE_INFO_TYPES.PARENT,
+                                    queueType: 'parent',
                                     capacity: 70,
                                     usedCapacity: 45.5,
                                     maxCapacity: 100,
@@ -31,7 +31,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                     queues: {
                                         queue: [
                                             {
-                                                type: QUEUE_INFO_TYPES.LEAF,
+                                                queueType: 'leaf',
                                                 capacity: 60,
                                                 usedCapacity: 50,
                                                 maxCapacity: 100,
@@ -44,7 +44,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                                 state: QUEUE_STATES.RUNNING,
                                             },
                                             {
-                                                type: QUEUE_INFO_TYPES.LEAF,
+                                                queueType: 'leaf',
                                                 capacity: 40,
                                                 usedCapacity: 37.5,
                                                 maxCapacity: 100,
@@ -60,7 +60,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                     },
                                 },
                                 {
-                                    type: QUEUE_INFO_TYPES.PARENT,
+                                    queueType: 'parent',
                                     capacity: 20,
                                     usedCapacity: 75,
                                     maxCapacity: 50,
@@ -74,7 +74,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                     queues: {
                                         queue: [
                                             {
-                                                type: QUEUE_INFO_TYPES.LEAF,
+                                                queueType: 'leaf',
                                                 capacity: 70,
                                                 usedCapacity: 71.4,
                                                 maxCapacity: 100,
@@ -87,7 +87,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                                 state: QUEUE_STATES.RUNNING,
                                             },
                                             {
-                                                type: QUEUE_INFO_TYPES.LEAF,
+                                                queueType: 'leaf',
                                                 capacity: 30,
                                                 usedCapacity: 83.3,
                                                 maxCapacity: 100,
@@ -103,7 +103,7 @@ describe('Integration Tests - Complete API Responses', () => {
                                     },
                                 },
                                 {
-                                    type: QUEUE_INFO_TYPES.LEAF,
+                                    queueType: 'leaf',
                                     capacity: 10,
                                     usedCapacity: 0,
                                     maxCapacity: 20,
@@ -446,7 +446,7 @@ describe('Integration Tests - Complete API Responses', () => {
                         queues: {
                             queue: [
                                 {
-                                    type: QUEUE_INFO_TYPES.LEAF,
+                                    queueType: 'leaf',
                                     capacity: 70,
                                     usedCapacity: 45.5,
                                     maxCapacity: 100,

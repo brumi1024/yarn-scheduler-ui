@@ -194,7 +194,7 @@ function createNodes(
             const stateDisplay = getQueuePropertyValue(queuePath, 'state');
 
             const nodeData: QueueCardData = {
-                type: 'capacitySchedulerLeafQueueInfo',
+                queueType: 'leaf' as const,
                 capacity: 0,
                 usedCapacity: 0,
                 maxCapacity: 100,
@@ -376,7 +376,7 @@ function augmentQueueTreeWithStagedQueues(rootQueue: QueueInfo, stagedChanges: S
             if (queue.queuePath === parentPath) {
                 // Create the new queue info
                 const newQueue: QueueInfo = {
-                    type: 'capacitySchedulerLeafQueueInfo',
+                    queueType: 'leaf' as const,
                     capacity: 0,
                     usedCapacity: 0,
                     maxCapacity: 100,

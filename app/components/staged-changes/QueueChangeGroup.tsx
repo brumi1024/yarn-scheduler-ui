@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
+import { SPECIAL_VALUES } from '~/lib/types';
 import { ChevronDown, ChevronUp, Folder, GitBranch } from 'lucide-react';
-import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import {
@@ -8,7 +8,7 @@ import {
     CollapsibleContent,
     CollapsibleTrigger,
 } from '../ui/collapsible';
-import type { StagedChange } from '../../lib/types';
+import type { StagedChange } from '~/lib/types';
 import { DiffView } from './DiffView';
 
 interface QueueChangeGroupProps {
@@ -42,13 +42,13 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
                         className="w-full p-4 justify-between hover:bg-muted/50"
                     >
                         <div className="flex items-center gap-3">
-                            {queuePath === 'global' ? (
+                            {queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH ? (
                                 <Folder className="h-4 w-4" />
                             ) : (
                                 <GitBranch className="h-4 w-4" />
                             )}
                             <span className="font-medium">
-                                {queuePath === 'global' ? 'Global Settings' : queuePath}
+                                {queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH ? 'Global Settings' : queuePath}
                             </span>
                             
                             {/* Change summary badges */}

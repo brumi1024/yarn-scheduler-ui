@@ -1,3 +1,5 @@
+import { MUTATION_OPERATIONS } from './constants';
+
 export type ConfigProperty = {
     name: string;
     value: string;
@@ -15,8 +17,8 @@ export type QueueUpdateParams = {
 export type GlobalUpdateParams = Record<string, string>;
 
 export type SchedConfUpdateInfo = {
-    'add-queue'?: QueueUpdateParams[];
-    'update-queue'?: QueueUpdateParams[];
-    'remove-queue'?: string[];
-    'global-updates'?: GlobalUpdateParams;
+    [MUTATION_OPERATIONS.ADD_QUEUE]?: QueueUpdateParams[];
+    [MUTATION_OPERATIONS.UPDATE_QUEUE]?: QueueUpdateParams[];
+    [MUTATION_OPERATIONS.REMOVE_QUEUE]?: string[];
+    [MUTATION_OPERATIONS.GLOBAL_UPDATES]?: GlobalUpdateParams;
 };

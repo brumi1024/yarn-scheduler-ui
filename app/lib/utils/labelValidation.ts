@@ -7,6 +7,8 @@
  * - Must be unique in cluster
  */
 
+import { SPECIAL_VALUES } from '~/lib/types';
+
 export type ValidationResult = {
     valid: boolean;
     error?: string;
@@ -145,12 +147,12 @@ export function validateQueueLabelAccess(
     parentAccessibleLabels: string[]
 ): ValidationResult {
     // Root queue can access any label (represented as "*")
-    if (queuePath === 'root') {
+    if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
         return { valid: true };
     }
     
     // If parent has access to "*", child can access any label
-    if (parentAccessibleLabels.includes('*')) {
+    if (parentAccessibleLabels.includes(SPECIAL_VALUES.ALL_USERS_ACL)) {
         return { valid: true };
     }
     

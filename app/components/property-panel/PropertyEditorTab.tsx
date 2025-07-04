@@ -7,10 +7,7 @@ import {
     Shield, 
     Sliders,
     Tag,
-    RotateCcw,
-    Edit
 } from 'lucide-react';
-import { cn } from '../../lib/utils';
 import { Badge } from '../ui/badge';
 import {
     Accordion,
@@ -18,11 +15,12 @@ import {
     AccordionItem,
     AccordionTrigger,
 } from '../ui/accordion';
-import { usePropertyEditor } from '../../hooks/usePropertyEditor';
+import { usePropertyEditor } from '~/hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
-import type { QueueInfo } from '../../lib/types/queue';
-import type { PropertyCategory, LabelPropertyDescriptor } from '../../lib/types/property-descriptor';
-import { groupLabelPropertiesByLabel } from '../../lib/utils/labelPropertyUtils';
+import type { QueueInfo } from '~/lib/types';
+import type { PropertyCategory, LabelPropertyDescriptor } from '~/lib/types';
+import { groupLabelPropertiesByLabel } from '~/lib/utils/labelPropertyUtils';
+import { SPECIAL_VALUES } from '~/lib/types';
 import { toast } from 'sonner';
 import { Form } from '../ui/form';
 
@@ -130,8 +128,8 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
         if (!accessibleLabelsString.trim()) {
             return []; // Default partition only
         }
-        if (accessibleLabelsString.trim() === '*') {
-            return ['*']; // All labels
+        if (accessibleLabelsString.trim() === SPECIAL_VALUES.ALL_USERS_ACL) {
+            return [SPECIAL_VALUES.ALL_USERS_ACL]; // All labels
         }
         return accessibleLabelsString.split(',').map(l => l.trim()).filter(l => l.length > 0);
     }, [watchedValues]);
@@ -265,7 +263,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                                 
                                 // Filter to only show properties for accessible labels
                                 const filteredLabelGroups = Object.entries(labelGroups).filter(([labelName]) => {
-                                    if (accessibleLabels.includes('*')) return true; // All labels accessible
+                                    if (accessibleLabels.includes(SPECIAL_VALUES.ALL_USERS_ACL)) return true; // All labels accessible
                                     return accessibleLabels.includes(labelName);
                                 });
 

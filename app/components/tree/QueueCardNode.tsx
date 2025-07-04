@@ -25,13 +25,14 @@ import {
 } from 'lucide-react';
 import type { QueueCardData } from './hooks/useQueueTreeData';
 import { useQueueActions } from './hooks/useQueueActions';
-import { useSchedulerStore } from '../../store/schedulerStore';
-import { cn } from '../../lib/utils';
+import { useSchedulerStore } from '~/store/schedulerStore';
+import { cn } from '~/lib/utils';
 import { AddQueueDialog } from './dialogs/AddQueueDialog';
 import { DeleteQueueDialog } from './dialogs/DeleteQueueDialog';
 import { QueueCapacityProgress } from './QueueCapacityProgress';
 import { QueueStatusBadges } from './QueueStatusBadges';
 import { QueueResourceStats } from './QueueResourceStats';
+import { QUEUE_STATES } from '~/lib/types';
 
 // Simple capacity parsing for display purposes
 const parseCapacityValue = (input: string) => {
@@ -93,7 +94,7 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     const capacityMode = parseCapacityValue(capacityConfig).mode;
     const canAdd = canAddChildQueue(queuePath);
     const canDelete = canDeleteQueue(queuePath);
-    const isRunning = state === 'RUNNING';
+    const isRunning = state === QUEUE_STATES.RUNNING;
 
     const handleClick = (event: React.MouseEvent) => {
         event.stopPropagation();
@@ -113,7 +114,7 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     };
 
     const handleToggleState = () => {
-        const newState = isRunning ? 'STOPPED' : 'RUNNING';
+        const newState = isRunning ? QUEUE_STATES.STOPPED : QUEUE_STATES.RUNNING;
         updateQueueProperty(queuePath, 'state', newState);
     };
 

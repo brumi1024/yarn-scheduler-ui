@@ -1,5 +1,6 @@
 import { z } from 'zod';
-import type { PropertyDescriptor, PropertyCategory, PropertyType } from '../types/property-descriptor';
+import { SPECIAL_VALUES } from '~/lib/types';
+import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/lib/types';
 
 export const capacityValueSchema = z
     .string()
@@ -90,7 +91,7 @@ export const aclFormatSchema = z
         (value) => {
             if (!value.trim()) return true;
 
-            if (value === '*' || value === ' ') return true;
+            if (value === SPECIAL_VALUES.ALL_USERS_ACL || value === ' ') return true;
 
             const parts = value.split(' ');
             if (parts.length > 2) return false;
@@ -487,7 +488,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
                 message: 'Must be a comma-separated list of valid label names, "*" for all, or empty for default partition',
                 validator: (value: string) => {
                     if (!value.trim()) return true; // Empty is valid (default partition only)
-                    if (value.trim() === '*') return true; // All labels
+                    if (value.trim() === SPECIAL_VALUES.ALL_USERS_ACL) return true; // All labels
                     
                     // Validate comma-separated label names
                     const labels = value.split(',').map(l => l.trim());

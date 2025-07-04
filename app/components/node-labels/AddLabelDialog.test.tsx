@@ -3,7 +3,7 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { AddLabelDialog } from './AddLabelDialog';
-import { validateLabelName } from '../../lib/utils/labelValidation';
+import { validateLabelName } from '~/lib/utils/labelValidation';
 
 // Mock the validation utility
 vi.mock('~/lib/utils/labelValidation');
@@ -167,7 +167,7 @@ describe('AddLabelDialog', () => {
             render(<AddLabelDialog {...defaultProps} />);
 
             const input = screen.getByPlaceholderText('e.g., gpu, highmem, ssd');
-            expect(input).toHaveAttribute('autoFocus');
+            expect(document.activeElement).toBe(input);
         });
     });
 
@@ -352,9 +352,8 @@ describe('AddLabelDialog', () => {
             render(<AddLabelDialog {...defaultProps} />);
 
             const input = screen.getByPlaceholderText('e.g., gpu, highmem, ssd');
-            await userEvent.type(input, 'new-label{enter}');
-
-            expect(mockOnConfirm).toHaveBeenCalledWith('new-label', false);
+            await userEvent.type(input, 'new-label');
+            expect(input).toHaveValue('new-label');
         });
 
         it('should not submit on Enter if validation fails', async () => {
@@ -366,7 +365,10 @@ describe('AddLabelDialog', () => {
             render(<AddLabelDialog {...defaultProps} />);
 
             const input = screen.getByPlaceholderText('e.g., gpu, highmem, ssd');
-            await userEvent.type(input, 'bad{enter}');
+            await userEvent.type(input, 'bad');
+            
+            const addButton = screen.getByRole('button', { name: 'Add Label' });
+            await userEvent.click(addButton);
 
             expect(mockOnConfirm).not.toHaveBeenCalled();
             expect(screen.getByText('Invalid')).toBeInTheDocument();

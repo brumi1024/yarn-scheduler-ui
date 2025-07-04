@@ -34,7 +34,7 @@ describe('SchedulerInfo interface', () => {
             queues: {
                 queue: [
                     {
-                        type: 'capacitySchedulerLeafQueueInfo',
+                        queueType: 'leaf',
                         capacity: 70,
                         usedCapacity: 45.5,
                         maxCapacity: 100,

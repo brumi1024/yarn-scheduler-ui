@@ -1,7 +1,8 @@
 import React from 'react';
 import { ChevronDown } from 'lucide-react';
-import { useSchedulerStore } from '../../store/schedulerStore';
-import { globalPropertyDefinitions } from '../../lib/config/propertyDefinitions';
+import { useSchedulerStore } from '~/store/schedulerStore';
+import { globalPropertyDefinitions } from '~/lib/config/propertyDefinitions';
+import { SPECIAL_VALUES } from '~/lib/types';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -31,7 +32,7 @@ export const GlobalSettings: React.FC = () => {
     };
 
     const categories = getGlobalPropertyCategories();
-    const globalStagedChanges = stagedChanges.filter(c => c.queuePath === 'global');
+    const globalStagedChanges = stagedChanges.filter(c => c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH);
 
     const handlePropertyChange = (propertyKey: string, value: string) => {
         stageGlobalChange(propertyKey, value);

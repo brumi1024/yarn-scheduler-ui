@@ -6,6 +6,7 @@
  */
 
 import type { StagedChange, SchedConfUpdateInfo } from '../types';
+import { SPECIAL_VALUES, MUTATION_OPERATIONS } from '~/lib/types';
 import { groupBy } from 'es-toolkit';
 
 /**
@@ -19,15 +20,15 @@ import { groupBy } from 'es-toolkit';
  */
 export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUpdateInfo {
     const request: SchedConfUpdateInfo = {
-        'update-queue': [],
-        'add-queue': [],
-        'remove-queue': [],
-        'global-updates': {},
+        [MUTATION_OPERATIONS.UPDATE_QUEUE]: [],
+        [MUTATION_OPERATIONS.ADD_QUEUE]: [],
+        [MUTATION_OPERATIONS.REMOVE_QUEUE]: [],
+        [MUTATION_OPERATIONS.GLOBAL_UPDATES]: {},
     };
 
     // Separate global changes from queue-specific changes
-    const globalChanges = stagedChanges.filter(change => change.queuePath === 'global');
-    const queueChanges = stagedChanges.filter(change => change.queuePath !== 'global');
+    const globalChanges = stagedChanges.filter(change => change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH);
+    const queueChanges = stagedChanges.filter(change => change.queuePath !== SPECIAL_VALUES.GLOBAL_QUEUE_PATH);
 
     // Group queue changes by path for efficient processing
     const changesByQueue = groupBy(queueChanges, change => change.queuePath);
@@ -73,29 +74,30 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
     }
 
     if (updatesByQueue.size > 0) {
-        request['update-queue'] = Array.from(updatesByQueue.entries()).map(([queuePath, params]) => ({
+        request[MUTATION_OPERATIONS.UPDATE_QUEUE] = Array.from(updatesByQueue.entries()).map(([queuePath, params]) => ({
             'queue-name': queuePath,
             params,
         }));
     }
 
     if (addsByQueue.size > 0) {
-        request['add-queue'] = Array.from(addsByQueue.entries()).map(([queuePath, params]) => ({
+        request[MUTATION_OPERATIONS.ADD_QUEUE] = Array.from(addsByQueue.entries()).map(([queuePath, params]) => ({
             'queue-name': queuePath,
             params,
         }));
     }
 
     if (removals.length > 0) {
-        request['remove-queue'] = removals;
+        request[MUTATION_OPERATIONS.REMOVE_QUEUE] = removals;
     }
 
     if (Object.keys(globalUpdates).length > 0) {
-        request['global-updates'] = globalUpdates;
+        request[MUTATION_OPERATIONS.GLOBAL_UPDATES] = globalUpdates;
     }
 
     return request;
 }
+
 
 /**
  * Builds a queue mutation object for update operations
@@ -129,7 +131,7 @@ export function buildGlobalMutation(changes: StagedChange[]): Record<string, str
     const globalUpdates: Record<string, string> = {};
 
     for (const change of changes) {
-        if (change.queuePath === 'global' && change.property && change.newValue !== undefined) {
+        if (change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH && change.property && change.newValue !== undefined) {
             globalUpdates[change.property] = change.newValue;
         }
     }
@@ -196,8 +198,8 @@ export function groupChangesByQueue(changes: StagedChange[]): Map<string, Staged
  */
 export function validateMutationRequest(request: SchedConfUpdateInfo): { valid: boolean; message?: string } {
 
-    if (request['update-queue']) {
-        for (const update of request['update-queue']) {
+    if (request[MUTATION_OPERATIONS.UPDATE_QUEUE]) {
+        for (const update of request[MUTATION_OPERATIONS.UPDATE_QUEUE]) {
             if (!update['queue-name'] || update['queue-name'].trim() === '') {
                 return { valid: false, message: 'Queue name cannot be empty' };
             }
@@ -219,8 +221,8 @@ export function validateMutationRequest(request: SchedConfUpdateInfo): { valid: 
         }
     }
 
-    if (request['add-queue']) {
-        for (const add of request['add-queue']) {
+    if (request[MUTATION_OPERATIONS.ADD_QUEUE]) {
+        for (const add of request[MUTATION_OPERATIONS.ADD_QUEUE]) {
             if (!add['queue-name'] || add['queue-name'].trim() === '') {
                 return { valid: false, message: 'Queue name cannot be empty' };
             }
@@ -231,8 +233,8 @@ export function validateMutationRequest(request: SchedConfUpdateInfo): { valid: 
         }
     }
 
-    if (request['remove-queue']) {
-        for (const queuePath of request['remove-queue']) {
+    if (request[MUTATION_OPERATIONS.REMOVE_QUEUE]) {
+        for (const queuePath of request[MUTATION_OPERATIONS.REMOVE_QUEUE]) {
             if (!queuePath || queuePath.trim() === '') {
                 return { valid: false, message: 'Queue path cannot be empty' };
             }

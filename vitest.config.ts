@@ -9,9 +9,4 @@ export default defineConfig({
     globals: true,
     setupFiles: ['./app/test-utils/vitest-setup.ts'],
   },
-  resolve: {
-    alias: {
-      '~': '/app',
-    },
-  },
 });

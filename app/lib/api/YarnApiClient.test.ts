@@ -25,7 +25,7 @@ const mockSchedulerResponse: SchedulerResponse = {
             queues: {
                 queue: [
                     {
-                        type: 'capacitySchedulerLeafQueueInfo',
+                        queueType: 'leaf',
                         capacity: 50,
                         usedCapacity: 80,
                         maxCapacity: 100,
@@ -56,7 +56,7 @@ const mockSchedulerResponse: SchedulerResponse = {
                         queues: {
                             queue: [
                                 {
-                                    type: 'capacitySchedulerLeafQueueInfo',
+                                    queueType: 'leaf',
                                     capacity: 60,
                                     usedCapacity: 50,
                                     maxCapacity: 100,
@@ -71,7 +71,7 @@ const mockSchedulerResponse: SchedulerResponse = {
                                     state: 'RUNNING',
                                 },
                                 {
-                                    type: 'capacitySchedulerLeafQueueInfo',
+                                    queueType: 'leaf',
                                     capacity: 40,
                                     usedCapacity: 1.25,
                                     maxCapacity: 100,
@@ -668,7 +668,7 @@ describe('YarnApiClient', () => {
                         queues: {
                             queue: [
                                 {
-                                    type: 'capacitySchedulerLeafQueueInfo',
+                                    queueType: 'leaf',
                                     capacity: 100,
                                     usedCapacity: 0,
                                     maxCapacity: 100,

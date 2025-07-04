@@ -70,7 +70,7 @@ describe('QueueNode interface', () => {
 describe('QueueInfo interface', () => {
     it('should accept valid scheduler queue info', () => {
         const queueInfo: QueueInfo = {
-            type: 'capacitySchedulerLeafQueueInfo',
+            queueType: 'leaf',
             capacity: 70,
             usedCapacity: 45.5,
             maxCapacity: 100,
@@ -89,7 +89,7 @@ describe('QueueInfo interface', () => {
 
     it('should handle parent queue with child queues', () => {
         const parentQueueInfo: QueueInfo = {
-            type: 'capacitySchedulerQueueInfo',
+            queueType: 'parent',
             capacity: 100,
             usedCapacity: 60,
             maxCapacity: 100,
@@ -103,7 +103,7 @@ describe('QueueInfo interface', () => {
             queues: {
                 queue: [
                     {
-                        type: 'capacitySchedulerLeafQueueInfo',
+                        queueType: 'leaf',
                         capacity: 70,
                         usedCapacity: 45.5,
                         maxCapacity: 100,
@@ -126,7 +126,7 @@ describe('QueueInfo interface', () => {
 
     it('should handle stopped queue state', () => {
         const stoppedQueue: QueueInfo = {
-            type: 'capacitySchedulerLeafQueueInfo',
+            queueType: 'leaf',
             capacity: 20,
             usedCapacity: 0,
             maxCapacity: 50,

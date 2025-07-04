@@ -61,7 +61,7 @@ const createNodeProps = (data: QueueCardData, overrides?: Partial<NodeProps>) =>
 
 describe('QueueCardNode', () => {
   const defaultNodeData: QueueCardData = {
-    type: 'capacitySchedulerLeafQueueInfo',
+    queueType: 'leaf',
     queuePath: 'root.default',
     queueName: 'default',
     capacity: 10,

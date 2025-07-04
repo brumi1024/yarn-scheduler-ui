@@ -1,5 +1,6 @@
 import { useCallback } from 'react';
-import { useSchedulerStore } from '../../../store/schedulerStore';
+import { useSchedulerStore } from '~/store/schedulerStore';
+import { SPECIAL_VALUES } from '~/lib/types';
 
 export type UseQueueActionsResult = {
     addChildQueue: (parentPath: string, queueName: string, config: Record<string, string>) => void;
@@ -33,7 +34,7 @@ export function useQueueActions(): UseQueueActionsResult {
 
     const deleteQueue = useCallback(
         (queuePath: string) => {
-            if (queuePath === 'root') {
+            if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
                 throw new Error('Cannot delete root queue');
             }
 
@@ -68,7 +69,7 @@ export function useQueueActions(): UseQueueActionsResult {
 
     const canDeleteQueue = useCallback(
         (queuePath: string) => {
-            if (queuePath === 'root') {
+            if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
                 return false;
             }
 

@@ -7,7 +7,9 @@
  * - Node label properties: yarn.scheduler.capacity.<queue-path>.accessible-node-labels.<label>.<property>
  */
 
-const YARN_SCHEDULER_PREFIX = 'yarn.scheduler.capacity';
+import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/lib/types';
+
+const YARN_SCHEDULER_PREFIX = CONFIG_PREFIXES.BASE;
 const NODE_LABELS_SEGMENT = 'accessible-node-labels';
 
 /**
@@ -128,7 +130,7 @@ export function getParentQueuePath(queuePath: string): string | null {
  * @returns True if this is the root queue
  */
 export function isRootQueue(queuePath: string): boolean {
-    return queuePath === 'root';
+    return queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
 }
 
 /**
@@ -143,6 +145,6 @@ export function isGlobalPropertyKey(propertyKey: string): boolean {
 
     const suffix = propertyKey.substring(YARN_SCHEDULER_PREFIX.length + 1);
 
-    return !suffix.startsWith('root.');
+    return !suffix.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME + '.');
 }
 

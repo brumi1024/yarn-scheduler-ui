@@ -11,6 +11,9 @@
 *.iml
 dev-docs
 docs/screenshots
+/.cl*
+/.se*
+/CL*.md
 
 # Dependencies
 node_modules/

@@ -20,7 +20,7 @@ describe('Type Guards', () => {
     describe('isQueueInfo', () => {
         it('should identify valid QueueInfo object', () => {
             const queueInfo = {
-                type: 'capacitySchedulerLeafQueueInfo',
+                queueType: 'leaf',
                 capacity: 70,
                 usedCapacity: 45.5,
                 maxCapacity: 100,
@@ -38,7 +38,7 @@ describe('Type Guards', () => {
 
         it('should reject objects missing required fields', () => {
             const invalidQueue = {
-                type: 'capacitySchedulerLeafQueueInfo',
+                queueType: 'leaf',
                 capacity: 70,
                 // missing other required fields
             };
@@ -86,7 +86,7 @@ describe('Type Guards', () => {
     describe('isLeafQueue', () => {
         it('should identify leaf queues', () => {
             const leafQueue: QueueInfo = {
-                type: 'capacitySchedulerLeafQueueInfo',
+                queueType: 'leaf',
                 capacity: 70,
                 usedCapacity: 45.5,
                 maxCapacity: 100,
@@ -104,7 +104,7 @@ describe('Type Guards', () => {
 
         it('should reject parent queues', () => {
             const parentQueue: QueueInfo = {
-                type: 'capacitySchedulerQueueInfo',
+                queueType: 'parent',
                 capacity: 100,
                 usedCapacity: 60,
                 maxCapacity: 100,
@@ -125,7 +125,7 @@ describe('Type Guards', () => {
     describe('isParentQueue', () => {
         it('should identify parent queues', () => {
             const parentQueue: QueueInfo = {
-                type: 'capacitySchedulerQueueInfo',
+                queueType: 'parent',
                 capacity: 100,
                 usedCapacity: 60,
                 maxCapacity: 100,

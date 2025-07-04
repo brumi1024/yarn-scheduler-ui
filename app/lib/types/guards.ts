@@ -1,9 +1,10 @@
 import type { QueueInfo } from './queue';
 import type { SchedulerInfo } from './scheduler';
+import type { QueueInfo } from './queue';
 import type { ResourceInfo } from './resource';
 import type { PropertyDescriptor } from './property-descriptor';
 import type { MutationError } from './mutation';
-import { QUEUE_STATES, SCHEDULER_TYPES, QUEUE_INFO_TYPES, CONFIG_PREFIXES, GLOBAL_CONFIG_PROPS, SPECIAL_VALUES } from './constants';
+import { QUEUE_STATES, SCHEDULER_TYPES, QUEUE_TYPES, CONFIG_PREFIXES, SPECIAL_VALUES } from './constants';
 
 export function isQueueInfo(obj: unknown): obj is QueueInfo {
     if (!obj || typeof obj !== 'object') {
@@ -12,7 +13,7 @@ export function isQueueInfo(obj: unknown): obj is QueueInfo {
 
     const q = obj as Record<string, unknown>;
     return (
-        typeof q.type === 'string' &&
+        typeof q.queueType === 'string' && (q.queueType === QUEUE_TYPES.LEAF || q.queueType === QUEUE_TYPES.PARENT) &&
         typeof q.capacity === 'number' &&
         typeof q.usedCapacity === 'number' &&
         typeof q.maxCapacity === 'number' &&
@@ -31,12 +32,16 @@ export function isCapacitySchedulerInfo(obj: SchedulerInfo): obj is SchedulerInf
 }
 
 export function isLeafQueue(queue: QueueInfo): boolean {
-    return queue.type === QUEUE_INFO_TYPES.LEAF;
+    return queue.queueType === QUEUE_TYPES.LEAF;
 }
 
+
+
 export function isParentQueue(queue: QueueInfo): boolean {
-    return queue.type !== QUEUE_INFO_TYPES.LEAF && 'queues' in queue;
+    return queue.queueType === QUEUE_TYPES.PARENT;
 }
+
+
 
 export function hasQueueChildren(obj: unknown): boolean {
     if (!obj || typeof obj !== 'object') {
@@ -130,10 +135,7 @@ export function isGlobalProperty(propertyName: string): boolean {
         return false;
     }
 
-    // Common global properties
-    const globalProperties = Object.values(GLOBAL_CONFIG_PROPS);
-
-    return globalProperties.some(prop => remainder === prop);
+    return true;
 }
 
 export function isNodeLabelProperty(propertyName: string): boolean {
