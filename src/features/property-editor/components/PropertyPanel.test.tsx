@@ -4,7 +4,7 @@ import { render, screen } from '~/testing/setup/setup';
 import { PropertyPanel } from './PropertyPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { getMockQueueInfo } from '~/testing/factories/factories';
+import { getMockQueueInfo } from '~/testing/factories';
 import { toast } from 'sonner';
 
 // Mock the store

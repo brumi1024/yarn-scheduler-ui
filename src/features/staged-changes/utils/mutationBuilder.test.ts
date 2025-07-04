@@ -8,7 +8,7 @@ import {
   groupChangesByQueue,
   validateMutationRequest,
 } from './mutationBuilder';
-import type { StagedChange, SchedConfUpdateInfo } from '../types';
+import type { StagedChange, SchedConfUpdateInfo } from '~/types';
 
 describe('mutationBuilder', () => {
   const now = Date.now();
@@ -48,18 +48,11 @@ describe('mutationBuilder', () => {
           type: 'add',
           timestamp: now,
           queuePath: 'root.test',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '20',
-        },
-        {
-          id: '5',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.test',
-          property: 'state',
-          oldValue: undefined,
-          newValue: 'RUNNING',
+          property: '__config__',
+          config: {
+            capacity: '20',
+            state: 'RUNNING',
+          },
         },
         {
           id: '6',
@@ -114,6 +107,36 @@ describe('mutationBuilder', () => {
         'remove-queue': [],
         'global-updates': {},
       });
+    });
+
+    it('should handle add queue with config object', () => {
+      const stagedChanges: StagedChange[] = [
+        {
+          id: '1',
+          type: 'add',
+          timestamp: now,
+          queuePath: 'root.production.team2',
+          property: '__config__',
+          config: {
+            capacity: '20',
+            'maximum-capacity': '50',
+            state: 'RUNNING',
+          },
+        },
+      ];
+
+      const request = buildMutationRequest(stagedChanges);
+
+      expect(request['add-queue']).toEqual([
+        {
+          'queue-name': 'root.production.team2',
+          params: {
+            capacity: '20',
+            'maximum-capacity': '50',
+            state: 'RUNNING',
+          },
+        },
+      ]);
     });
 
     it('should group multiple properties for same queue', () => {
@@ -427,16 +450,17 @@ describe('mutationBuilder', () => {
   });
 
   describe('buildAddQueueMutation', () => {
-    it('should build add queue mutation with single property', () => {
+    it('should build add queue mutation with config object', () => {
       const changes: StagedChange[] = [
         {
           id: '1',
           type: 'add',
           timestamp: now,
           queuePath: 'root.test',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '20',
+          property: '__config__',
+          config: {
+            capacity: '20',
+          },
         },
       ];
 
@@ -450,34 +474,19 @@ describe('mutationBuilder', () => {
       });
     });
 
-    it('should build add queue mutation with multiple properties', () => {
+    it('should build add queue mutation with multiple properties in config', () => {
       const changes: StagedChange[] = [
         {
           id: '1',
           type: 'add',
           timestamp: now,
           queuePath: 'root.team2',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '30',
-        },
-        {
-          id: '2',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.team2',
-          property: 'maximum-capacity',
-          oldValue: undefined,
-          newValue: '50',
-        },
-        {
-          id: '3',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.team2',
-          property: 'state',
-          oldValue: undefined,
-          newValue: 'RUNNING',
+          property: '__config__',
+          config: {
+            capacity: '30',
+            'maximum-capacity': '50',
+            state: 'RUNNING',
+          },
         },
       ];
 
@@ -493,25 +502,18 @@ describe('mutationBuilder', () => {
       });
     });
 
-    it('should handle add queue with node label properties', () => {
+    it('should handle add queue with node label properties in config', () => {
       const changes: StagedChange[] = [
         {
           id: '1',
           type: 'add',
           timestamp: now,
           queuePath: 'root.ml',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '25',
-        },
-        {
-          id: '2',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.ml',
-          property: 'accessible-node-labels.gpu.capacity',
-          oldValue: undefined,
-          newValue: '100',
+          property: '__config__',
+          config: {
+            capacity: '25',
+            'accessible-node-labels.gpu.capacity': '100',
+          },
         },
       ];
 
@@ -912,27 +914,12 @@ describe('mutationBuilder', () => {
           type: 'add',
           timestamp: now,
           queuePath: 'root.ml',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '20',
-        },
-        {
-          id: '5',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.ml',
-          property: 'state',
-          oldValue: undefined,
-          newValue: 'RUNNING',
-        },
-        {
-          id: '6',
-          type: 'add',
-          timestamp: now,
-          queuePath: 'root.ml',
-          property: 'accessible-node-labels.gpu.capacity',
-          oldValue: undefined,
-          newValue: '100',
+          property: '__config__',
+          config: {
+            capacity: '20',
+            state: 'RUNNING',
+            'accessible-node-labels.gpu.capacity': '100',
+          },
         },
         // Remove deprecated queue
         {

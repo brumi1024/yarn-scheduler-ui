@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 import { createSchedulerStore, traverseQueueTree } from './schedulerStore';
-import { buildMutationRequest } from '~/utils/mutationBuilder';
+import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBuilder';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
   QueueInfo,
@@ -551,11 +551,12 @@ describe('schedulerStore', () => {
 
         store.getState().stageQueueAddition('root.production', 'team2', queueConfig);
 
-        expect(store.getState().stagedChanges).toHaveLength(3); // One for each property
+        expect(store.getState().stagedChanges).toHaveLength(1); // Single change with config
 
-        const addChanges = store.getState().stagedChanges.filter((c) => c.type === 'add');
-        expect(addChanges).toHaveLength(3);
-        expect(addChanges.every((c) => c.queuePath === 'root.production.team2')).toBe(true);
+        const addChange = store.getState().stagedChanges[0];
+        expect(addChange.type).toBe('add');
+        expect(addChange.queuePath).toBe('root.production.team2');
+        expect(addChange.config).toEqual(queueConfig);
       });
     });
 
@@ -569,9 +570,7 @@ describe('schedulerStore', () => {
         expect(store.getState().stagedChanges[0]).toMatchObject({
           type: 'remove',
           queuePath: 'root.production.batch',
-          property: undefined,
-          oldValue: undefined,
-          newValue: undefined,
+          property: '__config__',
         });
       });
     });
@@ -1094,9 +1093,10 @@ describe('utility functions', () => {
           id: '3',
           type: 'add',
           queuePath: 'root.test',
-          property: 'capacity',
-          oldValue: undefined,
-          newValue: '20',
+          property: '__config__',
+          config: {
+            capacity: '20',
+          },
           timestamp: Date.now(),
         },
         {

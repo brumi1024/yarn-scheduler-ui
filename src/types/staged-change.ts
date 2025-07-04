@@ -11,4 +11,6 @@ export type StagedChange = {
   label?: string;
   description?: string;
   parentChangeId?: string;
+  // Add queue can have multiple properties as changes, but in the UI it's one "add" operation
+  config?: Record<string, string>;
 };

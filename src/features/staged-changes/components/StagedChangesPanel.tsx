@@ -1,7 +1,12 @@
 import React, { useState } from 'react';
-import { Trash2, Check, Gauge, ChevronUp, ChevronDown, GripHorizontal } from 'lucide-react';
-import { cn } from '~/utils/cn';
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetFooter } from '~/components/ui/sheet';
+import { Trash2, Check, Gauge } from 'lucide-react';
+import {
+  Drawer,
+  DrawerContent,
+  DrawerHeader,
+  DrawerTitle,
+  DrawerFooter,
+} from '~/components/ui/drawer';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -15,11 +20,8 @@ interface StagedChangesPanelProps {
   onOpen?: () => void;
 }
 
-type DrawerState = 'collapsed' | 'expanded';
-
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
-  const [drawerState, setDrawerState] = useState<DrawerState>('collapsed');
 
   const { stagedChanges, revertChange, clearAllChanges, applyChanges } = useSchedulerStore();
 
@@ -62,10 +64,6 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
     toast.info(`Reverted change: ${change.property}`);
   };
 
-  const toggleDrawerState = () => {
-    setDrawerState((prev) => (prev === 'collapsed' ? 'expanded' : 'collapsed'));
-  };
-
   // Show floating button when panel is closed and there are staged changes
   if (!open && stagedChanges.length > 0) {
     return (
@@ -87,43 +85,23 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
   }
 
   return (
-    <Sheet open={open} onOpenChange={onClose}>
-      <SheetContent
-        side="bottom"
-        className={cn(
-          'transition-all duration-300 ease-in-out',
-          drawerState === 'collapsed' ? 'h-[200px]' : 'h-[60vh]',
-        )}
-        onOpenAutoFocus={(e) => e.preventDefault()}
-      >
-        {/* Drag Handle */}
-        <div
-          className="absolute top-0 left-1/2 -translate-x-1/2 w-12 h-1.5 bg-muted-foreground/20 rounded-full mt-2 cursor-ns-resize"
-          onClick={toggleDrawerState}
-        />
-
+    <Drawer open={open} onOpenChange={onClose} snapPoints={[0.2, 0.6, 0.9]}>
+      <DrawerContent className="h-[90vh] max-h-[90vh]">
         <div className="flex flex-col h-full">
           {/* Header */}
-          <SheetHeader className="border-b">
+          <DrawerHeader className="border-b pb-4">
             <div className="flex items-center justify-between">
               <div className="flex items-center gap-3">
-                <Button variant="ghost" size="icon" onClick={toggleDrawerState} className="h-8 w-8">
-                  {drawerState === 'collapsed' ? (
-                    <ChevronUp className="h-4 w-4" />
-                  ) : (
-                    <ChevronDown className="h-4 w-4" />
-                  )}
-                </Button>
-                <SheetTitle>Staged Changes</SheetTitle>
+                <DrawerTitle>Staged Changes</DrawerTitle>
                 <Badge variant="secondary">
                   {stagedChanges.length} {stagedChanges.length === 1 ? 'change' : 'changes'}
                 </Badge>
               </div>
             </div>
-          </SheetHeader>
+          </DrawerHeader>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto p-4">
+          <div className="flex-1 overflow-auto p-4 min-h-0">
             {stagedChanges.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">No staged changes</div>
             ) : (
@@ -142,7 +120,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
 
           {/* Actions */}
           {stagedChanges.length > 0 && (
-            <SheetFooter className="border-t">
+            <DrawerFooter className="border-t">
               <div className="flex justify-between items-center w-full">
                 <Button variant="outline" onClick={handleClearAll} disabled={isApplying}>
                   <Trash2 className="h-4 w-4 mr-2" />
@@ -162,10 +140,10 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                   )}
                 </Button>
               </div>
-            </SheetFooter>
+            </DrawerFooter>
           )}
         </div>
-      </SheetContent>
-    </Sheet>
+      </DrawerContent>
+    </Drawer>
   );
 }

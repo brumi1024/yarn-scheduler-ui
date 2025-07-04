@@ -4,8 +4,8 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { validateLabelRemoval } from '~/utils/labelValidation';
-import { AddLabelDialog } from './dialogs/AddLabelDialog';
+import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
+import { AddLabelDialog } from '~/features/node-labels';
 
 export const NodeLabelsPanel: React.FC = () => {
   const {

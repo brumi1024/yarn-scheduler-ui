@@ -4,13 +4,13 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { validateLabelRemoval } from '~/utils/labelValidation';
-import { getMockNodeLabel } from '~/testing/factories/factories';
+import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
+import { getMockNodeLabel } from '~/testing/factories';
 import type { NodeLabel } from '~/types';
 
 // Mock dependencies
 vi.mock('~/stores/schedulerStore');
-vi.mock('~/utils/labelValidation', () => ({
+vi.mock('~/features/node-labels/utils/labelValidation', () => ({
   validateLabelRemoval: vi.fn(),
   validateLabelName: vi.fn(() => ({ valid: true })),
 }));

@@ -3,10 +3,10 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { AddLabelDialog } from './AddLabelDialog';
-import { validateLabelName } from '~/utils/labelValidation';
+import { validateLabelName } from '~/features/node-labels/utils/labelValidation';
 
 // Mock the validation utility
-vi.mock('~/utils/labelValidation');
+vi.mock('~/features/node-labels/utils/labelValidation');
 
 // Mock UI components to simplify testing
 vi.mock('~/components/ui/dialog', () => ({

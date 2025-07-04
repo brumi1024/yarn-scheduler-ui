@@ -37,6 +37,15 @@ vi.mock('./QueueChangeGroup', () => ({
   ),
 }));
 
+// Setup pointer capture mock for Vaul drawer
+beforeEach(() => {
+  // Mock pointer capture methods for Vaul drawer
+  if (!Element.prototype.setPointerCapture) {
+    Element.prototype.setPointerCapture = vi.fn();
+    Element.prototype.releasePointerCapture = vi.fn();
+  }
+});
+
 const mockStagedChanges: StagedChange[] = [
   {
     id: '1',
@@ -266,8 +275,7 @@ describe('StagedChangesPanel', () => {
     expect(clearButton).toBeDisabled();
   });
 
-  it('should toggle drawer state', async () => {
-    const user = userEvent.setup();
+  it('should render with draggable drawer', async () => {
     (useSchedulerStore as any).mockImplementation((selector: any) => {
       const state = {
         stagedChanges: mockStagedChanges,
@@ -280,24 +288,16 @@ describe('StagedChangesPanel', () => {
 
     render(<StagedChangesPanel open={true} onClose={vi.fn()} onOpen={vi.fn()} />);
 
-    // The Sheet component renders content in a portal, so we need to look in the document body
+    // The Drawer component renders content in a portal
     await waitFor(() => {
-      const sheetContent = document.querySelector('[data-slot="sheet-content"]');
-      expect(sheetContent).toBeTruthy();
+      const drawerContent = document.querySelector('[data-vaul-drawer]');
+      expect(drawerContent).toBeTruthy();
     });
 
-    const sheetContent = document.querySelector('[data-slot="sheet-content"]');
-    expect(sheetContent).toHaveClass('h-[200px]');
-
-    // Click toggle button - find the button with ChevronUp icon
-    const toggleButton = screen
-      .getAllByRole('button')
-      .find((btn) => btn.querySelector('svg.lucide-chevron-up'));
-    expect(toggleButton).toBeDefined();
-    await user.click(toggleButton!);
-
-    // Should expand
-    expect(sheetContent).toHaveClass('h-[60vh]');
+    // Check that drawer is rendered with snap points
+    const drawerContent = document.querySelector('[data-vaul-drawer]');
+    expect(drawerContent).toHaveAttribute('data-vaul-snap-points', 'true');
+    expect(drawerContent).toHaveAttribute('data-vaul-drawer-direction', 'bottom');
   });
 
   it('should close panel when clicking close button', async () => {

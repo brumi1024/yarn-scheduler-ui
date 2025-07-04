@@ -3,7 +3,7 @@ import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { GlobalSettings } from './GlobalSettings';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { globalPropertyDefinitions } from '~/config/propertyDefinitions';
+import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import type { StagedChange } from '~/types/staged-change';
 
@@ -11,7 +11,7 @@ import type { StagedChange } from '~/types/staged-change';
 vi.mock('~/stores/schedulerStore');
 
 // Mock the property definitions
-vi.mock('~/config/propertyDefinitions', () => ({
+vi.mock('~/config/properties/global-properties', () => ({
   globalPropertyDefinitions: [],
 }));
 

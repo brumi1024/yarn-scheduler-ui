@@ -4,7 +4,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabels } from './NodeLabels';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { getMockNodeLabel } from '~/testing/factories/factories';
+import { getMockNodeLabel } from '~/testing/factories';
 import type { NodeLabel } from '~/types/node-label';
 
 // Mock the store
