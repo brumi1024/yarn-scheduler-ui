@@ -1,67 +1,215 @@
 # YARN Scheduler UI
 
-A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler configurations. This tool provides an intuitive visual interface for viewing, editing, and managing queue hierarchies in YARN clusters.
+A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler configurations. This application provides visual tools for viewing and editing queue hierarchies, managing capacity allocations, and configuring scheduler settings.
 
 ## Features
 
-- **Visual Queue Tree**: Interactive hierarchical view of scheduler queues
-- **Multi-mode Capacity Management**: Support for percentage, weight, and absolute resource modes
-- **Batch Operations**: Stage multiple changes and apply them atomically
-- **Real-time Validation**: Client-side validation with capacity totals checking
-- **Search & Sort**: Find queues quickly with search and sorting options
-- **Change Tracking**: Visual indicators for pending additions, modifications, and deletions
+- **Queue Management**
+  - Visual queue hierarchy with interactive tree view
+  - Create, edit, and delete queues
+  - Configure queue capacities and resource allocations
+  - Set queue states (RUNNING, STOPPED, DRAINING)
 
-<img width="3200" alt="Screenshot 2025-06-02 at 9 47 02" src="https://github.com/user-attachments/assets/6c23a8e3-e5f8-4c47-bf8f-20aaae547e9b" />
-<img width="3200" alt="Screenshot 2025-06-02 at 9 47 11" src="https://github.com/user-attachments/assets/47402e7a-3335-4aca-82fc-a2112dd0c941" />
-<img width="3200" alt="Screenshot 2025-06-02 at 9 47 15" src="https://github.com/user-attachments/assets/4e11fc47-2d98-4125-8aae-9ef70afad06e" />
+- **Resource Allocation**
+  - Configure queue capacities using percentage, weight, or absolute modes
+  - Set minimum and maximum capacity limits
+  - Manage user and application limits
+
+- **Node Labels**
+  - Create and manage node labels
+  - Assign labels to queues
+  - Configure label-specific capacities
+
+- **Global Settings**
+  - Configure cluster-wide scheduler properties
+  - Set maximum applications and AM resource limits
+  - Configure resource calculator and other global parameters
+
+- **Staged Changes**
+  - Preview all pending configuration changes
+  - Apply changes in batch
+  - Revert individual changes or clear all
+
+## Tech Stack
+
+- **Frontend**: React 19 with TypeScript
+- **Routing**: React Router v7
+- **State Management**: Zustand
+- **UI Components**: Shadcn with Tailwind CSS
+- **Data Visualization**: React Flow (xyflow)
+- **Build Tool**: Vite
+- **Testing**: Vitest with React Testing Library
+- **API Client**: Custom YARN REST API client
+
+## Project Structure
+
+```
+yarn-scheduler-ui/
+├── src/
+│   ├── app/              # Application entry points and routes
+│   ├── components/       # Shared UI components
+│   ├── features/         # Feature-specific modules
+│   │   ├── global-settings/
+│   │   ├── node-labels/
+│   │   ├── property-editor/
+│   │   ├── queue-management/
+│   │   └── staged-changes/
+│   ├── hooks/            # Custom React hooks
+│   ├── lib/              # Utilities and helpers
+│   ├── stores/           # Zustand stores
+│   ├── types/            # TypeScript type definitions
+│   └── utils/            # Utility functions
+├── public/               # Static assets
+├── docs/                 # Documentation
+└── tests/                # Test files
+```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js (version 14 or higher)
-- npm (comes with Node.js)
+- Node.js 18+ and npm 9+
+- Access to a YARN ResourceManager REST API
 
 ### Installation
 
 1. Clone the repository:
 
-    ```bash
-    git clone https://github.com/brumi1024/yarn-scheduler-ui.git
-    cd yarn-scheduler-ui
-    ```
+```bash
+git clone <repository-url>
+cd yarn-scheduler-ui
+```
 
 2. Install dependencies:
-    ```bash
-    npm install
-    ```
 
-### Running the Application
+```bash
+npm install
+```
+
+3. Configure the YARN API endpoint (optional):
+   Create a `.env` file with your YARN ResourceManager URL:
+
+```env
+VITE_YARN_API_URL=http://your-yarn-rm:8088
+```
+
+### Development
 
 Start the development server:
+
+```bash
+npm run dev
+```
+
+The application will be available at `http://localhost:5173`.
+
+### Building
+
+Build for production:
+
+```bash
+npm run build
+```
+
+Start the production server:
 
 ```bash
 npm start
 ```
 
-This will start a local HTTP server on port 8080. Open your browser and navigate to:
+## Testing
 
-- http://localhost:8080
-- http://127.0.0.1:8080
+Run all tests:
 
-The application will automatically load with mock data for development and testing.
+```bash
+npm test
+```
 
-### Available Scripts
+Run tests in watch mode:
 
-- `npm start` - Start the development server
-- `npm run lint` - Run ESLint to check code quality
-- `npm run lint:fix` - Automatically fix ESLint issues
-- `npm run format` - Format code with Prettier
+```bash
+npm run test
+```
 
-## Important
+Run tests with UI:
 
-The project is currently under development, and later it will be part of the Hadoop repository.
+```bash
+npm run test:ui
+```
 
-## Live demo
+Generate coverage report:
 
-[Here](https://brumi1024.github.io/yarn-scheduler-ui/)
+```bash
+npm run test:coverage
+```
+
+## Code Quality
+
+### Type Checking
+
+```bash
+npm run typecheck
+```
+
+### Linting
+
+```bash
+npm run lint
+npm run lint:fix
+```
+
+### Formatting
+
+```bash
+npm run format
+npm run format:check
+```
+
+## Development Guidelines
+
+### Component Structure
+
+- Use functional components with TypeScript
+- Place feature-specific components in their feature directory
+- Share common components in `src/components`
+
+### State Management
+
+- Global state is managed with Zustand stores
+- Use React Query for server state management
+- Keep component state local when possible
+
+### Testing
+
+- Write tests for all new features
+- Use React Testing Library for component tests
+- Mock external dependencies appropriately
+
+### Type Safety
+
+- TypeScript strict mode is enabled
+- Avoid `any` types
+- Use proper type definitions for all data structures
+
+## API Integration
+
+The application integrates with YARN ResourceManager REST API endpoints:
+
+- `/ws/v1/cluster/scheduler` - Scheduler information
+- `/ws/v1/cluster/scheduler-conf` - Scheduler configuration
+- `/ws/v1/cluster/node-labels` - Node label management
+
+## Contributing
+
+1. Fork the repository
+2. Create a feature branch (`git checkout -b feature/your-feature`)
+3. Make your changes
+4. Write/update tests
+5. Ensure all tests pass and code quality checks succeed
+6. Commit your changes
+7. Push to your fork
+8. Create a Pull Request
+
+## Support
+
+For issues and feature requests, please use the GitHub issue tracker.
