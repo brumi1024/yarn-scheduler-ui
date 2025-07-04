@@ -3,7 +3,7 @@ import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import React, { useCallback, useEffect, useMemo } from 'react';
 import { useSchedulerStore } from '../stores/schedulerStore';
-import type { PropertyDescriptor, LabelPropertyDescriptor } from '../types/property-descriptor';
+import type { PropertyDescriptor, LabelPropertyDescriptor, ValidationRule } from '../types/property-descriptor';
 import { queuePropertyDefinitions } from '../config/propertyDefinitions';
 import { generateLabelPropertyDescriptors, isLabelProperty, extractLabelFromPropertyName, extractBasePropertyFromLabelProperty } from '../utils/labelPropertyUtils';
 import { toast } from 'sonner';
@@ -15,7 +15,7 @@ function createFormSchema(properties: any[]) {
         let fieldSchema: z.ZodType = z.string();
 
         if (property.validationRules) {
-            property.validationRules.forEach((rule) => {
+            property.validationRules.forEach((rule: ValidationRule) => {
                 switch (rule.type) {
                     case 'range':
                         if (property.type === 'number') {

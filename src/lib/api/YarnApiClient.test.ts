@@ -11,7 +11,9 @@ import type {
     NodeLabelsResponse,
     NodeToLabelsResponse,
     VersionResponse,
-} from '../types';
+    QueueInfo,
+    ConfigProperty,
+} from '../../types';
 
 // Mock data for tests
 const mockSchedulerResponse: SchedulerResponse = {
@@ -40,7 +42,7 @@ const mockSchedulerResponse: SchedulerResponse = {
                         state: 'RUNNING',
                     },
                     {
-                        type: 'capacityScheduler',
+                        queueType: 'parent',
                         capacity: 50,
                         usedCapacity: 31,
                         maxCapacity: 100,
@@ -179,7 +181,7 @@ describe('YarnApiClient', () => {
             expect(queues.length).toBeGreaterThan(0);
             
             // Find a parent queue that has children
-            const parentQueue = queues.find(q => q.queues?.queue);
+            const parentQueue = queues.find((q: QueueInfo) => q.queues?.queue);
             if (parentQueue) {
                 expect(parentQueue.queues?.queue).toBeDefined();
                 expect(Array.isArray(parentQueue.queues?.queue)).toBe(true);
@@ -217,7 +219,7 @@ describe('YarnApiClient', () => {
             expect(response.property.length).toBeGreaterThan(0);
             
             // Check that all properties have name and value
-            response.property.forEach(prop => {
+            response.property.forEach((prop: ConfigProperty) => {
                 expect(prop.name).toBeDefined();
                 expect(prop.value).toBeDefined();
             });

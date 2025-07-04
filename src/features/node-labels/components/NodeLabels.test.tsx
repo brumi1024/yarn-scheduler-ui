@@ -4,11 +4,11 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabels } from './NodeLabels';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { getMockNodeLabel } from '~/testing/factories';
+import { getMockNodeLabel } from '~/testing/factories/factories';
 import type { NodeLabel } from '~/types/node-label';
 
 // Mock the store
-vi.mock('~/store/schedulerStore');
+vi.mock('~/stores/schedulerStore');
 
 // Mock the child components to focus on NodeLabels behavior
 vi.mock('./NodeLabelsPanel', () => ({
@@ -38,7 +38,7 @@ describe('NodeLabels', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockConsoleError.mockClear();
-        (useSchedulerStore as any).mockReturnValue(defaultStoreState);
+        vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
     });
 
     afterAll(() => {
@@ -47,7 +47,7 @@ describe('NodeLabels', () => {
 
     describe('Loading states', () => {
         it('should display loading skeleton when loading with no existing node labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 isLoading: true,
                 nodeLabels: []
@@ -66,7 +66,7 @@ describe('NodeLabels', () => {
                 getMockNodeLabel({ name: 'highmem', exclusivity: false })
             ];
 
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 isLoading: true,
                 nodeLabels: existingLabels
@@ -105,13 +105,13 @@ describe('NodeLabels', () => {
             render(<NodeLabels />);
 
             const refreshButton = screen.getByRole('button', { name: /refresh/i });
-            await userEvent.click(refreshButton);
+            await userEvent.click(refreshButton as HTMLElement);
 
             expect(mockRefreshSchedulerData).toHaveBeenCalledTimes(1);
         });
 
         it('should disable refresh button while loading', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 isLoading: true,
                 nodeLabels: [getMockNodeLabel()]
@@ -124,7 +124,7 @@ describe('NodeLabels', () => {
         });
 
         it('should show spinning animation on refresh icon when loading', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 isLoading: true,
                 nodeLabels: [getMockNodeLabel()]
@@ -144,7 +144,7 @@ describe('NodeLabels', () => {
             render(<NodeLabels />);
 
             const refreshButton = screen.getByRole('button', { name: /refresh/i });
-            await userEvent.click(refreshButton);
+            await userEvent.click(refreshButton as HTMLElement);
 
             await waitFor(() => {
                 expect(mockConsoleError).toHaveBeenCalledWith(
@@ -158,7 +158,7 @@ describe('NodeLabels', () => {
     describe('Error handling', () => {
         it('should display error alert when error exists', () => {
             const errorMessage = 'Failed to load node labels';
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 error: errorMessage
             });
@@ -211,7 +211,7 @@ describe('NodeLabels', () => {
 
         it('should show selected label badge when a label is selected', () => {
             const selectedLabel = 'gpu';
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 selectedNodeLabel: selectedLabel
             });
@@ -225,7 +225,7 @@ describe('NodeLabels', () => {
 
         it('should pass selected label to NodesPanel', () => {
             const selectedLabel = 'highmem';
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 selectedNodeLabel: selectedLabel
             });
@@ -264,7 +264,7 @@ describe('NodeLabels', () => {
             render(<NodeLabels />);
 
             const labelsCard = screen.getByText('Available Labels').closest('[data-slot="card"]');
-            const labelsPanel = within(labelsCard!).getByTestId('node-labels-panel');
+            const labelsPanel = within(labelsCard! as HTMLElement).getByTestId('node-labels-panel');
             expect(labelsPanel).toBeInTheDocument();
         });
 
@@ -272,7 +272,7 @@ describe('NodeLabels', () => {
             render(<NodeLabels />);
 
             const configCard = screen.getByText('Node Label Configuration').closest('[data-slot="card"]');
-            const nodesPanel = within(configCard!).getByTestId('nodes-panel');
+            const nodesPanel = within(configCard! as HTMLElement).getByTestId('nodes-panel');
             expect(nodesPanel).toBeInTheDocument();
         });
     });
@@ -294,7 +294,7 @@ describe('NodeLabels', () => {
             const { rerender } = render(<NodeLabels />);
 
             // Update store to show error
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 error: 'New error occurred'
             });

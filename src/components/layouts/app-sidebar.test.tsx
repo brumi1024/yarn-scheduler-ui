@@ -39,8 +39,8 @@ vi.mock('~/components/ui/sidebar', () => ({
   SidebarMenuButton: ({ children, isActive, asChild, ...props }: any) => {
     const className = isActive ? 'active' : '';
     if (asChild && React.isValidElement(children)) {
-      return React.cloneElement(children, {
-        className: `${children.props.className || ''} ${className}`.trim(),
+      return React.cloneElement(children as React.ReactElement<any>, {
+        className: `${(children.props as any).className || ''} ${className}`.trim(),
         'data-active': isActive,
       });
     }

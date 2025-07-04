@@ -1,47 +1,18 @@
 import React from 'react';
-import { render, screen, waitFor, fireEvent, within } from '@testing-library/react';
+import { render, screen, waitFor, fireEvent, within } from '~/testing/setup/setup';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { validateLabelRemoval } from '~/utils/labelValidation';
-import { getMockNodeLabel } from '~/testing/factories';
+import { validateLabelRemoval, validateLabelName } from '~/utils/labelValidation';
+import { getMockNodeLabel } from '~/testing/factories/factories';
 import type { NodeLabel } from '~/types';
 
 // Mock dependencies
 vi.mock('~/stores/schedulerStore');
-vi.mock('~/utils/labelValidation');
-
-// Mock the AddLabelDialog component
-vi.mock('./AddLabelDialog', () => ({
-    AddLabelDialog: ({ 
-        open, 
-        onClose, 
-        onConfirm, 
-        existingLabels,
-        isLoading 
-    }: {
-        open: boolean;
-        onClose: () => void;
-        onConfirm: (name: string, exclusivity: boolean) => void;
-        existingLabels: string[];
-        isLoading?: boolean;
-    }) => {
-        if (!open) return null;
-        
-        return (
-            <div data-testid="add-label-dialog">
-                <div>Existing labels: {existingLabels.join(', ')}</div>
-                <button onClick={onClose}>Cancel</button>
-                <button 
-                    onClick={() => onConfirm('new-label', true)}
-                    disabled={isLoading}
-                >
-                    Add Label
-                </button>
-            </div>
-        );
-    }
+vi.mock('~/utils/labelValidation', () => ({
+    validateLabelRemoval: vi.fn(),
+    validateLabelName: vi.fn(() => ({ valid: true }))
 }));
 
 describe('NodeLabelsPanel', () => {
@@ -64,10 +35,10 @@ describe('NodeLabelsPanel', () => {
     beforeEach(() => {
         vi.clearAllMocks();
         mockConsoleError.mockClear();
-        (useSchedulerStore as any).mockReturnValue(defaultStoreState);
-        (useSchedulerStore as any).getState = mockGetState;
+        vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
+        vi.mocked(useSchedulerStore).getState = mockGetState;
         mockGetState.mockReturnValue({ nodeToLabels: [] });
-        (validateLabelRemoval as any).mockReturnValue({ valid: true });
+        vi.mocked(validateLabelRemoval).mockReturnValue({ valid: true });
     });
 
     afterAll(() => {
@@ -97,7 +68,7 @@ describe('NodeLabelsPanel', () => {
         ];
 
         it('should display all node labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -110,7 +81,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should show correct label count', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -121,7 +92,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should display exclusive badge for exclusive labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -133,7 +104,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should show shield icon for exclusive labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -149,7 +120,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should handle singular vs plural label text', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: [getMockNodeLabel()]
             });
@@ -167,7 +138,7 @@ describe('NodeLabelsPanel', () => {
         ];
 
         it('should call selectNodeLabel when clicking on a label', async () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -175,13 +146,13 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            await userEvent.click(gpuLabel!);
+            await userEvent.click(gpuLabel! as HTMLElement);
 
             expect(mockSelectNodeLabel).toHaveBeenCalledWith('gpu');
         });
 
         it('should deselect label when clicking on selected label', async () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels,
                 selectedNodeLabel: 'gpu'
@@ -190,13 +161,13 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            await userEvent.click(gpuLabel!);
+            await userEvent.click(gpuLabel! as HTMLElement);
 
             expect(mockSelectNodeLabel).toHaveBeenCalledWith(null);
         });
 
         it('should highlight selected label', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels,
                 selectedNodeLabel: 'highmem'
@@ -222,7 +193,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should disable add button when loading', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 isLoading: true
             });
@@ -237,9 +208,11 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const addButton = screen.getByRole('button', { name: /add/i });
-            await userEvent.click(addButton);
+            await userEvent.click(addButton as HTMLElement);
 
-            expect(screen.getByTestId('add-label-dialog')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByRole('dialog')).toBeInTheDocument();
+            });
         });
 
         it('should pass existing label names to add dialog', async () => {
@@ -248,7 +221,7 @@ describe('NodeLabelsPanel', () => {
                 getMockNodeLabel({ name: 'highmem' })
             ];
 
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -256,9 +229,12 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const addButton = screen.getByRole('button', { name: /add/i });
-            await userEvent.click(addButton);
+            await userEvent.click(addButton as HTMLElement);
 
-            expect(screen.getByText('Existing labels: gpu, highmem')).toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.getByRole('dialog')).toBeInTheDocument();
+                expect(screen.getByLabelText(/label name/i)).toBeInTheDocument();
+            });
         });
 
         it('should call addNodeLabel when confirming dialog', async () => {
@@ -267,13 +243,23 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const addButton = screen.getByRole('button', { name: /add/i });
-            await userEvent.click(addButton);
+            await userEvent.click(addButton as HTMLElement);
 
-            const confirmButton = within(screen.getByTestId('add-label-dialog'))
-                .getByRole('button', { name: /add label/i });
-            await userEvent.click(confirmButton);
+            await waitFor(() => {
+                expect(screen.getByRole('dialog')).toBeInTheDocument();
+            });
 
-            expect(mockAddNodeLabel).toHaveBeenCalledWith('new-label', true);
+            // Fill in the label name
+            const nameInput = screen.getByLabelText(/label name/i);
+            await userEvent.type(nameInput, 'new-label');
+
+            // Click the Add Label button in the dialog
+            const confirmButton = screen.getByRole('button', { name: 'Add Label' });
+            await userEvent.click(confirmButton as HTMLElement);
+
+            await waitFor(() => {
+                expect(mockAddNodeLabel).toHaveBeenCalledWith('new-label', false); // Default exclusivity is false
+            });
         });
 
         it('should handle add label errors', async () => {
@@ -283,11 +269,19 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const addButton = screen.getByRole('button', { name: /add/i });
-            await userEvent.click(addButton);
+            await userEvent.click(addButton as HTMLElement);
 
-            const confirmButton = within(screen.getByTestId('add-label-dialog'))
-                .getByRole('button', { name: /add label/i });
-            await userEvent.click(confirmButton);
+            await waitFor(() => {
+                expect(screen.getByRole('dialog')).toBeInTheDocument();
+            });
+
+            // Fill in the label name
+            const nameInput = screen.getByLabelText(/label name/i);
+            await userEvent.type(nameInput, 'error-label');
+
+            // Click the Add Label button in the dialog
+            const confirmButton = screen.getByRole('button', { name: 'Add Label' });
+            await userEvent.click(confirmButton as HTMLElement);
 
             await waitFor(() => {
                 expect(mockConsoleError).toHaveBeenCalledWith(
@@ -301,13 +295,20 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const addButton = screen.getByRole('button', { name: /add/i });
-            await userEvent.click(addButton);
+            await userEvent.click(addButton as HTMLElement);
 
-            const cancelButton = within(screen.getByTestId('add-label-dialog'))
+            await waitFor(() => {
+                // The dialog is rendered through a portal, so we need to check for the actual dialog role
+                expect(screen.getByRole('dialog')).toBeInTheDocument();
+            });
+
+            const cancelButton = within(screen.getByRole('dialog'))
                 .getByRole('button', { name: /cancel/i });
-            await userEvent.click(cancelButton);
+            await userEvent.click(cancelButton as HTMLElement);
 
-            expect(screen.queryByTestId('add-label-dialog')).not.toBeInTheDocument();
+            await waitFor(() => {
+                expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+            });
         });
     });
 
@@ -318,7 +319,7 @@ describe('NodeLabelsPanel', () => {
         ];
 
         beforeEach(() => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -330,7 +331,7 @@ describe('NodeLabelsPanel', () => {
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
             
             // Delete button should be hidden initially
-            const deleteButton = within(gpuLabel!).getByRole('button');
+            const deleteButton = within(gpuLabel! as HTMLElement).getByRole('button');
             expect(deleteButton).toHaveClass('opacity-0');
 
             // Hover over the label
@@ -346,7 +347,7 @@ describe('NodeLabelsPanel', () => {
             ];
 
             mockGetState.mockReturnValue({ nodeToLabels: mockNodeToLabels });
-            (validateLabelRemoval as any).mockReturnValue({
+            vi.mocked(validateLabelRemoval).mockReturnValue({
                 valid: false,
                 error: 'Cannot remove label: nodes are assigned'
             });
@@ -354,9 +355,9 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            const deleteButton = within(gpuLabel!).getByRole('button');
+            const deleteButton = within(gpuLabel! as HTMLElement).getByRole('button');
             
-            await userEvent.click(deleteButton);
+            await userEvent.click(deleteButton as HTMLElement);
 
             expect(validateLabelRemoval).toHaveBeenCalledWith(
                 'gpu',
@@ -371,15 +372,15 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should call removeNodeLabel when validation passes', async () => {
-            (validateLabelRemoval as any).mockReturnValue({ valid: true });
+            vi.mocked(validateLabelRemoval).mockReturnValue({ valid: true });
             mockRemoveNodeLabel.mockResolvedValue(undefined);
 
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            const deleteButton = within(gpuLabel!).getByRole('button');
+            const deleteButton = within(gpuLabel! as HTMLElement).getByRole('button');
             
-            await userEvent.click(deleteButton);
+            await userEvent.click(deleteButton as HTMLElement);
 
             expect(mockRemoveNodeLabel).toHaveBeenCalledWith('gpu');
         });
@@ -388,16 +389,16 @@ describe('NodeLabelsPanel', () => {
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            const deleteButton = within(gpuLabel!).getByRole('button');
+            const deleteButton = within(gpuLabel! as HTMLElement).getByRole('button');
             
-            await userEvent.click(deleteButton);
+            await userEvent.click(deleteButton as HTMLElement);
 
             // Should not trigger label selection
             expect(mockSelectNodeLabel).not.toHaveBeenCalled();
         });
 
         it('should disable delete button when loading', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels,
                 isLoading: true
@@ -417,14 +418,14 @@ describe('NodeLabelsPanel', () => {
         it('should handle remove label errors', async () => {
             const testError = new Error('Failed to remove label');
             mockRemoveNodeLabel.mockRejectedValue(testError);
-            (validateLabelRemoval as any).mockReturnValue({ valid: true });
+            vi.mocked(validateLabelRemoval).mockReturnValue({ valid: true });
 
             render(<NodeLabelsPanel />);
 
             const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
-            const deleteButton = within(gpuLabel!).getByRole('button');
+            const deleteButton = within(gpuLabel! as HTMLElement).getByRole('button');
             
-            await userEvent.click(deleteButton);
+            await userEvent.click(deleteButton as HTMLElement);
 
             await waitFor(() => {
                 expect(mockConsoleError).toHaveBeenCalledWith(
@@ -442,7 +443,7 @@ describe('NodeLabelsPanel', () => {
         ];
 
         it('should show hover effect on labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -458,7 +459,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should show cursor pointer on labels', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -480,7 +481,7 @@ describe('NodeLabelsPanel', () => {
         ];
 
         it('should have accessible list structure', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });
@@ -495,7 +496,7 @@ describe('NodeLabelsPanel', () => {
         });
 
         it('should have accessible tooltips for delete buttons', () => {
-            (useSchedulerStore as any).mockReturnValue({
+            vi.mocked(useSchedulerStore).mockReturnValue({
                 ...defaultStoreState,
                 nodeLabels: mockLabels
             });

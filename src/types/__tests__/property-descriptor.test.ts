@@ -244,6 +244,7 @@ describe('PropertyCategory', () => {
         const limitsCategory: PropertyCategory = 'limits';
         const securityCategory: PropertyCategory = 'security';
         const advancedCategory: PropertyCategory = 'advanced';
+        const nodeLabelsCategory: PropertyCategory = 'nodeLabels';
 
         expect(generalCategory).toBe('general');
         expect(resourceCategory).toBe('resource');
@@ -251,5 +252,6 @@ describe('PropertyCategory', () => {
         expect(limitsCategory).toBe('limits');
         expect(securityCategory).toBe('security');
         expect(advancedCategory).toBe('advanced');
+        expect(nodeLabelsCategory).toBe('nodeLabels');
     });
 });

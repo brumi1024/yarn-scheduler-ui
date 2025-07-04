@@ -6,7 +6,7 @@ import { ThemeProvider } from '~/components/providers/theme-provider';
 import { useQueueTreeData } from '../hooks/useQueueTreeData';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { Node, Edge } from '@xyflow/react';
-import type { QueueCardData } from '~/types/queue';
+import type { QueueCardData } from '../hooks/useQueueTreeData';
 
 // Mock d3 modules to prevent errors in test environment
 vi.mock('d3-drag', () => ({
@@ -81,17 +81,7 @@ const getMockQueueCardData = (overrides?: Partial<QueueCardData>): QueueCardData
 };
 
 // Mock the useQueueTreeData hook
-vi.mock('./hooks/useQueueTreeData', () => ({
-  useQueueTreeData: vi.fn(() => ({
-    nodes: [],
-    edges: [],
-    isLoading: true,
-    error: null,
-  })),
-}));
-
-// Mock the useSchedulerStore with all required data
-vi.mock('~/store/schedulerStore', () => ({
+vi.mock('~/stores/schedulerStore', () => ({
   useSchedulerStore: vi.fn((selector) => {
     const state = {
       selectQueue: vi.fn(),
@@ -117,13 +107,24 @@ vi.mock('~/store/schedulerStore', () => ({
   }),
 }));
 
+vi.mock('../hooks/useQueueTreeData', () => ({
+  useQueueTreeData: vi.fn(() => ({
+    nodes: [],
+    edges: [],
+    isLoading: true,
+    error: null,
+  })),
+}));
+
+// Remove duplicate mock - already mocked above
+
 // Mock the useQueueActions hook
-vi.mock('~/hooks/useQueueActions', () => ({
+vi.mock('~/features/queue-management/hooks/useQueueActions', () => ({
   useQueueActions: vi.fn(() => ({
     canAddChildQueue: vi.fn(() => true),
     canDeleteQueue: vi.fn(() => true),
-    handleAddQueue: vi.fn(),
-    handleDeleteQueue: vi.fn(),
+    addChildQueue: vi.fn(),
+    deleteQueue: vi.fn(),
   })),
 }));
 

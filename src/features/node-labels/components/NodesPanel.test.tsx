@@ -528,7 +528,7 @@ describe('NodesPanel', () => {
 
             // Find the remove button by its icon (X)
             const actionCell = screen.getByRole('row', { name: /node1.example.com/i }).querySelector('td:last-child');
-            const removeButton = within(actionCell!).getByRole('button');
+            const removeButton = within(actionCell! as HTMLElement).getByRole('button');
             expect(removeButton).toBeInTheDocument();
             expect(removeButton.querySelector('svg')).toBeInTheDocument();
         });
@@ -548,7 +548,7 @@ describe('NodesPanel', () => {
 
             // Check that no remove button exists in the action cell
             const actionCell = screen.getByRole('row', { name: /node1.example.com/i }).querySelector('td:last-child');
-            const buttons = within(actionCell!).queryAllByRole('button');
+            const buttons = within(actionCell! as HTMLElement).queryAllByRole('button');
             // Should only have the select trigger, no remove button
             expect(buttons.length).toBeLessThan(2);
         });
@@ -566,8 +566,8 @@ describe('NodesPanel', () => {
 
             // Find and click the remove button
             const actionCell = screen.getByRole('row', { name: /node1.example.com/i }).querySelector('td:last-child');
-            const removeButton = within(actionCell!).getByRole('button');
-            await userEvent.click(removeButton);
+            const removeButton = within(actionCell! as HTMLElement).getByRole('button');
+            await userEvent.click(removeButton as HTMLElement);
 
             expect(mockAssignNodeToLabel).toHaveBeenCalledWith('node-1', null);
         });
@@ -584,7 +584,7 @@ describe('NodesPanel', () => {
 
             // Find the remove button and check it's disabled
             const actionCell = screen.getByRole('row', { name: /node1.example.com/i }).querySelector('td:last-child');
-            const removeButton = within(actionCell!).getByRole('button');
+            const removeButton = within(actionCell! as HTMLElement).getByRole('button');
             expect(removeButton).toBeDisabled();
         });
     });
@@ -681,7 +681,7 @@ describe('NodesPanel', () => {
             // The tooltip content is rendered when hovering
             // Instead, verify the button with X icon exists
             const actionCell = screen.getByRole('row', { name: /node1.example.com/i }).querySelector('td:last-child');
-            const removeButton = within(actionCell!).getByRole('button');
+            const removeButton = within(actionCell! as HTMLElement).getByRole('button');
             expect(removeButton).toBeInTheDocument();
             
             // The button should have an X icon

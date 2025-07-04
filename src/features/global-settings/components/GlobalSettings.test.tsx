@@ -289,9 +289,9 @@ describe('GlobalSettings', () => {
     describe('property ordering', () => {
         it('should display categories in alphabetical order', () => {
             const properties = [
-                getMockPropertyDescriptor({ category: 'zebra' }),
-                getMockPropertyDescriptor({ category: 'alpha' }),
-                getMockPropertyDescriptor({ category: 'beta' })
+                getMockPropertyDescriptor({ category: 'advanced' }),
+                getMockPropertyDescriptor({ category: 'general' }),
+                getMockPropertyDescriptor({ category: 'resource' })
             ];
             (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
             mockUseSchedulerStore.mockReturnValue(createMockStore());
@@ -299,9 +299,9 @@ describe('GlobalSettings', () => {
             render(<GlobalSettings />);
 
             const headings = screen.getAllByTestId('accordion-trigger');
-            expect(headings[0]).toHaveTextContent('alpha Settings');
-            expect(headings[1]).toHaveTextContent('beta Settings');
-            expect(headings[2]).toHaveTextContent('zebra Settings');
+            expect(headings[0]).toHaveTextContent('advanced Settings');
+            expect(headings[1]).toHaveTextContent('general Settings');
+            expect(headings[2]).toHaveTextContent('resource Settings');
         });
 
         it('should maintain property order within categories as defined', () => {
@@ -365,7 +365,7 @@ describe('GlobalSettings', () => {
             const properties = [
                 getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
                 getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
-                getMockPropertyDescriptor({ name: 'prop3', category: 'performance' })
+                getMockPropertyDescriptor({ name: 'prop3', category: 'scheduling' })
             ];
             (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
             mockUseSchedulerStore.mockReturnValue(createMockStore());
@@ -375,7 +375,7 @@ describe('GlobalSettings', () => {
             // Verify all category accordions are rendered
             expect(screen.getByText('general Settings')).toBeInTheDocument();
             expect(screen.getByText('security Settings')).toBeInTheDocument();
-            expect(screen.getByText('performance Settings')).toBeInTheDocument();
+            expect(screen.getByText('scheduling Settings')).toBeInTheDocument();
             
             // Verify correct number of accordion items
             const accordionItems = screen.getAllByTestId('accordion-item');
