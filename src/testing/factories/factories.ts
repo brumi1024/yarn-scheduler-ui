@@ -4,6 +4,7 @@ import type { QueueInfo, PropertyDescriptor, StagedChange, NodeLabel } from '~/t
 
 export const getMockQueueInfo = (overrides?: Partial<QueueInfo>): QueueInfo => {
   return {
+    queueType: "leaf",
     queueName: "default",
     queuePath: "root.default",
     capacity: 10,
@@ -16,10 +17,7 @@ export const getMockQueueInfo = (overrides?: Partial<QueueInfo>): QueueInfo => {
     numPendingApplications: 0,
     numActiveApplications: 2,
     state: "RUNNING",
-    queues: null,
-    allocatedContainers: 10,
-    reservedContainers: 0,
-    pendingContainers: 0,
+    queues: undefined,
     ...overrides
   };
 };
@@ -29,7 +27,7 @@ export const getMockPropertyDescriptor = (overrides?: Partial<PropertyDescriptor
     name: "capacity",
     displayName: "Capacity",
     description: "Queue capacity as percentage, weight, or absolute resources",
-    type: "capacity",
+    type: "string",
     category: "general",
     required: true,
     defaultValue: "0",

@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '~/testing/setup';
+import React from 'react';
+import { render, screen, waitFor } from '~/testing/setup/setup';
 import { DeleteQueueDialog } from './DeleteQueueDialog';
 import userEvent from '@testing-library/user-event';
 
@@ -7,7 +8,7 @@ import userEvent from '@testing-library/user-event';
 const mockDeleteQueue = vi.fn();
 const mockCanDeleteQueue = vi.fn();
 
-vi.mock('../hooks/useQueueActions', () => ({
+vi.mock('../../hooks/useQueueActions', () => ({
   useQueueActions: () => ({
     deleteQueue: mockDeleteQueue,
     canDeleteQueue: mockCanDeleteQueue,
@@ -27,19 +28,13 @@ describe('DeleteQueueDialog', () => {
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
   });
 
-  it('should render dialog with queue information', () => {
+  it('should render dialog with queue information', async () => {
     render(<DeleteQueueDialog open={true} queuePath="root.production.team1" onClose={vi.fn()} />);
 
     expect(screen.getByRole('dialog')).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: /delete queue/i })).toBeInTheDocument();
-    expect(
-      screen.getByText((content, element) => {
-        return (
-          content.includes('Are you sure you want to delete the queue') &&
-          (element?.textContent?.includes('team1') || false)
-        );
-      }),
-    ).toBeInTheDocument();
+    expect(screen.getByText(/Are you sure you want to delete the queue/)).toBeInTheDocument();
+    expect(screen.getByText('team1')).toBeInTheDocument();
     expect(screen.getByText(/This action cannot be undone/)).toBeInTheDocument();
   });
 

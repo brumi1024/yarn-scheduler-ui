@@ -159,7 +159,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
                             <div className="flex justify-between items-center">
                                 <span className="text-xs text-muted-foreground">Queue Type</span>
                                 <Badge variant="outline" className="text-xs">
-                                    {queue.type || 'Capacity Scheduler'}
+                                    {queue.queueType || 'Capacity Scheduler'}
                                 </Badge>
                             </div>
                             

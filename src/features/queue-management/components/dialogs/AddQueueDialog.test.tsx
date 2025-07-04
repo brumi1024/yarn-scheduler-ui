@@ -1,24 +1,52 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '~/testing/setup';
+import React from 'react';
+import { render, screen, waitFor, fireEvent } from '~/testing/setup/setup';
 import { AddQueueDialog } from './AddQueueDialog';
 import userEvent from '@testing-library/user-event';
 
 // Mock the useQueueActions hook
 const mockAddChildQueue = vi.fn();
 const mockCanAddChildQueue = vi.fn();
+const mockGetQueueByPath = vi.fn();
+const mockStageQueueAddition = vi.fn();
 
-vi.mock('../hooks/useQueueActions', () => ({
+vi.mock('../../hooks/useQueueActions', () => ({
   useQueueActions: () => ({
     addChildQueue: mockAddChildQueue,
     canAddChildQueue: mockCanAddChildQueue,
   }),
 }));
 
+// Mock the store
+vi.mock('~/stores/schedulerStore', () => ({
+  useSchedulerStore: vi.fn((selector) => {
+    const state = {
+      getQueueByPath: mockGetQueueByPath,
+      stageQueueAddition: mockStageQueueAddition,
+    };
+    
+    if (typeof selector === 'function') {
+      return selector(state);
+    }
+    
+    return state;
+  }),
+}));
+
 describe('AddQueueDialog', () => {
+  const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
+  
   beforeEach(() => {
     vi.clearAllMocks();
+    mockConsoleError.mockClear();
     // Default: can add child queue
     mockCanAddChildQueue.mockReturnValue(true);
+    // Default: parent queue exists
+    mockGetQueueByPath.mockReturnValue({ queuePath: 'root.production', queueName: 'production' });
+  });
+  
+  afterAll(() => {
+    mockConsoleError.mockRestore();
   });
 
   it('should not render when closed', () => {
@@ -109,19 +137,33 @@ describe('AddQueueDialog', () => {
 
     const nameInput = screen.getByLabelText(/queue name/i);
     const capacityInput = screen.getByLabelText('Capacity (%) *');
-    const submitButton = screen.getByRole('button', { name: /add queue/i });
+    const maxCapacityInput = screen.getByLabelText('Max Capacity (%) *');
 
-    await user.type(nameInput, 'new-queue');
+    // Fill all required fields
+    await user.type(nameInput, 'newqueue');
+
+    // Clear and type capacity (default is 10)
     await user.clear(capacityInput);
     await user.type(capacityInput, '25');
+    
+    // Clear and type max capacity (default is 100)
+    await user.clear(maxCapacityInput);
+    await user.type(maxCapacityInput, '100');
+    
+    // Submit the form
+    const submitButton = screen.getByRole('button', { name: /add queue/i });
+    expect(submitButton).not.toBeDisabled();
+    
     await user.click(submitButton);
 
     await waitFor(() => {
       expect(mockAddChildQueue).toHaveBeenCalledWith(
         'root.production',
-        'new-queue',
+        'newqueue',
         expect.objectContaining({
           capacity: '25',
+          'maximum-capacity': '100', // Default value
+          state: 'RUNNING', // Default value
         }),
       );
       expect(onClose).toHaveBeenCalled();

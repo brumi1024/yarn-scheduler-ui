@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '~/testing/setup';
+import { render, screen, waitFor } from '~/testing/setup/setup';
 import { StagedChangesPanel } from './StagedChangesPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';

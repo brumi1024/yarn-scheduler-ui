@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '~/testing/setup';
+import { render, screen } from '~/testing/setup/setup';
 import { QueueCardNode } from './QueueCardNode';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { TooltipProvider } from '~/components/ui/tooltip';
+import type { NodeProps } from '@xyflow/react';
 
 // Mock the store
 vi.mock('~/stores/schedulerStore');
@@ -55,6 +56,9 @@ const createNodeProps = (data: QueueCardData, overrides?: Partial<NodeProps>) =>
     deletable: true,
     dragging: false,
     zIndex: 0,
+    isConnectable: true,
+    positionAbsoluteX: 0,
+    positionAbsoluteY: 0,
     ...overrides
   };
 };

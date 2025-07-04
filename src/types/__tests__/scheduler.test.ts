@@ -209,7 +209,7 @@ describe('CapacitySchedulerInfo interface', () => {
     expect(capacitySchedulerInfo.autoCreationEligibility).toBe('off');
     expect(capacitySchedulerInfo.mode).toBe('absolute');
     expect(capacitySchedulerInfo.nodeLabels).toContain('gpu');
-    expect(capacitySchedulerInfo.queueAcls.queueAcl).toHaveLength(1);
+    expect(capacitySchedulerInfo.queueAcls?.queueAcl).toHaveLength(1);
   });
 
   it('should handle scheduler info with node label partitions', () => {

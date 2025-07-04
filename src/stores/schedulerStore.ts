@@ -571,7 +571,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
 
                 // Convert current mappings to array format and update the specific node
                 const existingMappings = currentMappings.nodeToLabelsInfo?.nodeToLabels || [];
-                const updatedMappings = existingMappings.map((mapping) => {
+                const updatedMappings = existingMappings.map((mapping: NodeToLabelMapping) => {
                     if (mapping.nodeId === nodeId) {
                         return {
                             nodeId,
@@ -585,7 +585,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                 });
 
                 // If this is a new node, add it to the mappings
-                if (!existingMappings.some(mapping => mapping.nodeId === nodeId)) {
+                if (!existingMappings.some((mapping: NodeToLabelMapping) => mapping.nodeId === nodeId)) {
                     updatedMappings.push({
                         nodeId,
                         labels: labelName === null ? [] : [labelName]
@@ -687,7 +687,25 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
                 return null;
             };
 
-            return findQueue(state.schedulerData);
+            // Convert SchedulerInfo to QueueInfo-like structure for traversal
+            const rootQueue: QueueInfo = {
+                queueType: 'parent' as const,
+                capacity: state.schedulerData.capacity,
+                usedCapacity: state.schedulerData.usedCapacity,
+                maxCapacity: state.schedulerData.maxCapacity,
+                absoluteCapacity: state.schedulerData.capacity,
+                absoluteMaxCapacity: state.schedulerData.maxCapacity,
+                absoluteUsedCapacity: state.schedulerData.usedCapacity,
+                numApplications: 0,
+                numActiveApplications: 0,
+                numPendingApplications: 0,
+                queueName: state.schedulerData.queueName,
+                queuePath: state.schedulerData.queueName,
+                state: 'RUNNING' as const,
+                queues: state.schedulerData.queues
+            };
+            
+            return findQueue(rootQueue);
         },
 
         getChildQueues: (parentPath) => {

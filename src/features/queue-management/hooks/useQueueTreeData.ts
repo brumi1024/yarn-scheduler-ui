@@ -1,7 +1,7 @@
 import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import type { QueueInfo, StagedChange, SchedulerInfo, CapacitySchedulerInfo } from '~/types';
+import type { QueueInfo, QueueType, StagedChange, SchedulerInfo, CapacitySchedulerInfo } from '~/types';
 import type { QueueStateValue } from '~/types/constants';
 import { AUTO_CREATION_PROPS } from '~/types/constants';
 import { DagreLayout } from '../utils/DagreLayout';
@@ -35,7 +35,7 @@ function convertSchedulerInfoToQueueInfo(schedulerInfo: SchedulerInfo): QueueInf
     const capacitySchedulerInfo = schedulerInfo as CapacitySchedulerInfo;
 
     return {
-        type: schedulerInfo.type,
+        queueType: schedulerInfo.type as QueueType,
         capacity: schedulerInfo.capacity,
         usedCapacity: schedulerInfo.usedCapacity,
         maxCapacity: schedulerInfo.maxCapacity,

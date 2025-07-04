@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { render, screen } from '~/testing/setup/setup';
 import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { ModeToggle } from './mode-toggle';
@@ -11,7 +11,7 @@ const mockUseTheme = vi.fn(() => ({
   setTheme: mockSetTheme,
 }));
 
-vi.mock('~/components/theme-provider', () => ({
+vi.mock('~/components/providers/theme-provider', () => ({
   useTheme: () => mockUseTheme(),
 }));
 

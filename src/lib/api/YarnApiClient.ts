@@ -14,7 +14,7 @@ import type {
     NodeToLabelsResponse,
     NodesResponse,
     VersionResponse,
-} from '../types';
+} from '../../types';
 
 export class YarnApiClient {
     private readonly baseUrl: string;

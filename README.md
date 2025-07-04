@@ -176,7 +176,6 @@ npm run format:check
 ### State Management
 
 - Global state is managed with Zustand stores
-- Use React Query for server state management
 - Keep component state local when possible
 
 ### Testing

@@ -1,10 +1,10 @@
 import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen, waitFor } from '~/testing/setup';
+import { render, screen, waitFor } from '~/testing/setup/setup';
 import { PropertyPanel } from './PropertyPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { getMockQueueInfo } from '~/testing/factories';
+import { getMockQueueInfo } from '~/testing/factories/factories';
 import { toast } from 'sonner';
 
 // Mock the store

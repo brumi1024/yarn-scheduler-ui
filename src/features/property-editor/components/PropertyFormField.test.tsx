@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { render, screen } from '~/testing/setup';
+import { render, screen } from '~/testing/setup/setup';
 import { PropertyFormField } from './PropertyFormField';
 import { useForm, FormProvider } from 'react-hook-form';
-import { getMockPropertyDescriptor } from '~/testing/factories';
+import { getMockPropertyDescriptor } from '~/testing/factories/factories';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '~/components/ui/tooltip';
 

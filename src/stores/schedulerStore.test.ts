@@ -6,24 +6,28 @@ import type {
   QueueInfo,
   StagedChange,
   SchedulerInfo,
-  ConfigInfo,
+  ConfigData,
   NodeLabelsInfo,
+  NodeLabelsResponse,
+  NodesResponse,
   VersionResponse,
+  SchedulerResponse,
 } from '../types';
+import { QUEUE_TYPES } from '../types/constants';
 
 // Mock data for tests
-const mockSchedulerResponse: SchedulerInfo = {
+const mockSchedulerResponse: SchedulerResponse = {
   scheduler: {
     schedulerInfo: {
-      queueType: 'parent',
+      type: 'capacityScheduler',
       capacity: 100,
       usedCapacity: 50,
       maxCapacity: 100,
       queueName: 'root',
-      queuePath: 'root',
       queues: {
         queue: [
           {
+            queueType: QUEUE_TYPES.LEAF,
             queueName: 'default',
             capacity: 10,
             usedCapacity: 0,
@@ -32,6 +36,8 @@ const mockSchedulerResponse: SchedulerInfo = {
             absoluteMaxCapacity: 100,
             absoluteUsedCapacity: 0,
             numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
             queuePath: 'root.default',
             queues: { queue: [] },
             resourcesUsed: {
@@ -41,6 +47,7 @@ const mockSchedulerResponse: SchedulerInfo = {
             state: 'RUNNING',
           },
           {
+            queueType: QUEUE_TYPES.PARENT,
             queueName: 'production',
             capacity: 60,
             usedCapacity: 0,
@@ -49,10 +56,13 @@ const mockSchedulerResponse: SchedulerInfo = {
             absoluteMaxCapacity: 100,
             absoluteUsedCapacity: 0,
             numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
             queuePath: 'root.production',
             queues: {
               queue: [
                 {
+                  queueType: QUEUE_TYPES.LEAF,
                   queueName: 'batch',
                   capacity: 50,
                   usedCapacity: 0,
@@ -61,6 +71,8 @@ const mockSchedulerResponse: SchedulerInfo = {
                   absoluteMaxCapacity: 60,
                   absoluteUsedCapacity: 0,
                   numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
                   queuePath: 'root.production.batch',
                   queues: { queue: [] },
                   resourcesUsed: {
@@ -70,6 +82,7 @@ const mockSchedulerResponse: SchedulerInfo = {
                   state: 'RUNNING',
                 },
                 {
+                  queueType: QUEUE_TYPES.LEAF,
                   queueName: 'interactive',
                   capacity: 50,
                   usedCapacity: 0,
@@ -78,6 +91,8 @@ const mockSchedulerResponse: SchedulerInfo = {
                   absoluteMaxCapacity: 60,
                   absoluteUsedCapacity: 0,
                   numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
                   queuePath: 'root.production.interactive',
                   queues: { queue: [] },
                   resourcesUsed: {
@@ -91,6 +106,7 @@ const mockSchedulerResponse: SchedulerInfo = {
             state: 'RUNNING',
           },
           {
+            queueType: QUEUE_TYPES.LEAF,
             queueName: 'development',
             capacity: 30,
             usedCapacity: 0,
@@ -99,6 +115,8 @@ const mockSchedulerResponse: SchedulerInfo = {
             absoluteMaxCapacity: 100,
             absoluteUsedCapacity: 0,
             numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
             queuePath: 'root.development',
             queues: { queue: [] },
             resourcesUsed: {
@@ -113,7 +131,7 @@ const mockSchedulerResponse: SchedulerInfo = {
   },
 };
 
-const mockConfigResponse: ConfigInfo = {
+const mockConfigResponse: ConfigData = {
   property: [
     {
       name: 'yarn.scheduler.capacity.root.queues',
@@ -194,7 +212,7 @@ const mockConfigResponse: ConfigInfo = {
   ],
 };
 
-const mockNodeLabelsResponse: NodeLabelsInfo = {
+const mockNodeLabelsResponse: NodeLabelsResponse = {
   nodeLabelsInfo: {
     nodeLabelInfo: [
       { name: 'gpu', exclusivity: true },
@@ -204,15 +222,38 @@ const mockNodeLabelsResponse: NodeLabelsInfo = {
   },
 };
 
-const mockNodesResponse = {
+const mockNodesResponse: NodesResponse = {
   nodes: {
     node: [
       {
         id: 'node1.example.com:8041',
         rack: '/default-rack',
+        nodeHostName: 'node1.example.com',
         state: 'RUNNING',
         nodeHTTPAddress: 'node1.example.com:8042',
         version: '3.4.0',
+        lastHealthUpdate: Date.now(),
+        healthReport: 'Healthy',
+        numContainers: 5,
+        usedMemoryMB: 4096,
+        availMemoryMB: 12288,
+        usedVirtualCores: 4,
+        availableVirtualCores: 12,
+        numRunningOpportContainers: 0,
+        usedMemoryOpportGB: 0,
+        usedVirtualCoresOpport: 0,
+        numQueuedContainers: 0,
+        nodeLabels: ['gpu', 'ssd'],
+        allocationTags: {},
+        usedResource: {
+          memory: 4096,
+          vCores: 4,
+        },
+        availableResource: {
+          memory: 12288,
+          vCores: 12,
+        },
+        nodeAttributesInfo: {},
       },
     ],
   },
@@ -352,8 +393,8 @@ describe('schedulerStore', () => {
       const mockApiClient = vi.mocked(store.getState().apiClient);
 
       // Create promises that we can control
-      let resolveScheduler: (value: any) => void;
-      const schedulerPromise = new Promise((resolve) => {
+      let resolveScheduler: (value: SchedulerResponse) => void;
+      const schedulerPromise = new Promise<SchedulerResponse>((resolve) => {
         resolveScheduler = resolve;
       });
 
@@ -980,7 +1021,7 @@ describe('utility functions', () => {
         queues: {
           queue: [
             {
-              queueType: 'leaf',
+              queueType: QUEUE_TYPES.LEAF,
               capacity: 50,
               usedCapacity: 80,
               maxCapacity: 100,
