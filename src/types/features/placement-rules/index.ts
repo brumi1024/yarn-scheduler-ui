@@ -47,6 +47,12 @@ export interface PlacementRulesData {
   requiresMigration?: boolean;
 }
 
+export interface MigrationResult {
+  success: boolean;
+  rules: PlacementRule[];
+  errors: string[];
+}
+
 // Re-export validators
 export {
   PlacementRuleSchema,
