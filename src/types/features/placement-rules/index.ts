@@ -40,5 +40,17 @@ export interface LegacyRuleFormat {
   target: string;
 }
 
+export interface PlacementRulesData {
+  format: 'json' | 'legacy' | 'none';
+  rules?: PlacementRule[];
+  legacyRules?: string;
+  requiresMigration?: boolean;
+}
+
 // Re-export validators
-export { PlacementRuleSchema, isPlacementRule, isValidPlacementRule } from './validators';
+export {
+  PlacementRuleSchema,
+  isPlacementRule,
+  validatePlacementRule,
+  isValidPlacementRule,
+} from './validators';
