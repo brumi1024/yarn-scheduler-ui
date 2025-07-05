@@ -43,7 +43,10 @@ export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
 
   stageQueueChange: (queuePath: string, property: string, value: string) => void;
-  stageGlobalChange: (property: string, value: string) => void;
+  stageGlobalChange: (
+    property: string,
+    value: string | Record<string, unknown> | unknown[],
+  ) => void;
   stageQueueAddition: (
     parentPath: string,
     queueName: string,

@@ -537,6 +537,47 @@ describe('schedulerStore', () => {
           newValue: '15000',
         });
       });
+
+      it('should stringify object values for placement rules JSON property', () => {
+        const store = createTestStore();
+
+        const placementRules = [
+          { type: 'user', matches: 'admin*', policy: 'specified', value: 'root.admin' },
+          { type: 'group', matches: 'production', policy: 'specified', value: 'root.production' },
+        ];
+
+        store
+          .getState()
+          .stageGlobalChange('yarn.scheduler.capacity.mapping-rule-json', placementRules);
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0]).toMatchObject({
+          type: 'update',
+          queuePath: 'global',
+          property: 'yarn.scheduler.capacity.mapping-rule-json',
+          oldValue: undefined,
+          newValue: JSON.stringify(placementRules),
+        });
+      });
+
+      it('should handle string values for placement rules JSON property', () => {
+        const store = createTestStore();
+
+        const placementRulesString = '[{"type":"user","matches":"*","policy":"primaryGroup"}]';
+
+        store
+          .getState()
+          .stageGlobalChange('yarn.scheduler.capacity.mapping-rule-json', placementRulesString);
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0]).toMatchObject({
+          type: 'update',
+          queuePath: 'global',
+          property: 'yarn.scheduler.capacity.mapping-rule-json',
+          oldValue: undefined,
+          newValue: placementRulesString,
+        });
+      });
     });
 
     describe('stageQueueAddition', () => {
