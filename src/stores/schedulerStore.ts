@@ -13,6 +13,7 @@ import {
   createStagedChangesSlice,
   createQueueSelectionSlice,
   createQueueDataSlice,
+  createPlacementRulesSlice,
   type SchedulerStore,
 } from './slices';
 
@@ -30,6 +31,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
     ...createStagedChangesSlice(set, get, api),
     ...createQueueSelectionSlice(set, get, api),
     ...createQueueDataSlice(set, get, api),
+    ...createPlacementRulesSlice(set, get, api),
   }));
 
 /**

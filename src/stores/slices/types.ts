@@ -11,6 +11,7 @@ import type {
   StagedChange,
   QueueInfo,
 } from '~/types';
+import type { PlacementRulesSlice } from './placementRulesSlice';
 
 export interface BaseStoreSlice {
   apiClient: YarnApiClient;
@@ -94,4 +95,5 @@ export type SchedulerStore = BaseStoreSlice &
   NodeLabelsSlice &
   StagedChangesSlice &
   QueueSelectionSlice &
-  QueueDataSlice;
+  QueueDataSlice &
+  PlacementRulesSlice;

@@ -8,3 +8,4 @@ export * from './nodeLabelsSlice';
 export * from './stagedChangesSlice';
 export * from './queueSelectionSlice';
 export * from './queueDataSlice';
+export * from './placementRulesSlice';
