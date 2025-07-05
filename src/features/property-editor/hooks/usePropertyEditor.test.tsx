@@ -23,14 +23,14 @@ vi.mock('~/hooks/useQueueValidation', () => ({
     isValid: true,
     hasWarnings: false,
     clearBusinessErrors: vi.fn(),
-  })
+  }),
 }));
 vi.mock('sonner', () => ({
   toast: {
     error: vi.fn(),
     success: vi.fn(),
     warning: vi.fn(),
-  }
+  },
 }));
 
 describe('usePropertyEditor cross-queue validation', () => {
@@ -41,8 +41,8 @@ describe('usePropertyEditor cross-queue validation', () => {
     maxCapacity: 100,
     queueName: 'root',
     queues: {
-      queue: []
-    }
+      queue: [],
+    },
   };
 
   const mockStoreData = {
@@ -52,10 +52,8 @@ describe('usePropertyEditor cross-queue validation', () => {
     clearQueueChanges: vi.fn(),
     nodeLabels: [],
     schedulerData: mockSchedulerData,
-    configData: new Map([
-      ['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']
-    ]),
-    stagedChanges: []
+    configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
+    stagedChanges: [],
   };
 
   beforeEach(() => {
@@ -66,16 +64,14 @@ describe('usePropertyEditor cross-queue validation', () => {
   it('should use validatePropertyChange when submitting form changes', () => {
     // This test verifies that the hook imports and uses the validatePropertyChange function
     // The actual integration is tested in the component tests
-    
-    const { result } = renderHook(() => 
-      usePropertyEditor({ queuePath: 'root.parent.child1' })
-    );
-    
+
+    const { result } = renderHook(() => usePropertyEditor({ queuePath: 'root.parent.child1' }));
+
     // Verify the hook initialized properly
     expect(result.current).toBeDefined();
     expect(result.current.handleSubmit).toBeDefined();
     expect(result.current.stageChange).toBeDefined();
-    
+
     // Verify that validatePropertyChange is imported (this proves the integration)
     expect(validatePropertyChange).toBeDefined();
   });

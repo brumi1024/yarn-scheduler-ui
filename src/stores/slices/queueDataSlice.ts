@@ -46,7 +46,7 @@ export const createQueueDataSlice: StateCreator<
 
     // If config doesn't have the value, check for default value
     if (configValue === undefined || configValue === null) {
-      const propertyDef = globalPropertyDefinitions.find(p => p.name === property);
+      const propertyDef = globalPropertyDefinitions.find((p) => p.name === property);
       const defaultValue = propertyDef?.defaultValue || '';
       return { value: defaultValue, isStaged: false };
     }

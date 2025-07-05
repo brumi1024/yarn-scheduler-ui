@@ -19,9 +19,7 @@ interface LegacyModeDocumentationProps {
 export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = ({ children }) => {
   return (
     <Dialog>
-      <DialogTrigger asChild>
-        {children}
-      </DialogTrigger>
+      <DialogTrigger asChild>{children}</DialogTrigger>
       <DialogContent className="max-w-3xl max-h-[80vh]">
         <DialogHeader>
           <DialogTitle>YARN Capacity Scheduler Queue Modes</DialogTitle>
@@ -29,7 +27,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
             Understanding Legacy Mode vs Flexible Mode in capacity configuration
           </DialogDescription>
         </DialogHeader>
-        
+
         <Tabs defaultValue="overview" className="mt-4">
           <TabsList className="grid w-full grid-cols-4">
             <TabsTrigger value="overview">Overview</TabsTrigger>
@@ -37,7 +35,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
             <TabsTrigger value="flexible">Flexible Mode</TabsTrigger>
             <TabsTrigger value="migration">Migration</TabsTrigger>
           </TabsList>
-          
+
           <div className="h-[400px] mt-4 overflow-y-auto">
             <TabsContent value="overview" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Queue Mode Overview</h3>
@@ -45,7 +43,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                 The YARN Capacity Scheduler supports two queue configuration modes that determine
                 how capacity values are validated and enforced.
               </p>
-              
+
               <div className="space-y-3">
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
@@ -57,11 +55,13 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                     must use the same capacity type and child capacities must sum to exactly 100%.
                   </p>
                 </div>
-                
+
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
                     <Badge variant="secondary">Flexible Mode</Badge>
-                    <span className="text-sm text-muted-foreground">(Recommended for new clusters)</span>
+                    <span className="text-sm text-muted-foreground">
+                      (Recommended for new clusters)
+                    </span>
                   </div>
                   <p className="text-sm">
                     Allows mixed capacity types and flexible capacity sums. Provides more options
@@ -69,53 +69,54 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                   </p>
                 </div>
               </div>
-              
+
               <Alert>
                 <Info className="h-4 w-4" />
                 <AlertDescription>
-                  The mode is controlled by the <code className="text-xs">yarn.scheduler.capacity.legacy-queue-mode.enabled</code> property
-                  in Global Settings.
+                  The mode is controlled by the{' '}
+                  <code className="text-xs">yarn.scheduler.capacity.legacy-queue-mode.enabled</code>{' '}
+                  property in Global Settings.
                 </AlertDescription>
               </Alert>
             </TabsContent>
-            
+
             <TabsContent value="legacy" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Legacy Mode Details</h3>
               <p className="text-sm text-muted-foreground">
                 Legacy mode maintains backward compatibility with older YARN versions and enforces
                 traditional capacity scheduling rules.
               </p>
-              
+
               <div className="space-y-3">
                 <h4 className="font-medium">Validation Rules</h4>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
                     <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">Capacity Type Consistency</p>
                       <p className="text-xs text-muted-foreground">
-                        All sibling queues must use the same capacity type (percentage, weight, or absolute).
-                        You cannot mix different types at the same level.
+                        All sibling queues must use the same capacity type (percentage, weight, or
+                        absolute). You cannot mix different types at the same level.
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start gap-2">
                     <XCircle className="h-4 w-4 text-destructive mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
                       <p className="text-sm font-medium">Child Capacity Sum</p>
                       <p className="text-xs text-muted-foreground">
-                        When using percentage-based capacity, all child queues must sum to exactly 100%.
-                        No over or under allocation is allowed.
+                        When using percentage-based capacity, all child queues must sum to exactly
+                        100%. No over or under allocation is allowed.
                       </p>
                     </div>
                   </div>
                 </div>
-                
+
                 <h4 className="font-medium mt-4">Example Configuration</h4>
                 <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
-{`root
+                  {`root
 ├── prod (60%)
 │   ├── critical (70%)  # 70% of prod = 42% of root
 │   └── regular (30%)   # 30% of prod = 18% of root
@@ -123,26 +124,27 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
     ├── team-a (50%)    # 50% of dev = 20% of root
     └── team-b (50%)    # 50% of dev = 20% of root`}
                 </pre>
-                
+
                 <Alert className="mt-4">
                   <AlertDescription className="text-xs">
-                    In legacy mode, you must ensure all percentages at each level sum to 100%.
-                    In this example: prod (60%) + dev (40%) = 100%, critical (70%) + regular (30%) = 100%, etc.
+                    In legacy mode, you must ensure all percentages at each level sum to 100%. In
+                    this example: prod (60%) + dev (40%) = 100%, critical (70%) + regular (30%) =
+                    100%, etc.
                   </AlertDescription>
                 </Alert>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="flexible" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Flexible Mode Details</h3>
               <p className="text-sm text-muted-foreground">
-                Flexible mode provides more options for capacity configuration, allowing for
-                dynamic and elastic resource allocation.
+                Flexible mode provides more options for capacity configuration, allowing for dynamic
+                and elastic resource allocation.
               </p>
-              
+
               <div className="space-y-3">
                 <h4 className="font-medium">Key Features</h4>
-                
+
                 <div className="space-y-2">
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
@@ -154,7 +156,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
@@ -165,7 +167,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                       </p>
                     </div>
                   </div>
-                  
+
                   <div className="flex items-start gap-2">
                     <CheckCircle className="h-4 w-4 text-green-600 dark:text-green-400 mt-0.5 flex-shrink-0" />
                     <div className="flex-1">
@@ -177,10 +179,10 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                     </div>
                   </div>
                 </div>
-                
+
                 <h4 className="font-medium mt-4">Example Configuration</h4>
                 <pre className="bg-muted p-3 rounded-md text-xs overflow-x-auto">
-{`root
+                  {`root
 ├── prod (10w)          # Weight-based
 │   ├── critical (80%)  # Percentage of prod
 │   └── regular (40%)   # Can exceed 100%!
@@ -188,36 +190,38 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
     ├── team-a [memory=10GB]  # Absolute
     └── team-b (2w)           # Weight`}
                 </pre>
-                
+
                 <Alert className="mt-4">
                   <AlertDescription className="text-xs">
-                    In flexible mode, you can mix capacity types and don't need to sum to 100%.
-                    This allows for more dynamic resource allocation based on actual usage.
+                    In flexible mode, you can mix capacity types and don't need to sum to 100%. This
+                    allows for more dynamic resource allocation based on actual usage.
                   </AlertDescription>
                 </Alert>
               </div>
             </TabsContent>
-            
+
             <TabsContent value="migration" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Migration Guide</h3>
               <p className="text-sm text-muted-foreground">
                 Steps to migrate from Legacy Mode to Flexible Mode safely.
               </p>
-              
+
               <div className="space-y-4">
                 <Alert>
                   <AlertDescription>
-                    Before migrating, ensure your YARN cluster version supports flexible mode
-                    and test thoroughly in a non-production environment.
+                    Before migrating, ensure your YARN cluster version supports flexible mode and
+                    test thoroughly in a non-production environment.
                   </AlertDescription>
                 </Alert>
-                
+
                 <div className="space-y-3">
                   <h4 className="font-medium">Migration Steps</h4>
-                  
+
                   <div className="space-y-2">
                     <div className="flex items-start gap-2">
-                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">1</Badge>
+                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                        1
+                      </Badge>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Review Current Configuration</p>
                         <p className="text-xs text-muted-foreground">
@@ -226,42 +230,48 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-2">
-                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">2</Badge>
+                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                        2
+                      </Badge>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Plan Capacity Changes</p>
                         <p className="text-xs text-muted-foreground">
-                          Decide if you want to keep the same effective capacity distribution
-                          or take advantage of flexible allocation.
+                          Decide if you want to keep the same effective capacity distribution or
+                          take advantage of flexible allocation.
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-2">
-                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">3</Badge>
+                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                        3
+                      </Badge>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Stage Changes</p>
                         <p className="text-xs text-muted-foreground">
-                          Make necessary adjustments to queue capacities. In flexible mode,
-                          you can stage changes that would be invalid in legacy mode.
+                          Make necessary adjustments to queue capacities. In flexible mode, you can
+                          stage changes that would be invalid in legacy mode.
                         </p>
                       </div>
                     </div>
-                    
+
                     <div className="flex items-start gap-2">
-                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">4</Badge>
+                      <Badge className="w-6 h-6 rounded-full p-0 flex items-center justify-center">
+                        4
+                      </Badge>
                       <div className="flex-1">
                         <p className="text-sm font-medium">Apply and Monitor</p>
                         <p className="text-xs text-muted-foreground">
-                          Apply the configuration changes and monitor resource allocation
-                          to ensure it meets your requirements.
+                          Apply the configuration changes and monitor resource allocation to ensure
+                          it meets your requirements.
                         </p>
                       </div>
                     </div>
                   </div>
                 </div>
-                
+
                 <div className="border rounded-lg p-3 bg-muted/50 mt-4">
                   <h4 className="font-medium text-sm mb-2">Best Practices</h4>
                   <ul className="text-xs space-y-1 text-muted-foreground">

@@ -13,7 +13,8 @@ describe('BusinessValidationService', () => {
       legacyModeEnabled: true,
       schedulerData: {
         queues: {
-          queue: [{
+          queue: [
+            {
               queuePath: 'root',
               queues: {
                 queue: [
@@ -21,7 +22,8 @@ describe('BusinessValidationService', () => {
                   { queuePath: 'root.b', queueName: 'b' },
                 ],
               },
-            }],
+            },
+          ],
         },
       } as any,
       configData: new Map([
@@ -67,19 +69,19 @@ describe('BusinessValidationService', () => {
       // Set up context to trigger multiple capacity validators
       context.configData.set('yarn.scheduler.capacity.root.b.capacity', '2w'); // Different type
       const result = service.validateField('capacity', '50%', context);
-      
+
       // Should have error for capacity type consistency
       expect(result.errors.length).toBeGreaterThan(0);
-      expect(result.errors.some(e => e.rule === 'capacity-type-consistency')).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'capacity-type-consistency')).toBe(true);
     });
   });
 
   describe('validateQueue', () => {
     it('should validate all properties', () => {
       const properties = {
-        'capacity': '50%',
+        capacity: '50%',
         'maximum-capacity': '75%',
-        'state': 'RUNNING',
+        state: 'RUNNING',
         'default-application-lifetime': '3600',
       };
 
@@ -110,7 +112,7 @@ describe('BusinessValidationService', () => {
 
       const result = service.validateQueue('root', {}, parentContext);
       expect(result.valid).toBe(false);
-      expect(result.errors.some(e => e.rule === 'child-capacity-sum')).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'child-capacity-sum')).toBe(true);
     });
 
     it('should skip child capacity sum validation when legacy mode disabled', () => {
@@ -126,13 +128,15 @@ describe('BusinessValidationService', () => {
         queueName: 'root',
         queuePath: 'root',
         queues: {
-          queue: [{
+          queue: [
+            {
               queuePath: 'root.a',
               queueName: 'a',
               state: 'STOPPED',
               numApplications: 0,
               queues: { queue: [] },
-            }],
+            },
+          ],
         },
       } as any;
 
@@ -145,12 +149,14 @@ describe('BusinessValidationService', () => {
         queueName: 'root',
         queuePath: 'root',
         queues: {
-          queue: [{
+          queue: [
+            {
               queuePath: 'root.a',
               queueName: 'a',
               state: 'RUNNING',
               numApplications: 0,
-            }],
+            },
+          ],
         },
       } as any;
 

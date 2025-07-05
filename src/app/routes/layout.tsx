@@ -17,13 +17,11 @@ export default function Layout() {
   const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const location = useLocation();
-  
+
   // Get legacy mode status considering staged changes
   const legacyModeEnabled = useMemo(() => {
     const mergedData = getMergedConfigData(configData, stagedChanges);
-    return mergedData.get(
-      'yarn.scheduler.capacity.legacy-queue-mode.enabled'
-    ) !== 'false';
+    return mergedData.get('yarn.scheduler.capacity.legacy-queue-mode.enabled') !== 'false';
   }, [configData, stagedChanges]);
 
   useEffect(() => {
@@ -85,8 +83,8 @@ export default function Layout() {
                       <TooltipProvider>
                         <Tooltip>
                           <TooltipTrigger asChild>
-                            <Badge 
-                              variant={legacyModeEnabled ? "default" : "secondary"}
+                            <Badge
+                              variant={legacyModeEnabled ? 'default' : 'secondary'}
                               className="cursor-pointer hover:opacity-80 transition-opacity"
                             >
                               <Info className="mr-1 h-3 w-3" />

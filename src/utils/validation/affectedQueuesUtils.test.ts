@@ -1,5 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import { getAffectedQueuesForValidation, collectAffectedQueuesValidationErrors } from './affectedQueuesUtils';
+import {
+  getAffectedQueuesForValidation,
+  collectAffectedQueuesValidationErrors,
+} from './affectedQueuesUtils';
 import type { SchedulerInfo, QueueInfo } from '~/types';
 
 describe('affectedQueuesUtils', () => {
@@ -10,11 +13,15 @@ describe('affectedQueuesUtils', () => {
     maxCapacity: 100,
     queueName: 'root',
     queues: {
-      queue: queues
-    }
+      queue: queues,
+    },
   });
 
-  const createMockQueue = (queuePath: string, queueName: string, children?: QueueInfo[]): QueueInfo => ({
+  const createMockQueue = (
+    queuePath: string,
+    queueName: string,
+    children?: QueueInfo[],
+  ): QueueInfo => ({
     queuePath,
     queueName,
     queueType: children ? 'parent' : 'leaf',
@@ -30,9 +37,9 @@ describe('affectedQueuesUtils', () => {
     state: 'RUNNING',
     resourcesUsed: {
       memory: 0,
-      vCores: 0
+      vCores: 0,
     },
-    ...(children && { queues: { queue: children } })
+    ...(children && { queues: { queue: children } }),
   });
 
   describe('getAffectedQueuesForValidation', () => {
@@ -43,16 +50,10 @@ describe('affectedQueuesUtils', () => {
 
     it('should include parent queue for capacity changes', () => {
       const mockData = createMockSchedulerData([
-        createMockQueue('root.parent', 'parent', [
-          createMockQueue('root.parent.child', 'child')
-        ])
+        createMockQueue('root.parent', 'parent', [createMockQueue('root.parent.child', 'child')]),
       ]);
 
-      const affected = getAffectedQueuesForValidation(
-        'capacity',
-        'root.parent.child',
-        mockData
-      );
+      const affected = getAffectedQueuesForValidation('capacity', 'root.parent.child', mockData);
 
       expect(affected).toContain('root.parent.child');
       expect(affected).toContain('root.parent');
@@ -62,15 +63,11 @@ describe('affectedQueuesUtils', () => {
       const mockData = createMockSchedulerData([
         createMockQueue('root.parent', 'parent', [
           createMockQueue('root.parent.child1', 'child1'),
-          createMockQueue('root.parent.child2', 'child2')
-        ])
+          createMockQueue('root.parent.child2', 'child2'),
+        ]),
       ]);
 
-      const affected = getAffectedQueuesForValidation(
-        'capacity',
-        'root.parent',
-        mockData
-      );
+      const affected = getAffectedQueuesForValidation('capacity', 'root.parent', mockData);
 
       expect(affected).toContain('root.parent');
       expect(affected).toContain('root.parent.child1');
@@ -78,15 +75,9 @@ describe('affectedQueuesUtils', () => {
     });
 
     it('should not include parent for root queue', () => {
-      const mockData = createMockSchedulerData([
-        createMockQueue('root', 'root')
-      ]);
+      const mockData = createMockSchedulerData([createMockQueue('root', 'root')]);
 
-      const affected = getAffectedQueuesForValidation(
-        'capacity',
-        'root',
-        mockData
-      );
+      const affected = getAffectedQueuesForValidation('capacity', 'root', mockData);
 
       expect(affected).toEqual(['root']);
     });
@@ -95,16 +86,12 @@ describe('affectedQueuesUtils', () => {
       const mockData = createMockSchedulerData([
         createMockQueue('root.parent', 'parent', [
           createMockQueue('root.parent.middle', 'middle', [
-            createMockQueue('root.parent.middle.child', 'child')
-          ])
-        ])
+            createMockQueue('root.parent.middle.child', 'child'),
+          ]),
+        ]),
       ]);
 
-      const affected = getAffectedQueuesForValidation(
-        'state',
-        'root.parent.middle',
-        mockData
-      );
+      const affected = getAffectedQueuesForValidation('state', 'root.parent.middle', mockData);
 
       expect(affected).toContain('root.parent.middle');
       expect(affected).toContain('root.parent');
@@ -113,15 +100,13 @@ describe('affectedQueuesUtils', () => {
 
     it('should handle non-capacity properties without adding extra queues', () => {
       const mockData = createMockSchedulerData([
-        createMockQueue('root.parent', 'parent', [
-          createMockQueue('root.parent.child', 'child')
-        ])
+        createMockQueue('root.parent', 'parent', [createMockQueue('root.parent.child', 'child')]),
       ]);
 
       const affected = getAffectedQueuesForValidation(
         'user-limit-factor',
         'root.parent.child',
-        mockData
+        mockData,
       );
 
       expect(affected).toEqual(['root.parent.child']);
@@ -135,26 +120,22 @@ describe('affectedQueuesUtils', () => {
           queuePath: 'root.parent',
           errors: [
             { field: 'capacity', message: 'Parent error 1' },
-            { field: 'capacity', message: 'Parent error 2' }
-          ]
+            { field: 'capacity', message: 'Parent error 2' },
+          ],
         },
         {
           queuePath: 'root.parent.child',
-          errors: [
-            { field: 'capacity', message: 'Child error' }
-          ]
+          errors: [{ field: 'capacity', message: 'Child error' }],
         },
         {
           queuePath: 'root.other',
-          errors: [
-            { field: 'state', message: 'Other error' }
-          ]
-        }
+          errors: [{ field: 'state', message: 'Other error' }],
+        },
       ];
 
       const collected = collectAffectedQueuesValidationErrors(
         ['root.parent', 'root.parent.child'],
-        allErrors
+        allErrors,
       );
 
       expect(collected).toHaveLength(3);
@@ -165,10 +146,7 @@ describe('affectedQueuesUtils', () => {
     });
 
     it('should handle empty error lists', () => {
-      const collected = collectAffectedQueuesValidationErrors(
-        ['root.parent'],
-        []
-      );
+      const collected = collectAffectedQueuesValidationErrors(['root.parent'], []);
 
       expect(collected).toEqual([]);
     });
@@ -177,14 +155,11 @@ describe('affectedQueuesUtils', () => {
       const allErrors = [
         {
           queuePath: 'root.other',
-          errors: [{ field: 'state', message: 'Other error' }]
-        }
+          errors: [{ field: 'state', message: 'Other error' }],
+        },
       ];
 
-      const collected = collectAffectedQueuesValidationErrors(
-        ['root.parent'],
-        allErrors
-      );
+      const collected = collectAffectedQueuesValidationErrors(['root.parent'], allErrors);
 
       expect(collected).toEqual([]);
     });

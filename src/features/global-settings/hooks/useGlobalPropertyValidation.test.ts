@@ -11,15 +11,13 @@ describe('useGlobalPropertyValidation', () => {
       queueName: 'root',
       queuePath: 'root',
       state: 'RUNNING',
-      queues: { queue: [] }
+      queues: { queue: [] },
     };
 
     (useSchedulerStore as any).mockReturnValue({
-      configData: new Map([
-        ['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true'],
-      ]),
+      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
       schedulerData: mockSchedulerData,
-      stagedChanges: []
+      stagedChanges: [],
     });
 
     const { result } = renderHook(() => useGlobalPropertyValidation());
@@ -34,15 +32,13 @@ describe('useGlobalPropertyValidation', () => {
       queueName: 'root',
       queuePath: 'root',
       state: 'RUNNING',
-      queues: { queue: [] }
+      queues: { queue: [] },
     };
 
     (useSchedulerStore as any).mockReturnValue({
-      configData: new Map([
-        ['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true'],
-      ]),
+      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
       schedulerData: mockSchedulerData,
-      stagedChanges: []
+      stagedChanges: [],
     });
 
     const { result } = renderHook(() => useGlobalPropertyValidation());

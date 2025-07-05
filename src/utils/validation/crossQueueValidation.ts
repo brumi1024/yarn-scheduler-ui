@@ -1,7 +1,4 @@
-import type { 
-  BusinessValidationError, 
-  QueueValidationContext 
-} from './businessRules/types';
+import type { BusinessValidationError, QueueValidationContext } from './businessRules/types';
 import type { StagedChange, SchedulerInfo } from '~/types';
 import { businessValidation } from './businessRules/service';
 import { isBlockingError } from './businessRules/ruleCategories';
@@ -30,18 +27,14 @@ export function validatePropertyChange({
   schedulerData,
   configData,
   stagedChanges,
-  includeBlockingErrors = false
+  includeBlockingErrors = false,
 }: ValidatePropertyChangeOptions): BusinessValidationError[] {
   if (!schedulerData) {
     return [];
   }
 
   // Get affected queues for this property change
-  const affectedQueues = getAffectedQueuesForValidation(
-    propertyName,
-    queuePath,
-    schedulerData
-  );
+  const affectedQueues = getAffectedQueuesForValidation(propertyName, queuePath, schedulerData);
 
   // Create merged config with this change applied
   const tempChange: StagedChange = {
@@ -51,7 +44,7 @@ export function validatePropertyChange({
     property: propertyName,
     oldValue: '',
     newValue: propertyValue,
-    timestamp: Date.now()
+    timestamp: Date.now(),
   };
 
   const mergedConfig = getMergedConfigData(configData, [...stagedChanges, tempChange]);
@@ -59,36 +52,33 @@ export function validatePropertyChange({
   const allValidationErrors: BusinessValidationError[] = [];
 
   // For each affected queue, run validation
-  affectedQueues.forEach(affectedQueuePath => {
+  affectedQueues.forEach((affectedQueuePath) => {
     const context = createValidationContext({
       queuePath: affectedQueuePath,
       schedulerData,
       configData: mergedConfig,
-      field: propertyName
+      field: propertyName,
     });
 
     // Run validation for the queue
     const queueResult = businessValidation.validateQueue(
       affectedQueuePath,
       { [propertyName]: propertyValue },
-      context
+      context,
     );
 
     // Filter errors based on includeBlockingErrors flag
-    const filteredErrors = includeBlockingErrors 
+    const filteredErrors = includeBlockingErrors
       ? queueResult.errors
-      : queueResult.errors.filter(error => 
-          !isBlockingError(error.rule || '', error.severity)
-        );
-    
+      : queueResult.errors.filter((error) => !isBlockingError(error.rule || '', error.severity));
+
     allValidationErrors.push(...filteredErrors);
   });
 
   // Remove duplicates based on message and field
-  const uniqueErrors = allValidationErrors.filter((error, index, self) =>
-    index === self.findIndex(e => 
-      e.message === error.message && e.field === error.field
-    )
+  const uniqueErrors = allValidationErrors.filter(
+    (error, index, self) =>
+      index === self.findIndex((e) => e.message === error.message && e.field === error.field),
   );
 
   return uniqueErrors;
@@ -107,7 +97,7 @@ interface ValidateAllStagedChangesOptions {
 export function validateAllStagedChanges({
   stagedChanges,
   schedulerData,
-  configData
+  configData,
 }: ValidateAllStagedChangesOptions): Map<string, BusinessValidationError[] | undefined> {
   const validationResults = new Map<string, BusinessValidationError[] | undefined>();
 
@@ -116,7 +106,7 @@ export function validateAllStagedChanges({
   }
 
   // Process each staged change
-  stagedChanges.forEach(change => {
+  stagedChanges.forEach((change) => {
     // Skip validation for 'add' and 'remove' operations
     if (change.type !== 'update' || !change.property) {
       validationResults.set(change.id, undefined);
@@ -129,8 +119,8 @@ export function validateAllStagedChanges({
       queuePath: change.queuePath,
       schedulerData,
       configData,
-      stagedChanges: stagedChanges.filter(c => c.id !== change.id), // Exclude current change
-      includeBlockingErrors: false
+      stagedChanges: stagedChanges.filter((c) => c.id !== change.id), // Exclude current change
+      includeBlockingErrors: false,
     });
 
     validationResults.set(change.id, errors.length > 0 ? errors : undefined);
@@ -156,7 +146,7 @@ export function selectivelyValidateStagedChanges({
   affectedProperties,
   stagedChanges,
   schedulerData,
-  configData
+  configData,
 }: SelectiveValidateOptions): Map<string, BusinessValidationError[] | undefined> {
   const validationResults = new Map<string, BusinessValidationError[] | undefined>();
 
@@ -165,11 +155,12 @@ export function selectivelyValidateStagedChanges({
   }
 
   // Process each staged change
-  stagedChanges.forEach(change => {
+  stagedChanges.forEach((change) => {
     // Skip if not affected
-    const isAffected = affectedQueuePaths.has(change.queuePath) || 
-                      (change.property && affectedProperties.has(change.property));
-    
+    const isAffected =
+      affectedQueuePaths.has(change.queuePath) ||
+      (change.property && affectedProperties.has(change.property));
+
     if (!isAffected) {
       // Keep existing validation errors
       validationResults.set(change.id, change.validationErrors);
@@ -188,8 +179,8 @@ export function selectivelyValidateStagedChanges({
       queuePath: change.queuePath,
       schedulerData,
       configData,
-      stagedChanges: stagedChanges.filter(c => c.id !== change.id), // Exclude current change
-      includeBlockingErrors: false
+      stagedChanges: stagedChanges.filter((c) => c.id !== change.id), // Exclude current change
+      includeBlockingErrors: false,
     });
 
     validationResults.set(change.id, errors.length > 0 ? errors : undefined);

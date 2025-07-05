@@ -13,8 +13,15 @@ import {
 import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { businessValidation } from '~/utils/validation/businessRules/service';
-import type { BusinessValidationError, QueueValidationContext } from '~/utils/validation/businessRules/types';
-import { findQueueByPath, getParentPath, getSiblingQueues } from '~/utils/validation/businessRules/utils';
+import type {
+  BusinessValidationError,
+  QueueValidationContext,
+} from '~/utils/validation/businessRules/types';
+import {
+  findQueueByPath,
+  getParentPath,
+  getSiblingQueues,
+} from '~/utils/validation/businessRules/utils';
 import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
@@ -44,16 +51,16 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const { schedulerData, configData, stagedChanges } = useSchedulerStore();
-  
+
   const currentEnabled = value === 'true';
-  
+
   // Calculate validation changes that would occur
   const validationPreview = useMemo(() => {
     if (!schedulerData) return { added: [], removed: [], affectedQueues: 0 };
-    
+
     const previewResults: ValidationPreview[] = [];
     const simulatedLegacyMode = !currentEnabled; // What it would be after toggle
-    
+
     // Create a simulated staged change for the legacy mode toggle
     const simulatedStagedChange: StagedChange = {
       id: 'simulated',
@@ -63,43 +70,53 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
       oldValue: currentEnabled ? 'true' : 'false',
       newValue: simulatedLegacyMode ? 'true' : 'false',
       timestamp: Date.now(),
-      validationErrors: []
+      validationErrors: [],
     };
-    
+
     // Merge current staged changes with the simulated change
     const simulatedStagedChanges = [
-      ...stagedChanges.filter(c => 
-        !(c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH && c.property === 'legacy-queue-mode.enabled')
+      ...stagedChanges.filter(
+        (c) =>
+          !(
+            c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
+            c.property === 'legacy-queue-mode.enabled'
+          ),
       ),
-      simulatedStagedChange
+      simulatedStagedChange,
     ];
-    
+
     // Create merged config data with simulated changes
     const simulatedMergedData = getMergedConfigData(configData, simulatedStagedChanges);
     const currentMergedData = getMergedConfigData(configData, stagedChanges);
-    
+
     // Helper to get all queues recursively
-    const getAllQueues = (queue: import('~/types').QueueInfo, results: import('~/types').QueueInfo[] = []): import('~/types').QueueInfo[] => {
+    const getAllQueues = (
+      queue: import('~/types').QueueInfo,
+      results: import('~/types').QueueInfo[] = [],
+    ): import('~/types').QueueInfo[] => {
       results.push(queue);
       if (queue.queues?.queue) {
         queue.queues.queue.forEach((child) => getAllQueues(child, results));
       }
       return results;
     };
-    
+
     const allQueues = getAllQueues(schedulerData as unknown as import('~/types').QueueInfo);
-    
+
     // Validate each queue with simulated legacy mode
-    allQueues.forEach(queue => {
+    allQueues.forEach((queue) => {
       const context: QueueValidationContext = {
         queuePath: queue.queuePath,
         legacyModeEnabled: simulatedLegacyMode,
         schedulerData,
         configData: simulatedMergedData,
-        parentQueue: queue.queuePath !== 'root' ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '') : undefined,
+        parentQueue:
+          queue.queuePath !== 'root'
+            ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '')
+            : undefined,
         siblingQueues: getSiblingQueues(schedulerData, queue.queuePath),
       };
-      
+
       // Get current properties for this queue
       const queueProperties: Record<string, string> = {};
       simulatedMergedData.forEach((value, key) => {
@@ -108,29 +125,32 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
           queueProperties[propertyName] = value;
         }
       });
-      
+
       const result = businessValidation.validateQueue(queue.queuePath, queueProperties, context);
-      
+
       if (result.errors.length > 0) {
         previewResults.push({
           queuePath: queue.queuePath,
-          errors: result.errors
+          errors: result.errors,
         });
       }
     });
-    
+
     // Compare with current validation state
     const currentResults: ValidationPreview[] = [];
-    allQueues.forEach(queue => {
+    allQueues.forEach((queue) => {
       const context: QueueValidationContext = {
         queuePath: queue.queuePath,
         legacyModeEnabled: currentEnabled,
         schedulerData,
         configData: currentMergedData,
-        parentQueue: queue.queuePath !== 'root' ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '') : undefined,
+        parentQueue:
+          queue.queuePath !== 'root'
+            ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '')
+            : undefined,
         siblingQueues: getSiblingQueues(schedulerData, queue.queuePath),
       };
-      
+
       const queueProperties: Record<string, string> = {};
       currentMergedData.forEach((value, key) => {
         if (key.startsWith(`yarn.scheduler.capacity.${queue.queuePath}.`)) {
@@ -138,54 +158,54 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
           queueProperties[propertyName] = value;
         }
       });
-      
+
       const result = businessValidation.validateQueue(queue.queuePath, queueProperties, context);
-      
+
       if (result.errors.length > 0) {
         currentResults.push({
           queuePath: queue.queuePath,
-          errors: result.errors
+          errors: result.errors,
         });
       }
     });
-    
+
     // Determine added/removed errors
     const added: ValidationPreview[] = [];
     const removed: ValidationPreview[] = [];
-    
-    previewResults.forEach(preview => {
-      const current = currentResults.find(c => c.queuePath === preview.queuePath);
+
+    previewResults.forEach((preview) => {
+      const current = currentResults.find((c) => c.queuePath === preview.queuePath);
       if (!current) {
         added.push(preview);
       } else {
         const newErrors = preview.errors.filter(
-          e => !current.errors.some(ce => ce.rule === e.rule && ce.field === e.field)
+          (e) => !current.errors.some((ce) => ce.rule === e.rule && ce.field === e.field),
         );
         if (newErrors.length > 0) {
           added.push({ queuePath: preview.queuePath, errors: newErrors });
         }
       }
     });
-    
-    currentResults.forEach(current => {
-      const preview = previewResults.find(p => p.queuePath === current.queuePath);
+
+    currentResults.forEach((current) => {
+      const preview = previewResults.find((p) => p.queuePath === current.queuePath);
       if (!preview) {
         removed.push(current);
       } else {
         const removedErrors = current.errors.filter(
-          e => !preview.errors.some(pe => pe.rule === e.rule && pe.field === e.field)
+          (e) => !preview.errors.some((pe) => pe.rule === e.rule && pe.field === e.field),
         );
         if (removedErrors.length > 0) {
           removed.push({ queuePath: current.queuePath, errors: removedErrors });
         }
       }
     });
-    
+
     const affectedQueues = new Set([
-      ...added.map(a => a.queuePath),
-      ...removed.map(r => r.queuePath)
+      ...added.map((a) => a.queuePath),
+      ...removed.map((r) => r.queuePath),
     ]).size;
-    
+
     return { added, removed, affectedQueues };
   }, [currentEnabled, schedulerData, configData, stagedChanges]);
 
@@ -203,16 +223,15 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
             Modified
           </Badge>
         )}
-        
+
         <Dialog open={showPreview} onOpenChange={setShowPreview}>
           <DialogTrigger asChild>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-8 px-2"
-              disabled={!schedulerData}
-            >
-              {showPreview ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            <Button variant="ghost" size="sm" className="h-8 px-2" disabled={!schedulerData}>
+              {showPreview ? (
+                <ChevronUp className="h-4 w-4" />
+              ) : (
+                <ChevronDown className="h-4 w-4" />
+              )}
               Preview
             </Button>
           </DialogTrigger>
@@ -224,10 +243,11 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
               <div>
                 <h4 className="font-medium text-sm">Validation Preview</h4>
                 <p className="text-xs text-muted-foreground mt-1">
-                  Changes that would occur when switching to {currentEnabled ? 'Flexible' : 'Legacy'} Mode
+                  Changes that would occur when switching to{' '}
+                  {currentEnabled ? 'Flexible' : 'Legacy'} Mode
                 </p>
               </div>
-              
+
               {validationPreview.affectedQueues === 0 ? (
                 <p className="text-sm text-muted-foreground py-2">
                   No validation changes would occur.
@@ -235,9 +255,10 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
               ) : (
                 <>
                   <div className="text-sm">
-                    <span className="font-medium">{validationPreview.affectedQueues}</span> queue{validationPreview.affectedQueues !== 1 ? 's' : ''} would be affected
+                    <span className="font-medium">{validationPreview.affectedQueues}</span> queue
+                    {validationPreview.affectedQueues !== 1 ? 's' : ''} would be affected
                   </div>
-                  
+
                   <div className="w-full rounded-md border p-3">
                     <div className="space-y-4">
                       {validationPreview.removed.length > 0 && (
@@ -253,7 +274,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                                   <div
                                     key={errorIdx}
                                     className={cn(
-                                      "flex items-start gap-2 text-xs p-2 rounded-md bg-green-50 dark:bg-green-950/20",
+                                      'flex items-start gap-2 text-xs p-2 rounded-md bg-green-50 dark:bg-green-950/20',
                                     )}
                                   >
                                     <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
@@ -265,7 +286,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                           </div>
                         </div>
                       )}
-                      
+
                       {validationPreview.added.length > 0 && (
                         <div>
                           <h5 className="text-xs font-medium text-destructive mb-2">
@@ -279,10 +300,10 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                                   <div
                                     key={errorIdx}
                                     className={cn(
-                                      "flex items-start gap-2 text-xs p-2 rounded-md",
-                                      error.severity === 'error' 
-                                        ? "bg-destructive/10" 
-                                        : "bg-amber-500/10"
+                                      'flex items-start gap-2 text-xs p-2 rounded-md',
+                                      error.severity === 'error'
+                                        ? 'bg-destructive/10'
+                                        : 'bg-amber-500/10',
                                     )}
                                   >
                                     {error.severity === 'error' ? (
@@ -300,10 +321,11 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                       )}
                     </div>
                   </div>
-                  
+
                   {currentEnabled && validationPreview.added.length > 0 && (
                     <div className="text-xs text-muted-foreground border-t pt-2">
-                      <strong>Note:</strong> These errors can be temporarily staged when working with multiple queues.
+                      <strong>Note:</strong> These errors can be temporarily staged when working
+                      with multiple queues.
                     </div>
                   )}
                 </>
@@ -311,7 +333,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
             </div>
           </DialogContent>
         </Dialog>
-        
+
         <Switch
           id={property.name}
           checked={currentEnabled}

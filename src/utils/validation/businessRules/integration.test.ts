@@ -35,7 +35,11 @@ describe('Business Validation Integration', () => {
       schedulerData: undefined,
     };
 
-    const result = businessValidation.validateField('default-application-lifetime', '7200', context);
+    const result = businessValidation.validateField(
+      'default-application-lifetime',
+      '7200',
+      context,
+    );
     expect(result.valid).toBe(false);
     expect(result.errors[0].rule).toBe('lifetime-relationship');
   });
@@ -76,9 +80,9 @@ describe('Business Validation Integration', () => {
     };
 
     const properties = {
-      'capacity': '50%',
+      capacity: '50%',
       'maximum-capacity': '75%',
-      'state': 'RUNNING',
+      state: 'RUNNING',
       'user-limit-factor': '1.5',
       'minimum-user-limit-percent': '25',
     };
@@ -118,6 +122,8 @@ describe('Business Validation Integration', () => {
     expect(businessValidation.validateField('user-limit-factor', '', context).valid).toBe(true);
 
     // Non-numeric values should pass (Zod handles format validation)
-    expect(businessValidation.validateField('user-limit-factor', 'invalid', context).valid).toBe(true);
+    expect(businessValidation.validateField('user-limit-factor', 'invalid', context).valid).toBe(
+      true,
+    );
   });
 });

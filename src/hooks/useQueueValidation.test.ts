@@ -39,9 +39,9 @@ describe('useQueueValidation with staged changes', () => {
                 capacity: 30,
                 queueType: 'leaf' as const,
                 state: 'RUNNING',
-              }
-            ]
-          }
+              },
+            ],
+          },
         },
         {
           queueName: 'dev',
@@ -49,9 +49,9 @@ describe('useQueueValidation with staged changes', () => {
           capacity: 40,
           queueType: 'leaf' as const,
           state: 'RUNNING',
-        }
-      ]
-    }
+        },
+      ],
+    },
   };
 
   const baseConfigData = new Map([
@@ -71,12 +71,10 @@ describe('useQueueValidation with staged changes', () => {
     (useSchedulerStore as any).mockReturnValue({
       configData: baseConfigData,
       schedulerData: mockSchedulerData,
-      stagedChanges: []
+      stagedChanges: [],
     });
 
-    const { result } = renderHook(() => 
-      useQueueValidation({ queuePath: 'root' })
-    );
+    const { result } = renderHook(() => useQueueValidation({ queuePath: 'root' }));
 
     // With legacy mode enabled and child capacities summing to 100%, should be valid
     expect(result.current.businessErrors).toHaveLength(0);
@@ -90,18 +88,16 @@ describe('useQueueValidation with staged changes', () => {
         property: 'legacy-queue-mode.enabled',
         oldValue: 'true',
         newValue: 'false',
-      })
+      }),
     ];
 
     (useSchedulerStore as any).mockReturnValue({
       configData: baseConfigData,
       schedulerData: mockSchedulerData,
-      stagedChanges
+      stagedChanges,
     });
 
-    const { result } = renderHook(() => 
-      useQueueValidation({ queuePath: 'root' })
-    );
+    const { result } = renderHook(() => useQueueValidation({ queuePath: 'root' }));
 
     // With legacy mode disabled (staged), no validation errors expected
     expect(result.current.businessErrors).toHaveLength(0);
@@ -115,25 +111,23 @@ describe('useQueueValidation with staged changes', () => {
         property: 'capacity',
         oldValue: '60',
         newValue: '70', // This would make root children sum to 110%
-      })
+      }),
     ];
 
     (useSchedulerStore as any).mockReturnValue({
       configData: baseConfigData,
       schedulerData: mockSchedulerData,
-      stagedChanges
+      stagedChanges,
     });
 
-    const { result } = renderHook(() => 
-      useQueueValidation({ queuePath: 'root' })
-    );
+    const { result } = renderHook(() => useQueueValidation({ queuePath: 'root' }));
 
     // Need to trigger validation with the root queue's properties
     const rootProperties = {
       capacity: '100',
-      queues: 'prod,dev'
+      queues: 'prod,dev',
     };
-    
+
     let isValid;
     await act(async () => {
       isValid = await result.current.validateAll(rootProperties);
@@ -142,7 +136,7 @@ describe('useQueueValidation with staged changes', () => {
     // With legacy mode enabled and children summing to 110%, should have error
     expect(isValid).toBe(false);
     const capacityErrors = result.current.businessErrors.filter(
-      e => e.rule === 'child-capacity-sum'
+      (e) => e.rule === 'child-capacity-sum',
     );
     expect(capacityErrors.length).toBeGreaterThan(0);
     expect(capacityErrors[0].message).toContain('must sum to 100%');
@@ -161,22 +155,20 @@ describe('useQueueValidation with staged changes', () => {
         property: 'capacity',
         oldValue: '60',
         newValue: '70', // Would be invalid in legacy mode
-      })
+      }),
     ];
 
     (useSchedulerStore as any).mockReturnValue({
       configData: baseConfigData,
       schedulerData: mockSchedulerData,
-      stagedChanges
+      stagedChanges,
     });
 
-    const { result } = renderHook(() => 
-      useQueueValidation({ queuePath: 'root' })
-    );
+    const { result } = renderHook(() => useQueueValidation({ queuePath: 'root' }));
 
     // With legacy mode disabled, capacity sum over 100% should be allowed
     const capacityErrors = result.current.businessErrors.filter(
-      e => e.rule === 'childCapacitySum'
+      (e) => e.rule === 'childCapacitySum',
     );
     expect(capacityErrors).toHaveLength(0);
     expect(result.current.isValid).toBe(true);
@@ -185,7 +177,7 @@ describe('useQueueValidation with staged changes', () => {
   it('should handle deleted properties in staged changes', () => {
     const configWithMaxCapacity = new Map([
       ...baseConfigData,
-      ['yarn.scheduler.capacity.root.prod.maximum-capacity', '100']
+      ['yarn.scheduler.capacity.root.prod.maximum-capacity', '100'],
     ]);
 
     const stagedChanges: StagedChange[] = [
@@ -194,18 +186,16 @@ describe('useQueueValidation with staged changes', () => {
         property: 'maximum-capacity',
         oldValue: '100',
         newValue: '', // Empty value should delete the property
-      })
+      }),
     ];
 
     (useSchedulerStore as any).mockReturnValue({
       configData: configWithMaxCapacity,
       schedulerData: mockSchedulerData,
-      stagedChanges
+      stagedChanges,
     });
 
-    const { result } = renderHook(() => 
-      useQueueValidation({ queuePath: 'root.prod' })
-    );
+    const { result } = renderHook(() => useQueueValidation({ queuePath: 'root.prod' }));
 
     // Should validate without considering the deleted property
     expect(result.current.isValid).toBe(true);

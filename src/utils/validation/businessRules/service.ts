@@ -1,29 +1,29 @@
-import type { 
-  BusinessValidator, 
-  BusinessValidationResult, 
+import type {
+  BusinessValidator,
+  BusinessValidationResult,
   BusinessValidationError,
-  QueueValidationContext 
+  QueueValidationContext,
 } from './types';
 import {
   validateCapacityTypeConsistency,
   validateChildCapacitySum,
   validateMaxCapacityRelationship,
-  validateParentChildCapacityConstraints
+  validateParentChildCapacityConstraints,
 } from './capacityRules';
-import { 
-  validateQueueStateTransition, 
+import {
+  validateQueueStateTransition,
   validateQueueDeletion,
-  validateQueueConversion 
+  validateQueueConversion,
 } from './stateRules';
-import { 
+import {
   validateApplicationLifetime,
   validateUserLimitFactor,
-  validateMinimumUserLimitPercent
+  validateMinimumUserLimitPercent,
 } from './lifetimeRules';
 
 export class BusinessValidationService {
   private validators = new Map<string, BusinessValidator<unknown>[]>();
-  
+
   constructor() {
     this.registerValidators();
   }
@@ -32,20 +32,26 @@ export class BusinessValidationService {
     this.addValidator('capacity', [
       validateCapacityTypeConsistency as BusinessValidator<unknown>,
       validateChildCapacitySum as BusinessValidator<unknown>,
-      validateParentChildCapacityConstraints as BusinessValidator<unknown>
+      validateParentChildCapacityConstraints as BusinessValidator<unknown>,
     ]);
 
     this.addValidator('maximum-capacity', [
-      validateMaxCapacityRelationship as BusinessValidator<unknown>
+      validateMaxCapacityRelationship as BusinessValidator<unknown>,
     ]);
 
     this.addValidator('state', [validateQueueStateTransition as BusinessValidator<unknown>]);
-    
-    this.addValidator('default-application-lifetime', [validateApplicationLifetime as BusinessValidator<unknown>]);
-    this.addValidator('maximum-application-lifetime', [validateApplicationLifetime as BusinessValidator<unknown>]);
-    
+
+    this.addValidator('default-application-lifetime', [
+      validateApplicationLifetime as BusinessValidator<unknown>,
+    ]);
+    this.addValidator('maximum-application-lifetime', [
+      validateApplicationLifetime as BusinessValidator<unknown>,
+    ]);
+
     this.addValidator('user-limit-factor', [validateUserLimitFactor as BusinessValidator<unknown>]);
-    this.addValidator('minimum-user-limit-percent', [validateMinimumUserLimitPercent as BusinessValidator<unknown>]);
+    this.addValidator('minimum-user-limit-percent', [
+      validateMinimumUserLimitPercent as BusinessValidator<unknown>,
+    ]);
   }
 
   private addValidator(field: string, validators: BusinessValidator<unknown>[]) {
@@ -55,7 +61,7 @@ export class BusinessValidationService {
   validateField(
     field: string,
     value: unknown,
-    context: QueueValidationContext
+    context: QueueValidationContext,
   ): BusinessValidationResult {
     const validators = this.validators.get(field) || [];
     const errors: BusinessValidationError[] = [];
@@ -66,15 +72,15 @@ export class BusinessValidationService {
     }
 
     return {
-      valid: errors.filter(e => e.severity === 'error').length === 0,
-      errors
+      valid: errors.filter((e) => e.severity === 'error').length === 0,
+      errors,
     };
   }
 
   validateQueue(
     queuePath: string,
     properties: Record<string, string>,
-    context: QueueValidationContext
+    context: QueueValidationContext,
   ): BusinessValidationResult {
     const errors: BusinessValidationError[] = [];
     const queueContext = { ...context, queuePath };
@@ -90,14 +96,14 @@ export class BusinessValidationService {
     }
 
     return {
-      valid: errors.filter(e => e.severity === 'error').length === 0,
-      errors
+      valid: errors.filter((e) => e.severity === 'error').length === 0,
+      errors,
     };
   }
 
   validateOperation(
     operation: 'delete' | 'convert',
-    context: QueueValidationContext
+    context: QueueValidationContext,
   ): BusinessValidationResult {
     switch (operation) {
       case 'delete':

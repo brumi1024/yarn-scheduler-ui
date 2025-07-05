@@ -11,14 +11,14 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
     return {
       type: 'percentage',
       value: 100,
-      rawValue: trimmedValue
+      rawValue: trimmedValue,
     };
   }
 
   if (trimmedValue.endsWith('%')) {
     const numericPart = trimmedValue.slice(0, -1);
     const numericValue = parseFloat(numericPart);
-    
+
     if (isNaN(numericValue)) {
       return null;
     }
@@ -26,14 +26,14 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
     return {
       type: 'percentage',
       value: numericValue,
-      rawValue: trimmedValue
+      rawValue: trimmedValue,
     };
   }
 
   if (trimmedValue.endsWith('w')) {
     const numericPart = trimmedValue.slice(0, -1);
     const numericValue = parseFloat(numericPart);
-    
+
     if (isNaN(numericValue) || numericValue <= 0) {
       return null;
     }
@@ -41,7 +41,7 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
     return {
       type: 'weight',
       value: numericValue,
-      rawValue: trimmedValue
+      rawValue: trimmedValue,
     };
   }
 
@@ -53,18 +53,18 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
 
     const resources: Record<string, number> = {};
     const resourcePairs = resourcePart.split(',');
-    
+
     for (const pair of resourcePairs) {
       const [resource, val] = pair.trim().split('=');
       if (!resource || !val) {
         return null;
       }
-      
+
       const numericValue = parseFloat(val);
       if (isNaN(numericValue)) {
         return null;
       }
-      
+
       resources[resource.trim()] = numericValue;
     }
 
@@ -72,7 +72,7 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
       type: 'absolute',
       value: 0,
       resources,
-      rawValue: trimmedValue
+      rawValue: trimmedValue,
     };
   }
 
@@ -81,7 +81,7 @@ export function parseCapacityValue(value: string | undefined): ParsedCapacity | 
     return {
       type: 'percentage',
       value: numericValue,
-      rawValue: trimmedValue
+      rawValue: trimmedValue,
     };
   }
 
@@ -126,7 +126,7 @@ export function formatCapacityDisplay(parsed: ParsedCapacity): string {
 
 export function compareCapacityValues(
   capacity1: ParsedCapacity | null,
-  capacity2: ParsedCapacity | null
+  capacity2: ParsedCapacity | null,
 ): number {
   if (!capacity1 || !capacity2) {
     return 0;

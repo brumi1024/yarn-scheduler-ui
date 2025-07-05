@@ -3,7 +3,10 @@ import type { SchedulerInfo, QueueInfo } from '~/types';
 /**
  * Finds a queue by path in the scheduler data, searching recursively
  */
-function findQueueByPathRecursive(queue: QueueInfo | SchedulerInfo, targetPath: string): QueueInfo | null {
+function findQueueByPathRecursive(
+  queue: QueueInfo | SchedulerInfo,
+  targetPath: string,
+): QueueInfo | null {
   // Check if this is the root (SchedulerInfo)
   if ('queueName' in queue && queue.queueName === 'root' && targetPath === 'root') {
     // Convert SchedulerInfo to QueueInfo-like structure for root
@@ -23,24 +26,24 @@ function findQueueByPathRecursive(queue: QueueInfo | SchedulerInfo, targetPath: 
       state: 'RUNNING',
       resourcesUsed: {
         memory: 0,
-        vCores: 0
+        vCores: 0,
       },
-      queues: queue.queues
+      queues: queue.queues,
     } as QueueInfo;
   }
-  
+
   // For regular queues
   if ('queuePath' in queue && queue.queuePath === targetPath) {
     return queue as QueueInfo;
   }
-  
+
   if (queue.queues?.queue) {
     for (const child of queue.queues.queue) {
       const found = findQueueByPathRecursive(child, targetPath);
       if (found) return found;
     }
   }
-  
+
   return null;
 }
 
@@ -59,70 +62,70 @@ function findQueueInScheduler(schedulerData: SchedulerInfo, queuePath: string): 
 export function getAffectedQueuesForValidation(
   propertyName: string,
   queuePath: string,
-  schedulerData: SchedulerInfo | null
+  schedulerData: SchedulerInfo | null,
 ): string[] {
   const affectedQueues: string[] = [queuePath]; // Always include the current queue
-  
+
   if (!schedulerData) {
     return affectedQueues;
   }
-  
+
   // For capacity changes, include parent queue for child sum validation
   if (propertyName === 'capacity') {
     const currentQueue = findQueueInScheduler(schedulerData, queuePath);
     if (!currentQueue) {
       return affectedQueues;
     }
-    
+
     // If this queue has a parent, add it to affected queues
     const parentPath = getParentQueuePath(queuePath);
     if (parentPath) {
       affectedQueues.push(parentPath);
-      
+
       // Also add sibling queues for capacity type consistency validation
       const parentQueue = findQueueInScheduler(schedulerData, parentPath);
       if (parentQueue?.queues?.queue) {
-        parentQueue.queues.queue.forEach(sibling => {
+        parentQueue.queues.queue.forEach((sibling) => {
           if (sibling.queuePath !== queuePath && !affectedQueues.includes(sibling.queuePath)) {
             affectedQueues.push(sibling.queuePath);
           }
         });
       }
     }
-    
+
     // If this queue has children, they might be affected by capacity type consistency
     if (currentQueue.queues?.queue?.length) {
-      currentQueue.queues.queue.forEach(child => {
+      currentQueue.queues.queue.forEach((child) => {
         if (!affectedQueues.includes(child.queuePath)) {
           affectedQueues.push(child.queuePath);
         }
       });
     }
   }
-  
+
   // For state changes, include parent and children
   if (propertyName === 'state') {
     const currentQueue = findQueueInScheduler(schedulerData, queuePath);
     if (!currentQueue) {
       return affectedQueues;
     }
-    
+
     // Add parent if exists
     const parentPath = getParentQueuePath(queuePath);
     if (parentPath) {
       affectedQueues.push(parentPath);
     }
-    
+
     // Add all children
     if (currentQueue.queues?.queue?.length) {
-      currentQueue.queues.queue.forEach(child => {
+      currentQueue.queues.queue.forEach((child) => {
         if (!affectedQueues.includes(child.queuePath)) {
           affectedQueues.push(child.queuePath);
         }
       });
     }
   }
-  
+
   return affectedQueues;
 }
 
@@ -145,16 +148,16 @@ function getParentQueuePath(queuePath: string): string | null {
  */
 export function collectAffectedQueuesValidationErrors(
   affectedQueues: string[],
-  allValidationErrors: Array<{ queuePath: string; errors: any[] }>
+  allValidationErrors: Array<{ queuePath: string; errors: any[] }>,
 ): any[] {
   const collectedErrors: any[] = [];
-  
-  affectedQueues.forEach(queuePath => {
-    const queueErrors = allValidationErrors.find(item => item.queuePath === queuePath);
+
+  affectedQueues.forEach((queuePath) => {
+    const queueErrors = allValidationErrors.find((item) => item.queuePath === queuePath);
     if (queueErrors?.errors) {
       collectedErrors.push(...queueErrors.errors);
     }
   });
-  
+
   return collectedErrors;
 }

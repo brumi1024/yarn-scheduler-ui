@@ -8,12 +8,12 @@ import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueue
 vi.mock('~/utils/validation/businessRules/service');
 vi.mock('~/utils/validation/affectedQueuesUtils');
 vi.mock('~/utils/validation/stagedChangesUtils', () => ({
-  getMergedConfigData: vi.fn((configData) => configData)
+  getMergedConfigData: vi.fn((configData) => configData),
 }));
 
 describe('stagedChangesSlice - validation refresh', () => {
   it('should refresh validation errors for all staged changes', () => {
-    let state = {
+    const state = {
       stagedChanges: [
         {
           id: '1',
@@ -22,14 +22,14 @@ describe('stagedChangesSlice - validation refresh', () => {
           property: 'capacity',
           oldValue: '50%',
           newValue: '52%',
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       ] as StagedChange[],
       configData: new Map([
         ['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true'],
         ['yarn.scheduler.capacity.root.parent.capacity', '100%'],
         ['yarn.scheduler.capacity.root.parent.child1.capacity', '50%'],
-        ['yarn.scheduler.capacity.root.parent.child2.capacity', '50%']
+        ['yarn.scheduler.capacity.root.parent.child2.capacity', '50%'],
       ]),
       schedulerData: {
         type: 'capacityScheduler',
@@ -37,17 +37,17 @@ describe('stagedChangesSlice - validation refresh', () => {
         usedCapacity: 0,
         maxCapacity: 100,
         queueName: 'root',
-        queues: { queue: [] }
-      } as any
+        queues: { queue: [] },
+      } as any,
     };
 
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
-    
+
     // Mock affected queues to include parent
     vi.mocked(getAffectedQueuesForValidation).mockReturnValue([
       'root.parent.child1',
-      'root.parent'
+      'root.parent',
     ]);
 
     // Mock validation to return capacity sum error for parent
@@ -55,19 +55,21 @@ describe('stagedChangesSlice - validation refresh', () => {
       if (queuePath === 'root.parent') {
         return {
           valid: false,
-          errors: [{
-            field: 'capacity',
-            message: 'Child queue capacities must sum to 100%',
-            severity: 'error',
-            rule: 'child-capacity-sum'
-          }]
+          errors: [
+            {
+              field: 'capacity',
+              message: 'Child queue capacities must sum to 100%',
+              severity: 'error',
+              rule: 'child-capacity-sum',
+            },
+          ],
         };
       }
       return { valid: true, errors: [] };
     });
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
-    
+
     // Call refreshValidationErrors directly
     slice.refreshValidationErrors();
 
@@ -79,13 +81,13 @@ describe('stagedChangesSlice - validation refresh', () => {
       expect.objectContaining({
         field: 'capacity',
         message: 'Child queue capacities must sum to 100%',
-        rule: 'child-capacity-sum'
-      })
+        rule: 'child-capacity-sum',
+      }),
     );
   });
 
   it('should clear validation errors when they are resolved', () => {
-    let state = {
+    const state = {
       stagedChanges: [
         {
           id: '1',
@@ -95,41 +97,41 @@ describe('stagedChangesSlice - validation refresh', () => {
           oldValue: '50%',
           newValue: '50%',
           timestamp: Date.now(),
-          validationErrors: [{
-            field: 'capacity',
-            message: 'Child queue capacities must sum to 100%',
-            severity: 'error',
-            rule: 'child-capacity-sum'
-          }]
-        }
+          validationErrors: [
+            {
+              field: 'capacity',
+              message: 'Child queue capacities must sum to 100%',
+              severity: 'error',
+              rule: 'child-capacity-sum',
+            },
+          ],
+        },
       ] as StagedChange[],
-      configData: new Map([
-        ['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']
-      ]),
+      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
       schedulerData: {
         type: 'capacityScheduler',
         capacity: 100,
         usedCapacity: 0,
         maxCapacity: 100,
         queueName: 'root',
-        queues: { queue: [] }
-      } as any
+        queues: { queue: [] },
+      } as any,
     };
 
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
-    
+
     // Mock affected queues
     vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.parent.child1']);
 
     // Mock validation to return no errors (issue resolved)
-    vi.mocked(businessValidation.validateQueue).mockReturnValue({ 
-      valid: true, 
-      errors: [] 
+    vi.mocked(businessValidation.validateQueue).mockReturnValue({
+      valid: true,
+      errors: [],
     });
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
-    
+
     // Call refreshValidationErrors
     slice.refreshValidationErrors();
 
@@ -140,7 +142,7 @@ describe('stagedChangesSlice - validation refresh', () => {
   });
 
   it('should handle absolute resource validation', () => {
-    let state = {
+    const state = {
       stagedChanges: [
         {
           id: '1',
@@ -149,12 +151,12 @@ describe('stagedChangesSlice - validation refresh', () => {
           property: 'capacity',
           oldValue: '[memory=1024,vcores=4]',
           newValue: '[memory=3000,vcores=4]',
-          timestamp: Date.now()
-        }
+          timestamp: Date.now(),
+        },
       ] as StagedChange[],
       configData: new Map([
         ['yarn.scheduler.capacity.root.parent.capacity', '[memory=2048,vcores=8]'],
-        ['yarn.scheduler.capacity.root.parent.child1.capacity', '[memory=1024,vcores=4]']
+        ['yarn.scheduler.capacity.root.parent.child1.capacity', '[memory=1024,vcores=4]'],
       ]),
       schedulerData: {
         type: 'capacityScheduler',
@@ -162,17 +164,17 @@ describe('stagedChangesSlice - validation refresh', () => {
         usedCapacity: 0,
         maxCapacity: 100,
         queueName: 'root',
-        queues: { queue: [] }
-      } as any
+        queues: { queue: [] },
+      } as any,
     };
 
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
-    
+
     // Mock affected queues
     vi.mocked(getAffectedQueuesForValidation).mockReturnValue([
       'root.parent.child1',
-      'root.parent'
+      'root.parent',
     ]);
 
     // Mock validation to return resource constraint warning
@@ -180,19 +182,22 @@ describe('stagedChangesSlice - validation refresh', () => {
       if (queuePath === 'root.parent.child1') {
         return {
           valid: false,
-          errors: [{
-            field: 'capacity',
-            message: 'Child queue memory allocation (3000) cannot exceed parent queue memory allocation (2048)',
-            severity: 'warning',
-            rule: 'parent-child-capacity-constraint'
-          }]
+          errors: [
+            {
+              field: 'capacity',
+              message:
+                'Child queue memory allocation (3000) cannot exceed parent queue memory allocation (2048)',
+              severity: 'warning',
+              rule: 'parent-child-capacity-constraint',
+            },
+          ],
         };
       }
       return { valid: true, errors: [] };
     });
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
-    
+
     // Call refreshValidationErrors
     slice.refreshValidationErrors();
 
@@ -202,8 +207,8 @@ describe('stagedChangesSlice - validation refresh', () => {
       expect.objectContaining({
         message: expect.stringContaining('memory allocation (3000)'),
         rule: 'parent-child-capacity-constraint',
-        severity: 'warning'
-      })
+        severity: 'warning',
+      }),
     );
   });
 });

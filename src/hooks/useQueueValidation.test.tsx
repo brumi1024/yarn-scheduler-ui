@@ -37,7 +37,7 @@ describe('useQueueValidation', () => {
       useQueueValidation({
         queuePath: 'root.a',
         schema: z.object({ capacity: z.string() }),
-      })
+      }),
     );
 
     expect(result.current.businessErrors).toEqual([]);
@@ -50,7 +50,7 @@ describe('useQueueValidation', () => {
       useQueueValidation({
         queuePath: 'root.a',
         schema: z.object({ capacity: z.string() }),
-      })
+      }),
     );
 
     // Change capacity to invalid value
@@ -72,7 +72,7 @@ describe('useQueueValidation', () => {
         }),
       {
         initialProps: { queuePath: 'root.a' },
-      }
+      },
     );
 
     // Add some errors
@@ -107,7 +107,7 @@ describe('useQueueValidation', () => {
         schema: z.object({
           'maximum-capacity': z.string().min(1, 'Maximum capacity is required'),
         }),
-      })
+      }),
     );
 
     // Add business error by triggering validation with invalid data
@@ -132,9 +132,7 @@ describe('useQueueValidation', () => {
         queuePath: 'root',
         state: 'RUNNING',
         queues: {
-          queue: [
-            { queuePath: 'root.a', queueName: 'a', state: 'RUNNING' },
-          ],
+          queue: [{ queuePath: 'root.a', queueName: 'a', state: 'RUNNING' }],
         },
       },
       stagedChanges: [], // Add empty staged changes array
@@ -144,7 +142,7 @@ describe('useQueueValidation', () => {
       useQueueValidation({
         queuePath: 'root.a',
         schema: z.object({ capacity: z.string() }),
-      })
+      }),
     );
 
     act(() => {
@@ -163,7 +161,7 @@ describe('useQueueValidation', () => {
           capacity: z.string(),
           'maximum-capacity': z.string(),
         }),
-      })
+      }),
     );
 
     const data = {
@@ -175,7 +173,7 @@ describe('useQueueValidation', () => {
     await act(async () => {
       isValid = await result.current.validateAll(data);
     });
-    
+
     expect(isValid).toBe(false);
     expect(result.current.businessErrors.length).toBeGreaterThan(0);
   });
@@ -195,7 +193,7 @@ describe('useQueueValidation', () => {
       useQueueValidation({
         queuePath: 'root.a',
         schema: z.object({ capacity: z.string() }),
-      })
+      }),
     );
 
     act(() => {
@@ -210,7 +208,7 @@ describe('useQueueValidation', () => {
     const { result } = renderHook(() =>
       useQueueValidation({
         queuePath: 'root.a',
-      })
+      }),
     );
 
     act(() => {
@@ -226,7 +224,7 @@ describe('useQueueValidation', () => {
       useQueueValidation({
         queuePath: 'root.a',
         schema: z.object({ capacity: z.string() }),
-      })
+      }),
     );
 
     // Add error

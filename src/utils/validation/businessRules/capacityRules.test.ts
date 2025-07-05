@@ -7,7 +7,9 @@ import {
 } from './capacityRules';
 import type { QueueValidationContext, QueueInfo } from './types';
 
-const createMockContext = (overrides?: Partial<QueueValidationContext>): QueueValidationContext => ({
+const createMockContext = (
+  overrides?: Partial<QueueValidationContext>,
+): QueueValidationContext => ({
   queuePath: 'root.a',
   legacyModeEnabled: true,
   schedulerData: undefined,
@@ -274,18 +276,23 @@ describe('capacityRules', () => {
     it('should check multiple resources independently', () => {
       const context = createMockContext({
         parentQueue: { queuePath: 'root' } as unknown as QueueInfo,
-        configData: new Map([['yarn.scheduler.capacity.root.capacity', '[memory=2048,vcores=4,gpu=2]']]),
+        configData: new Map([
+          ['yarn.scheduler.capacity.root.capacity', '[memory=2048,vcores=4,gpu=2]'],
+        ]),
       });
 
-      const result = validateParentChildCapacityConstraints('[memory=1024,vcores=8,gpu=3]', context);
+      const result = validateParentChildCapacityConstraints(
+        '[memory=1024,vcores=8,gpu=3]',
+        context,
+      );
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(2);
-      
+
       // Should have warnings for vcores and gpu, but not memory
-      const errorMessages = result.errors.map(e => e.message);
-      expect(errorMessages.some(m => m.includes('vcores'))).toBe(true);
-      expect(errorMessages.some(m => m.includes('gpu'))).toBe(true);
-      expect(errorMessages.every(m => !m.includes('memory'))).toBe(true);
+      const errorMessages = result.errors.map((e) => e.message);
+      expect(errorMessages.some((m) => m.includes('vcores'))).toBe(true);
+      expect(errorMessages.some((m) => m.includes('gpu'))).toBe(true);
+      expect(errorMessages.every((m) => !m.includes('memory'))).toBe(true);
     });
 
     it('should skip validation when child has resource not in parent', () => {

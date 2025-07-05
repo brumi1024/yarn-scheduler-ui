@@ -6,7 +6,9 @@ import {
 } from './lifetimeRules';
 import type { QueueValidationContext } from './types';
 
-const createMockContext = (overrides?: Partial<QueueValidationContext>): QueueValidationContext => ({
+const createMockContext = (
+  overrides?: Partial<QueueValidationContext>,
+): QueueValidationContext => ({
   queuePath: 'root.a',
   legacyModeEnabled: true,
   schedulerData: undefined,

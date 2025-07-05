@@ -6,7 +6,9 @@ import {
 } from './stateRules';
 import type { QueueValidationContext, QueueInfo, SchedulerInfo } from './types';
 
-const createMockContext = (overrides?: Partial<QueueValidationContext>): QueueValidationContext => ({
+const createMockContext = (
+  overrides?: Partial<QueueValidationContext>,
+): QueueValidationContext => ({
   queuePath: 'root.a',
   legacyModeEnabled: true,
   schedulerData: undefined,
@@ -26,24 +28,26 @@ const createSchedulerWithQueue = (queue: Partial<QueueInfo>): SchedulerInfo => (
   maxCapacity: 100,
   state: 'RUNNING',
   queues: {
-    queue: [{
-      queuePath: 'root.a',
-      queueName: 'a',
-      queueType: 'leaf',
-      state: 'RUNNING',
-      capacity: 100,
-      usedCapacity: 0,
-      maxCapacity: 100,
-      absoluteCapacity: 100,
-      absoluteMaxCapacity: 100,
-      absoluteUsedCapacity: 0,
-      numApplications: 0,
-      numActiveApplications: 0,
-      numPendingApplications: 0,
-      resourcesUsed: { memory: 0, vCores: 0 },
-      ...queue
-    } as QueueInfo]
-  }
+    queue: [
+      {
+        queuePath: 'root.a',
+        queueName: 'a',
+        queueType: 'leaf',
+        state: 'RUNNING',
+        capacity: 100,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        absoluteCapacity: 100,
+        absoluteMaxCapacity: 100,
+        absoluteUsedCapacity: 0,
+        numApplications: 0,
+        numActiveApplications: 0,
+        numPendingApplications: 0,
+        resourcesUsed: { memory: 0, vCores: 0 },
+        ...queue,
+      } as QueueInfo,
+    ],
+  },
 });
 
 describe('stateRules', () => {
@@ -86,17 +90,17 @@ describe('stateRules', () => {
           state: 'RUNNING',
           queues: {
             queue: [
-              { 
+              {
                 queuePath: 'root.a.child1',
                 queueName: 'child1',
                 state: 'RUNNING',
-                queueType: 'leaf'
+                queueType: 'leaf',
               } as QueueInfo,
               {
                 queuePath: 'root.a.child2',
                 queueName: 'child2',
                 state: 'STOPPED',
-                queueType: 'leaf'
+                queueType: 'leaf',
               } as QueueInfo,
             ],
           },
@@ -114,15 +118,17 @@ describe('stateRules', () => {
       const context = createMockContext({
         schedulerData: {
           queues: {
-            queue: [{
-              queuePath: 'root.a',
+            queue: [
+              {
+                queuePath: 'root.a',
                 queues: {
                   queue: [
                     { state: 'STOPPED', queueName: 'child1' } as unknown as QueueInfo,
                     { state: 'STOPPED', queueName: 'child2' } as unknown as QueueInfo,
                   ],
                 },
-              } as unknown as QueueInfo],
+              } as unknown as QueueInfo,
+            ],
           },
         } as any,
       });
@@ -137,12 +143,14 @@ describe('stateRules', () => {
       const context = createMockContext({
         schedulerData: {
           queues: {
-            queue: [{
-              queuePath: 'root.a',
+            queue: [
+              {
+                queuePath: 'root.a',
                 state: 'STOPPED',
                 numApplications: 0,
                 queues: { queue: [] },
-              } as unknown as QueueInfo],
+              } as unknown as QueueInfo,
+            ],
           },
         } as any,
       });
@@ -206,11 +214,13 @@ describe('stateRules', () => {
         schedulerData: createSchedulerWithQueue({
           state: 'RUNNING',
           numApplications: 3,
-          queues: { 
-            queue: [{ 
-              queueName: 'child',
-              queuePath: 'root.a.child'
-            } as unknown as QueueInfo] 
+          queues: {
+            queue: [
+              {
+                queueName: 'child',
+                queuePath: 'root.a.child',
+              } as unknown as QueueInfo,
+            ],
           },
         }),
       });
@@ -226,11 +236,13 @@ describe('stateRules', () => {
       const context = createMockContext({
         schedulerData: {
           queues: {
-            queue: [{
-              queuePath: 'root.a',
+            queue: [
+              {
+                queuePath: 'root.a',
                 state: 'STOPPED',
                 numApplications: 0,
-              } as unknown as QueueInfo],
+              } as unknown as QueueInfo,
+            ],
           },
         } as any,
       });

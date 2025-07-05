@@ -75,7 +75,7 @@ describe('capacityUtils', () => {
         value: 0,
         rawValue: '0%',
       });
-      
+
       expect(parseCapacityValue('100%')).toEqual({
         type: 'percentage',
         value: 100,
@@ -127,7 +127,7 @@ describe('capacityUtils', () => {
           type: 'percentage',
           value: 50,
           rawValue: '50',
-        })
+        }),
       ).toBe('50%');
 
       expect(
@@ -135,7 +135,7 @@ describe('capacityUtils', () => {
           type: 'weight',
           value: 2.5,
           rawValue: '2.5w',
-        })
+        }),
       ).toBe('2.5w');
 
       expect(
@@ -144,7 +144,7 @@ describe('capacityUtils', () => {
           value: 0,
           resources: { memory: 1024, vcores: 2 },
           rawValue: '[memory=1024,vcores=2]',
-        })
+        }),
       ).toBe('[memory=1024,vcores=2]');
     });
   });
@@ -166,7 +166,7 @@ describe('capacityUtils', () => {
       const cap1 = parseCapacityValue('50%');
       const cap2 = parseCapacityValue('2w');
       expect(() => compareCapacityValues(cap1, cap2)).toThrow(
-        'Cannot compare capacities of different types'
+        'Cannot compare capacities of different types',
       );
     });
 
@@ -174,7 +174,7 @@ describe('capacityUtils', () => {
       const cap1 = parseCapacityValue('[memory=1024]');
       const cap2 = parseCapacityValue('[memory=2048]');
       expect(() => compareCapacityValues(cap1, cap2)).toThrow(
-        'Cannot compare absolute capacities directly'
+        'Cannot compare absolute capacities directly',
       );
     });
 

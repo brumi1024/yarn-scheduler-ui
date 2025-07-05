@@ -119,20 +119,26 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                   </Badge>
                 </div>
               </div>
-              
+
               {/* Validation Summary */}
               {(validationSummary.errorCount > 0 || validationSummary.warningCount > 0) && (
                 <div className="flex gap-2">
                   {validationSummary.errorCount > 0 && (
                     <div className="flex items-center gap-1.5 text-sm text-destructive">
                       <AlertCircle className="h-4 w-4" />
-                      <span>{validationSummary.errorCount} validation {validationSummary.errorCount === 1 ? 'error' : 'errors'}</span>
+                      <span>
+                        {validationSummary.errorCount} validation{' '}
+                        {validationSummary.errorCount === 1 ? 'error' : 'errors'}
+                      </span>
                     </div>
                   )}
                   {validationSummary.warningCount > 0 && (
                     <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
                       <AlertTriangle className="h-4 w-4" />
-                      <span>{validationSummary.warningCount} {validationSummary.warningCount === 1 ? 'warning' : 'warnings'}</span>
+                      <span>
+                        {validationSummary.warningCount}{' '}
+                        {validationSummary.warningCount === 1 ? 'warning' : 'warnings'}
+                      </span>
                     </div>
                   )}
                 </div>

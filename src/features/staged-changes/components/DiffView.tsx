@@ -149,9 +149,9 @@ export const DiffView: React.FC<DiffViewProps> = ({ change, onRevert, timestamp 
                 key={index}
                 className={cn(
                   'flex items-center gap-2 text-xs p-2 rounded-md',
-                  error.severity === 'error' 
-                    ? 'bg-destructive/10 text-destructive' 
-                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                  error.severity === 'error'
+                    ? 'bg-destructive/10 text-destructive'
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400',
                 )}
               >
                 {error.severity === 'error' ? (

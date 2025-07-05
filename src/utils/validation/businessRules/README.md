@@ -19,10 +19,8 @@ import { businessValidation } from './service';
 const context: QueueValidationContext = {
   queuePath: 'root.production',
   legacyModeEnabled: true,
-  configData: new Map([
-    ['yarn.scheduler.capacity.root.production.capacity', '50%']
-  ]),
-  schedulerData: schedulerInfo
+  configData: new Map([['yarn.scheduler.capacity.root.production.capacity', '50%']]),
+  schedulerData: schedulerInfo,
 };
 
 // Validate a single field
@@ -37,9 +35,9 @@ if (!result.valid) {
 ```typescript
 // Validate all properties for a queue
 const properties = {
-  'capacity': '50%',
+  capacity: '50%',
   'maximum-capacity': '75%',
-  'state': 'RUNNING'
+  state: 'RUNNING',
 };
 
 const result = businessValidation.validateQueue('root.production', properties, context);
@@ -61,10 +59,8 @@ if (!result.valid) {
 
 1. **Capacity Type Consistency** (Legacy Mode)
    - All sibling queues must use the same capacity type (percentage, weight, or absolute)
-   
 2. **Child Capacity Sum** (Legacy Mode)
    - Child queue capacities must sum to 100% when using percentage mode
-   
 3. **Maximum Capacity Relationship**
    - Maximum capacity must be >= capacity
    - Must use the same format as capacity
@@ -77,12 +73,10 @@ if (!result.valid) {
 1. **State Transitions**
    - Cannot set queue to RUNNING if parent is STOPPED
    - Cannot stop queue with running children
-   
 2. **Queue Deletion**
    - Queue must be STOPPED
    - Queue must have no applications
    - Queue must have no children
-   
 3. **Queue Conversion**
    - Queue must be STOPPED
    - Queue must have no applications
@@ -115,20 +109,15 @@ Errors have two severity levels:
 Use the `useQueueValidation` hook to integrate both Zod and business validation:
 
 ```typescript
-const {
-  form,
-  businessErrors,
-  handleBlur,
-  getFieldErrors,
-  getFieldWarnings,
-  validateAll
-} = useQueueValidation({
-  queuePath: 'root.production',
-  schema: queuePropertiesSchema
-});
+const { form, businessErrors, handleBlur, getFieldErrors, getFieldWarnings, validateAll } =
+  useQueueValidation({
+    queuePath: 'root.production',
+    schema: queuePropertiesSchema,
+  });
 ```
 
 The hook automatically:
+
 - Combines Zod format errors with business rule errors
 - Provides field-level error and warning lists
 - Handles validation on blur

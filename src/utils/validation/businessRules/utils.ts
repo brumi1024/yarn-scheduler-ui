@@ -2,7 +2,7 @@ import type { QueueInfo, SchedulerInfo } from '~/types';
 
 export function findQueueByPath(
   schedulerData: SchedulerInfo | undefined,
-  queuePath: string
+  queuePath: string,
 ): QueueInfo | undefined {
   if (!schedulerData?.queues?.queue || !queuePath) {
     return undefined;
@@ -14,7 +14,7 @@ export function findQueueByPath(
   }
 
   const pathParts = queuePath.split('.');
-  
+
   // Start from the scheduler root
   let currentQueue: QueueInfo | undefined = schedulerData as unknown as QueueInfo;
 
@@ -27,9 +27,7 @@ export function findQueueByPath(
       return undefined;
     }
 
-    currentQueue = currentQueue.queues.queue.find(
-      (q) => q.queueName === pathParts[i]
-    );
+    currentQueue = currentQueue.queues.queue.find((q) => q.queueName === pathParts[i]);
 
     if (!currentQueue) {
       return undefined;
@@ -46,7 +44,7 @@ export function getParentPath(queuePath: string): string | undefined {
 
 export function getSiblingQueues(
   schedulerData: SchedulerInfo | undefined,
-  queuePath: string
+  queuePath: string,
 ): QueueInfo[] {
   const parentPath = getParentPath(queuePath);
   if (!parentPath) {

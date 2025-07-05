@@ -6,7 +6,10 @@ import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
-import type { BusinessValidationError, QueueValidationContext } from '~/utils/validation/businessRules/types';
+import type {
+  BusinessValidationError,
+  QueueValidationContext,
+} from '~/utils/validation/businessRules/types';
 import {
   buildGlobalPropertyKey,
   buildNodeLabelPropertyKey,
@@ -20,7 +23,10 @@ import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
 import { businessValidation } from '~/utils/validation/businessRules/service';
 import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
-import { validateAllStagedChanges, selectivelyValidateStagedChanges } from '~/utils/validation/crossQueueValidation';
+import {
+  validateAllStagedChanges,
+  selectivelyValidateStagedChanges,
+} from '~/utils/validation/crossQueueValidation';
 
 export const createStagedChangesSlice: StateCreator<
   SchedulerStore,
@@ -72,7 +78,7 @@ export const createStagedChangesSlice: StateCreator<
         state.stagedChanges.push(change);
       }
     });
-    
+
     // Refresh validation errors for affected changes
     get().refreshAffectedValidationErrors(queuePath, property);
   },
@@ -116,7 +122,7 @@ export const createStagedChangesSlice: StateCreator<
         state.stagedChanges.push(change);
       }
     });
-    
+
     // Refresh validation errors for affected changes
     get().refreshAffectedValidationErrors(SPECIAL_VALUES.GLOBAL_QUEUE_PATH, property);
   },
@@ -229,7 +235,7 @@ export const createStagedChangesSlice: StateCreator<
         state.stagedChanges.push(change);
       }
     });
-    
+
     // Refresh validation errors for affected changes
     get().refreshAffectedValidationErrors(queuePath, fullPropertyName);
   },
@@ -286,7 +292,7 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       state.stagedChanges = state.stagedChanges.filter((c) => c.id !== changeId);
     });
-    
+
     // Refresh validation errors for remaining staged changes
     get().refreshValidationErrors();
   },
@@ -301,7 +307,7 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== queuePath);
     });
-    
+
     // Refresh validation errors for remaining staged changes
     get().refreshValidationErrors();
   },
@@ -324,7 +330,7 @@ export const createStagedChangesSlice: StateCreator<
 
   refreshValidationErrors: () => {
     const { stagedChanges, schedulerData, configData } = get();
-    
+
     if (!schedulerData || stagedChanges.length === 0) {
       return;
     }
@@ -333,21 +339,21 @@ export const createStagedChangesSlice: StateCreator<
     const validationResults = validateAllStagedChanges({
       stagedChanges,
       schedulerData,
-      configData
+      configData,
     });
 
     set((state) => {
       // Update each staged change with its validation errors
-      state.stagedChanges = state.stagedChanges.map(change => ({
+      state.stagedChanges = state.stagedChanges.map((change) => ({
         ...change,
-        validationErrors: validationResults.get(change.id)
+        validationErrors: validationResults.get(change.id),
       }));
     });
   },
 
   refreshAffectedValidationErrors: (triggeringQueuePath: string, triggeringProperty: string) => {
     const { stagedChanges, schedulerData, configData } = get();
-    
+
     if (!schedulerData || stagedChanges.length === 0) {
       return;
     }
@@ -356,12 +362,12 @@ export const createStagedChangesSlice: StateCreator<
     const affectedQueues = getAffectedQueuesForValidation(
       triggeringProperty,
       triggeringQueuePath,
-      schedulerData
+      schedulerData,
     );
-    
+
     const affectedQueuePaths = new Set(affectedQueues);
     const affectedProperties = new Set<string>();
-    
+
     // Some properties affect validation of other properties
     if (triggeringProperty === 'capacity') {
       affectedProperties.add('capacity');
@@ -371,7 +377,7 @@ export const createStagedChangesSlice: StateCreator<
       affectedProperties.add('capacity');
       affectedProperties.add('maximum-capacity');
       // Need to re-validate all queues when legacy mode changes
-      stagedChanges.forEach(change => {
+      stagedChanges.forEach((change) => {
         if (change.queuePath) {
           affectedQueuePaths.add(change.queuePath);
         }
@@ -384,14 +390,14 @@ export const createStagedChangesSlice: StateCreator<
       affectedProperties,
       stagedChanges,
       schedulerData,
-      configData
+      configData,
     });
 
     set((state) => {
       // Update each staged change with its validation errors
-      state.stagedChanges = state.stagedChanges.map(change => ({
+      state.stagedChanges = state.stagedChanges.map((change) => ({
         ...change,
-        validationErrors: validationResults.get(change.id)
+        validationErrors: validationResults.get(change.id),
       }));
     });
   },

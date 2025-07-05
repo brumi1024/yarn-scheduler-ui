@@ -27,7 +27,7 @@ export interface QueueValidationContext {
 
 export type BusinessValidator<T = unknown> = (
   value: T,
-  context: QueueValidationContext
+  context: QueueValidationContext,
 ) => BusinessValidationResult;
 
 export interface ValidationRule {

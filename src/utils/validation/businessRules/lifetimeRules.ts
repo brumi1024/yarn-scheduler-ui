@@ -2,7 +2,7 @@ import type { BusinessValidator, QueueValidationContext, BusinessValidationError
 
 export const validateApplicationLifetime: BusinessValidator<string> = (value, context) => {
   const field = context.field || 'default-application-lifetime';
-  
+
   if (!value || value.trim() === '' || value === '-1') {
     return { valid: true, errors: [] };
   }
@@ -16,9 +16,9 @@ export const validateApplicationLifetime: BusinessValidator<string> = (value, co
 
   if (field === 'default-application-lifetime') {
     const maxLifetime = context.configData.get(
-      `yarn.scheduler.capacity.${context.queuePath}.maximum-application-lifetime`
+      `yarn.scheduler.capacity.${context.queuePath}.maximum-application-lifetime`,
     );
-    
+
     if (maxLifetime && maxLifetime !== '-1') {
       const maxNum = parseInt(maxLifetime, 10);
       if (!isNaN(maxNum) && lifetime > maxNum) {
@@ -26,7 +26,7 @@ export const validateApplicationLifetime: BusinessValidator<string> = (value, co
           field: 'default-application-lifetime',
           message: `Default lifetime (${lifetime}s) cannot exceed maximum lifetime (${maxNum}s)`,
           severity: 'error',
-          rule: 'lifetime-relationship'
+          rule: 'lifetime-relationship',
         });
       }
     }
@@ -34,9 +34,9 @@ export const validateApplicationLifetime: BusinessValidator<string> = (value, co
 
   if (field === 'maximum-application-lifetime') {
     const defaultLifetime = context.configData.get(
-      `yarn.scheduler.capacity.${context.queuePath}.default-application-lifetime`
+      `yarn.scheduler.capacity.${context.queuePath}.default-application-lifetime`,
     );
-    
+
     if (defaultLifetime && defaultLifetime !== '-1') {
       const defaultNum = parseInt(defaultLifetime, 10);
       if (!isNaN(defaultNum) && lifetime < defaultNum) {
@@ -44,7 +44,7 @@ export const validateApplicationLifetime: BusinessValidator<string> = (value, co
           field: 'maximum-application-lifetime',
           message: `Maximum lifetime (${lifetime}s) must be greater than or equal to default lifetime (${defaultNum}s)`,
           severity: 'error',
-          rule: 'lifetime-relationship'
+          rule: 'lifetime-relationship',
         });
       }
     }
@@ -52,7 +52,7 @@ export const validateApplicationLifetime: BusinessValidator<string> = (value, co
 
   return {
     valid: errors.length === 0,
-    errors
+    errors,
   };
 };
 
@@ -73,7 +73,7 @@ export const validateUserLimitFactor: BusinessValidator<string> = (value, _conte
       field: 'user-limit-factor',
       message: 'User limit factor must be non-negative',
       severity: 'error',
-      rule: 'user-limit-factor-range'
+      rule: 'user-limit-factor-range',
     });
   }
 
@@ -82,13 +82,13 @@ export const validateUserLimitFactor: BusinessValidator<string> = (value, _conte
       field: 'user-limit-factor',
       message: 'User limit factor of 0 will prevent any user from submitting applications',
       severity: 'warning',
-      rule: 'user-limit-factor-zero-warning'
+      rule: 'user-limit-factor-zero-warning',
     });
   }
 
   return {
-    valid: errors.filter(e => e.severity === 'error').length === 0,
-    errors
+    valid: errors.filter((e) => e.severity === 'error').length === 0,
+    errors,
   };
 };
 
@@ -109,7 +109,7 @@ export const validateMinimumUserLimitPercent: BusinessValidator<string> = (value
       field: 'minimum-user-limit-percent',
       message: 'Minimum user limit percent cannot exceed 100%',
       severity: 'error',
-      rule: 'minimum-user-limit-percent-max'
+      rule: 'minimum-user-limit-percent-max',
     });
   }
 
@@ -118,12 +118,12 @@ export const validateMinimumUserLimitPercent: BusinessValidator<string> = (value
       field: 'minimum-user-limit-percent',
       message: 'Setting minimum user limit to 100% means each user gets the entire queue capacity',
       severity: 'warning',
-      rule: 'minimum-user-limit-percent-warning'
+      rule: 'minimum-user-limit-percent-warning',
     });
   }
 
   return {
-    valid: errors.filter(e => e.severity === 'error').length === 0,
-    errors
+    valid: errors.filter((e) => e.severity === 'error').length === 0,
+    errors,
   };
 };

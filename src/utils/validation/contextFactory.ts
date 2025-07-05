@@ -17,15 +17,14 @@ export function createValidationContext({
   queuePath,
   schedulerData,
   configData,
-  field
+  field,
 }: CreateValidationContextOptions): QueueValidationContext {
-  const legacyModeEnabled = configData.get(
-    'yarn.scheduler.capacity.legacy-queue-mode.enabled'
-  ) !== 'false';
+  const legacyModeEnabled =
+    configData.get('yarn.scheduler.capacity.legacy-queue-mode.enabled') !== 'false';
 
   let parentQueue: QueueInfo | undefined;
   let siblingQueues: QueueInfo[] | undefined;
-  
+
   if (schedulerData) {
     const parentPath = getParentPath(queuePath);
     if (parentPath) {
@@ -41,6 +40,6 @@ export function createValidationContext({
     configData,
     parentQueue,
     siblingQueues,
-    field
+    field,
   };
 }

@@ -264,9 +264,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   return (
                     <div key={index} className="flex items-start gap-1.5">
                       <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-yellow-600 dark:text-yellow-500">
-                        {warning}
-                      </p>
+                      <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
                       {isLegacyMode && (
                         <Tooltip>
                           <TooltipTrigger asChild>
@@ -274,8 +272,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                           </TooltipTrigger>
                           <TooltipContent className="max-w-xs">
                             <p className="text-xs">
-                              This validation is enforced because legacy queue mode is enabled. 
-                              You can disable legacy mode in Global Settings for more flexible capacity configuration.
+                              This validation is enforced because legacy queue mode is enabled. You
+                              can disable legacy mode in Global Settings for more flexible capacity
+                              configuration.
                             </p>
                           </TooltipContent>
                         </Tooltip>

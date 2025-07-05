@@ -45,7 +45,12 @@ import type { BusinessValidationError } from '~/utils/validation/businessRules/t
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
 
-  stageQueueChange: (queuePath: string, property: string, value: string, validationErrors?: BusinessValidationError[]) => void;
+  stageQueueChange: (
+    queuePath: string,
+    property: string,
+    value: string,
+    validationErrors?: BusinessValidationError[],
+  ) => void;
   stageGlobalChange: (
     property: string,
     value: string | Record<string, unknown> | unknown[],
@@ -74,7 +79,10 @@ export interface StagedChangesSlice {
   getStagedChangeById: (changeId: string) => StagedChange | undefined;
   getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
   refreshValidationErrors: () => void;
-  refreshAffectedValidationErrors: (triggeringQueuePath: string, triggeringProperty: string) => void;
+  refreshAffectedValidationErrors: (
+    triggeringQueuePath: string,
+    triggeringProperty: string,
+  ) => void;
 }
 
 export interface QueueSelectionSlice {
