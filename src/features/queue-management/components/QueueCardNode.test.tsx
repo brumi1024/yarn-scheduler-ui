@@ -223,7 +223,7 @@ describe('QueueCardNode', () => {
 
     const card = screen.getByText('default').closest('.relative');
     if (!card) throw new Error('Card not found');
-    expect(card).toHaveClass('bg-accent');
+    expect(card).toHaveClass('bg-blue-200');
   });
 
   it('should show comparison state when queue is in comparison', () => {
