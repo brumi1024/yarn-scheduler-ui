@@ -1,18 +1,5 @@
-import { useState } from 'react';
-import {
-  DndContext,
-  closestCenter,
-  KeyboardSensor,
-  PointerSensor,
-  useSensor,
-  useSensors,
-} from '@dnd-kit/core';
-import type { DragEndEvent } from '@dnd-kit/core';
-import {
-  SortableContext,
-  sortableKeyboardCoordinates,
-  verticalListSortingStrategy,
-} from '@dnd-kit/sortable';
+import { useState, useEffect } from 'react';
+import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
@@ -29,22 +16,21 @@ export function PlacementRulesList() {
   const [showAddForm, setShowAddForm] = useState(false);
   const [editingIndex, setEditingIndex] = useState<number | null>(null);
 
-  const sensors = useSensors(
-    useSensor(PointerSensor),
-    useSensor(KeyboardSensor, {
-      coordinateGetter: sortableKeyboardCoordinates,
-    }),
-  );
+  // Monitor for drag events globally
+  useEffect(() => {
+    return monitorForElements({
+      onDrop({ source, location }) {
+        if (!location.current.dropTargets.length) return;
 
-  const handleDragEnd = (event: DragEndEvent) => {
-    const { active, over } = event;
+        const draggedIndex = source.data.index;
+        const targetIndex = location.current.dropTargets[0].data.index;
 
-    if (active.id !== over?.id) {
-      const oldIndex = parseInt(active.id.toString().replace('rule-', ''));
-      const newIndex = parseInt(over?.id.toString().replace('rule-', '') || '0');
-      reorderRules(oldIndex, newIndex);
-    }
-  };
+        if (draggedIndex !== undefined && targetIndex !== undefined) {
+          reorderRules(draggedIndex as number, targetIndex as number);
+        }
+      },
+    });
+  }, [reorderRules]);
 
   const handleAdd = (data: PlacementRule) => {
     addRule(data);
@@ -106,26 +92,20 @@ export function PlacementRulesList() {
           </CardContent>
         </Card>
       ) : (
-        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext
-            items={rules.map((_, index) => `rule-${index}`)}
-            strategy={verticalListSortingStrategy}
-          >
-            <div className="space-y-2">
-              {rules.map((rule, index) => (
-                <PlacementRuleItem
-                  key={`rule-${index}`}
-                  rule={rule}
-                  index={index}
-                  isSelected={selectedRuleIndex === index}
-                  onEdit={() => setEditingIndex(index)}
-                  onDelete={() => deleteRule(index)}
-                  onSelect={() => selectRule(index)}
-                />
-              ))}
-            </div>
-          </SortableContext>
-        </DndContext>
+        <div className="space-y-2">
+          {rules.map((rule, index) => (
+            <PlacementRuleItem
+              key={`rule-${index}`}
+              rule={rule}
+              index={index}
+              isSelected={selectedRuleIndex === index}
+              onEdit={() => setEditingIndex(index)}
+              onDelete={() => deleteRule(index)}
+              onSelect={() => selectRule(index)}
+              onReorder={reorderRules}
+            />
+          ))}
+        </div>
       )}
     </div>
   );
