@@ -13,7 +13,7 @@ import type {
   VersionResponse,
   SchedulerResponse,
 } from '../types';
-import { QUEUE_TYPES } from '../types/constants';
+import { QUEUE_TYPES, SPECIAL_VALUES } from '../types/constants';
 
 // Mock data for tests
 const mockSchedulerResponse: SchedulerResponse = {
@@ -535,6 +535,47 @@ describe('schedulerStore', () => {
           property: 'maximum-applications',
           oldValue: undefined,
           newValue: '15000',
+        });
+      });
+
+      it('should stringify object values for placement rules JSON property', () => {
+        const store = createTestStore();
+
+        const placementRules = [
+          { type: 'user', matches: 'admin*', policy: 'specified', value: 'root.admin' },
+          { type: 'group', matches: 'production', policy: 'specified', value: 'root.production' },
+        ];
+
+        store
+          .getState()
+          .stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, placementRules);
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0]).toMatchObject({
+          type: 'update',
+          queuePath: 'global',
+          property: SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+          oldValue: undefined,
+          newValue: JSON.stringify(placementRules),
+        });
+      });
+
+      it('should handle string values for placement rules JSON property', () => {
+        const store = createTestStore();
+
+        const placementRulesString = '[{"type":"user","matches":"*","policy":"primaryGroup"}]';
+
+        store
+          .getState()
+          .stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, placementRulesString);
+
+        expect(store.getState().stagedChanges).toHaveLength(1);
+        expect(store.getState().stagedChanges[0]).toMatchObject({
+          type: 'update',
+          queuePath: 'global',
+          property: SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+          oldValue: undefined,
+          newValue: placementRulesString,
         });
       });
     });

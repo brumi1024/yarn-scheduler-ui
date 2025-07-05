@@ -68,6 +68,14 @@ export const createStagedChangesSlice: StateCreator<
 
   stageGlobalChange: (property, value) => {
     set((state) => {
+      // For JSON properties like placement rules, stringify the value if it's an object
+      let stringValue: string;
+      if (property === SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY && typeof value === 'object') {
+        stringValue = JSON.stringify(value);
+      } else {
+        stringValue = String(value);
+      }
+
       const propertyKey = buildGlobalPropertyKey(property);
       const originalValue = state.configData.get(propertyKey);
 
@@ -76,12 +84,12 @@ export const createStagedChangesSlice: StateCreator<
       );
 
       // If the new value matches the original value, remove the staged change
-      if (value === originalValue && existingIndex >= 0) {
+      if (stringValue === originalValue && existingIndex >= 0) {
         state.stagedChanges.splice(existingIndex, 1);
       } else if (existingIndex >= 0) {
         // Update existing staged change
-        state.stagedChanges[existingIndex].newValue = value;
-      } else if (value !== originalValue) {
+        state.stagedChanges[existingIndex].newValue = stringValue;
+      } else if (stringValue !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
           id: nanoid(),
@@ -89,7 +97,7 @@ export const createStagedChangesSlice: StateCreator<
           queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
           property,
           oldValue: originalValue,
-          newValue: value,
+          newValue: stringValue,
           timestamp: Date.now(),
         };
         state.stagedChanges.push(change);
