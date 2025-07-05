@@ -98,6 +98,9 @@ vi.mock('~/stores/schedulerStore', () => ({
       stageQueueAddition: vi.fn(),
       stageQueueRemoval: vi.fn(),
       stageQueueChange: vi.fn(),
+      canCompareQueues: vi.fn(() => false),
+      clearComparisonQueues: vi.fn(),
+      getComparisonData: vi.fn(() => new Map()),
     };
 
     // If selector is provided, call it with state
@@ -255,6 +258,9 @@ describe('QueueVisualizationContainer', () => {
         stageQueueAddition: vi.fn(),
         stageQueueRemoval: vi.fn(),
         stageQueueChange: vi.fn(),
+        canCompareQueues: vi.fn(() => false),
+        clearComparisonQueues: vi.fn(),
+        getComparisonData: vi.fn(() => new Map()),
       };
 
       if (typeof selector === 'function') {
