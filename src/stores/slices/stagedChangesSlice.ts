@@ -70,7 +70,7 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       // For JSON properties like placement rules, stringify the value if it's an object
       let stringValue: string;
-      if (property === 'yarn.scheduler.capacity.mapping-rule-json' && typeof value === 'object') {
+      if (property === SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY && typeof value === 'object') {
         stringValue = JSON.stringify(value);
       } else {
         stringValue = String(value);

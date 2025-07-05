@@ -13,7 +13,7 @@ import type {
   VersionResponse,
   SchedulerResponse,
 } from '../types';
-import { QUEUE_TYPES } from '../types/constants';
+import { QUEUE_TYPES, SPECIAL_VALUES } from '../types/constants';
 
 // Mock data for tests
 const mockSchedulerResponse: SchedulerResponse = {
@@ -548,13 +548,13 @@ describe('schedulerStore', () => {
 
         store
           .getState()
-          .stageGlobalChange('yarn.scheduler.capacity.mapping-rule-json', placementRules);
+          .stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, placementRules);
 
         expect(store.getState().stagedChanges).toHaveLength(1);
         expect(store.getState().stagedChanges[0]).toMatchObject({
           type: 'update',
           queuePath: 'global',
-          property: 'yarn.scheduler.capacity.mapping-rule-json',
+          property: SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
           oldValue: undefined,
           newValue: JSON.stringify(placementRules),
         });
@@ -567,13 +567,13 @@ describe('schedulerStore', () => {
 
         store
           .getState()
-          .stageGlobalChange('yarn.scheduler.capacity.mapping-rule-json', placementRulesString);
+          .stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, placementRulesString);
 
         expect(store.getState().stagedChanges).toHaveLength(1);
         expect(store.getState().stagedChanges[0]).toMatchObject({
           type: 'update',
           queuePath: 'global',
-          property: 'yarn.scheduler.capacity.mapping-rule-json',
+          property: SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
           oldValue: undefined,
           newValue: placementRulesString,
         });
