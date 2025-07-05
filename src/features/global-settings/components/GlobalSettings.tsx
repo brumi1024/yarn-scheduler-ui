@@ -13,10 +13,13 @@ import {
   AccordionTrigger,
 } from '~/components/ui/accordion';
 import { PropertyInput } from './PropertyInput';
+import { LegacyModeToggle } from './LegacyModeToggle';
+import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 
 export const GlobalSettings: React.FC = () => {
   const { getGlobalPropertyValue, stageGlobalChange, stagedChanges } = useSchedulerStore();
+  const { validateGlobalProperty } = useGlobalPropertyValidation();
 
   const getGlobalPropertyCategories = () => {
     const categories = new Set(globalPropertyDefinitions.map((prop) => prop.category));
@@ -33,7 +36,8 @@ export const GlobalSettings: React.FC = () => {
   );
 
   const handlePropertyChange = (propertyKey: string, value: string) => {
-    stageGlobalChange(propertyKey, value);
+    const validationErrors = validateGlobalProperty(propertyKey, value);
+    stageGlobalChange(propertyKey, value, validationErrors);
   };
 
   return (
@@ -74,12 +78,21 @@ export const GlobalSettings: React.FC = () => {
 
                       return (
                         <div key={property.name}>
-                          <PropertyInput
-                            property={property}
-                            value={value}
-                            isStaged={isStaged}
-                            onChange={(newValue) => handlePropertyChange(property.name, newValue)}
-                          />
+                          {property.name === 'legacy-queue-mode.enabled' ? (
+                            <LegacyModeToggle
+                              property={property}
+                              value={value}
+                              isStaged={isStaged}
+                              onChange={(newValue) => handlePropertyChange(property.name, newValue)}
+                            />
+                          ) : (
+                            <PropertyInput
+                              property={property}
+                              value={value}
+                              isStaged={isStaged}
+                              onChange={(newValue) => handlePropertyChange(property.name, newValue)}
+                            />
+                          )}
                           {index < categoryProperties.length - 1 && <hr className="mt-6" />}
                         </div>
                       );

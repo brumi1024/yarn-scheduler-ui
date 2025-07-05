@@ -6,6 +6,7 @@ import type { StateCreator } from 'zustand';
 import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
 import type { QueueInfo } from '~/types';
 import { buildGlobalPropertyKey, buildPropertyKey } from '~/utils/propertyUtils';
+import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import type { QueueDataSlice, SchedulerStore } from './types';
 
 export const createQueueDataSlice: StateCreator<
@@ -32,7 +33,7 @@ export const createQueueDataSlice: StateCreator<
 
   getGlobalPropertyValue: (property) => {
     const propertyKey = buildGlobalPropertyKey(property);
-    const configValue = get().configData.get(propertyKey) || '';
+    const configValue = get().configData.get(propertyKey);
 
     // Check if there's a staged change for this property
     const stagedChange = get().stagedChanges.find(
@@ -41,6 +42,13 @@ export const createQueueDataSlice: StateCreator<
 
     if (stagedChange && stagedChange.newValue !== undefined) {
       return { value: stagedChange.newValue, isStaged: true };
+    }
+
+    // If config doesn't have the value, check for default value
+    if (configValue === undefined || configValue === null) {
+      const propertyDef = globalPropertyDefinitions.find((p) => p.name === property);
+      const defaultValue = propertyDef?.defaultValue || '';
+      return { value: defaultValue, isStaged: false };
     }
 
     return { value: configValue, isStaged: false };

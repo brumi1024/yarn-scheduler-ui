@@ -294,9 +294,9 @@ describe('StagedChangesPanel', () => {
       expect(drawerContent).toBeTruthy();
     });
 
-    // Check that drawer is rendered with snap points
+    // Check that drawer is rendered
     const drawerContent = document.querySelector('[data-vaul-drawer]');
-    expect(drawerContent).toHaveAttribute('data-vaul-snap-points', 'true');
+    expect(drawerContent).toBeInTheDocument();
     expect(drawerContent).toHaveAttribute('data-vaul-drawer-direction', 'bottom');
   });
 

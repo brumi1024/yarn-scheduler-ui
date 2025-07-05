@@ -7,7 +7,7 @@ import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '~/components/ui/form';
-import { HelpCircle } from 'lucide-react';
+import { HelpCircle, Info, AlertTriangle } from 'lucide-react';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 
 interface PropertyFormFieldProps {
@@ -15,6 +15,8 @@ interface PropertyFormFieldProps {
   control: Control<Record<string, string>>;
   stagedStatus?: 'new' | 'modified' | 'deleted';
   dependentValues?: Record<string, string>;
+  onBlur?: (propertyName: string, value: string) => void;
+  warnings?: string[];
 }
 
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
@@ -22,6 +24,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   control,
   stagedStatus,
   dependentValues = {},
+  onBlur,
+  warnings = [],
 }) => {
   // Check if field should be enabled based on dependencies
   const isFieldEnabled = React.useMemo(() => {
@@ -168,7 +172,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   type="number"
                   value={field.value || ''}
                   onChange={(e) => field.onChange(e.target.value)}
-                  onBlur={field.onBlur}
+                  onBlur={(e) => {
+                    field.onBlur();
+                    onBlur?.(property.name, e.target.value);
+                  }}
                   step={property.displayFormat?.decimals ? 0.01 : 1}
                   min={property.validationRules?.find((r) => r.type === 'range')?.min}
                   max={property.validationRules?.find((r) => r.type === 'range')?.max}
@@ -218,7 +225,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 <textarea
                   value={field.value || ''}
                   onChange={(e) => field.onChange(e.target.value)}
-                  onBlur={field.onBlur}
+                  onBlur={(e) => {
+                    field.onBlur();
+                    onBlur?.(property.name, e.target.value);
+                  }}
                   rows={2}
                   placeholder={property.defaultValue || undefined}
                   className={cn(
@@ -232,7 +242,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   type="text"
                   value={field.value || ''}
                   onChange={(e) => field.onChange(e.target.value)}
-                  onBlur={field.onBlur}
+                  onBlur={(e) => {
+                    field.onBlur();
+                    onBlur?.(property.name, e.target.value);
+                  }}
                   placeholder={property.defaultValue || undefined}
                   disabled={!isFieldEnabled}
                   className={cn(
@@ -243,6 +256,34 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               )}
             </FormControl>
             <FormMessage />
+            {/* Business validation warnings */}
+            {warnings.length > 0 && (
+              <div className="mt-1 space-y-1">
+                {warnings.map((warning, index) => {
+                  const isLegacyMode = warning.includes('legacy mode requirement');
+                  return (
+                    <div key={index} className="flex items-start gap-1.5">
+                      <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                      <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
+                      {isLegacyMode && (
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help mt-0.5 flex-shrink-0" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs">
+                            <p className="text-xs">
+                              This validation is enforced because legacy queue mode is enabled. You
+                              can disable legacy mode in Global Settings for more flexible capacity
+                              configuration.
+                            </p>
+                          </TooltipContent>
+                        </Tooltip>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            )}
           </FormItem>
         );
     }

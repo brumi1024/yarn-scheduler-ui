@@ -112,6 +112,8 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       propertiesByCategory,
       getStagedStatus,
       formState,
+      handleFieldBlur,
+      getFieldWarnings,
     } = usePropertyEditor({
       queuePath: queue.queuePath,
     });
@@ -311,6 +313,8 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                                     property={prop}
                                     control={control}
                                     stagedStatus={getStagedStatus(prop.originalName || prop.name)}
+                                    onBlur={handleFieldBlur}
+                                    warnings={getFieldWarnings(prop.formFieldName || prop.name)}
                                   />
                                 ))}
                               </div>
@@ -347,6 +351,8 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                             property={prop}
                             control={control}
                             stagedStatus={getStagedStatus(prop.originalName || prop.name)}
+                            onBlur={handleFieldBlur}
+                            warnings={getFieldWarnings(prop.formFieldName || prop.name)}
                           />
                         ))}
                       </div>
