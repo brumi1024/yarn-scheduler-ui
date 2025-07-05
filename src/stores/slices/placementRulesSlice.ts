@@ -204,6 +204,7 @@ export const createPlacementRulesSlice: StateCreator<
     if (!legacyRules) {
       set((state) => {
         state.showMigrationDialog = false;
+        state.rulesError = null;
       });
       return;
     }
