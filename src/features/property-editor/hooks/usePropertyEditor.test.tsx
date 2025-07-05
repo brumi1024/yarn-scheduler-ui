@@ -1,10 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { renderHook, act } from '@testing-library/react';
+import { renderHook } from '@testing-library/react';
 import { usePropertyEditor } from './usePropertyEditor';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerInfo } from '~/types';
 import { validatePropertyChange } from '~/utils/validation/crossQueueValidation';
-import { toast } from 'sonner';
 
 // Mock dependencies
 vi.mock('~/stores/schedulerStore');

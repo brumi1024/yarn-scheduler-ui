@@ -19,10 +19,7 @@ import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBu
 import { isValidQueueName } from '~/types';
 import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } from '~/lib/errors';
 import type { StagedChangesSlice, SchedulerStore } from './types';
-import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
-import { businessValidation } from '~/utils/validation/businessRules/service';
-import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
 import {
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,

@@ -148,9 +148,9 @@ function getParentQueuePath(queuePath: string): string | null {
  */
 export function collectAffectedQueuesValidationErrors(
   affectedQueues: string[],
-  allValidationErrors: Array<{ queuePath: string; errors: any[] }>,
-): any[] {
-  const collectedErrors: any[] = [];
+  allValidationErrors: Array<{ queuePath: string; errors: unknown[] }>,
+): unknown[] {
+  const collectedErrors: unknown[] = [];
 
   affectedQueues.forEach((queuePath) => {
     const queueErrors = allValidationErrors.find((item) => item.queuePath === queuePath);

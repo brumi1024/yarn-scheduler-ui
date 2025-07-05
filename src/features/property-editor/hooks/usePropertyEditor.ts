@@ -320,6 +320,7 @@ export function usePropertyEditor({
       businessErrors,
       schedulerData,
       configData,
+      stagedChanges,
     ],
   );
 

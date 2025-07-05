@@ -21,12 +21,10 @@ const createMockContext = (
 // Helper to create scheduler data with proper structure for findQueueByPath
 const createSchedulerWithQueue = (queue: Partial<QueueInfo>): SchedulerInfo => ({
   queueName: 'root',
-  queuePath: 'root',
   type: 'capacityScheduler' as const,
   capacity: 100,
   usedCapacity: 0,
   maxCapacity: 100,
-  state: 'RUNNING',
   queues: {
     queue: [
       {
