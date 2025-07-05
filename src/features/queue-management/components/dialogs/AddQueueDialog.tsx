@@ -178,7 +178,7 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
           <div className="space-y-2">
             <Label htmlFor="state">State</Label>
             <Select
-              defaultValue="RUNNING"
+              value={watch('state')}
               onValueChange={(value) => setValue('state', value as 'RUNNING' | 'STOPPED')}
             >
               <SelectTrigger id="state">

@@ -93,7 +93,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Rule Type</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select rule type" />
@@ -141,7 +141,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               render={({ field }) => (
                 <FormItem>
                   <FormLabel>Placement Policy</FormLabel>
-                  <Select onValueChange={field.onChange} defaultValue={field.value}>
+                  <Select onValueChange={field.onChange} value={field.value}>
                     <FormControl>
                       <SelectTrigger>
                         <SelectValue placeholder="Select placement policy" />
@@ -277,7 +277,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Fallback Behavior</FormLabel>
-                    <Select onValueChange={field.onChange} defaultValue={field.value}>
+                    <Select onValueChange={field.onChange} value={field.value}>
                       <FormControl>
                         <SelectTrigger>
                           <SelectValue placeholder="Select fallback behavior" />
