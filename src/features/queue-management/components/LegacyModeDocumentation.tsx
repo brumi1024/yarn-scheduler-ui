@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router';
 import {
   Dialog,
   DialogContent,
@@ -20,7 +21,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-6xl max-h-[95vh]">
         <DialogHeader>
           <DialogTitle>YARN Capacity Scheduler Queue Modes</DialogTitle>
           <DialogDescription>
@@ -36,7 +37,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
             <TabsTrigger value="migration">Migration</TabsTrigger>
           </TabsList>
 
-          <div className="h-[400px] mt-4 overflow-y-auto">
+          <div className="h-[600px] mt-4 overflow-y-auto">
             <TabsContent value="overview" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Queue Mode Overview</h3>
               <p className="text-sm text-muted-foreground">
@@ -47,7 +48,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
               <div className="space-y-3">
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="default">Legacy Mode</Badge>
+                    <Badge variant="warning">Legacy Mode</Badge>
                     <span className="text-sm text-muted-foreground">(Default)</span>
                   </div>
                   <p className="text-sm">
@@ -58,7 +59,7 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
 
                 <div className="border rounded-lg p-4">
                   <div className="flex items-center gap-2 mb-2">
-                    <Badge variant="secondary">Flexible Mode</Badge>
+                    <Badge variant="success">Flexible Mode</Badge>
                     <span className="text-sm text-muted-foreground">
                       (Recommended for new clusters)
                     </span>
@@ -75,7 +76,10 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                 <AlertDescription>
                   The mode is controlled by the{' '}
                   <code className="text-xs">yarn.scheduler.capacity.legacy-queue-mode.enabled</code>{' '}
-                  property in Global Settings.
+                  property.{' '}
+                  <Link to="/global-settings" className="underline hover:no-underline">
+                    Configure in Global Settings →
+                  </Link>
                 </AlertDescription>
               </Alert>
             </TabsContent>

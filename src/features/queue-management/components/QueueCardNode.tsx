@@ -18,7 +18,7 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { Plus, Trash2, Edit, Play, Pause } from 'lucide-react';
+import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle } from 'lucide-react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -29,6 +29,7 @@ import { QueueCapacityProgress } from './QueueCapacityProgress';
 import { QueueStatusBadges } from './QueueStatusBadges';
 import { QueueResourceStats } from './QueueResourceStats';
 import { QUEUE_STATES } from '~/types';
+import { Badge } from '~/components/ui/badge';
 
 // Simple capacity parsing for display purposes
 const parseCapacityValue = (input: string) => {
@@ -45,9 +46,12 @@ const parseCapacityValue = (input: string) => {
   return { mode: 'percentage' as const, value: trimmed };
 };
 
-export const QueueCardNode = ({ data }: NodeProps) => {
+export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const [addDialogOpen, setAddDialogOpen] = useState(false);
   const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+
+  // Cast data to QueueCardData type
+  const queueData = data as QueueCardData;
 
   const {
     comparisonQueues,
@@ -73,7 +77,10 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     maxCapacityConfig,
     stagedState,
     autoCreationStatus,
-  } = data as QueueCardData;
+    validationErrors,
+    isAffectedByErrors,
+    errorSource,
+  } = queueData;
 
   const isSelectedForComparison = comparisonQueues.includes(queuePath);
   const isSelectedQueue = selectedQueuePath === queuePath;
@@ -118,48 +125,104 @@ export const QueueCardNode = ({ data }: NodeProps) => {
     <Card
       className={cn(
         'relative w-[400px] h-[300px] transition-all duration-200 flex flex-col',
+        // Enhanced background and border for better contrast
+        'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
+        // Shadow for depth - stronger in light mode
+        'shadow-lg hover:shadow-xl dark:shadow-md dark:hover:shadow-lg',
         // Cursor styling - not clickable for new queues
-        stagedStatus === 'new' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer hover:shadow-md',
+        stagedStatus === 'new' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer',
         // Border styling based on status
         stagedStatus === 'new' && 'ring-2 ring-queue-new',
         stagedStatus === 'deleted' && 'ring-2 ring-queue-deleted',
         stagedStatus === 'modified' && 'ring-2 ring-queue-modified',
         !stagedStatus && isSelectedQueue && 'ring-2 ring-primary',
-        // Background styling
-        isSelectedQueue && 'bg-accent',
-        isSelectedForComparison && !isSelectedQueue && 'bg-muted',
+        // Validation error styling
+        validationErrors &&
+          validationErrors.some((e) => e.severity === 'error') &&
+          'ring-2 ring-destructive',
+        isAffectedByErrors && !validationErrors && 'ring-2 ring-amber-500',
+        // Background styling for states
+        isSelectedQueue && 'bg-blue-200 dark:bg-gray-800',
+        isSelectedForComparison && !isSelectedQueue && 'bg-gray-200 dark:bg-gray-700',
       )}
       onClick={handleClick}
     >
       <CardHeader>
-        <CardTitle className="text-base truncate">{queueName}</CardTitle>
-        <CardDescription>{queuePath}</CardDescription>
+        <div className="flex items-start justify-between">
+          <div className="flex-1">
+            <CardTitle className="text-base truncate">{queueName}</CardTitle>
+            <CardDescription>{queuePath}</CardDescription>
 
-        <CardDescription>
-          <QueueStatusBadges
-            capacityMode={capacityMode}
-            state={state}
-            stagedState={stagedState}
-            stagedStatus={stagedStatus}
-            autoCreationStatus={autoCreationStatus}
-          />
-        </CardDescription>
+            <CardDescription>
+              <QueueStatusBadges
+                capacityMode={capacityMode}
+                state={state}
+                stagedState={stagedState}
+                stagedStatus={stagedStatus}
+                autoCreationStatus={autoCreationStatus}
+              />
+            </CardDescription>
+          </div>
+
+          {/* Validation error indicators */}
+          {(validationErrors || isAffectedByErrors) && (
+            <div className="flex items-center gap-2 ml-2">
+              {validationErrors && validationErrors.length > 0 && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge variant="destructive" className="h-6 px-2">
+                        <AlertCircle className="h-3 w-3 mr-1" />
+                        {validationErrors.filter((e) => e.severity === 'error').length}
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-semibold mb-1">Validation Errors</p>
+                      <ul className="text-sm space-y-1">
+                        {validationErrors
+                          .filter((e) => e.severity === 'error')
+                          .map((error, idx) => (
+                            <li key={idx}>• {error.message}</li>
+                          ))}
+                      </ul>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+
+              {isAffectedByErrors && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger>
+                      <Badge
+                        variant="outline"
+                        className="h-6 px-2 border-amber-500 text-amber-600 dark:text-amber-400"
+                      >
+                        <AlertTriangle className="h-3 w-3" />
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">
+                      <p className="font-semibold mb-1">Affected by Child Queue Changes</p>
+                      <p className="text-sm">
+                        This queue is affected by validation errors from{' '}
+                        {errorSource ? `queue "${errorSource}"` : 'child queues'}.
+                      </p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
+            </div>
+          )}
+        </div>
 
         <CardAction>
-          <div
-            className={cn(
-              'rounded-md p-0.5 transition-colors',
-              isSelectedForComparison && 'bg-blue-100 dark:bg-blue-900',
-            )}
-          >
-            <Checkbox
-              checked={isSelectedForComparison}
-              onCheckedChange={handleComparisonToggle}
-              onClick={(e) => e.stopPropagation()}
-              className="h-4 w-4"
-              disabled={false}
-            />
-          </div>
+          <Checkbox
+            checked={isSelectedForComparison}
+            onCheckedChange={handleComparisonToggle}
+            onClick={(e) => e.stopPropagation()}
+            className="h-5 w-5 border-2"
+            disabled={false}
+          />
         </CardAction>
       </CardHeader>
 
