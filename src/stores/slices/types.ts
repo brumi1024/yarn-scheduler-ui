@@ -40,25 +40,30 @@ export interface NodeLabelsSlice {
   assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;
 }
 
+import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
+
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
 
-  stageQueueChange: (queuePath: string, property: string, value: string) => void;
+  stageQueueChange: (queuePath: string, property: string, value: string, validationErrors?: BusinessValidationError[]) => void;
   stageGlobalChange: (
     property: string,
     value: string | Record<string, unknown> | unknown[],
+    validationErrors?: BusinessValidationError[],
   ) => void;
   stageQueueAddition: (
     parentPath: string,
     queueName: string,
     config: Record<string, string>,
+    validationErrors?: BusinessValidationError[],
   ) => void;
-  stageQueueRemoval: (queuePath: string) => void;
+  stageQueueRemoval: (queuePath: string, validationErrors?: BusinessValidationError[]) => void;
   stageLabelQueueChange: (
     queuePath: string,
     label: string,
     property: string,
     value: string,
+    validationErrors?: BusinessValidationError[],
   ) => void;
   applyChanges: () => Promise<void>;
   revertChange: (changeId: string) => void;
@@ -68,6 +73,8 @@ export interface StagedChangesSlice {
   getChangesForQueue: (queuePath: string) => StagedChange[];
   getStagedChangeById: (changeId: string) => StagedChange | undefined;
   getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
+  refreshValidationErrors: () => void;
+  refreshAffectedValidationErrors: (triggeringQueuePath: string, triggeringProperty: string) => void;
 }
 
 export interface QueueSelectionSlice {

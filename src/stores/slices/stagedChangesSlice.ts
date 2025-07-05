@@ -6,6 +6,7 @@ import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
+import type { BusinessValidationError, QueueValidationContext } from '~/utils/validation/businessRules/types';
 import {
   buildGlobalPropertyKey,
   buildNodeLabelPropertyKey,
@@ -15,6 +16,11 @@ import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBu
 import { isValidQueueName } from '~/types';
 import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } from '~/lib/errors';
 import type { StagedChangesSlice, SchedulerStore } from './types';
+import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
+import { businessValidation } from '~/utils/validation/businessRules/service';
+import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
+import { validateAllStagedChanges, selectivelyValidateStagedChanges } from '~/utils/validation/crossQueueValidation';
 
 export const createStagedChangesSlice: StateCreator<
   SchedulerStore,
@@ -24,7 +30,7 @@ export const createStagedChangesSlice: StateCreator<
 > = (set, get) => ({
   stagedChanges: [],
 
-  stageQueueChange: (queuePath, property, value) => {
+  stageQueueChange: (queuePath, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
       throw createStoreError(
         ERROR_CODES.INVALID_QUEUE_PATH,
@@ -50,6 +56,7 @@ export const createStagedChangesSlice: StateCreator<
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = value;
+        state.stagedChanges[existingIndex].validationErrors = validationErrors;
       } else if (value !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -60,13 +67,17 @@ export const createStagedChangesSlice: StateCreator<
           oldValue: originalValue,
           newValue: value,
           timestamp: Date.now(),
+          validationErrors,
         };
         state.stagedChanges.push(change);
       }
     });
+    
+    // Refresh validation errors for affected changes
+    get().refreshAffectedValidationErrors(queuePath, property);
   },
 
-  stageGlobalChange: (property, value) => {
+  stageGlobalChange: (property, value, validationErrors) => {
     set((state) => {
       // For JSON properties like placement rules, stringify the value if it's an object
       let stringValue: string;
@@ -89,6 +100,7 @@ export const createStagedChangesSlice: StateCreator<
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = stringValue;
+        state.stagedChanges[existingIndex].validationErrors = validationErrors;
       } else if (stringValue !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -99,13 +111,17 @@ export const createStagedChangesSlice: StateCreator<
           oldValue: originalValue,
           newValue: stringValue,
           timestamp: Date.now(),
+          validationErrors,
         };
         state.stagedChanges.push(change);
       }
     });
+    
+    // Refresh validation errors for affected changes
+    get().refreshAffectedValidationErrors(SPECIAL_VALUES.GLOBAL_QUEUE_PATH, property);
   },
 
-  stageQueueAddition: (parentPath, queueName, config) => {
+  stageQueueAddition: (parentPath, queueName, config, validationErrors) => {
     if (!isValidQueueName(queueName)) {
       throw createStoreError(
         ERROR_CODES.INVALID_QUEUE_NAME,
@@ -140,13 +156,14 @@ export const createStagedChangesSlice: StateCreator<
         property: SPECIAL_VALUES.CONFIG_PLACEHOLDER,
         config,
         timestamp: Date.now(),
+        validationErrors,
       };
 
       state.stagedChanges.push(change);
     });
   },
 
-  stageQueueRemoval: (queuePath) => {
+  stageQueueRemoval: (queuePath, validationErrors) => {
     set((state) => {
       // Remove any existing remove change for the same queue
       state.stagedChanges = state.stagedChanges.filter(
@@ -159,13 +176,14 @@ export const createStagedChangesSlice: StateCreator<
         queuePath,
         property: SPECIAL_VALUES.CONFIG_PLACEHOLDER,
         timestamp: Date.now(),
+        validationErrors,
       };
 
       state.stagedChanges.push(change);
     });
   },
 
-  stageLabelQueueChange: (queuePath, label, property, value) => {
+  stageLabelQueueChange: (queuePath, label, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
       throw createStoreError(ERROR_CODES.INVALID_QUEUE_PATH, `Invalid queue path: ${queuePath}`);
     }
@@ -178,8 +196,9 @@ export const createStagedChangesSlice: StateCreator<
       throw createStoreError(ERROR_CODES.INVALID_PROPERTY_NAME, 'Property name cannot be empty');
     }
 
+    const fullPropertyName = `accessible-node-labels.${label}.${property}`;
+
     set((state) => {
-      const fullPropertyName = `accessible-node-labels.${label}.${property}`;
       const propertyKey = buildNodeLabelPropertyKey(queuePath, label, property);
       const originalValue = state.configData.get(propertyKey);
 
@@ -193,6 +212,7 @@ export const createStagedChangesSlice: StateCreator<
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = value;
+        state.stagedChanges[existingIndex].validationErrors = validationErrors;
       } else if (value !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -204,10 +224,14 @@ export const createStagedChangesSlice: StateCreator<
           newValue: value,
           label,
           timestamp: Date.now(),
+          validationErrors,
         };
         state.stagedChanges.push(change);
       }
     });
+    
+    // Refresh validation errors for affected changes
+    get().refreshAffectedValidationErrors(queuePath, fullPropertyName);
   },
 
   applyChanges: async () => {
@@ -262,6 +286,9 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       state.stagedChanges = state.stagedChanges.filter((c) => c.id !== changeId);
     });
+    
+    // Refresh validation errors for remaining staged changes
+    get().refreshValidationErrors();
   },
 
   clearAllChanges: () => {
@@ -274,6 +301,9 @@ export const createStagedChangesSlice: StateCreator<
     set((state) => {
       state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== queuePath);
     });
+    
+    // Refresh validation errors for remaining staged changes
+    get().refreshValidationErrors();
   },
 
   hasUnsavedChanges: () => {
@@ -290,5 +320,79 @@ export const createStagedChangesSlice: StateCreator<
 
   getLabelChangesForQueue: (queuePath, label) => {
     return get().stagedChanges.filter((c) => c.queuePath === queuePath && c.label === label);
+  },
+
+  refreshValidationErrors: () => {
+    const { stagedChanges, schedulerData, configData } = get();
+    
+    if (!schedulerData || stagedChanges.length === 0) {
+      return;
+    }
+
+    // Validate all staged changes using the shared logic
+    const validationResults = validateAllStagedChanges({
+      stagedChanges,
+      schedulerData,
+      configData
+    });
+
+    set((state) => {
+      // Update each staged change with its validation errors
+      state.stagedChanges = state.stagedChanges.map(change => ({
+        ...change,
+        validationErrors: validationResults.get(change.id)
+      }));
+    });
+  },
+
+  refreshAffectedValidationErrors: (triggeringQueuePath: string, triggeringProperty: string) => {
+    const { stagedChanges, schedulerData, configData } = get();
+    
+    if (!schedulerData || stagedChanges.length === 0) {
+      return;
+    }
+
+    // Determine which queues and properties could be affected
+    const affectedQueues = getAffectedQueuesForValidation(
+      triggeringProperty,
+      triggeringQueuePath,
+      schedulerData
+    );
+    
+    const affectedQueuePaths = new Set(affectedQueues);
+    const affectedProperties = new Set<string>();
+    
+    // Some properties affect validation of other properties
+    if (triggeringProperty === 'capacity') {
+      affectedProperties.add('capacity');
+      affectedProperties.add('maximum-capacity');
+    } else if (triggeringProperty === 'yarn.scheduler.capacity.legacy-queue-mode.enabled') {
+      // Legacy mode affects all capacity validations
+      affectedProperties.add('capacity');
+      affectedProperties.add('maximum-capacity');
+      // Need to re-validate all queues when legacy mode changes
+      stagedChanges.forEach(change => {
+        if (change.queuePath) {
+          affectedQueuePaths.add(change.queuePath);
+        }
+      });
+    }
+
+    // Selectively validate only affected changes
+    const validationResults = selectivelyValidateStagedChanges({
+      affectedQueuePaths,
+      affectedProperties,
+      stagedChanges,
+      schedulerData,
+      configData
+    });
+
+    set((state) => {
+      // Update each staged change with its validation errors
+      state.stagedChanges = state.stagedChanges.map(change => ({
+        ...change,
+        validationErrors: validationResults.get(change.id)
+      }));
+    });
   },
 });

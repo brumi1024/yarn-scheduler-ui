@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Check, Gauge } from 'lucide-react';
+import { Trash2, Check, Gauge, AlertTriangle, AlertCircle } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
@@ -38,6 +38,26 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
       },
       {} as Record<string, StagedChange[]>,
     );
+  }, [stagedChanges]);
+
+  // Calculate validation summary
+  const validationSummary = React.useMemo(() => {
+    let errorCount = 0;
+    let warningCount = 0;
+
+    stagedChanges.forEach((change) => {
+      if (change.validationErrors) {
+        change.validationErrors.forEach((error) => {
+          if (error.severity === 'error') {
+            errorCount++;
+          } else {
+            warningCount++;
+          }
+        });
+      }
+    });
+
+    return { errorCount, warningCount };
   }, [stagedChanges]);
 
   const handleApplyChanges = async () => {
@@ -85,23 +105,43 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
   }
 
   return (
-    <Drawer open={open} onOpenChange={onClose} snapPoints={[0.2, 0.6, 0.9]}>
-      <DrawerContent className="h-[90vh] max-h-[90vh]">
-        <div className="flex flex-col h-full">
+    <Drawer open={open} onOpenChange={onClose}>
+      <DrawerContent className="max-h-[85vh]">
+        <div className="flex flex-col h-full max-h-[85vh]">
           {/* Header */}
           <DrawerHeader className="border-b pb-4">
-            <div className="flex items-center justify-between">
-              <div className="flex items-center gap-3">
-                <DrawerTitle>Staged Changes</DrawerTitle>
-                <Badge variant="secondary">
-                  {stagedChanges.length} {stagedChanges.length === 1 ? 'change' : 'changes'}
-                </Badge>
+            <div className="space-y-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <DrawerTitle>Staged Changes</DrawerTitle>
+                  <Badge variant="secondary">
+                    {stagedChanges.length} {stagedChanges.length === 1 ? 'change' : 'changes'}
+                  </Badge>
+                </div>
               </div>
+              
+              {/* Validation Summary */}
+              {(validationSummary.errorCount > 0 || validationSummary.warningCount > 0) && (
+                <div className="flex gap-2">
+                  {validationSummary.errorCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-sm text-destructive">
+                      <AlertCircle className="h-4 w-4" />
+                      <span>{validationSummary.errorCount} validation {validationSummary.errorCount === 1 ? 'error' : 'errors'}</span>
+                    </div>
+                  )}
+                  {validationSummary.warningCount > 0 && (
+                    <div className="flex items-center gap-1.5 text-sm text-amber-600 dark:text-amber-400">
+                      <AlertTriangle className="h-4 w-4" />
+                      <span>{validationSummary.warningCount} {validationSummary.warningCount === 1 ? 'warning' : 'warnings'}</span>
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </DrawerHeader>
 
           {/* Content */}
-          <div className="flex-1 overflow-auto p-4 min-h-0">
+          <div className="flex-1 overflow-y-auto p-4">
             {stagedChanges.length === 0 ? (
               <div className="text-center text-muted-foreground py-8">No staged changes</div>
             ) : (

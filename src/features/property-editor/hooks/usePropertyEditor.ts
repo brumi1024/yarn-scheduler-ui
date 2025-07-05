@@ -16,6 +16,10 @@ import {
   extractBasePropertyFromLabelProperty,
 } from '~/features/node-labels/utils/labelPropertyUtils';
 import { toast } from 'sonner';
+import { useQueueValidation } from '~/hooks/useQueueValidation';
+import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
+import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
+import { validatePropertyChange } from '~/utils/validation/crossQueueValidation';
 
 function createFormSchema(
   properties: Array<
@@ -90,6 +94,8 @@ export function usePropertyEditor({
     stageLabelQueueChange,
     clearQueueChanges,
     nodeLabels,
+    schedulerData,
+    configData,
   } = useSchedulerStore();
 
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
@@ -115,6 +121,20 @@ export function usePropertyEditor({
 
   const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
+  // Use the new validation hook for business rules
+  const {
+    businessErrors,
+    handleBlur: handleBusinessBlur,
+    getFieldErrors,
+    getFieldWarnings,
+    validateAll,
+  } = useQueueValidation({
+    queuePath,
+    schema: formSchema,
+    properties: allProperties,
+    mode: 'onBlur',
+  });
+
   const form = useForm({
     resolver: zodResolver(formSchema),
     defaultValues: {},
@@ -127,7 +147,6 @@ export function usePropertyEditor({
     handleSubmit,
     reset,
     setValue,
-    formState: { errors, isValid },
   } = form;
 
   const watchedValues = useWatch({ control });
@@ -154,7 +173,7 @@ export function usePropertyEditor({
   );
 
   const stageChange = useCallback(
-    (propertyName: string, value: string) => {
+    (propertyName: string, value: string, validationErrors?: BusinessValidationError[]) => {
       const property = allProperties.find((p) => p.name === propertyName);
       if (!property?.required && !value.trim()) {
         return;
@@ -166,10 +185,10 @@ export function usePropertyEditor({
         const baseProperty = extractBasePropertyFromLabelProperty(propertyName);
 
         if (labelName && baseProperty) {
-          stageLabelQueueChange(queuePath, labelName, baseProperty, value);
+          stageLabelQueueChange(queuePath, labelName, baseProperty, value, validationErrors);
         }
       } else {
-        stageQueueChange(queuePath, propertyName, value);
+        stageQueueChange(queuePath, propertyName, value, validationErrors);
       }
     },
     [queuePath, stageQueueChange, stageLabelQueueChange, allProperties],
@@ -183,36 +202,94 @@ export function usePropertyEditor({
     [setValue],
   );
 
+  const handleFieldBlur = useCallback(
+    (propertyName: string, value: string) => {
+      // Find the original property name from the escaped name
+      const property = allProperties.find((p) => p.formFieldName === propertyName || p.name === propertyName);
+      const originalName = property?.originalName || propertyName;
+      
+      // Validate business rules on blur
+      handleBusinessBlur(originalName, value);
+    },
+    [allProperties, handleBusinessBlur],
+  );
+
   const onSubmit = useCallback(
     async (data: Record<string, string>) => {
       try {
         // Create mapping from escaped field names back to original property names
         const fieldNameMapping: Record<string, string> = {};
+        const changedData: Record<string, string> = {};
+        
         allProperties.forEach((property) => {
           const escapedName = property.formFieldName || property.name;
           const originalName = property.originalName || property.name;
           fieldNameMapping[escapedName] = originalName;
         });
 
-        // Only stage fields that are actually dirty (changed by user)
+        // Collect only dirty fields for validation
         const dirtyFields = form.formState.dirtyFields;
-        let stagedCount = 0;
-
         Object.entries(dirtyFields).forEach(([escapedFieldName, isDirty]) => {
-          if (!isDirty) return; // Skip non-dirty fields
-
-          const value = data[escapedFieldName];
-          const originalPropertyName = fieldNameMapping[escapedFieldName] || escapedFieldName;
-
-          // Type safety check - only stage string values
-          if (typeof value !== 'string') {
-            return; // Skip this property
+          if (isDirty && typeof data[escapedFieldName] === 'string') {
+            const originalName = fieldNameMapping[escapedFieldName] || escapedFieldName;
+            changedData[originalName] = data[escapedFieldName];
           }
+        });
 
-          if (value !== undefined && value !== null) {
-            stageChange(originalPropertyName, value);
-            stagedCount++;
-          }
+        // Run business validation on all changed fields
+        const currentValues: Record<string, string> = {};
+        allProperties.forEach((property) => {
+          const originalName = property.originalName || property.name;
+          const { value } = getQueuePropertyValue(queuePath, originalName);
+          currentValues[originalName] = value;
+        });
+
+        // Merge current values with changes for validation
+        const validationData = { ...currentValues, ...changedData };
+        await validateAll(validationData);
+        
+        // Check for blocking errors
+        const blockingErrors = businessErrors.filter(error => 
+          error.severity === 'error' && isBlockingError(error.rule, error.severity)
+        );
+
+        if (blockingErrors.length > 0) {
+          toast.error(`Cannot stage changes: ${blockingErrors[0].message}`);
+          return { success: false, message: blockingErrors[0].message };
+        }
+
+        // Get non-blocking validation errors to attach to changes
+        const validationWarnings = businessErrors.filter(error => 
+          !isBlockingError(error.rule, error.severity)
+        );
+
+        // Stage changes with validation metadata including cross-queue errors
+        let stagedCount = 0;
+        Object.entries(changedData).forEach(([propertyName, value]) => {
+          // Get cross-queue validation errors using shared logic
+          const crossQueueErrors = validatePropertyChange({
+            propertyName,
+            propertyValue: value,
+            queuePath,
+            schedulerData,
+            configData,
+            stagedChanges,
+            includeBlockingErrors: false
+          });
+          
+          // Also include field-specific errors from the main validation
+          const fieldErrors = validationWarnings.filter(e => e.field === propertyName);
+          const allErrors = [...fieldErrors, ...crossQueueErrors];
+          
+          // Remove duplicates based on message and field
+          const uniqueErrors = allErrors.filter((error, index, self) =>
+            index === self.findIndex(e => 
+              e.message === error.message && e.field === error.field
+            )
+          );
+          
+          stageChange(propertyName, value, uniqueErrors.length > 0 ? uniqueErrors : undefined);
+          stagedCount++;
         });
 
         const result = {
@@ -220,8 +297,12 @@ export function usePropertyEditor({
           message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
         };
 
-        // Show the toast here where we have the result
-        toast.success(result.message);
+        // Show success with warning if there are validation issues
+        if (validationWarnings.length > 0) {
+          toast.warning(`${result.message} (with ${validationWarnings.length} validation warning${validationWarnings.length !== 1 ? 's' : ''})`);
+        } else {
+          toast.success(result.message);
+        }
 
         return result;
       } catch (error) {
@@ -230,7 +311,7 @@ export function usePropertyEditor({
         throw error;
       }
     },
-    [stageChange, allProperties, form.formState.dirtyFields],
+    [stageChange, allProperties, form.formState.dirtyFields, getQueuePropertyValue, queuePath, validateAll, businessErrors, schedulerData, configData],
   );
 
   const handleReset = useCallback(() => {
@@ -268,15 +349,74 @@ export function usePropertyEditor({
     return categories;
   }, [allProperties]);
 
+  // Get combined errors and validity state
+  const combinedErrors = useMemo(() => {
+    const zodErrors = form.formState.errors;
+    const businessErrorsMap: Record<string, string[]> = {};
+    
+    // Map business errors to form field names
+    businessErrors.forEach((error) => {
+      const property = allProperties.find((p) => p.originalName === error.field || p.name === error.field);
+      const fieldName = property?.formFieldName || error.field;
+      
+      if (!businessErrorsMap[fieldName]) {
+        businessErrorsMap[fieldName] = [];
+      }
+      
+      if (error.severity === 'error') {
+        businessErrorsMap[fieldName].push(error.message);
+      }
+    });
+    
+    // Combine Zod and business errors
+    const combined: Record<string, { type: string; message: string }> = {};
+    
+    // Copy Zod errors
+    Object.entries(zodErrors).forEach(([field, error]) => {
+      if (error) {
+        combined[field] = {
+          type: (typeof error.type === 'string' ? error.type : 'validation'),
+          message: (typeof error.message === 'string' ? error.message : 'Validation error')
+        };
+      }
+    });
+    
+    Object.entries(businessErrorsMap).forEach(([field, messages]) => {
+      if (combined[field]) {
+        // If there's already a Zod error, append business errors
+        const existingMessage = combined[field].message || '';
+        combined[field] = {
+          ...combined[field],
+          message: existingMessage ? `${existingMessage}. ${messages.join('. ')}` : messages.join('. ')
+        };
+      } else {
+        // Create new error entry for business errors
+        combined[field] = {
+          type: 'business',
+          message: messages.join('. ')
+        };
+      }
+    });
+    
+    return combined;
+  }, [form.formState.errors, businessErrors, allProperties]);
+
+  const isFormValid = useMemo(() => {
+    const hasZodErrors = !form.formState.isValid;
+    const hasBusinessErrors = businessErrors.some(e => e.severity === 'error');
+    return !hasZodErrors && !hasBusinessErrors;
+  }, [form.formState.isValid, businessErrors]);
+
   return {
     form,
     control,
     handleSubmit: handleSubmit(onSubmit),
     handleReset,
     handleFieldChange,
+    handleFieldBlur,
     stageChange,
-    errors,
-    isValid,
+    errors: combinedErrors,
+    isValid: isFormValid,
 
     hasChanges,
     watchedValues,
@@ -287,5 +427,10 @@ export function usePropertyEditor({
     properties: allProperties,
     labelProperties,
     formState: form.formState,
+    
+    // Business validation specific
+    businessErrors,
+    getFieldErrors,
+    getFieldWarnings,
   };
 }

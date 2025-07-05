@@ -1,5 +1,5 @@
 import React from 'react';
-import { Plus, Edit2, Minus, Trash2 } from 'lucide-react';
+import { Plus, Edit2, Minus, Trash2, AlertTriangle, AlertCircle } from 'lucide-react';
 import { cn } from '~/utils/cn';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -139,6 +139,30 @@ export const DiffView: React.FC<DiffViewProps> = ({ change, onRevert, timestamp 
 
         {change.type === 'remove' && !change.oldValue && (
           <p className="text-sm text-destructive italic">Queue will be removed</p>
+        )}
+
+        {/* Validation errors/warnings */}
+        {change.validationErrors && change.validationErrors.length > 0 && (
+          <div className="space-y-1 mt-2">
+            {change.validationErrors.map((error, index) => (
+              <div
+                key={index}
+                className={cn(
+                  'flex items-center gap-2 text-xs p-2 rounded-md',
+                  error.severity === 'error' 
+                    ? 'bg-destructive/10 text-destructive' 
+                    : 'bg-amber-500/10 text-amber-700 dark:text-amber-400'
+                )}
+              >
+                {error.severity === 'error' ? (
+                  <AlertCircle className="h-3 w-3 flex-shrink-0" />
+                ) : (
+                  <AlertTriangle className="h-3 w-3 flex-shrink-0" />
+                )}
+                <span>{error.message}</span>
+              </div>
+            ))}
+          </div>
         )}
       </CardContent>
     </Card>
