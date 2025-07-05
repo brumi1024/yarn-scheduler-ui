@@ -45,7 +45,7 @@ beforeEach(() => {
     Element.prototype.releasePointerCapture = vi.fn();
   }
 
-  // Mock getComputedStyle to return transform for vaul
+  // Mock getComputedStyle to return transform for value
   const originalGetComputedStyle = window.getComputedStyle;
   window.getComputedStyle = vi.fn().mockImplementation((element) => {
     const result = originalGetComputedStyle(element);
