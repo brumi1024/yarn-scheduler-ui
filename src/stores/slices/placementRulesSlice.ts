@@ -6,6 +6,7 @@ import type { StateCreator } from 'zustand';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
+import { migrateLegacyRules } from '~/features/placement-rules/utils/migration';
 import type { SchedulerStore } from './types';
 
 export interface PlacementRulesSlice {
@@ -198,30 +199,43 @@ export const createPlacementRulesSlice: StateCreator<
 
   // Migrate legacy rules to JSON format
   migrateLegacyRules: async () => {
-    const { stageGlobalChange } = get();
+    const { stageGlobalChange, legacyRules } = get();
+
+    if (!legacyRules) {
+      set((state) => {
+        state.showMigrationDialog = false;
+        state.rulesError = null;
+      });
+      return;
+    }
 
     try {
-      // Migration logic will be implemented in issue #06
-      // This will use a utility function to convert legacy format to JSON
-      // For now, placeholder:
-      const migratedRules: PlacementRule[] = []; // TODO: implement migration logic
-      // const { legacyRules } = get(); // TODO: use when implementing migration
+      // Use migration utility to convert legacy rules
+      const result = migrateLegacyRules(legacyRules);
 
-      // Stage the migration as a global change
-      const rulesConfig = { rules: migratedRules };
-      stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, rulesConfig);
+      if (result.success) {
+        // Stage the migration as a global change with proper format
+        const rulesConfig = { rules: result.rules };
+        stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, rulesConfig);
 
-      // Update local state
-      set((state) => {
-        state.rules = migratedRules;
-        state.originalRules = migratedRules;
-        state.showMigrationDialog = false;
-        state.legacyRules = null;
-      });
+        // Update local state
+        set((state) => {
+          state.rules = result.rules;
+          state.originalRules = result.rules;
+          state.showMigrationDialog = false;
+          state.legacyRules = null;
+          state.rulesError = null;
+        });
+      } else {
+        // Show errors but don't close dialog
+        const errorMessage = result.errors.join('\n');
+        set((state) => {
+          state.rulesError = errorMessage;
+        });
+      }
     } catch (error) {
       set((state) => {
         state.rulesError = error instanceof Error ? error.message : 'Failed to migrate rules';
-        state.showMigrationDialog = false;
       });
     }
   },

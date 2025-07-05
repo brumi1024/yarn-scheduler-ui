@@ -446,7 +446,7 @@ describe('placementRulesSlice', () => {
   });
 
   describe('migrateLegacyRules', () => {
-    it('should handle migration placeholder (to be implemented)', async () => {
+    it('should migrate legacy rules successfully', async () => {
       const store = createTestStore();
       const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
 
@@ -457,23 +457,28 @@ describe('placementRulesSlice', () => {
 
       await store.getState().migrateLegacyRules();
 
-      // For now, it creates empty rules (TODO placeholder)
+      // Should convert the legacy rule to JSON format
       expect(stageGlobalChangeSpy).toHaveBeenCalledWith(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, {
-        rules: [],
+        rules: [
+          {
+            type: 'user',
+            matches: 'alice',
+            policy: 'custom',
+            customPlacement: 'root.users.alice',
+            fallbackResult: 'placeDefault',
+            create: true,
+          },
+        ],
       });
 
       expect(store.getState().showMigrationDialog).toBe(false);
       expect(store.getState().legacyRules).toBeNull();
+      expect(store.getState().rules).toHaveLength(1);
+      expect(store.getState().rules[0].matches).toBe('alice');
     });
 
     it('should handle migration errors', async () => {
       const store = createTestStore();
-      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
-
-      // Mock stageGlobalChange to throw an error
-      stageGlobalChangeSpy.mockImplementation(() => {
-        throw new Error('Migration failed');
-      });
 
       store.setState({
         legacyRules: 'invalid-format',
@@ -482,8 +487,11 @@ describe('placementRulesSlice', () => {
 
       await store.getState().migrateLegacyRules();
 
-      expect(store.getState().rulesError).toBe('Migration failed');
-      expect(store.getState().showMigrationDialog).toBe(false);
+      expect(store.getState().rulesError).toBe(
+        'Failed to convert rule "invalid-format": Invalid rule format',
+      );
+      // Dialog should remain open on error so user can see the error
+      expect(store.getState().showMigrationDialog).toBe(true);
     });
   });
 
