@@ -4,24 +4,10 @@ import userEvent from '@testing-library/user-event';
 import { PlacementRuleItem } from './PlacementRuleItem';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
-// Mock @dnd-kit/sortable
-vi.mock('@dnd-kit/sortable', () => ({
-  useSortable: vi.fn(() => ({
-    attributes: {},
-    listeners: {},
-    setNodeRef: vi.fn(),
-    transform: null,
-    transition: undefined,
-    isDragging: false,
-  })),
-}));
-
-vi.mock('@dnd-kit/utilities', () => ({
-  CSS: {
-    Transform: {
-      toString: vi.fn(() => ''),
-    },
-  },
+// Mock @atlaskit/pragmatic-drag-and-drop
+vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
+  draggable: vi.fn(() => vi.fn()),
+  dropTargetForElements: vi.fn(() => vi.fn()),
 }));
 
 describe('PlacementRuleItem', () => {
@@ -37,6 +23,7 @@ describe('PlacementRuleItem', () => {
   const mockOnEdit = vi.fn();
   const mockOnDelete = vi.fn();
   const mockOnSelect = vi.fn();
+  const mockOnReorder = vi.fn();
 
   beforeEach(() => {
     vi.clearAllMocks();
@@ -51,6 +38,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -70,6 +58,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -105,6 +94,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -129,6 +119,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -158,6 +149,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -183,6 +175,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -201,6 +194,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -226,6 +220,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -246,6 +241,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 
@@ -273,6 +269,7 @@ describe('PlacementRuleItem', () => {
         onEdit={mockOnEdit}
         onDelete={mockOnDelete}
         onSelect={mockOnSelect}
+        onReorder={mockOnReorder}
       />,
     );
 

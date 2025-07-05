@@ -34,21 +34,9 @@ vi.mock('./PlacementRuleForm', () => ({
   )),
 }));
 
-// Mock DnD Kit
-vi.mock('@dnd-kit/core', () => ({
-  DndContext: vi.fn(({ children }) => <div data-testid="dnd-context">{children}</div>),
-  closestCenter: vi.fn(),
-  KeyboardSensor: vi.fn(),
-  PointerSensor: vi.fn(),
-  useSensor: vi.fn(),
-  useSensors: vi.fn(() => []),
-}));
-
-vi.mock('@dnd-kit/sortable', () => ({
-  arrayMove: vi.fn(),
-  SortableContext: vi.fn(({ children }) => <div data-testid="sortable-context">{children}</div>),
-  sortableKeyboardCoordinates: vi.fn(),
-  verticalListSortingStrategy: vi.fn(),
+// Mock pragmatic drag and drop
+vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
+  monitorForElements: vi.fn(() => vi.fn()),
 }));
 
 describe('PlacementRulesList', () => {
@@ -217,7 +205,7 @@ describe('PlacementRulesList', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render drag and drop context when rules exist', () => {
+  it('should render rules without drag and drop wrappers', () => {
     vi.mocked(useSchedulerStore).mockReturnValue({
       ...mockStoreFunctions,
       rules: mockRules,
@@ -225,7 +213,10 @@ describe('PlacementRulesList', () => {
 
     render(<PlacementRulesList />);
 
-    expect(screen.getByTestId('dnd-context')).toBeInTheDocument();
-    expect(screen.getByTestId('sortable-context')).toBeInTheDocument();
+    // Rules should be rendered directly without DnD wrappers
+    expect(screen.getByTestId('rule-item-0')).toBeInTheDocument();
+    expect(screen.getByTestId('rule-item-1')).toBeInTheDocument();
+    expect(screen.queryByTestId('dnd-context')).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sortable-context')).not.toBeInTheDocument();
   });
 });

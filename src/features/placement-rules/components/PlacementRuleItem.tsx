@@ -1,6 +1,8 @@
-import { useState } from 'react';
-import { useSortable } from '@dnd-kit/sortable';
-import { CSS } from '@dnd-kit/utilities';
+import { useState, useRef, useEffect } from 'react';
+import {
+  draggable,
+  dropTargetForElements,
+} from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { ChevronDown, ChevronUp, Edit2, Trash2, GripVertical } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardHeader } from '~/components/ui/card';
@@ -25,6 +27,7 @@ interface PlacementRuleItemProps {
   onEdit: () => void;
   onDelete: () => void;
   onSelect: () => void;
+  onReorder: (startIndex: number, finishIndex: number) => void;
 }
 
 export function PlacementRuleItem({
@@ -34,18 +37,57 @@ export function PlacementRuleItem({
   onEdit,
   onDelete,
   onSelect,
+  onReorder,
 }: PlacementRuleItemProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
+  const [isDragging, setIsDragging] = useState(false);
+  const [isDraggedOver, setIsDraggedOver] = useState(false);
+  const cardRef = useRef<HTMLDivElement>(null);
+  const dragHandleRef = useRef<HTMLDivElement>(null);
 
-  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
-    id: `rule-${index}`,
-  });
+  useEffect(() => {
+    const cardEl = cardRef.current;
+    const dragHandleEl = dragHandleRef.current;
+    if (!cardEl || !dragHandleEl) return;
 
-  const style = {
-    transform: CSS.Transform.toString(transform),
-    transition,
-  };
+    // Make the card draggable
+    const cleanup = draggable({
+      element: cardEl,
+      dragHandle: dragHandleEl,
+      getInitialData: () => ({
+        type: 'placement-rule',
+        index,
+        ruleId: `rule-${index}`,
+      }),
+      onDragStart: () => setIsDragging(true),
+      onDrop: () => setIsDragging(false),
+    });
+
+    // Make the card a drop target
+    const dropCleanup = dropTargetForElements({
+      element: cardEl,
+      getData: () => ({ index }),
+      onDragEnter: ({ source }) => {
+        if (source.data.type === 'placement-rule' && source.data.index !== index) {
+          setIsDraggedOver(true);
+        }
+      },
+      onDragLeave: () => setIsDraggedOver(false),
+      onDrop: ({ source }) => {
+        setIsDraggedOver(false);
+        if (source.data.type === 'placement-rule' && source.data.index !== index) {
+          const sourceIndex = source.data.index as number;
+          onReorder(sourceIndex, index);
+        }
+      },
+    });
+
+    return () => {
+      cleanup();
+      dropCleanup();
+    };
+  }, [index, onReorder]);
 
   const getPolicyDisplay = (policy: string): string => {
     const policyMap: Record<string, string> = {
@@ -78,11 +120,11 @@ export function PlacementRuleItem({
 
   return (
     <Card
-      ref={setNodeRef}
-      style={style}
+      ref={cardRef}
       className={cn(
         'transition-all',
         isDragging && 'opacity-50 shadow-2xl',
+        isDraggedOver && 'ring-2 ring-blue-500',
         isSelected && 'ring-2 ring-primary',
       )}
       onClick={onSelect}
@@ -90,7 +132,7 @@ export function PlacementRuleItem({
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
-            <div {...attributes} {...listeners} className="cursor-grab hover:bg-accent rounded p-1">
+            <div ref={dragHandleRef} className="cursor-grab hover:bg-accent rounded p-1">
               <GripVertical className="h-4 w-4 text-muted-foreground" />
             </div>
 
