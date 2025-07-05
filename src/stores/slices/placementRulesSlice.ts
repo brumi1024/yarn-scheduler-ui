@@ -63,6 +63,8 @@ export const createPlacementRulesSlice: StateCreator<
           state.rules = rules;
           state.originalRules = rules;
           state.isLoadingRules = false;
+          state.showMigrationDialog = false;
+          state.legacyRules = null;
         });
       } else if (response.format === 'legacy' && response.requiresMigration) {
         // Handle legacy format - show migration dialog
