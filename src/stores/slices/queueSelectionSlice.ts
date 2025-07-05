@@ -4,6 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import type { QueueSelectionSlice, SchedulerStore } from './types';
+import { getQueueProperties } from '~/utils/configPropertyUtils';
 
 export const createQueueSelectionSlice: StateCreator<
   SchedulerStore,
@@ -52,5 +53,27 @@ export const createQueueSelectionSlice: StateCreator<
         state.selectedQueuePath = null;
       }
     });
+  },
+
+  clearComparisonQueues: () => {
+    set((state) => {
+      state.comparisonQueues = [];
+    });
+  },
+
+  canCompareQueues: () => {
+    return get().comparisonQueues.length >= 2;
+  },
+
+  getComparisonData: () => {
+    const { comparisonQueues, configData } = get();
+    const configs = new Map<string, Record<string, string>>();
+
+    comparisonQueues.forEach((queuePath) => {
+      const properties = getQueueProperties(configData, queuePath);
+      configs.set(queuePath, properties);
+    });
+
+    return configs;
   },
 });
