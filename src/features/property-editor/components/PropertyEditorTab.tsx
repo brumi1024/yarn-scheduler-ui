@@ -1,5 +1,14 @@
 import React, { useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { Settings, HardDrive, Gauge, Calendar, Shield, Sliders, Tag } from 'lucide-react';
+import {
+  Settings,
+  HardDrive,
+  Gauge,
+  Calendar,
+  Shield,
+  Sliders,
+  Tag,
+  GitBranch,
+} from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import {
   Accordion,
@@ -15,6 +24,8 @@ import { groupLabelPropertiesByLabel } from '~/features/node-labels/utils/labelP
 import { SPECIAL_VALUES } from '~/types';
 import { toast } from 'sonner';
 import { Form } from '~/components/ui/form';
+import { useSchedulerStore } from '~/stores/schedulerStore';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 
 export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
@@ -118,27 +129,48 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       queuePath: queue.queuePath,
     });
 
+    // Get node labels and accessibility checker from store
+    const { nodeLabels, getQueueAccessibility, hasQueueProperty } = useSchedulerStore();
+
     // Check if form is still initializing
     const isFormInitializing =
       !control || !propertiesByCategory || Object.keys(propertiesByCategory).length === 0;
 
-    // Determine which labels this queue has access to
+    // Determine which labels this queue has access to (including inherited access)
     const getAccessibleLabels = React.useCallback(() => {
+      const accessibleLabels: string[] = [];
+
+      // Check if queue has explicit access to all labels (*)
       const accessibleLabelsValue = watchedValues?.['accessible-node-labels'];
       const accessibleLabelsString =
         typeof accessibleLabelsValue === 'string' ? accessibleLabelsValue : '';
 
-      if (!accessibleLabelsString.trim()) {
-        return []; // Default partition only
-      }
       if (accessibleLabelsString.trim() === SPECIAL_VALUES.ALL_USERS_ACL) {
-        return [SPECIAL_VALUES.ALL_USERS_ACL]; // All labels
+        return [SPECIAL_VALUES.ALL_USERS_ACL];
       }
-      return accessibleLabelsString
-        .split(',')
-        .map((l) => l.trim())
-        .filter((l) => l.length > 0);
-    }, [watchedValues]);
+
+      // Check access for each configured node label using the store method that handles inheritance
+      nodeLabels.forEach((nodeLabel) => {
+        if (getQueueAccessibility(queue.queuePath, nodeLabel.name)) {
+          accessibleLabels.push(nodeLabel.name);
+        }
+      });
+
+      return accessibleLabels;
+    }, [watchedValues, queue.queuePath, nodeLabels, getQueueAccessibility]);
+
+    // Check if node label access is inherited (no explicit accessible-node-labels property)
+    const isNodeLabelAccessInherited = React.useMemo(() => {
+      // Root queue never inherits
+      if (queue.queuePath === 'root') return false;
+
+      // Check if property exists in config (not just empty string default)
+      const hasExplicitConfig = hasQueueProperty(queue.queuePath, 'accessible-node-labels');
+
+      // If no explicit config but has accessible labels, it's inherited
+      const accessibleLabels = getAccessibleLabels();
+      return !hasExplicitConfig && accessibleLabels.length > 0;
+    }, [queue.queuePath, hasQueueProperty, getAccessibleLabels]);
 
     const accessibleLabels = getAccessibleLabels();
     const hasAccessibleLabels = accessibleLabels.length > 0;
@@ -284,7 +316,30 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                         <div className="flex items-center gap-3 flex-1">
                           {config.icon}
                           <div className="text-left flex-1">
-                            <div className="text-sm font-medium">{config.label}</div>
+                            <div className="flex items-center gap-2">
+                              <span className="text-sm font-medium">{config.label}</span>
+                              {isNodeLabelAccessInherited && (
+                                <Tooltip>
+                                  <TooltipTrigger asChild>
+                                    <Badge
+                                      variant="secondary"
+                                      className="text-xs px-1.5 py-0 flex items-center gap-1"
+                                    >
+                                      <GitBranch className="h-3 w-3" />
+                                      Inherited
+                                    </Badge>
+                                  </TooltipTrigger>
+                                  <TooltipContent>
+                                    <p>
+                                      This queue inherits node label access from its parent queue.
+                                    </p>
+                                    <p className="text-xs text-muted-foreground mt-1">
+                                      To override, configure accessible-node-labels for this queue.
+                                    </p>
+                                  </TooltipContent>
+                                </Tooltip>
+                              )}
+                            </div>
                             <div className="text-xs text-muted-foreground">
                               Per-label capacity configuration for accessible labels
                             </div>

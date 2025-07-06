@@ -54,6 +54,14 @@ export const createQueueDataSlice: StateCreator<
     return { value: configValue, isStaged: false };
   },
 
+  hasQueueProperty: (queuePath, property) => {
+    const propertyKey = buildPropertyKey(queuePath, property);
+    return (
+      get().configData.has(propertyKey) ||
+      get().stagedChanges.some((c) => c.queuePath === queuePath && c.property === property)
+    );
+  },
+
   getQueueByPath: (queuePath) => {
     const schedulerData = get().schedulerData;
     if (!schedulerData) return null;

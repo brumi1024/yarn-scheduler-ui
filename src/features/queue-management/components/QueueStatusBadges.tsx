@@ -13,6 +13,7 @@ import {
   PlusCircle,
   Edit,
   MinusCircle,
+  Tag,
 } from 'lucide-react';
 import { cn } from '~/utils/cn';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
@@ -27,6 +28,10 @@ interface QueueStatusBadgesProps {
     status: 'off' | 'legacy' | 'flexible';
     isStaged?: boolean;
   };
+  labelInfo?: {
+    isLabelSpecific: boolean;
+    label: string;
+  };
 }
 
 export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
@@ -35,6 +40,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
   stagedState,
   stagedStatus,
   autoCreationStatus,
+  labelInfo,
 }) => {
   const getCapacityModeBadgeClass = () => {
     switch (capacityMode) {
@@ -185,6 +191,19 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
                 ? 'has modifications'
                 : 'will be deleted'}
           </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Label indicator when showing label-specific capacity */}
+      {labelInfo?.isLabelSpecific && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge variant="outline" className="px-2 py-1 flex items-center gap-0.5">
+              <Tag className="w-4 h-4" />
+              <span className="text-xs">{labelInfo.label}</span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent>Showing capacity for partition: {labelInfo.label}</TooltipContent>
         </Tooltip>
       )}
     </div>

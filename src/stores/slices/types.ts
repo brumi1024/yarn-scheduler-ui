@@ -104,6 +104,7 @@ export interface QueueDataSlice {
     property: string,
   ) => { value: string; isStaged: boolean };
   getGlobalPropertyValue: (property: string) => { value: string; isStaged: boolean };
+  hasQueueProperty: (queuePath: string, property: string) => boolean;
   getQueueByPath: (queuePath: string) => QueueInfo | null;
   getChildQueues: (parentPath: string) => QueueInfo[];
 }
@@ -113,18 +114,33 @@ export interface SearchSlice {
   searchQuery: string;
   searchContext: 'queues' | 'nodes' | 'settings' | null;
   isSearchFocused: boolean;
+  selectedNodeLabelFilter: string; // '' for DEFAULT partition
 
   // Actions
   setSearchQuery: (query: string) => void;
   setSearchContext: (context: 'queues' | 'nodes' | 'settings' | null) => void;
   clearSearch: () => void;
   setSearchFocused: (focused: boolean) => void;
+  selectNodeLabelFilter: (label: string) => void;
 
   // Computed
   getFilteredQueues: () => SchedulerInfo | null;
   getFilteredNodes: () => NodeInfo[];
   getFilteredSettings: () => import('~/types').PropertyDescriptor[];
   getSearchResults: () => { count: number; hasResults: boolean };
+  getQueueAccessibility: (queuePath: string, label: string) => boolean;
+  getQueueLabelCapacity: (
+    queuePath: string,
+    label: string,
+  ) => {
+    capacity: string;
+    maxCapacity: string;
+    absoluteCapacity: string;
+    isLabelSpecific: boolean;
+    label: string;
+    hasAccess: boolean;
+    canUseLabel: boolean;
+  } | null;
 }
 
 export type SchedulerStore = BaseStoreSlice &

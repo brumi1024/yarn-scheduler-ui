@@ -102,6 +102,20 @@ vi.mock('~/stores/schedulerStore', () => ({
       clearComparisonQueues: vi.fn(),
       getComparisonData: vi.fn(() => new Map()),
       searchQuery: '',
+      nodeLabels: [],
+      selectedNodeLabelFilter: '',
+      selectNodeLabelFilter: vi.fn(),
+      getQueueAccessibility: vi.fn(() => true),
+      getQueueLabelCapacity: vi.fn(() => ({
+        capacity: '0',
+        maxCapacity: '100',
+        absoluteCapacity: '0',
+        isLabelSpecific: false,
+        label: 'DEFAULT',
+        hasAccess: true,
+        canUseLabel: true,
+      })),
+      hasQueueProperty: vi.fn(() => false),
     };
 
     // If selector is provided, call it with state
@@ -263,6 +277,20 @@ describe('QueueVisualizationContainer', () => {
         clearComparisonQueues: vi.fn(),
         getComparisonData: vi.fn(() => new Map()),
         searchQuery: '',
+        nodeLabels: [],
+        selectedNodeLabelFilter: '',
+        selectNodeLabelFilter: vi.fn(),
+        getQueueAccessibility: vi.fn(() => true),
+        getQueueLabelCapacity: vi.fn(() => ({
+          capacity: '0',
+          maxCapacity: '100',
+          absoluteCapacity: '0',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        })),
+        hasQueueProperty: vi.fn(() => false),
       };
 
       if (typeof selector === 'function') {

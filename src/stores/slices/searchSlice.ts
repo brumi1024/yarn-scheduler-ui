@@ -22,6 +22,7 @@ export const createSearchSlice: StateCreator<
   searchQuery: '',
   searchContext: null,
   isSearchFocused: false,
+  selectedNodeLabelFilter: '', // '' represents DEFAULT partition
 
   setSearchQuery: (query) => {
     set((state) => {
@@ -144,5 +145,97 @@ export const createSearchSlice: StateCreator<
     };
 
     return cachedSearchResults;
+  },
+
+  selectNodeLabelFilter: (label) => {
+    set((state) => {
+      state.selectedNodeLabelFilter = label;
+    });
+  },
+
+  getQueueAccessibility: (queuePath, label) => {
+    // DEFAULT label is accessible to all
+    if (label === '') return true;
+
+    // Root queue always has access to all labels
+    if (queuePath === 'root') return true;
+
+    // Check if queue has accessible-node-labels configuration (including staged changes)
+    const accessibleLabelsResult = get().getQueuePropertyValue(queuePath, 'accessible-node-labels');
+    const accessibleLabels = accessibleLabelsResult.value;
+
+    // Check if property exists in config (not just empty string default)
+    const hasExplicitConfig = get().hasQueueProperty(queuePath, 'accessible-node-labels');
+
+    if (!hasExplicitConfig) {
+      // If not configured, inherit from parent
+      const parentPath = queuePath.substring(0, queuePath.lastIndexOf('.'));
+      if (parentPath && parentPath !== queuePath) {
+        return get().getQueueAccessibility(parentPath, label);
+      }
+      return false;
+    }
+
+    // Empty string means only DEFAULT partition
+    if (accessibleLabels === '') {
+      return false;
+    }
+
+    // Check if label is in the accessible list
+    const labelList = accessibleLabels.split(',').map((l) => l.trim());
+
+    // '*' means access to all labels (typically only root has this)
+    if (labelList.includes('*')) return true;
+
+    return labelList.includes(label);
+  },
+
+  getQueueLabelCapacity: (queuePath, label) => {
+    if (label === '') {
+      // Return default capacities (including staged changes)
+      const capacityResult = get().getQueuePropertyValue(queuePath, 'capacity');
+      const maxCapacityResult = get().getQueuePropertyValue(queuePath, 'maximum-capacity');
+      const absoluteCapacityResult = get().getQueuePropertyValue(queuePath, 'absolute-capacity');
+
+      return {
+        capacity: capacityResult.value || '0',
+        maxCapacity: maxCapacityResult.value || '100',
+        absoluteCapacity: absoluteCapacityResult.value || '0',
+        isLabelSpecific: false,
+        label: 'DEFAULT',
+        hasAccess: true,
+        canUseLabel: true,
+      };
+    }
+
+    // Check if queue has access to this label
+    const hasAccess = get().getQueueAccessibility(queuePath, label);
+
+    // Return label-specific capacities (including staged changes)
+    const capacityResult = get().getQueuePropertyValue(
+      queuePath,
+      `accessible-node-labels.${label}.capacity`,
+    );
+    const maxCapacityResult = get().getQueuePropertyValue(
+      queuePath,
+      `accessible-node-labels.${label}.maximum-capacity`,
+    );
+    const absoluteCapacityResult = get().getQueuePropertyValue(
+      queuePath,
+      `accessible-node-labels.${label}.absolute-capacity`,
+    );
+
+    const capacity = capacityResult.value || '0';
+
+    return {
+      capacity,
+      maxCapacity: maxCapacityResult.value || '100',
+      absoluteCapacity: absoluteCapacityResult.value || '0',
+      isLabelSpecific: true,
+      label,
+      hasAccess,
+      // A queue with 0% capacity cannot use the label even if it has access
+      canUseLabel: hasAccess && parseFloat(capacity) > 0,
+    };
   },
 });
