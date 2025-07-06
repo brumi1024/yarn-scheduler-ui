@@ -15,14 +15,15 @@ export const placementRuleFormSchema = z
       'reject',
       'defaultQueue',
       'user',
+      'applicationName',
       'custom',
       'setDefaultQueue',
     ]),
     parentQueue: z.string().optional(),
     value: z.string().optional(),
     customPlacement: z.string().optional(),
-    create: z.boolean(),
-    fallbackResult: z.enum(['skip', 'placeDefault', 'reject']),
+    create: z.boolean().default(false),
+    fallbackResult: z.enum(['skip', 'placeDefault', 'reject']).optional(),
   })
   .refine(
     (data) => {
@@ -48,6 +49,19 @@ export const placementRuleFormSchema = z
     {
       message: 'Custom placement pattern is required when policy is "custom"',
       path: ['customPlacement'],
+    },
+  )
+  .refine(
+    (data) => {
+      // Validate value is provided when policy is 'setDefaultQueue'
+      if (data.policy === 'setDefaultQueue' && !data.value) {
+        return false;
+      }
+      return true;
+    },
+    {
+      message: 'Queue value is required when policy is "setDefaultQueue"',
+      path: ['value'],
     },
   )
   .refine(
@@ -87,10 +101,10 @@ export function formDataToPlacementRule(formData: PlacementRuleFormData): Placem
   if (formData.customPlacement) {
     rule.customPlacement = formData.customPlacement;
   }
-  if (formData.create) {
+  if (formData.create !== undefined) {
     rule.create = formData.create;
   }
-  if (formData.fallbackResult) {
+  if (formData.fallbackResult !== undefined) {
     rule.fallbackResult = formData.fallbackResult;
   }
 

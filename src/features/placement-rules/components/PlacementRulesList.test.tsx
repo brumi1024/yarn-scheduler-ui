@@ -9,13 +9,23 @@ import type { PlacementRule } from '~/types/features/placement-rules';
 vi.mock('~/stores/schedulerStore');
 
 // Mock the components
-vi.mock('./PlacementRuleItem', () => ({
-  PlacementRuleItem: vi.fn(({ rule, index, onEdit, onDelete }) => (
-    <div data-testid={`rule-item-${index}`}>
-      <span>{rule.type}</span>
-      <span>{rule.matches}</span>
-      <button onClick={onEdit}>Edit</button>
-      <button onClick={onDelete}>Delete</button>
+
+vi.mock('./PlacementRulesTable', () => ({
+  PlacementRulesTable: vi.fn(({ rules, onDelete, onSelect }) => (
+    <div data-testid="placement-rules-table">
+      <table>
+        <tbody>
+          {rules.map((rule: PlacementRule, index: number) => (
+            <tr key={index} onClick={() => onSelect(index)}>
+              <td>{rule.type}</td>
+              <td>{rule.matches}</td>
+              <td>
+                <button onClick={() => onDelete(index)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )),
 }));
@@ -37,6 +47,21 @@ vi.mock('./PlacementRuleForm', () => ({
 // Mock pragmatic drag and drop
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   monitorForElements: vi.fn(() => vi.fn()),
+  dropTargetForElements: vi.fn(() => vi.fn()),
+  draggable: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge', () => ({
+  attachClosestEdge: vi.fn((data) => data),
+  extractClosestEdge: vi.fn(() => null),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/util/reorder-with-edge', () => ({
+  reorderWithEdge: vi.fn(({ list }) => list),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop/combine', () => ({
+  combine: vi.fn(() => () => {}),
 }));
 
 describe('PlacementRulesList', () => {
@@ -79,7 +104,7 @@ describe('PlacementRulesList', () => {
     expect(screen.getByRole('button', { name: /add first rule/i })).toBeInTheDocument();
   });
 
-  it('should render list of rules when rules exist', () => {
+  it('should render table view when rules exist', () => {
     vi.mocked(useSchedulerStore).mockReturnValue({
       ...mockStoreFunctions,
       rules: mockRules,
@@ -87,10 +112,7 @@ describe('PlacementRulesList', () => {
 
     render(<PlacementRulesList />);
 
-    expect(screen.getByTestId('rule-item-0')).toBeInTheDocument();
-    expect(screen.getByTestId('rule-item-1')).toBeInTheDocument();
-    expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText('developers')).toBeInTheDocument();
+    expect(screen.getByTestId('placement-rules-table')).toBeInTheDocument();
   });
 
   it('should show add form when Add Rule button is clicked', async () => {
@@ -134,46 +156,6 @@ describe('PlacementRulesList', () => {
     expect(screen.queryByTestId('placement-rule-form')).not.toBeInTheDocument();
   });
 
-  it('should show edit form when edit is clicked on a rule', async () => {
-    const user = userEvent.setup();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
-
-    render(<PlacementRulesList />);
-
-    // Click edit on first rule
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
-
-    expect(screen.getByTestId('placement-rule-form')).toBeInTheDocument();
-    expect(screen.getByText('Edit Rule Form')).toBeInTheDocument();
-  });
-
-  it('should call updateRule when form is submitted for editing', async () => {
-    const user = userEvent.setup();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
-
-    render(<PlacementRulesList />);
-
-    // Click edit
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
-
-    // Submit form
-    await user.click(screen.getByRole('button', { name: /submit/i }));
-
-    expect(mockStoreFunctions.updateRule).toHaveBeenCalledWith(0, {
-      type: 'user',
-      matches: 'test',
-      policy: 'user',
-    });
-  });
-
   it('should call deleteRule when delete is clicked on a rule', async () => {
     const user = userEvent.setup();
     vi.mocked(useSchedulerStore).mockReturnValue({
@@ -203,20 +185,5 @@ describe('PlacementRulesList', () => {
         'Rules are evaluated from top to bottom. The first matching rule determines the queue assignment. Drag rules to reorder them.',
       ),
     ).toBeInTheDocument();
-  });
-
-  it('should render rules without drag and drop wrappers', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
-
-    render(<PlacementRulesList />);
-
-    // Rules should be rendered directly without DnD wrappers
-    expect(screen.getByTestId('rule-item-0')).toBeInTheDocument();
-    expect(screen.getByTestId('rule-item-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('dnd-context')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sortable-context')).not.toBeInTheDocument();
   });
 });

@@ -338,12 +338,12 @@ describe('placementRulesSlice', () => {
 
       expect(store.getState().rules).toEqual([
         mockPlacementRules[1],
-        mockPlacementRules[2],
         mockPlacementRules[0],
+        mockPlacementRules[2],
       ]);
 
       expect(stageGlobalChangeSpy).toHaveBeenCalledWith(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, {
-        rules: [mockPlacementRules[1], mockPlacementRules[2], mockPlacementRules[0]],
+        rules: [mockPlacementRules[1], mockPlacementRules[0], mockPlacementRules[2]],
       });
     });
 
@@ -356,7 +356,7 @@ describe('placementRulesSlice', () => {
 
       store.getState().reorderRules(0, 2);
 
-      expect(store.getState().selectedRuleIndex).toBe(2);
+      expect(store.getState().selectedRuleIndex).toBe(1);
     });
 
     it('should adjust selection when moving rule before selected', () => {
@@ -366,10 +366,10 @@ describe('placementRulesSlice', () => {
         selectedRuleIndex: 2,
       });
 
-      // Move first rule to position after selected
+      // Move first rule to drop zone 2
       store.getState().reorderRules(0, 2);
 
-      expect(store.getState().selectedRuleIndex).toBe(1);
+      expect(store.getState().selectedRuleIndex).toBe(2);
     });
 
     it('should adjust selection when moving rule after selected', () => {

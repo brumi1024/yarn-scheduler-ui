@@ -143,30 +143,68 @@ export const createPlacementRulesSlice: StateCreator<
   },
 
   // Reorder rules
-  reorderRules: (fromIndex, toIndex) => {
-    const { rules, stageGlobalChange } = get();
+  // sourceIndex: the current position of the item being moved
+  // destinationIndex: the drop zone index (position where item should be inserted)
+  reorderRules: (sourceIndex, destinationIndex) => {
+    const { rules, selectedRuleIndex, stageGlobalChange } = get();
+
+    // Validate indices
+    if (
+      sourceIndex < 0 ||
+      sourceIndex >= rules.length ||
+      destinationIndex < 0 ||
+      destinationIndex > rules.length
+    ) {
+      console.warn('Invalid reorder indices:', {
+        sourceIndex,
+        destinationIndex,
+        rulesLength: rules.length,
+      });
+      return;
+    }
+
+    // For drag and drop, the destination represents a drop zone
+    // If dragging to a higher index, we need to adjust because the item will be removed first
+    let targetIndex = destinationIndex;
+    if (sourceIndex < destinationIndex) {
+      targetIndex = destinationIndex - 1;
+    }
+
+    // Don't do anything if the item would end up in the same position
+    if (sourceIndex === targetIndex) return;
+
+    // Create a new array and move the item
     const newRules = [...rules];
-    const [removed] = newRules.splice(fromIndex, 1);
-    newRules.splice(toIndex, 0, removed);
+    const [movedItem] = newRules.splice(sourceIndex, 1);
+    newRules.splice(targetIndex, 0, movedItem);
+
+    // Calculate new selection index
+    let newSelectedIndex = selectedRuleIndex;
+
+    if (selectedRuleIndex !== null) {
+      if (selectedRuleIndex === sourceIndex) {
+        // The selected item was moved
+        newSelectedIndex = targetIndex;
+      } else {
+        // Adjust selection for other items affected by the move
+        const minIndex = Math.min(sourceIndex, targetIndex);
+        const maxIndex = Math.max(sourceIndex, targetIndex);
+
+        if (selectedRuleIndex >= minIndex && selectedRuleIndex <= maxIndex) {
+          if (sourceIndex < targetIndex) {
+            // Item moved down, shift items in between up
+            newSelectedIndex = selectedRuleIndex - 1;
+          } else {
+            // Item moved up, shift items in between down
+            newSelectedIndex = selectedRuleIndex + 1;
+          }
+        }
+      }
+    }
 
     set((state) => {
       state.rules = newRules;
-      // Update selection index if needed
-      if (state.selectedRuleIndex === fromIndex) {
-        state.selectedRuleIndex = toIndex;
-      } else if (
-        state.selectedRuleIndex !== null &&
-        fromIndex < state.selectedRuleIndex &&
-        toIndex >= state.selectedRuleIndex
-      ) {
-        state.selectedRuleIndex = state.selectedRuleIndex - 1;
-      } else if (
-        state.selectedRuleIndex !== null &&
-        fromIndex > state.selectedRuleIndex &&
-        toIndex <= state.selectedRuleIndex
-      ) {
-        state.selectedRuleIndex = state.selectedRuleIndex + 1;
-      }
+      state.selectedRuleIndex = newSelectedIndex;
     });
 
     // Stage as global change with proper format

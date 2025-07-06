@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router';
-import { LayoutDashboard, Tag, Settings } from 'lucide-react';
+import { LayoutDashboard, Tag, Settings, ListFilter } from 'lucide-react';
 import {
   Sidebar,
   SidebarContent,
@@ -19,6 +19,11 @@ const navigation = [
     path: '/node-labels',
     title: 'Node Labels',
     icon: Tag,
+  },
+  {
+    path: '/placement-rules',
+    title: 'Placement Rules',
+    icon: ListFilter,
   },
   {
     path: '/global-settings',
