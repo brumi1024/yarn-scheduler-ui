@@ -44,6 +44,20 @@ beforeEach(() => {
     Element.prototype.setPointerCapture = vi.fn();
     Element.prototype.releasePointerCapture = vi.fn();
   }
+
+  // Mock getComputedStyle to return transform for value
+  const originalGetComputedStyle = window.getComputedStyle;
+  window.getComputedStyle = vi.fn().mockImplementation((element) => {
+    const result = originalGetComputedStyle(element);
+    return {
+      ...result,
+      transform: 'translateY(0px)',
+      getPropertyValue: (prop: string) => {
+        if (prop === 'transform') return 'translateY(0px)';
+        return result.getPropertyValue(prop);
+      },
+    };
+  });
 });
 
 const mockStagedChanges: StagedChange[] = [

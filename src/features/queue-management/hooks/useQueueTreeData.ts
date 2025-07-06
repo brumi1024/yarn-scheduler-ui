@@ -11,6 +11,7 @@ import type {
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { DagreLayout } from '../utils/DagreLayout';
+import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
 
 export type QueueCardData = QueueInfo & {
   stagedStatus?: 'new' | 'modified' | 'deleted';
@@ -20,6 +21,9 @@ export type QueueCardData = QueueInfo & {
   stagedState?: string;
   autoCreationEligibility?: string;
   autoCreationStatus?: { status: 'off' | 'legacy' | 'flexible'; isStaged: boolean };
+  validationErrors?: BusinessValidationError[];
+  isAffectedByErrors?: boolean;
+  errorSource?: string;
 };
 
 export type UseQueueTreeDataResult = {
@@ -132,6 +136,36 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
 
   const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
+  // Collect validation errors for this queue
+  const directErrors: BusinessValidationError[] = [];
+  let isAffectedByErrors = false;
+  let errorSource: string | undefined;
+
+  stagedChanges.forEach((change) => {
+    if (change.validationErrors && change.validationErrors.length > 0) {
+      // Check if this queue has direct errors
+      if (change.queuePath === queueInfo.queuePath) {
+        directErrors.push(...change.validationErrors);
+      } else {
+        // Check if this queue is affected by errors from other queues
+        // For capacity sum errors, the parent queue is affected by child changes
+        change.validationErrors.forEach((error) => {
+          if (error.rule === 'child-capacity-sum' || error.rule === 'capacity-type-consistency') {
+            // Get parent path of the changed queue
+            const changedQueueParts = change.queuePath.split('.');
+            if (changedQueueParts.length > 1) {
+              const parentPath = changedQueueParts.slice(0, -1).join('.');
+              if (parentPath === queueInfo.queuePath) {
+                isAffectedByErrors = true;
+                errorSource = change.queuePath;
+              }
+            }
+          }
+        });
+      }
+    }
+  });
+
   return {
     ...queueInfo,
 
@@ -152,6 +186,10 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       queueInfo.autoCreationEligibility,
       stagedChanges,
     ),
+
+    validationErrors: directErrors.length > 0 ? directErrors : undefined,
+    isAffectedByErrors,
+    errorSource,
   };
 }
 
@@ -212,6 +250,12 @@ function createNodes(
       const maxCapacityDisplay = getQueuePropertyValue(queuePath, 'maximum-capacity');
       const stateDisplay = getQueuePropertyValue(queuePath, 'state');
 
+      // Check for validation errors on the new queue from staged changes
+      const queueAddChange = stagedChanges.find(
+        (c) => c.type === 'add' && c.queuePath === queuePath,
+      );
+      const queueErrors = queueAddChange?.validationErrors || [];
+
       const nodeData: QueueCardData = {
         queueType: 'leaf' as const,
         capacity: 0,
@@ -232,6 +276,7 @@ function createNodes(
         capacityConfig: capacityDisplay.value || '0',
         maxCapacityConfig: maxCapacityDisplay.value || '100',
         stagedState: stateDisplay.value,
+        validationErrors: queueErrors.length > 0 ? queueErrors : undefined,
       };
 
       if (position) {

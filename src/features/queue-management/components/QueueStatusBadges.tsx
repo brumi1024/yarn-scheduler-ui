@@ -63,34 +63,34 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
   const getCapacityModeIcon = () => {
     switch (capacityMode) {
       case 'weight':
-        return <Weight className="w-3.5 h-3.5" />;
+        return <Weight className="w-4 h-4" />;
       case 'absolute':
-        return <Box className="w-3.5 h-3.5" />;
+        return <Box className="w-4 h-4" />;
       default:
-        return <Percent className="w-3.5 h-3.5" />;
+        return <Percent className="w-4 h-4" />;
     }
   };
 
   const getStateIcon = (currentState: string) => {
-    if (currentState === QUEUE_STATES.RUNNING) return <Play className="w-3.5 h-3.5" />;
-    if (currentState === QUEUE_STATES.STOPPED) return <Square className="w-3.5 h-3.5" />;
-    if (currentState === QUEUE_STATES.DRAINING) return <ArrowDownToLine className="w-3.5 h-3.5" />;
+    if (currentState === QUEUE_STATES.RUNNING) return <Play className="w-4 h-4" />;
+    if (currentState === QUEUE_STATES.STOPPED) return <Square className="w-4 h-4" />;
+    if (currentState === QUEUE_STATES.DRAINING) return <ArrowDownToLine className="w-4 h-4" />;
     return null;
   };
 
   const getModificationIcon = () => {
-    if (stagedStatus === 'new') return <PlusCircle className="w-3.5 h-3.5" />;
-    if (stagedStatus === 'modified') return <Edit className="w-3.5 h-3.5" />;
-    if (stagedStatus === 'deleted') return <MinusCircle className="w-3.5 h-3.5" />;
+    if (stagedStatus === 'new') return <PlusCircle className="w-4 h-4" />;
+    if (stagedStatus === 'modified') return <Edit className="w-4 h-4" />;
+    if (stagedStatus === 'deleted') return <MinusCircle className="w-4 h-4" />;
     return null;
   };
 
   return (
-    <div className="flex items-center gap-1 mb-3">
+    <div className="flex items-center gap-1.5 mb-3">
       {/* Capacity Mode */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="secondary" className={cn('p-1', getCapacityModeBadgeClass())}>
+          <Badge variant="secondary" className={cn('px-2 py-1', getCapacityModeBadgeClass())}>
             {getCapacityModeIcon()}
           </Badge>
         </TooltipTrigger>
@@ -106,7 +106,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
       {/* Queue State */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={getStateVariant()} className="p-1">
+          <Badge variant={getStateVariant()} className="px-2 py-1">
             {getStateIcon(state)}
           </Badge>
         </TooltipTrigger>
@@ -119,9 +119,9 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
           <TooltipTrigger asChild>
             <Badge
               variant="outline"
-              className="p-1 text-queue-modified border-queue-modified/30 flex items-center gap-0.5"
+              className="px-2 py-1 text-queue-modified border-queue-modified/30 flex items-center gap-0.5"
             >
-              <ArrowRight className="w-3 h-3" />
+              <ArrowRight className="w-3.5 h-3.5" />
               {getStateIcon(stagedState)}
             </Badge>
           </TooltipTrigger>
@@ -136,18 +136,18 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(
-                'p-1 flex items-center gap-0.5',
+                'px-2 py-1 flex items-center gap-0.5',
                 autoCreationStatus.status === 'flexible'
                   ? 'text-queue-running border-queue-running/30'
                   : 'text-queue-modified border-queue-modified/30',
               )}
             >
               {autoCreationStatus.status === 'flexible' ? (
-                <Sparkles className="w-3.5 h-3.5" />
+                <Sparkles className="w-4 h-4" />
               ) : (
-                <RefreshCw className="w-3.5 h-3.5" />
+                <RefreshCw className="w-4 h-4" />
               )}
-              {autoCreationStatus.isStaged && <ArrowRight className="w-3 h-3" />}
+              {autoCreationStatus.isStaged && <ArrowRight className="w-3.5 h-3.5" />}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -166,7 +166,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(
-                'p-1',
+                'px-2 py-1',
                 stagedStatus === 'new'
                   ? 'text-queue-new border-queue-new/30'
                   : stagedStatus === 'modified'

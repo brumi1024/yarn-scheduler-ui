@@ -93,6 +93,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
           size="lg"
           className="relative shadow-lg rounded-full px-6"
           onClick={onOpen}
+          data-staged-changes-trigger
         >
           <Gauge className="h-5 w-5 mr-2" />
           View Staged Changes
@@ -172,7 +173,16 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                   <Trash2 className="h-4 w-4 mr-2" />
                   Clear All
                 </Button>
-                <Button variant="default" onClick={handleApplyChanges} disabled={isApplying}>
+                <Button
+                  variant="default"
+                  onClick={handleApplyChanges}
+                  disabled={isApplying || validationSummary.errorCount > 0}
+                  title={
+                    validationSummary.errorCount > 0
+                      ? 'Fix validation errors before applying changes'
+                      : undefined
+                  }
+                >
                   {isApplying ? (
                     <>
                       <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent" />

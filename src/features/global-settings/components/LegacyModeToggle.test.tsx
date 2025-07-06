@@ -5,6 +5,11 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 
 vi.mock('~/stores/schedulerStore');
 
+// Mock the LegacyModeDocumentation component
+vi.mock('~/features/queue-management/components/LegacyModeDocumentation', () => ({
+  LegacyModeDocumentation: ({ children }: any) => <div>{children}</div>,
+}));
+
 // Mock the Dialog component to avoid portal issues in tests
 vi.mock('~/components/ui/dialog', () => ({
   Dialog: ({ children }: any) => <div>{children}</div>,
@@ -12,6 +17,7 @@ vi.mock('~/components/ui/dialog', () => ({
   DialogContent: ({ children }: any) => <div>{children}</div>,
   DialogHeader: ({ children }: any) => <div>{children}</div>,
   DialogTitle: ({ children }: any) => <h2>{children}</h2>,
+  DialogDescription: ({ children }: any) => <p>{children}</p>,
 }));
 
 describe('LegacyModeToggle', () => {

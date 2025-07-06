@@ -10,7 +10,7 @@ import {
   DialogTitle,
   DialogTrigger,
 } from '~/components/ui/dialog';
-import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp } from 'lucide-react';
+import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { businessValidation } from '~/utils/validation/businessRules/service';
 import type {
@@ -26,6 +26,7 @@ import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
+import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
 
 interface LegacyModeToggleProps {
   value: string;
@@ -212,9 +213,21 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   return (
     <div className="flex items-center justify-between space-x-2">
       <div className="space-y-0.5">
-        <Label htmlFor={property.name} className="text-base">
-          {property.displayName}
-        </Label>
+        <div className="flex items-center gap-2">
+          <Label htmlFor={property.name} className="text-base">
+            {property.displayName}
+          </Label>
+          <LegacyModeDocumentation>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="h-5 w-5 p-0 hover:bg-transparent"
+              type="button"
+            >
+              <Info className="h-3.5 w-3.5 text-muted-foreground" />
+            </Button>
+          </LegacyModeDocumentation>
+        </div>
         <p className="text-sm text-muted-foreground">{property.description}</p>
       </div>
       <div className="flex items-center gap-2">
