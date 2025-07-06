@@ -101,6 +101,7 @@ vi.mock('~/stores/schedulerStore', () => ({
       canCompareQueues: vi.fn(() => false),
       clearComparisonQueues: vi.fn(),
       getComparisonData: vi.fn(() => new Map()),
+      searchQuery: '',
     };
 
     // If selector is provided, call it with state
@@ -261,6 +262,7 @@ describe('QueueVisualizationContainer', () => {
         canCompareQueues: vi.fn(() => false),
         clearComparisonQueues: vi.fn(),
         getComparisonData: vi.fn(() => new Map()),
+        searchQuery: '',
       };
 
       if (typeof selector === 'function') {

@@ -10,12 +10,14 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import { Info, ChevronRight } from 'lucide-react';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
 import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { SearchBar } from '~/components/search/SearchBar';
 
 export default function Layout() {
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
   const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
   const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
+  const setSearchContext = useSchedulerStore((state) => state.setSearchContext);
   const location = useLocation();
 
   // Get legacy mode status considering staged changes
@@ -29,6 +31,19 @@ export default function Layout() {
       console.error('Failed to load initial data:', err);
     });
   }, [loadInitialData]);
+
+  // Update search context based on current route
+  useEffect(() => {
+    if (location.pathname === '/' || location.pathname.startsWith('/queue/')) {
+      setSearchContext('queues');
+    } else if (location.pathname === '/node-labels') {
+      setSearchContext('nodes');
+    } else if (location.pathname === '/global-settings') {
+      setSearchContext('settings');
+    } else {
+      setSearchContext(null);
+    }
+  }, [location.pathname, setSearchContext]);
 
   // Determine page title and description based on current route
   const getPageInfo = () => {
@@ -121,6 +136,7 @@ export default function Layout() {
                 </div>
                 <p className="text-sm text-muted-foreground">{pageInfo.description}</p>
               </div>
+              <SearchBar className="w-64" placeholder="Search" />
               <ModeToggle />
             </header>
 

@@ -11,12 +11,14 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
+import { HighlightedText } from '~/components/search/HighlightedText';
 
 interface PropertyInputProps {
   property: PropertyDescriptor;
   value: string;
   isStaged: boolean;
   onChange: (value: string) => void;
+  searchQuery?: string;
 }
 
 export const PropertyInput: React.FC<PropertyInputProps> = ({
@@ -24,6 +26,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
   value,
   isStaged,
   onChange,
+  searchQuery,
 }) => {
   // Extract validation rules for min/max
   const rangeValidation = property.validationRules?.find((rule) => rule.type === 'range');
@@ -35,9 +38,19 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
           <div className="flex items-center justify-between space-x-2">
             <div className="space-y-0.5">
               <Label htmlFor={property.name} className="text-base">
-                {property.displayName}
+                {searchQuery ? (
+                  <HighlightedText text={property.displayName} highlight={searchQuery} />
+                ) : (
+                  property.displayName
+                )}
               </Label>
-              <p className="text-sm text-muted-foreground">{property.description}</p>
+              <p className="text-sm text-muted-foreground">
+                {searchQuery ? (
+                  <HighlightedText text={property.description || ''} highlight={searchQuery} />
+                ) : (
+                  property.description
+                )}
+              </p>
             </div>
             <div className="flex items-center gap-2">
               {isStaged && (
@@ -58,7 +71,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor={property.name}>{property.displayName}</Label>
+              <Label htmlFor={property.name}>
+                {searchQuery ? (
+                  <HighlightedText text={property.displayName} highlight={searchQuery} />
+                ) : (
+                  property.displayName
+                )}
+              </Label>
               {isStaged && (
                 <Badge variant="outline" className="border-warning text-warning">
                   Modified
@@ -77,7 +96,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            <p className="text-sm text-muted-foreground">{property.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery ? (
+                <HighlightedText text={property.description || ''} highlight={searchQuery} />
+              ) : (
+                property.description
+              )}
+            </p>
           </div>
         );
 
@@ -85,7 +110,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor={property.name}>{property.displayName}</Label>
+              <Label htmlFor={property.name}>
+                {searchQuery ? (
+                  <HighlightedText text={property.displayName} highlight={searchQuery} />
+                ) : (
+                  property.displayName
+                )}
+              </Label>
               {isStaged && (
                 <Badge variant="outline" className="border-warning text-warning">
                   Modified
@@ -100,7 +131,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
               min={rangeValidation?.min}
               max={rangeValidation?.max}
             />
-            <p className="text-sm text-muted-foreground">{property.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery ? (
+                <HighlightedText text={property.description || ''} highlight={searchQuery} />
+              ) : (
+                property.description
+              )}
+            </p>
           </div>
         );
 
@@ -109,7 +146,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <div className="space-y-2">
             <div className="flex items-center justify-between">
-              <Label htmlFor={property.name}>{property.displayName}</Label>
+              <Label htmlFor={property.name}>
+                {searchQuery ? (
+                  <HighlightedText text={property.displayName} highlight={searchQuery} />
+                ) : (
+                  property.displayName
+                )}
+              </Label>
               {isStaged && (
                 <Badge variant="outline" className="border-warning text-warning">
                   Modified
@@ -122,7 +165,13 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
               value={value || property.defaultValue || ''}
               onChange={(e) => onChange(e.target.value)}
             />
-            <p className="text-sm text-muted-foreground">{property.description}</p>
+            <p className="text-sm text-muted-foreground">
+              {searchQuery ? (
+                <HighlightedText text={property.description || ''} highlight={searchQuery} />
+              ) : (
+                property.description
+              )}
+            </p>
           </div>
         );
     }

@@ -34,7 +34,7 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-  const { selectQueue, stagedChanges } = useSchedulerStore();
+  const { selectQueue, stagedChanges, searchQuery } = useSchedulerStore();
   const { theme } = useTheme();
 
   const { nodes, edges, isLoading, error } = useQueueTreeData();
@@ -110,9 +110,11 @@ const FlowInner: React.FC = () => {
     return (
       <div className="flex h-full items-center justify-center">
         <Alert className="max-w-md">
-          <AlertTitle>No Queue Data</AlertTitle>
+          <AlertTitle>{searchQuery ? 'No Matching Queues' : 'No Queue Data'}</AlertTitle>
           <AlertDescription>
-            No queue hierarchy data is available. Please check your scheduler configuration.
+            {searchQuery
+              ? `No queues match your search for "${searchQuery}". Try a different search term.`
+              : 'No queue hierarchy data is available. Please check your scheduler configuration.'}
           </AlertDescription>
         </Alert>
       </div>

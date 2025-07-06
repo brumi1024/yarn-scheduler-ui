@@ -16,18 +16,28 @@ import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
+import { HighlightedText } from '~/components/search/HighlightedText';
 
 export const GlobalSettings: React.FC = () => {
-  const { getGlobalPropertyValue, stageGlobalChange, stagedChanges } = useSchedulerStore();
+  const {
+    getGlobalPropertyValue,
+    stageGlobalChange,
+    stagedChanges,
+    searchQuery,
+    getFilteredSettings,
+  } = useSchedulerStore();
   const { validateGlobalProperty } = useGlobalPropertyValidation();
 
+  // Use filtered settings if search is active
+  const activePropertyDefinitions = searchQuery ? getFilteredSettings() : globalPropertyDefinitions;
+
   const getGlobalPropertyCategories = () => {
-    const categories = new Set(globalPropertyDefinitions.map((prop) => prop.category));
+    const categories = new Set(activePropertyDefinitions.map((prop) => prop.category));
     return Array.from(categories).sort();
   };
 
   const getGlobalPropertiesByCategory = (category: string) => {
-    return globalPropertyDefinitions.filter((prop) => prop.category === category);
+    return activePropertyDefinitions.filter((prop) => prop.category === category);
   };
 
   const categories = getGlobalPropertyCategories();
@@ -91,6 +101,7 @@ export const GlobalSettings: React.FC = () => {
                               value={value}
                               isStaged={isStaged}
                               onChange={(newValue) => handlePropertyChange(property.name, newValue)}
+                              searchQuery={searchQuery}
                             />
                           )}
                           {index < categoryProperties.length - 1 && <hr className="mt-6" />}
@@ -106,10 +117,13 @@ export const GlobalSettings: React.FC = () => {
       ) : (
         <Card>
           <CardContent className="pt-6">
-            <h3 className="mb-2 text-lg font-medium">No Global Properties Available</h3>
+            <h3 className="mb-2 text-lg font-medium">
+              {searchQuery ? 'No Matching Settings' : 'No Global Properties Available'}
+            </h3>
             <p className="text-sm text-muted-foreground">
-              Global properties configuration is not available. Please check the configuration
-              setup.
+              {searchQuery
+                ? `No settings match your search for "${searchQuery}". Try a different search term.`
+                : 'Global properties configuration is not available. Please check the configuration setup.'}
             </p>
           </CardContent>
         </Card>

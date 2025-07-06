@@ -41,11 +41,12 @@ const layoutEngine = new DagreLayout({
   orientation: 'horizontal',
 });
 
-function convertSchedulerInfoToQueueInfo(schedulerInfo: SchedulerInfo): QueueInfo {
+function createRootQueueInfo(schedulerInfo: SchedulerInfo): QueueInfo {
   const capacitySchedulerInfo = schedulerInfo as CapacitySchedulerInfo;
 
+  // Create a synthetic root queue that contains the scheduler's queues
   return {
-    queueType: schedulerInfo.type as QueueType,
+    queueType: 'parent' as QueueType,
     capacity: schedulerInfo.capacity,
     usedCapacity: schedulerInfo.usedCapacity,
     maxCapacity: schedulerInfo.maxCapacity,
@@ -61,10 +62,10 @@ function convertSchedulerInfoToQueueInfo(schedulerInfo: SchedulerInfo): QueueInf
     numApplications: 0,
     numActiveApplications: 0,
     numPendingApplications: 0,
-    resourcesUsed: capacitySchedulerInfo.usedResources,
+    resourcesUsed: capacitySchedulerInfo.usedResources || { memory: 0, vCores: 0 },
     queueName: schedulerInfo.queueName,
-    queuePath: capacitySchedulerInfo.queuePath || schedulerInfo.queueName,
-    state: (capacitySchedulerInfo.state as QueueStateValue) || 'RUNNING',
+    queuePath: 'root',
+    state: 'RUNNING' as QueueStateValue,
     queues: schedulerInfo.queues,
     autoCreationEligibility: capacitySchedulerInfo.autoCreationEligibility,
   };
@@ -499,6 +500,8 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const isLoading = useSchedulerStore((state) => state.isLoading);
   const error = useSchedulerStore((state) => state.error);
+  const searchQuery = useSchedulerStore((state) => state.searchQuery);
+  const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
 
   const { nodes, edges } = useMemo(() => {
     if (!schedulerData || isLoading) {
@@ -506,7 +509,15 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
     }
 
     try {
-      const rootQueue = convertSchedulerInfoToQueueInfo(schedulerData);
+      // Use filtered data if search is active
+      const dataToUse = searchQuery ? getFilteredQueues() : schedulerData;
+
+      if (!dataToUse) {
+        return { nodes: [], edges: [] };
+      }
+
+      // Create a root queue wrapper for visualization purposes
+      const rootQueue = createRootQueueInfo(dataToUse);
 
       // Augment the tree with staged new queues
       const augmentedRootQueue = augmentQueueTreeWithStagedQueues(rootQueue, stagedChanges);
@@ -524,7 +535,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
       console.error('Error processing queue tree data:', err);
       return { nodes: [], edges: [] };
     }
-  }, [schedulerData, stagedChanges, isLoading]);
+  }, [schedulerData, stagedChanges, isLoading, searchQuery, getFilteredQueues]);
 
   return {
     nodes,
