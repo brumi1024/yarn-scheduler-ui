@@ -19,6 +19,7 @@ import CustomFlowEdge from './CustomFlowEdge';
 import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
+import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -213,6 +214,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
     <div className={`h-full w-full ${className || ''}`}>
       <ReactFlowProvider>
         <FlowInner />
+        <CompareButton />
       </ReactFlowProvider>
     </div>
   );
