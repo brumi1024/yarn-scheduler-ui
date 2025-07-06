@@ -5,6 +5,7 @@ export default [
     index('routes/home.tsx'),
     route('queue/:queuePath', 'routes/queue.tsx'),
     route('node-labels', 'routes/node-labels.tsx'),
+    route('placement-rules', 'routes/placement-rules.tsx'),
     route('global-settings', 'routes/global-settings.tsx'),
   ]),
 ] satisfies RouteConfig;

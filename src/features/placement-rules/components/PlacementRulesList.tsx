@@ -1,79 +1,130 @@
 import { useState, useEffect } from 'react';
-import { monitorForElements } from '@atlaskit/pragmatic-drag-and-drop/element/adapter';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { Plus, InfoIcon } from 'lucide-react';
-import { PlacementRuleItem } from './PlacementRuleItem';
+import { Plus, InfoIcon, HelpCircle } from 'lucide-react';
 import { PlacementRuleForm } from './PlacementRuleForm';
+import { PlacementRulesTable } from './PlacementRulesTable';
+import { PolicyReferenceDialog } from './PolicyReferenceDialog';
+import { PlacementRulesMigrationDialog } from './MigrationDialog';
+import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRulesList() {
-  const { rules, selectedRuleIndex, addRule, updateRule, deleteRule, reorderRules, selectRule } =
-    useSchedulerStore();
+  const {
+    rules,
+    selectedRuleIndex,
+    addRule,
+    deleteRule,
+    reorderRules,
+    selectRule,
+    loadPlacementRules,
+    isLegacyMode,
+    legacyRules,
+    configData,
+    stagedChanges,
+  } = useSchedulerStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
-  const [editingIndex, setEditingIndex] = useState<number | null>(null);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
 
-  // Monitor for drag events globally
+  // Load placement rules when component mounts and config data is available
+  // Also re-run when staged changes update to properly detect migration status
   useEffect(() => {
-    return monitorForElements({
-      onDrop({ source, location }) {
-        if (!location.current.dropTargets.length) return;
+    // Only load placement rules if we have config data
+    if (configData && configData.size > 0) {
+      loadPlacementRules();
+    }
+  }, [configData, stagedChanges, loadPlacementRules]);
 
-        const draggedIndex = source.data.index;
-        const targetIndex = location.current.dropTargets[0].data.index;
-
-        if (draggedIndex !== undefined && targetIndex !== undefined) {
-          reorderRules(draggedIndex as number, targetIndex as number);
-        }
-      },
-    });
-  }, [reorderRules]);
+  // Reset dialog when transitioning out of legacy mode
+  useEffect(() => {
+    if (!isLegacyMode) {
+      setShowMigrationDialog(false);
+    }
+  }, [isLegacyMode]);
 
   const handleAdd = (data: PlacementRule) => {
     addRule(data);
     setShowAddForm(false);
   };
 
-  const handleUpdate = (data: PlacementRule, index?: number) => {
-    if (index !== undefined) {
-      updateRule(index, data);
-      setEditingIndex(null);
-    }
-  };
-
-  if (editingIndex !== null) {
-    return (
-      <PlacementRuleForm
-        rule={rules[editingIndex]}
-        ruleIndex={editingIndex}
-        onSubmit={handleUpdate}
-        onCancel={() => setEditingIndex(null)}
-      />
-    );
+  if (showAddForm && !isLegacyMode) {
+    return <PlacementRuleForm onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />;
   }
 
-  if (showAddForm) {
-    return <PlacementRuleForm onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />;
+  // Show legacy mode UI
+  if (isLegacyMode) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-warning">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Legacy Placement Rules Detected</h3>
+                <p className="text-muted-foreground mb-4">
+                  This scheduler is using legacy placement rules format. The visual editor is not
+                  available for legacy rules.
+                </p>
+                {legacyRules && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium mb-2">Current legacy rules:</p>
+                    <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto max-w-2xl mx-auto">
+                      {legacyRules}
+                    </pre>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground mb-4">
+                  To use the visual placement rules editor, please migrate to the JSON format.
+                </p>
+              </div>
+              <Button onClick={() => setShowMigrationDialog(true)}>
+                <InfoIcon className="h-4 w-4 mr-2" />
+                Migrate to JSON Format
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Migration dialog for legacy rules */}
+        <PlacementRulesMigrationDialog
+          open={showMigrationDialog}
+          onOpenChange={setShowMigrationDialog}
+        />
+      </div>
+    );
   }
 
   return (
     <div className="space-y-4">
-      <div className="flex justify-between items-start">
+      <div className="space-y-4">
         <Alert>
           <InfoIcon className="h-4 w-4" />
-          <AlertDescription>
-            Rules are evaluated from top to bottom. The first matching rule determines the queue
-            assignment. Drag rules to reorder them.
+          <AlertDescription className="flex items-center justify-between">
+            <span>
+              Rules are evaluated from top to bottom. The first matching rule determines the queue
+              assignment. Drag rules to reorder them.
+            </span>
+            <Tooltip>
+              <TooltipTrigger asChild>
+                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help ml-2 flex-shrink-0" />
+              </TooltipTrigger>
+              <TooltipContent className="max-w-xs">
+                Placement rules determine how the queue path is constructed for matching
+                applications
+              </TooltipContent>
+            </Tooltip>
           </AlertDescription>
         </Alert>
 
-        <Button onClick={() => setShowAddForm(true)}>
-          <Plus className="h-4 w-4 mr-2" />
-          Add Rule
-        </Button>
+        <div className="flex justify-end gap-2">
+          <PolicyReferenceDialog />
+          <Button onClick={() => setShowAddForm(true)}>
+            <Plus className="h-4 w-4 mr-2" />
+            Add Rule
+          </Button>
+        </div>
       </div>
 
       {rules.length === 0 ? (
@@ -92,20 +143,13 @@ export function PlacementRulesList() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {rules.map((rule, index) => (
-            <PlacementRuleItem
-              key={`rule-${index}`}
-              rule={rule}
-              index={index}
-              isSelected={selectedRuleIndex === index}
-              onEdit={() => setEditingIndex(index)}
-              onDelete={() => deleteRule(index)}
-              onSelect={() => selectRule(index)}
-              onReorder={reorderRules}
-            />
-          ))}
-        </div>
+        <PlacementRulesTable
+          rules={rules}
+          selectedRuleIndex={selectedRuleIndex}
+          onDelete={deleteRule}
+          onSelect={selectRule}
+          onReorder={reorderRules}
+        />
       )}
     </div>
   );

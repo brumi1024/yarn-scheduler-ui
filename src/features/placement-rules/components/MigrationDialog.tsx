@@ -15,13 +15,18 @@ import {
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { migrateLegacyRules } from '../utils/migration';
-import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import type { MigrationResult } from '~/types/features/placement-rules';
 
-export const PlacementRulesMigrationDialog = () => {
-  const { showMigrationDialog, legacyRules, setShowMigrationDialog, stageGlobalChange } =
-    useSchedulerStore();
+interface PlacementRulesMigrationDialogProps {
+  open: boolean;
+  onOpenChange: (open: boolean) => void;
+}
+
+export const PlacementRulesMigrationDialog = ({
+  open,
+  onOpenChange,
+}: PlacementRulesMigrationDialogProps) => {
+  const { legacyRules, migrateLegacyRules: storeMigrateLegacyRules } = useSchedulerStore();
 
   const [migrationResult, setMigrationResult] = useState<MigrationResult | null>(null);
   const [isMigrating, setIsMigrating] = useState(false);
@@ -31,20 +36,21 @@ export const PlacementRulesMigrationDialog = () => {
 
     setIsMigrating(true);
     try {
-      const result = migrateLegacyRules(legacyRules);
-      setMigrationResult(result);
+      // Use the store's migration function which handles both rules and format
+      await storeMigrateLegacyRules();
 
-      if (result.success) {
-        // Stage the migration using existing system with proper format
-        const rulesConfig = { rules: result.rules };
-        stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, rulesConfig);
+      // Set success result for UI feedback
+      setMigrationResult({
+        success: true,
+        rules: [],
+        errors: [],
+      });
 
-        // Close dialog after successful migration
-        setTimeout(() => {
-          setShowMigrationDialog(false);
-          setMigrationResult(null);
-        }, 2000);
-      }
+      // Close dialog after successful migration
+      setTimeout(() => {
+        onOpenChange(false);
+        setMigrationResult(null);
+      }, 2000);
     } catch (error) {
       setMigrationResult({
         success: false,
@@ -57,12 +63,20 @@ export const PlacementRulesMigrationDialog = () => {
   };
 
   const handleCancel = () => {
-    setShowMigrationDialog(false);
+    onOpenChange(false);
     setMigrationResult(null);
   };
 
+  // Handle dialog state changes
+  const handleDialogOpenChange = (newOpen: boolean) => {
+    if (!newOpen) {
+      setMigrationResult(null);
+    }
+    onOpenChange(newOpen);
+  };
+
   return (
-    <Dialog open={showMigrationDialog} onOpenChange={setShowMigrationDialog}>
+    <Dialog open={open} onOpenChange={handleDialogOpenChange}>
       <DialogContent className="sm:max-w-[625px]">
         <DialogHeader>
           <DialogTitle>Migrate Legacy Placement Rules</DialogTitle>

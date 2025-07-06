@@ -4,9 +4,11 @@ import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
+import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 
 // Mock the utils module
 vi.mock('~/utils/placementRulesUtils');
+vi.mock('~/utils/validation/stagedChangesUtils');
 
 // Create mock API client
 const createMockApiClient = () => ({
@@ -64,12 +66,16 @@ describe('placementRulesSlice', () => {
       expect(state.isLoadingRules).toBe(false);
       expect(state.rulesError).toBeNull();
       expect(state.selectedRuleIndex).toBeNull();
-      expect(state.showMigrationDialog).toBe(false);
       expect(state.legacyRules).toBeNull();
     });
   });
 
   describe('loadPlacementRules', () => {
+    beforeEach(() => {
+      // Mock getMergedConfigData to return the input config as-is by default
+      vi.mocked(getMergedConfigData).mockImplementation((config) => config);
+    });
+
     it('should load JSON format rules successfully', () => {
       const store = createTestStore();
       const mockExtract = vi.mocked(extractPlacementRulesFromConfig);
@@ -89,10 +95,10 @@ describe('placementRulesSlice', () => {
       expect(store.getState().originalRules).toEqual(mockPlacementRules);
       expect(store.getState().isLoadingRules).toBe(false);
       expect(store.getState().rulesError).toBeNull();
-      expect(store.getState().showMigrationDialog).toBe(false);
+      expect(store.getState().isLegacyMode).toBe(false);
     });
 
-    it('should handle legacy format and show migration dialog', () => {
+    it('should handle legacy format and set legacy mode', () => {
       const store = createTestStore();
       const mockExtract = vi.mocked(extractPlacementRulesFromConfig);
 
@@ -109,10 +115,10 @@ describe('placementRulesSlice', () => {
       expect(store.getState().rules).toEqual([]);
       expect(store.getState().originalRules).toEqual([]);
       expect(store.getState().isLoadingRules).toBe(false);
-      expect(store.getState().showMigrationDialog).toBe(true);
       expect(store.getState().legacyRules).toBe(
         'u:alice:root.users.alice\\ng:production:root.production',
       );
+      expect(store.getState().isLegacyMode).toBe(true);
     });
 
     it('should handle no rules configured', () => {
@@ -130,7 +136,6 @@ describe('placementRulesSlice', () => {
       expect(store.getState().rules).toEqual([]);
       expect(store.getState().originalRules).toEqual([]);
       expect(store.getState().isLoadingRules).toBe(false);
-      expect(store.getState().showMigrationDialog).toBe(false);
     });
 
     it('should handle extraction errors', () => {
@@ -171,6 +176,65 @@ describe('placementRulesSlice', () => {
       // After calling load, it should complete synchronously
       expect(store.getState().isLoadingRules).toBe(false);
       expect(store.getState().rules).toEqual(mockPlacementRules);
+    });
+
+    it('should consider staged changes when loading placement rules', () => {
+      const store = createTestStore();
+      const mockExtract = vi.mocked(extractPlacementRulesFromConfig);
+      const mockGetMergedConfig = vi.mocked(getMergedConfigData);
+
+      // Mock original config with legacy format
+      const originalConfig = new Map([
+        ['yarn.scheduler.capacity.queue-mappings', 'u:alice:root.users.alice'],
+      ]);
+
+      // Mock staged changes that include migration to JSON
+      const stagedChanges = [
+        {
+          id: 'change1',
+          type: 'update' as const,
+          queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
+          property: 'yarn.scheduler.capacity.mapping-rule-format',
+          oldValue: undefined,
+          newValue: 'json',
+          timestamp: Date.now(),
+        },
+        {
+          id: 'change2',
+          type: 'update' as const,
+          queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
+          property: SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+          oldValue: undefined,
+          newValue: JSON.stringify({ rules: mockPlacementRules }),
+          timestamp: Date.now(),
+        },
+      ];
+
+      // Mock merged config with staged changes applied
+      const mergedConfig = new Map([
+        ['yarn.scheduler.capacity.mapping-rule-format', 'json'],
+        [SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, JSON.stringify({ rules: mockPlacementRules })],
+      ]);
+
+      store.setState({
+        configData: originalConfig,
+        stagedChanges,
+      });
+
+      mockGetMergedConfig.mockReturnValue(mergedConfig);
+      mockExtract.mockReturnValue({
+        format: 'json',
+        rules: mockPlacementRules,
+      });
+
+      store.getState().loadPlacementRules();
+
+      // Verify getMergedConfigData was called with correct parameters
+      expect(mockGetMergedConfig).toHaveBeenCalledWith(originalConfig, stagedChanges);
+
+      // Verify that JSON format was detected and rules loaded
+      expect(store.getState().rules).toEqual(mockPlacementRules);
+      expect(store.getState().isLegacyMode).toBe(false);
     });
   });
 
@@ -338,12 +402,12 @@ describe('placementRulesSlice', () => {
 
       expect(store.getState().rules).toEqual([
         mockPlacementRules[1],
-        mockPlacementRules[2],
         mockPlacementRules[0],
+        mockPlacementRules[2],
       ]);
 
       expect(stageGlobalChangeSpy).toHaveBeenCalledWith(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, {
-        rules: [mockPlacementRules[1], mockPlacementRules[2], mockPlacementRules[0]],
+        rules: [mockPlacementRules[1], mockPlacementRules[0], mockPlacementRules[2]],
       });
     });
 
@@ -356,7 +420,7 @@ describe('placementRulesSlice', () => {
 
       store.getState().reorderRules(0, 2);
 
-      expect(store.getState().selectedRuleIndex).toBe(2);
+      expect(store.getState().selectedRuleIndex).toBe(1);
     });
 
     it('should adjust selection when moving rule before selected', () => {
@@ -366,10 +430,10 @@ describe('placementRulesSlice', () => {
         selectedRuleIndex: 2,
       });
 
-      // Move first rule to position after selected
+      // Move first rule to drop zone 2
       store.getState().reorderRules(0, 2);
 
-      expect(store.getState().selectedRuleIndex).toBe(1);
+      expect(store.getState().selectedRuleIndex).toBe(2);
     });
 
     it('should adjust selection when moving rule after selected', () => {
@@ -426,25 +490,6 @@ describe('placementRulesSlice', () => {
     });
   });
 
-  describe('setShowMigrationDialog', () => {
-    it('should show migration dialog', () => {
-      const store = createTestStore();
-
-      store.getState().setShowMigrationDialog(true);
-
-      expect(store.getState().showMigrationDialog).toBe(true);
-    });
-
-    it('should hide migration dialog', () => {
-      const store = createTestStore();
-      store.setState({ showMigrationDialog: true });
-
-      store.getState().setShowMigrationDialog(false);
-
-      expect(store.getState().showMigrationDialog).toBe(false);
-    });
-  });
-
   describe('migrateLegacyRules', () => {
     it('should migrate legacy rules successfully', async () => {
       const store = createTestStore();
@@ -452,7 +497,6 @@ describe('placementRulesSlice', () => {
 
       store.setState({
         legacyRules: 'u:alice:root.users.alice',
-        showMigrationDialog: true,
       });
 
       await store.getState().migrateLegacyRules();
@@ -471,7 +515,12 @@ describe('placementRulesSlice', () => {
         ],
       });
 
-      expect(store.getState().showMigrationDialog).toBe(false);
+      // Should also stage the format change to JSON
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
       expect(store.getState().legacyRules).toBeNull();
       expect(store.getState().rules).toHaveLength(1);
       expect(store.getState().rules[0].matches).toBe('alice');
@@ -482,7 +531,6 @@ describe('placementRulesSlice', () => {
 
       store.setState({
         legacyRules: 'invalid-format',
-        showMigrationDialog: true,
       });
 
       await store.getState().migrateLegacyRules();
@@ -490,8 +538,6 @@ describe('placementRulesSlice', () => {
       expect(store.getState().rulesError).toBe(
         'Failed to convert rule "invalid-format": Invalid rule format',
       );
-      // Dialog should remain open on error so user can see the error
-      expect(store.getState().showMigrationDialog).toBe(true);
     });
   });
 

@@ -13,6 +13,7 @@ export type PlacementPolicy =
   | 'reject'
   | 'defaultQueue'
   | 'user'
+  | 'applicationName'
   | 'custom'
   | 'setDefaultQueue';
 

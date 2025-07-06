@@ -62,6 +62,11 @@ export default function Layout() {
         title: 'Node Labels',
         description: 'Manage node labels and node-to-label mappings',
       };
+    } else if (location.pathname === '/placement-rules') {
+      return {
+        title: 'Placement Rules',
+        description: 'Define rules for application placement in queues',
+      };
     } else if (location.pathname.startsWith('/queue/')) {
       const queuePath = location.pathname.replace('/queue/', '');
       return {

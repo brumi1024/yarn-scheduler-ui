@@ -1,5 +1,5 @@
 import React from 'react';
-import { useForm } from 'react-hook-form';
+import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
   Form,
@@ -23,11 +23,16 @@ import { Switch } from '~/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { InfoIcon } from 'lucide-react';
+import { Combobox } from '~/components/ui/combobox';
+import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   placementRuleFormSchema,
   type PlacementRuleFormData,
   formDataToPlacementRule,
 } from '../schemas/placement-rule-schema';
+import { CustomPlacementHelpDialog } from './CustomPlacementHelpDialog';
+import { getPolicyDescription, POLICY_DISPLAY_NAMES } from '../constants/policy-descriptions';
+import { getAllParentQueues, getAllQueues } from '../utils/queue-utils';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 interface PlacementRuleFormProps {
@@ -38,8 +43,12 @@ interface PlacementRuleFormProps {
 }
 
 export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: PlacementRuleFormProps) {
+  const schedulerData = useSchedulerStore((state) => state.schedulerData);
+  const parentQueues = getAllParentQueues(schedulerData);
+  const allQueues = getAllQueues(schedulerData);
+
   const form = useForm<PlacementRuleFormData>({
-    resolver: zodResolver(placementRuleFormSchema),
+    resolver: zodResolver(placementRuleFormSchema) as any, // eslint-disable-line @typescript-eslint/no-explicit-any
     defaultValues: rule
       ? {
           type: rule.type,
@@ -56,7 +65,6 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
           matches: '*',
           policy: 'user',
           create: false,
-          fallbackResult: 'skip',
         },
   });
 
@@ -65,11 +73,11 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
   const requiresParentQueue = ['primaryGroupUser', 'secondaryGroupUser', 'custom'].includes(
     selectedPolicy,
   );
-  const requiresValue = selectedPolicy === 'specified';
+  const requiresValue = selectedPolicy === 'specified' || selectedPolicy === 'setDefaultQueue';
   const requiresCustomPlacement = selectedPolicy === 'custom';
   const showCreateOption = !['reject', 'defaultQueue', 'setDefaultQueue'].includes(selectedPolicy);
 
-  const handleSubmit = (data: PlacementRuleFormData) => {
+  const handleSubmit: SubmitHandler<PlacementRuleFormData> = (data) => {
     const placementRule = formDataToPlacementRule(data);
     onSubmit(placementRule, ruleIndex);
   };
@@ -88,7 +96,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="type"
                 render={({ field }) => (
                   <FormItem>
@@ -114,7 +122,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               />
 
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="matches"
                 render={({ field }) => (
                   <FormItem>
@@ -136,7 +144,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
             </div>
 
             <FormField
-              control={form.control}
+              control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
               name="policy"
               render={({ field }) => (
                 <FormItem>
@@ -148,20 +156,20 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                       </SelectTrigger>
                     </FormControl>
                     <SelectContent>
-                      <SelectItem value="user">User Queue</SelectItem>
-                      <SelectItem value="primaryGroup">Primary Group</SelectItem>
-                      <SelectItem value="primaryGroupUser">Primary Group → User</SelectItem>
-                      <SelectItem value="secondaryGroup">Secondary Group</SelectItem>
-                      <SelectItem value="secondaryGroupUser">Secondary Group → User</SelectItem>
-                      <SelectItem value="specified">Specified Queue</SelectItem>
-                      <SelectItem value="defaultQueue">Default Queue</SelectItem>
-                      <SelectItem value="setDefaultQueue">Set as Default Queue</SelectItem>
-                      <SelectItem value="reject">Reject Application</SelectItem>
-                      <SelectItem value="custom">Custom Placement</SelectItem>
+                      {Object.entries(POLICY_DISPLAY_NAMES).map(([value, label]) => (
+                        <SelectItem key={value} value={value}>
+                          {label}
+                        </SelectItem>
+                      ))}
                     </SelectContent>
                   </Select>
                   <FormDescription>
-                    Determines how the queue path is constructed for matching applications
+                    {(() => {
+                      const policy = getPolicyDescription(field.value);
+                      return policy
+                        ? policy.description
+                        : 'Determines how the queue path is constructed for matching applications';
+                    })()}
                   </FormDescription>
                   <FormMessage />
                 </FormItem>
@@ -170,16 +178,30 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
 
             {requiresValue && (
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="value"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Queue Value</FormLabel>
+                    <FormLabel>
+                      {selectedPolicy === 'setDefaultQueue' ? 'Default Queue' : 'Queue Value'}
+                    </FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., root.production" />
+                      <Combobox
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        items={allQueues}
+                        placeholder="Select a queue..."
+                        searchPlaceholder="Search queues..."
+                        emptyText="No queues found."
+                        aria-label={
+                          selectedPolicy === 'setDefaultQueue' ? 'Default Queue' : 'Queue Value'
+                        }
+                      />
                     </FormControl>
                     <FormDescription>
-                      The specific queue path where matching applications will be placed
+                      {selectedPolicy === 'setDefaultQueue'
+                        ? 'The new default queue path that will be used by subsequent defaultQueue policies'
+                        : 'The specific queue path where matching applications will be placed'}
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -189,13 +211,21 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
 
             {requiresParentQueue && (
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="parentQueue"
                 render={({ field }) => (
                   <FormItem>
                     <FormLabel>Parent Queue</FormLabel>
                     <FormControl>
-                      <Input {...field} placeholder="e.g., root.users" />
+                      <Combobox
+                        value={field.value || ''}
+                        onValueChange={field.onChange}
+                        items={parentQueues}
+                        placeholder="Select a parent queue..."
+                        searchPlaceholder="Search queues..."
+                        emptyText="No parent queues found."
+                        aria-label="Parent Queue"
+                      />
                     </FormControl>
                     <FormDescription>
                       The parent queue under which user/group queues will be created
@@ -208,11 +238,14 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
 
             {requiresCustomPlacement && (
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="customPlacement"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel>Custom Placement Pattern</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel>Custom Placement Pattern</FormLabel>
+                      <CustomPlacementHelpDialog triggerText="View Variables" />
+                    </div>
                     <FormControl>
                       <Input {...field} placeholder="e.g., root.%primary_group.%user" />
                     </FormControl>
@@ -225,33 +258,10 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               />
             )}
 
-            {requiresCustomPlacement && (
-              <Alert>
-                <InfoIcon className="h-4 w-4" />
-                <AlertDescription>
-                  Variables available for custom placement:
-                  <ul className="list-disc list-inside mt-2 space-y-1">
-                    <li>
-                      <code>%user</code> - The submitting user's name
-                    </li>
-                    <li>
-                      <code>%primary_group</code> - User's primary group
-                    </li>
-                    <li>
-                      <code>%secondary_group</code> - User's secondary group
-                    </li>
-                    <li>
-                      <code>%application</code> - Application name
-                    </li>
-                  </ul>
-                </AlertDescription>
-              </Alert>
-            )}
-
             <div className="space-y-4">
               {showCreateOption && (
                 <FormField
-                  control={form.control}
+                  control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                   name="create"
                   render={({ field }) => (
                     <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
@@ -272,7 +282,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               )}
 
               <FormField
-                control={form.control}
+                control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="fallbackResult"
                 render={({ field }) => (
                   <FormItem>

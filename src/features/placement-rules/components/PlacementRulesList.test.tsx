@@ -9,13 +9,26 @@ import type { PlacementRule } from '~/types/features/placement-rules';
 vi.mock('~/stores/schedulerStore');
 
 // Mock the components
-vi.mock('./PlacementRuleItem', () => ({
-  PlacementRuleItem: vi.fn(({ rule, index, onEdit, onDelete }) => (
-    <div data-testid={`rule-item-${index}`}>
-      <span>{rule.type}</span>
-      <span>{rule.matches}</span>
-      <button onClick={onEdit}>Edit</button>
-      <button onClick={onDelete}>Delete</button>
+vi.mock('./MigrationDialog', () => ({
+  PlacementRulesMigrationDialog: vi.fn(() => <div data-testid="migration-dialog" />),
+}));
+
+vi.mock('./PlacementRulesTable', () => ({
+  PlacementRulesTable: vi.fn(({ rules, onDelete, onSelect }) => (
+    <div data-testid="placement-rules-table">
+      <table>
+        <tbody>
+          {rules.map((rule: PlacementRule, index: number) => (
+            <tr key={index} onClick={() => onSelect(index)}>
+              <td>{rule.type}</td>
+              <td>{rule.matches}</td>
+              <td>
+                <button onClick={() => onDelete(index)}>Delete</button>
+              </td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
     </div>
   )),
 }));
@@ -37,6 +50,21 @@ vi.mock('./PlacementRuleForm', () => ({
 // Mock pragmatic drag and drop
 vi.mock('@atlaskit/pragmatic-drag-and-drop/element/adapter', () => ({
   monitorForElements: vi.fn(() => vi.fn()),
+  dropTargetForElements: vi.fn(() => vi.fn()),
+  draggable: vi.fn(() => vi.fn()),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/closest-edge', () => ({
+  attachClosestEdge: vi.fn((data) => data),
+  extractClosestEdge: vi.fn(() => null),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop-hitbox/util/reorder-with-edge', () => ({
+  reorderWithEdge: vi.fn(({ list }) => list),
+}));
+
+vi.mock('@atlaskit/pragmatic-drag-and-drop/combine', () => ({
+  combine: vi.fn(() => () => {}),
 }));
 
 describe('PlacementRulesList', () => {
@@ -62,6 +90,10 @@ describe('PlacementRulesList', () => {
     deleteRule: vi.fn(),
     reorderRules: vi.fn(),
     selectRule: vi.fn(),
+    loadPlacementRules: vi.fn(),
+    isLegacyMode: false,
+    legacyRules: null,
+    configData: new Map(),
   };
 
   beforeEach(() => {
@@ -79,7 +111,7 @@ describe('PlacementRulesList', () => {
     expect(screen.getByRole('button', { name: /add first rule/i })).toBeInTheDocument();
   });
 
-  it('should render list of rules when rules exist', () => {
+  it('should render table view when rules exist', () => {
     vi.mocked(useSchedulerStore).mockReturnValue({
       ...mockStoreFunctions,
       rules: mockRules,
@@ -87,10 +119,7 @@ describe('PlacementRulesList', () => {
 
     render(<PlacementRulesList />);
 
-    expect(screen.getByTestId('rule-item-0')).toBeInTheDocument();
-    expect(screen.getByTestId('rule-item-1')).toBeInTheDocument();
-    expect(screen.getByText('alice')).toBeInTheDocument();
-    expect(screen.getByText('developers')).toBeInTheDocument();
+    expect(screen.getByTestId('placement-rules-table')).toBeInTheDocument();
   });
 
   it('should show add form when Add Rule button is clicked', async () => {
@@ -134,46 +163,6 @@ describe('PlacementRulesList', () => {
     expect(screen.queryByTestId('placement-rule-form')).not.toBeInTheDocument();
   });
 
-  it('should show edit form when edit is clicked on a rule', async () => {
-    const user = userEvent.setup();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
-
-    render(<PlacementRulesList />);
-
-    // Click edit on first rule
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
-
-    expect(screen.getByTestId('placement-rule-form')).toBeInTheDocument();
-    expect(screen.getByText('Edit Rule Form')).toBeInTheDocument();
-  });
-
-  it('should call updateRule when form is submitted for editing', async () => {
-    const user = userEvent.setup();
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreFunctions,
-      rules: mockRules,
-    });
-
-    render(<PlacementRulesList />);
-
-    // Click edit
-    const editButtons = screen.getAllByRole('button', { name: /edit/i });
-    await user.click(editButtons[0]);
-
-    // Submit form
-    await user.click(screen.getByRole('button', { name: /submit/i }));
-
-    expect(mockStoreFunctions.updateRule).toHaveBeenCalledWith(0, {
-      type: 'user',
-      matches: 'test',
-      policy: 'user',
-    });
-  });
-
   it('should call deleteRule when delete is clicked on a rule', async () => {
     const user = userEvent.setup();
     vi.mocked(useSchedulerStore).mockReturnValue({
@@ -205,18 +194,77 @@ describe('PlacementRulesList', () => {
     ).toBeInTheDocument();
   });
 
-  it('should render rules without drag and drop wrappers', () => {
+  it('should call loadPlacementRules on mount when configData is available', () => {
+    // Set up configData with some content
+    const configWithData = new Map([['some.property', 'value']]);
     vi.mocked(useSchedulerStore).mockReturnValue({
       ...mockStoreFunctions,
-      rules: mockRules,
+      configData: configWithData,
     });
 
     render(<PlacementRulesList />);
 
-    // Rules should be rendered directly without DnD wrappers
-    expect(screen.getByTestId('rule-item-0')).toBeInTheDocument();
-    expect(screen.getByTestId('rule-item-1')).toBeInTheDocument();
-    expect(screen.queryByTestId('dnd-context')).not.toBeInTheDocument();
-    expect(screen.queryByTestId('sortable-context')).not.toBeInTheDocument();
+    expect(mockStoreFunctions.loadPlacementRules).toHaveBeenCalled();
+  });
+
+  it('should not call loadPlacementRules on mount when configData is empty', () => {
+    // Use default empty Map for configData
+    render(<PlacementRulesList />);
+
+    expect(mockStoreFunctions.loadPlacementRules).not.toHaveBeenCalled();
+  });
+
+  describe('legacy mode behavior', () => {
+    it('should show legacy mode UI when isLegacyMode is true', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+        legacyRules: 'u:user1:root.default,u:user2:root.production',
+      });
+
+      render(<PlacementRulesList />);
+
+      expect(screen.getByText('Legacy Placement Rules Detected')).toBeInTheDocument();
+      expect(
+        screen.getByText(/This scheduler is using legacy placement rules format/),
+      ).toBeInTheDocument();
+      expect(screen.getByText('u:user1:root.default,u:user2:root.production')).toBeInTheDocument();
+    });
+
+    it('should show migrate button in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+      });
+
+      render(<PlacementRulesList />);
+
+      const migrateButton = screen.getByRole('button', { name: /migrate to json format/i });
+      expect(migrateButton).toBeInTheDocument();
+    });
+
+    it('should not show add form in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+      });
+
+      render(<PlacementRulesList />);
+
+      // Add Rule button should not be present in legacy mode
+      expect(screen.queryByRole('button', { name: /add rule/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show rules table in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+        rules: mockRules,
+      });
+
+      render(<PlacementRulesList />);
+
+      expect(screen.queryByTestId('placement-rules-table')).not.toBeInTheDocument();
+    });
   });
 });
