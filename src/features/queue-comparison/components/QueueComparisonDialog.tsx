@@ -22,12 +22,12 @@ export const QueueComparisonDialog: React.FC<QueueComparisonDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { getComparisonData } = useSchedulerStore();
+  const { getComparisonData, comparisonQueues } = useSchedulerStore();
 
   const comparisonData = useMemo(() => {
     const configs = getComparisonData();
     return buildComparisonData(configs);
-  }, [getComparisonData]);
+  }, [getComparisonData, comparisonQueues]);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>

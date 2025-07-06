@@ -8,6 +8,7 @@ export const buildComparisonData = (
   configs: Map<string, Record<string, string>>,
 ): ComparisonData => {
   const queues = Array.from(configs.keys());
+  console.log('[DEBUG] Building comparison data for queues:', queues);
   const properties = new Map<string, Map<string, string | undefined>>();
   const differences = new Set<string>();
 

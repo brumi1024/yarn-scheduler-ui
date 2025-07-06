@@ -1,6 +1,14 @@
 import React, { useMemo } from 'react';
 import { Badge } from '~/components/ui/badge';
 import { cn } from '~/utils/cn';
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '~/components/ui/table';
 import type { ComparisonData } from '../utils/comparison';
 import { getPropertyCategory, formatPropertyName } from '../utils/comparison';
 
@@ -26,17 +34,17 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
   }, [properties]);
 
   return (
-    <div className="relative w-full h-full overflow-auto border rounded-lg">
-      <table className="w-full border-collapse">
-        <thead className="sticky top-0 z-20 bg-background">
-          <tr>
-            <th className="sticky left-0 z-30 bg-background border-b border-r px-4 py-3 text-left font-medium w-64 min-w-[16rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+    <div className="w-full h-full">
+      <Table className="border rounded-lg">
+        <TableHeader className="sticky top-0 z-20 bg-background">
+          <TableRow>
+            <TableHead className="sticky left-0 z-30 bg-background border-r px-4 py-3 text-left font-medium w-64 min-w-[16rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
               Property
-            </th>
+            </TableHead>
             {queues.map((queue) => (
-              <th
+              <TableHead
                 key={queue}
-                className="border-b px-4 py-3 text-left font-medium min-w-[300px] bg-background"
+                className="px-4 py-3 text-left font-medium min-w-[300px] bg-background"
               >
                 <div className="flex flex-col gap-1">
                   <span className="text-base">{queue.split('.').pop()}</span>
@@ -44,28 +52,28 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
                     {queue}
                   </Badge>
                 </div>
-              </th>
+              </TableHead>
             ))}
-          </tr>
-        </thead>
-        <tbody>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
           {Array.from(groupedProperties.entries()).map(([category, props]) => (
             <React.Fragment key={category}>
-              <tr>
-                <td
+              <TableRow>
+                <TableCell
                   colSpan={queues.length + 1}
-                  className="sticky left-0 bg-muted font-semibold text-sm px-4 py-2 border-b"
+                  className="sticky left-0 bg-muted font-semibold text-sm px-4 py-2"
                 >
                   {category}
-                </td>
-              </tr>
+                </TableCell>
+              </TableRow>
               {props.map((prop) => {
                 const values = properties.get(prop)!;
                 const isDifferent = differences.has(prop);
 
                 return (
-                  <tr key={prop} className="hover:bg-muted/30">
-                    <td className="sticky left-0 z-10 bg-background border-b border-r px-4 py-3 font-medium min-w-[16rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
+                  <TableRow key={prop}>
+                    <TableCell className="sticky left-0 z-10 bg-background border-r px-4 py-3 font-medium min-w-[16rem] shadow-[2px_0_4px_-2px_rgba(0,0,0,0.1)]">
                       <div className="flex items-center gap-2 pr-2">
                         <span className="truncate">{formatPropertyName(prop)}</span>
                         {isDifferent && (
@@ -74,14 +82,14 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
                           </Badge>
                         )}
                       </div>
-                    </td>
+                    </TableCell>
                     {queues.map((queue) => {
                       const value = values.get(queue);
                       return (
-                        <td
+                        <TableCell
                           key={queue}
                           className={cn(
-                            'border-b px-4 py-3 min-w-[300px]',
+                            'px-4 py-3 min-w-[300px]',
                             isDifferent && 'bg-blue-50 dark:bg-blue-950/20',
                           )}
                         >
@@ -92,16 +100,16 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
                           ) : (
                             <span className="text-muted-foreground italic text-sm">Not set</span>
                           )}
-                        </td>
+                        </TableCell>
                       );
                     })}
-                  </tr>
+                  </TableRow>
                 );
               })}
             </React.Fragment>
           ))}
-        </tbody>
-      </table>
+        </TableBody>
+      </Table>
     </div>
   );
 };
