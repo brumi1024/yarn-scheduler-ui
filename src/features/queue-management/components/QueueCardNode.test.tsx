@@ -94,6 +94,16 @@ describe('QueueCardNode', () => {
         toggleComparisonQueue: mockToggleComparisonQueue,
         getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
         getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
       };
       return selector ? selector(state) : state;
     });
@@ -215,6 +225,16 @@ describe('QueueCardNode', () => {
         toggleComparisonQueue: mockToggleComparisonQueue,
         getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
         getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
       };
       return selector ? selector(state) : state;
     });
@@ -236,6 +256,16 @@ describe('QueueCardNode', () => {
         toggleComparisonQueue: mockToggleComparisonQueue,
         getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
         getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
       };
       return selector ? selector(state) : state;
     });
@@ -336,6 +366,16 @@ describe('QueueCardNode', () => {
         toggleComparisonQueue: mockToggleComparisonQueue,
         getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
         getChildQueues: vi.fn().mockReturnValue([]),
+        selectedNodeLabelFilter: '',
+        getQueueLabelCapacity: vi.fn().mockReturnValue({
+          capacity: '10',
+          maxCapacity: '100',
+          absoluteCapacity: '10',
+          isLabelSpecific: false,
+          label: 'DEFAULT',
+          hasAccess: true,
+          canUseLabel: true,
+        }),
       };
       return selector ? selector(state) : state;
     });

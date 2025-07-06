@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Tag } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { useQueueTreeData, type QueueCardData } from '../hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
@@ -20,6 +20,7 @@ import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
+import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -34,7 +35,7 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-  const { selectQueue, stagedChanges, searchQuery } = useSchedulerStore();
+  const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
   const { theme } = useTheme();
 
   const { nodes, edges, isLoading, error } = useQueueTreeData();
@@ -122,10 +123,30 @@ const FlowInner: React.FC = () => {
   }
 
   return (
-    <>
+    <div className="relative h-full w-full flex flex-col">
+      {/* Header with controls */}
+      <div className="absolute top-4 right-4 z-10 flex items-center gap-4">
+        <NodeLabelSelector />
+      </div>
+
+      {/* Label filter information */}
+      {selectedNodeLabelFilter && (
+        <div className="absolute top-4 left-4 z-10">
+          <Alert className="py-2 px-4">
+            <Tag className="h-4 w-4" />
+            <AlertDescription>
+              <span>
+                Filtering by partition: <strong>{selectedNodeLabelFilter}</strong>. Queues without
+                access are shown in gray.
+              </span>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
       {/* Validation summary banner */}
       {validationSummary.errorCount > 0 && (
-        <div className="absolute top-4 left-1/2 transform -translate-x-1/2 z-10">
+        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
           <Alert className="flex items-center gap-3 py-2 px-4 shadow-lg border-destructive">
             <AlertCircle className="h-4 w-4 text-destructive" />
             <div className="flex items-center gap-3">
@@ -205,7 +226,7 @@ const FlowInner: React.FC = () => {
           zoomable
         />
       </ReactFlow>
-    </>
+    </div>
   );
 };
 

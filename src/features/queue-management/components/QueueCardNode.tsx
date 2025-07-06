@@ -18,7 +18,7 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle } from 'lucide-react';
+import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle, Tag } from 'lucide-react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -59,6 +59,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     selectQueue,
     setPropertyPanelOpen,
     toggleComparisonQueue,
+    selectedNodeLabelFilter,
+    getQueueLabelCapacity,
   } = useSchedulerStore();
 
   const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
@@ -85,6 +87,12 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const isSelectedForComparison = comparisonQueues.includes(queuePath);
   const isSelectedQueue = selectedQueuePath === queuePath;
 
+  // Get label-specific capacity information
+  const labelCapacityInfo = getQueueLabelCapacity(queuePath, selectedNodeLabelFilter);
+  const isAccessible = labelCapacityInfo?.canUseLabel ?? true; // For DEFAULT label
+  const isRoot = queuePath === 'root';
+  const shouldGrayOut = !isRoot && !isAccessible && selectedNodeLabelFilter !== '';
+
   const formatCapacityDisplay = (configValue: string): string => {
     const parsed = parseCapacityValue(configValue);
     // Only add % for percentage mode, weight already has 'w', absolute has brackets
@@ -94,7 +102,15 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     return configValue;
   };
 
-  const capacityMode = parseCapacityValue(capacityConfig).mode;
+  // Use label-specific capacity if a label is selected, otherwise use default
+  const displayCapacity = labelCapacityInfo?.isLabelSpecific
+    ? labelCapacityInfo.capacity
+    : capacityConfig;
+  const displayMaxCapacity = labelCapacityInfo?.isLabelSpecific
+    ? labelCapacityInfo.maxCapacity
+    : maxCapacityConfig;
+
+  const capacityMode = parseCapacityValue(displayCapacity).mode;
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
@@ -144,6 +160,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         // Background styling for states
         isSelectedQueue && 'bg-blue-200 dark:bg-gray-800',
         isSelectedForComparison && !isSelectedQueue && 'bg-gray-200 dark:bg-gray-700',
+        // Gray out inaccessible queues when filtered by label
+        shouldGrayOut && 'opacity-50 grayscale',
       )}
       onClick={handleClick}
     >
@@ -160,6 +178,14 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
                 stagedState={stagedState}
                 stagedStatus={stagedStatus}
                 autoCreationStatus={autoCreationStatus}
+                labelInfo={
+                  labelCapacityInfo
+                    ? {
+                        isLabelSpecific: labelCapacityInfo.isLabelSpecific,
+                        label: labelCapacityInfo.label,
+                      }
+                    : undefined
+                }
               />
             </CardDescription>
           </div>
@@ -230,13 +256,22 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         {/* Capacity info */}
         <div className="mb-3">
           <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{formatCapacityDisplay(capacityConfig)}</span>
+            <span className="text-2xl font-bold">{formatCapacityDisplay(displayCapacity)}</span>
             <span className="text-sm text-muted-foreground">capacity</span>
           </div>
           <div className="text-xs text-muted-foreground">
-            Maximum capacity: {formatCapacityDisplay(maxCapacityConfig)}
+            Maximum capacity: {formatCapacityDisplay(displayMaxCapacity)}
           </div>
         </div>
+
+        {/* Show why queue is inaccessible */}
+        {shouldGrayOut && (
+          <div className="text-xs text-muted-foreground mb-2">
+            {labelCapacityInfo?.hasAccess && parseFloat(labelCapacityInfo.capacity) === 0
+              ? `No capacity allocated for partition: ${selectedNodeLabelFilter}`
+              : `No access to partition: ${selectedNodeLabelFilter}`}
+          </div>
+        )}
 
         <QueueCapacityProgress
           capacity={capacity}
