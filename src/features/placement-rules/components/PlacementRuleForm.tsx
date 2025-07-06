@@ -92,9 +92,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
         </CardDescription>
       </CardHeader>
       <CardContent>
-        <Form {...(form as any)}>
-          {' '}
-          {/* eslint-disable-line @typescript-eslint/no-explicit-any */}
+        <Form {...form}>
           <form onSubmit={form.handleSubmit(handleSubmit)} className="space-y-6">
             <div className="grid grid-cols-2 gap-4">
               <FormField

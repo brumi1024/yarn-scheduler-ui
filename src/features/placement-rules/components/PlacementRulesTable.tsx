@@ -92,6 +92,7 @@ function DraggableTableRow({ rule, index, isSelected, onDelete, onSelect }: Tabl
     if (rule.parentQueue) return rule.parentQueue;
     if (rule.customPlacement) return 'Custom';
     if (rule.policy === 'reject') return '—';
+    if (rule.policy === 'applicationName') return rule.matches;
     return 'Dynamic';
   };
 
