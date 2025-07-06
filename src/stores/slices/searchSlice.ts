@@ -8,6 +8,11 @@ import { schedulerTreeUtils } from '~/utils/schedulerTreeUtils';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { buildGlobalPropertyKey } from '~/utils/propertyUtils';
 
+// Memoization cache for search results
+let cachedSearchQuery: string | null = null;
+let cachedSearchContext: string | null = null;
+let cachedSearchResults: { count: number; hasResults: boolean } | null = null;
+
 export const createSearchSlice: StateCreator<
   SchedulerStore,
   [['zustand/immer', never]],
@@ -16,34 +21,32 @@ export const createSearchSlice: StateCreator<
 > = (set, get) => ({
   searchQuery: '',
   searchContext: null,
-  searchHistory: [],
   isSearchFocused: false,
 
   setSearchQuery: (query) => {
     set((state) => {
       state.searchQuery = query;
     });
+    // Invalidate cache when query changes
+    if (query !== cachedSearchQuery) {
+      cachedSearchResults = null;
+    }
   },
 
   setSearchContext: (context) => {
     set((state) => {
       state.searchContext = context;
     });
+    // Invalidate cache when context changes
+    if (context !== cachedSearchContext) {
+      cachedSearchResults = null;
+    }
   },
 
   clearSearch: () => {
     set((state) => {
       state.searchQuery = '';
       state.isSearchFocused = false;
-    });
-  },
-
-  addToSearchHistory: (query) => {
-    set((state) => {
-      // Add to history if not already present
-      if (query && !state.searchHistory.includes(query)) {
-        state.searchHistory = [query, ...state.searchHistory].slice(0, 10); // Keep last 10
-      }
     });
   },
 
@@ -101,7 +104,18 @@ export const createSearchSlice: StateCreator<
 
   getSearchResults: () => {
     const { searchQuery, searchContext } = get();
+
+    // Return empty results if no query
     if (!searchQuery) return { count: 0, hasResults: false };
+
+    // Check cache
+    if (
+      cachedSearchQuery === searchQuery &&
+      cachedSearchContext === searchContext &&
+      cachedSearchResults !== null
+    ) {
+      return cachedSearchResults;
+    }
 
     let count = 0;
 
@@ -121,9 +135,14 @@ export const createSearchSlice: StateCreator<
         break;
     }
 
-    return {
+    // Cache the results
+    cachedSearchQuery = searchQuery;
+    cachedSearchContext = searchContext;
+    cachedSearchResults = {
       count,
       hasResults: count > 0,
     };
+
+    return cachedSearchResults;
   },
 });

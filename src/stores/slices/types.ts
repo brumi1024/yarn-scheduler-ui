@@ -112,14 +112,12 @@ export interface SearchSlice {
   // State
   searchQuery: string;
   searchContext: 'queues' | 'nodes' | 'settings' | null;
-  searchHistory: string[];
   isSearchFocused: boolean;
 
   // Actions
   setSearchQuery: (query: string) => void;
   setSearchContext: (context: 'queues' | 'nodes' | 'settings' | null) => void;
   clearSearch: () => void;
-  addToSearchHistory: (query: string) => void;
   setSearchFocused: (focused: boolean) => void;
 
   // Computed

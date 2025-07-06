@@ -2,7 +2,7 @@
  * Search bar component with context-aware search functionality
  */
 
-import { useEffect, useRef, useState, useMemo } from 'react';
+import { useEffect, useRef, useState, useMemo, memo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -16,7 +16,7 @@ interface SearchBarProps {
   className?: string;
 }
 
-export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
+const SearchBarComponent: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
   const {
     searchQuery,
     searchContext,
@@ -29,6 +29,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
 
   const inputRef = useRef<HTMLInputElement>(null);
   const [localQuery, setLocalQuery] = useState(searchQuery);
+  const [isSearching, setIsSearching] = useState(false);
 
   // Debounce search updates
   const debouncedQuery = useDebounce(localQuery, 300);
@@ -36,6 +37,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
   // Update store when debounced value changes
   useEffect(() => {
     setSearchQuery(debouncedQuery);
+    setIsSearching(false);
   }, [debouncedQuery, setSearchQuery]);
 
   // Keyboard shortcuts
@@ -62,11 +64,15 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
     setLocalQuery(value);
+    if (value && value !== debouncedQuery) {
+      setIsSearching(true);
+    }
   };
 
   const handleClear = () => {
     setLocalQuery('');
     clearSearch();
+    setIsSearching(false);
     inputRef.current?.focus();
   };
 
@@ -87,7 +93,12 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
   return (
     <div className={cn('relative', className)}>
       <div className="relative">
-        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+        <Search
+          className={cn(
+            'absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-all duration-200',
+            isSearching && 'animate-pulse',
+          )}
+        />
         <Input
           ref={inputRef}
           type="search"
@@ -103,7 +114,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
           <>
             <Badge
               variant="secondary"
-              className="absolute right-10 top-1/2 -translate-y-1/2 text-xs"
+              className="absolute right-10 top-1/2 -translate-y-1/2 text-xs transition-all duration-200"
             >
               {results.count} {results.count === 1 ? 'match' : 'matches'}
             </Badge>
@@ -121,7 +132,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
       </div>
 
       {isSearchFocused && (
-        <div className="absolute right-0 top-full mt-1 text-xs text-muted-foreground z-50 bg-background p-1 rounded shadow-sm">
+        <div className="absolute right-0 top-full mt-1 text-xs text-muted-foreground z-50 bg-background p-1 rounded shadow-sm transition-opacity duration-200">
           <kbd className="rounded border px-1">⌘K</kbd> to focus •
           <kbd className="rounded border px-1 ml-1">Esc</kbd> to clear
         </div>
@@ -129,3 +140,5 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
     </div>
   );
 };
+
+export const SearchBar = memo(SearchBarComponent);
