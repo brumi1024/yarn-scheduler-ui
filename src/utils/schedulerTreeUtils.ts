@@ -81,6 +81,37 @@ function filterQueueSubtree(queue: QueueInfo, matches: Set<string>): QueueInfo |
 }
 
 /**
+ * Build an index of queue relationships for efficient lookups
+ * @param queues Array of all queues
+ * @returns Index containing parent-child relationships and path lookups
+ */
+function buildQueueIndex(queues: QueueInfo[]) {
+  const pathToQueue = new Map<string, QueueInfo>();
+  const pathToDescendants = new Map<string, Set<string>>();
+
+  // First pass: build path lookup
+  queues.forEach((queue) => {
+    pathToQueue.set(queue.queuePath, queue);
+  });
+
+  // Second pass: build descendant relationships
+  queues.forEach((queue) => {
+    const pathParts = queue.queuePath.split('.');
+
+    // For each ancestor path, add this queue as a descendant
+    for (let i = 1; i < pathParts.length; i++) {
+      const ancestorPath = pathParts.slice(0, i).join('.');
+      if (!pathToDescendants.has(ancestorPath)) {
+        pathToDescendants.set(ancestorPath, new Set());
+      }
+      pathToDescendants.get(ancestorPath)!.add(queue.queuePath);
+    }
+  });
+
+  return { pathToQueue, pathToDescendants };
+}
+
+/**
  * Find all queues matching a search query
  * @param scheduler The scheduler to search in
  * @param searchQuery The search query
@@ -92,6 +123,9 @@ export function findMatchingQueues(scheduler: SchedulerInfo, searchQuery: string
 
   // Get all queues
   const allQueues = flattenSchedulerTree(scheduler);
+
+  // Build index for efficient lookups
+  const { pathToDescendants } = buildQueueIndex(allQueues);
 
   // Find direct matches
   allQueues.forEach((queue) => {
@@ -108,12 +142,13 @@ export function findMatchingQueues(scheduler: SchedulerInfo, searchQuery: string
         matches.add(pathParts.slice(0, i).join('.'));
       }
 
-      // Add all descendants
-      allQueues.forEach((otherQueue) => {
-        if (otherQueue.queuePath.startsWith(queue.queuePath + '.')) {
-          matches.add(otherQueue.queuePath);
-        }
-      });
+      // Add all descendants using the index
+      const descendants = pathToDescendants.get(queue.queuePath);
+      if (descendants) {
+        descendants.forEach((descendantPath) => {
+          matches.add(descendantPath);
+        });
+      }
     }
   });
 
