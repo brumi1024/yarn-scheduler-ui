@@ -27,7 +27,7 @@ export const QueueComparisonDialog: React.FC<QueueComparisonDialogProps> = ({
   const comparisonData = useMemo(() => {
     const configs = getComparisonData();
     return buildComparisonData(configs);
-  }, [getComparisonData, comparisonQueues]);
+  }, [getComparisonData, comparisonQueues]); // eslint-disable-line react-hooks/exhaustive-deps
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
