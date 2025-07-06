@@ -6,6 +6,7 @@ import { Button } from '~/components/ui/button';
 import { Card, CardContent, CardHeader } from '~/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import type { StagedChange } from '~/types';
+import { SPECIAL_VALUES } from '~/types';
 
 interface DiffViewProps {
   change: StagedChange;
@@ -43,6 +44,11 @@ const getChangeTypeVariant = (
 
 const formatPropertyName = (property: string | undefined): string => {
   if (!property) return 'Queue operation';
+
+  // Handle the __config__ placeholder for queue add/remove operations
+  if (property === SPECIAL_VALUES.CONFIG_PLACEHOLDER) {
+    return 'Queue configuration';
+  }
 
   // Handle node label properties with better formatting
   if (property.includes('accessible-node-labels.') && property.split('.').length === 3) {

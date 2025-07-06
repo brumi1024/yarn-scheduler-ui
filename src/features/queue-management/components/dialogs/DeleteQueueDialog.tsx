@@ -37,7 +37,7 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
 
   return (
     <Dialog open={open} onOpenChange={onClose}>
-      <DialogContent className="sm:max-w-md">
+      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-red-600">
             <Trash2 className="h-5 w-5" />
