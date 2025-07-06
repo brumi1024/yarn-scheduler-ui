@@ -5,6 +5,7 @@
 import type { StateCreator } from 'zustand';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
+import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { migrateLegacyRules } from '~/features/placement-rules/utils/migration';
 import type { SchedulerStore } from './types';
@@ -16,8 +17,8 @@ export interface PlacementRulesSlice {
   isLoadingRules: boolean;
   rulesError: string | null;
   selectedRuleIndex: number | null;
-  showMigrationDialog: boolean;
   legacyRules: string | null;
+  isLegacyMode: boolean;
 
   // Actions
   loadPlacementRules: () => void;
@@ -27,7 +28,6 @@ export interface PlacementRulesSlice {
   reorderRules: (fromIndex: number, toIndex: number) => void;
   selectRule: (index: number | null) => void;
   resetRulesChanges: () => void;
-  setShowMigrationDialog: (show: boolean) => void;
   migrateLegacyRules: () => Promise<void>;
 }
 
@@ -43,8 +43,8 @@ export const createPlacementRulesSlice: StateCreator<
   isLoadingRules: false,
   rulesError: null,
   selectedRuleIndex: null,
-  showMigrationDialog: false,
   legacyRules: null,
+  isLegacyMode: false,
 
   // Load rules from existing config data
   loadPlacementRules: () => {
@@ -54,34 +54,100 @@ export const createPlacementRulesSlice: StateCreator<
     });
 
     try {
-      // Extract placement rules from the already-loaded config
       const configData = get().configData;
-      const response = extractPlacementRulesFromConfig(configData);
+      const stagedChanges = get().stagedChanges;
 
-      if (response.format === 'json' && response.rules) {
-        const rules = response.rules;
-        set((state) => {
-          state.rules = rules;
-          state.originalRules = rules;
-          state.isLoadingRules = false;
-          state.showMigrationDialog = false;
-          state.legacyRules = null;
-        });
-      } else if (response.format === 'legacy' && response.requiresMigration) {
-        // Handle legacy format - show migration dialog
-        set((state) => {
-          state.rules = [];
-          state.originalRules = [];
-          state.isLoadingRules = false;
-          state.showMigrationDialog = true;
-          state.legacyRules = response.legacyRules || null;
-        });
+      // First, check the ORIGINAL config to detect if legacy rules exist
+      const originalResponse = extractPlacementRulesFromConfig(configData);
+
+      if (originalResponse.format === 'legacy' && originalResponse.requiresMigration) {
+        // Legacy rules exist in original config
+        // Check if migration is already staged
+        const formatStaged = stagedChanges.some(
+          (change) =>
+            change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
+            change.property === 'yarn.scheduler.capacity.mapping-rule-format' &&
+            change.newValue === 'json' &&
+            change.type === 'update',
+        );
+
+        if (formatStaged) {
+          // Migration is already staged
+          // Load JSON rules from staged changes
+          const jsonRulesStaged = stagedChanges.find(
+            (change) =>
+              change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
+              change.property === SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+          );
+
+          if (jsonRulesStaged && jsonRulesStaged.newValue) {
+            try {
+              const rulesData =
+                typeof jsonRulesStaged.newValue === 'string'
+                  ? JSON.parse(jsonRulesStaged.newValue)
+                  : jsonRulesStaged.newValue;
+              const rules = rulesData.rules || [];
+
+              set((state) => {
+                state.rules = rules;
+                state.originalRules = rules;
+                state.isLoadingRules = false;
+                state.legacyRules = null;
+                state.isLegacyMode = false;
+              });
+            } catch {
+              // If parsing fails, show empty rules
+              set((state) => {
+                state.rules = [];
+                state.originalRules = [];
+                state.isLoadingRules = false;
+                state.isLegacyMode = false;
+              });
+            }
+          } else {
+            // Format is staged but no rules found, show empty
+            set((state) => {
+              state.rules = [];
+              state.originalRules = [];
+              state.isLoadingRules = false;
+              state.isLegacyMode = false;
+            });
+          }
+        } else {
+          // Legacy rules exist but migration not staged
+          set((state) => {
+            state.rules = [];
+            state.originalRules = [];
+            state.isLoadingRules = false;
+            state.legacyRules = originalResponse.legacyRules || null;
+            state.isLegacyMode = true;
+          });
+        }
       } else {
-        set((state) => {
-          state.rules = [];
-          state.originalRules = [];
-          state.isLoadingRules = false;
-        });
+        // No legacy rules in original config
+        // Load rules normally using merged config
+        const mergedConfig = getMergedConfigData(configData, stagedChanges);
+        const response = extractPlacementRulesFromConfig(mergedConfig);
+
+        if (response.format === 'json' && response.rules) {
+          const rules = response.rules;
+          set((state) => {
+            state.rules = rules;
+            state.originalRules = rules;
+            state.isLoadingRules = false;
+            state.legacyRules = null;
+            state.isLegacyMode = false;
+          });
+        } else {
+          // No rules found
+          set((state) => {
+            state.rules = [];
+            state.originalRules = [];
+            state.isLoadingRules = false;
+            state.legacyRules = null;
+            state.isLegacyMode = false;
+          });
+        }
       }
     } catch (error) {
       set((state) => {
@@ -228,20 +294,12 @@ export const createPlacementRulesSlice: StateCreator<
     });
   },
 
-  // Show/hide migration dialog
-  setShowMigrationDialog: (show) => {
-    set((state) => {
-      state.showMigrationDialog = show;
-    });
-  },
-
   // Migrate legacy rules to JSON format
   migrateLegacyRules: async () => {
     const { stageGlobalChange, legacyRules } = get();
 
     if (!legacyRules) {
       set((state) => {
-        state.showMigrationDialog = false;
         state.rulesError = null;
       });
       return;
@@ -256,13 +314,16 @@ export const createPlacementRulesSlice: StateCreator<
         const rulesConfig = { rules: result.rules };
         stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, rulesConfig);
 
+        // Also stage the format change to JSON
+        stageGlobalChange('yarn.scheduler.capacity.mapping-rule-format', 'json');
+
         // Update local state
         set((state) => {
           state.rules = result.rules;
           state.originalRules = result.rules;
-          state.showMigrationDialog = false;
           state.legacyRules = null;
           state.rulesError = null;
+          state.isLegacyMode = false;
         });
       } else {
         // Show errors but don't close dialog

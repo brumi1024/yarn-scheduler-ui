@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
@@ -6,23 +6,94 @@ import { Plus, InfoIcon, HelpCircle } from 'lucide-react';
 import { PlacementRuleForm } from './PlacementRuleForm';
 import { PlacementRulesTable } from './PlacementRulesTable';
 import { PolicyReferenceDialog } from './PolicyReferenceDialog';
+import { PlacementRulesMigrationDialog } from './MigrationDialog';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRulesList() {
-  const { rules, selectedRuleIndex, addRule, deleteRule, reorderRules, selectRule } =
-    useSchedulerStore();
+  const {
+    rules,
+    selectedRuleIndex,
+    addRule,
+    deleteRule,
+    reorderRules,
+    selectRule,
+    loadPlacementRules,
+    isLegacyMode,
+    legacyRules,
+    configData,
+    stagedChanges,
+  } = useSchedulerStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
+  const [showMigrationDialog, setShowMigrationDialog] = useState(false);
+
+  // Load placement rules when component mounts and config data is available
+  // Also re-run when staged changes update to properly detect migration status
+  useEffect(() => {
+    // Only load placement rules if we have config data
+    if (configData && configData.size > 0) {
+      loadPlacementRules();
+    }
+  }, [configData, stagedChanges, loadPlacementRules]);
+
+  // Reset dialog when transitioning out of legacy mode
+  useEffect(() => {
+    if (!isLegacyMode) {
+      setShowMigrationDialog(false);
+    }
+  }, [isLegacyMode]);
 
   const handleAdd = (data: PlacementRule) => {
     addRule(data);
     setShowAddForm(false);
   };
 
-  if (showAddForm) {
+  if (showAddForm && !isLegacyMode) {
     return <PlacementRuleForm onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />;
+  }
+
+  // Show legacy mode UI
+  if (isLegacyMode) {
+    return (
+      <div className="space-y-4">
+        <Card className="border-warning">
+          <CardContent className="pt-6">
+            <div className="flex flex-col items-center space-y-4">
+              <div className="text-center">
+                <h3 className="text-lg font-semibold mb-2">Legacy Placement Rules Detected</h3>
+                <p className="text-muted-foreground mb-4">
+                  This scheduler is using legacy placement rules format. The visual editor is not
+                  available for legacy rules.
+                </p>
+                {legacyRules && (
+                  <div className="mb-4">
+                    <p className="text-sm font-medium mb-2">Current legacy rules:</p>
+                    <pre className="rounded-md bg-muted p-3 text-xs overflow-x-auto max-w-2xl mx-auto">
+                      {legacyRules}
+                    </pre>
+                  </div>
+                )}
+                <p className="text-sm text-muted-foreground mb-4">
+                  To use the visual placement rules editor, please migrate to the JSON format.
+                </p>
+              </div>
+              <Button onClick={() => setShowMigrationDialog(true)}>
+                <InfoIcon className="h-4 w-4 mr-2" />
+                Migrate to JSON Format
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {/* Migration dialog for legacy rules */}
+        <PlacementRulesMigrationDialog
+          open={showMigrationDialog}
+          onOpenChange={setShowMigrationDialog}
+        />
+      </div>
+    );
   }
 
   return (

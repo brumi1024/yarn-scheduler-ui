@@ -9,6 +9,9 @@ import type { PlacementRule } from '~/types/features/placement-rules';
 vi.mock('~/stores/schedulerStore');
 
 // Mock the components
+vi.mock('./MigrationDialog', () => ({
+  PlacementRulesMigrationDialog: vi.fn(() => <div data-testid="migration-dialog" />),
+}));
 
 vi.mock('./PlacementRulesTable', () => ({
   PlacementRulesTable: vi.fn(({ rules, onDelete, onSelect }) => (
@@ -87,6 +90,10 @@ describe('PlacementRulesList', () => {
     deleteRule: vi.fn(),
     reorderRules: vi.fn(),
     selectRule: vi.fn(),
+    loadPlacementRules: vi.fn(),
+    isLegacyMode: false,
+    legacyRules: null,
+    configData: new Map(),
   };
 
   beforeEach(() => {
@@ -185,5 +192,79 @@ describe('PlacementRulesList', () => {
         'Rules are evaluated from top to bottom. The first matching rule determines the queue assignment. Drag rules to reorder them.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('should call loadPlacementRules on mount when configData is available', () => {
+    // Set up configData with some content
+    const configWithData = new Map([['some.property', 'value']]);
+    vi.mocked(useSchedulerStore).mockReturnValue({
+      ...mockStoreFunctions,
+      configData: configWithData,
+    });
+
+    render(<PlacementRulesList />);
+
+    expect(mockStoreFunctions.loadPlacementRules).toHaveBeenCalled();
+  });
+
+  it('should not call loadPlacementRules on mount when configData is empty', () => {
+    // Use default empty Map for configData
+    render(<PlacementRulesList />);
+
+    expect(mockStoreFunctions.loadPlacementRules).not.toHaveBeenCalled();
+  });
+
+  describe('legacy mode behavior', () => {
+    it('should show legacy mode UI when isLegacyMode is true', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+        legacyRules: 'u:user1:root.default,u:user2:root.production',
+      });
+
+      render(<PlacementRulesList />);
+
+      expect(screen.getByText('Legacy Placement Rules Detected')).toBeInTheDocument();
+      expect(
+        screen.getByText(/This scheduler is using legacy placement rules format/),
+      ).toBeInTheDocument();
+      expect(screen.getByText('u:user1:root.default,u:user2:root.production')).toBeInTheDocument();
+    });
+
+    it('should show migrate button in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+      });
+
+      render(<PlacementRulesList />);
+
+      const migrateButton = screen.getByRole('button', { name: /migrate to json format/i });
+      expect(migrateButton).toBeInTheDocument();
+    });
+
+    it('should not show add form in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+      });
+
+      render(<PlacementRulesList />);
+
+      // Add Rule button should not be present in legacy mode
+      expect(screen.queryByRole('button', { name: /add rule/i })).not.toBeInTheDocument();
+    });
+
+    it('should not show rules table in legacy mode', () => {
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...mockStoreFunctions,
+        isLegacyMode: true,
+        rules: mockRules,
+      });
+
+      render(<PlacementRulesList />);
+
+      expect(screen.queryByTestId('placement-rules-table')).not.toBeInTheDocument();
+    });
   });
 });

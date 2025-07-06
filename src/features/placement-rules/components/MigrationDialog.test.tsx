@@ -3,21 +3,20 @@ import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { PlacementRulesMigrationDialog } from './MigrationDialog';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import * as migrationUtils from '../utils/migration';
-import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 // Mock the store
 vi.mock('~/stores/schedulerStore');
 
-// Mock the migration utilities
-vi.mock('../utils/migration');
-
 describe('PlacementRulesMigrationDialog', () => {
   const mockStoreState = {
-    showMigrationDialog: true,
     legacyRules: 'u:alice:root.users.alice,g:developers:root.teams.dev',
-    setShowMigrationDialog: vi.fn(),
     stageGlobalChange: vi.fn(),
+    migrateLegacyRules: vi.fn(),
+  };
+
+  const defaultProps = {
+    open: true,
+    onOpenChange: vi.fn(),
   };
 
   beforeEach(() => {
@@ -25,25 +24,20 @@ describe('PlacementRulesMigrationDialog', () => {
     vi.mocked(useSchedulerStore).mockReturnValue(mockStoreState);
   });
 
-  it('should render when showMigrationDialog is true', () => {
-    render(<PlacementRulesMigrationDialog />);
+  it('should render when open is true', () => {
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     expect(screen.getByText('Migrate Legacy Placement Rules')).toBeInTheDocument();
     expect(screen.getByText(/Legacy placement rules have been detected/)).toBeInTheDocument();
   });
 
-  it('should not render when showMigrationDialog is false', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      ...mockStoreState,
-      showMigrationDialog: false,
-    });
-
-    const { container } = render(<PlacementRulesMigrationDialog />);
+  it('should not render when open is false', () => {
+    const { container } = render(<PlacementRulesMigrationDialog {...defaultProps} open={false} />);
     expect(container.firstChild).toBeNull();
   });
 
   it('should display legacy rules preview', () => {
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     expect(screen.getByText('Current Legacy Rules:')).toBeInTheDocument();
     expect(screen.getByText(mockStoreState.legacyRules)).toBeInTheDocument();
@@ -51,53 +45,26 @@ describe('PlacementRulesMigrationDialog', () => {
 
   it('should handle successful migration', async () => {
     const user = userEvent.setup();
-    const mockMigrationResult = {
-      success: true,
-      rules: [
-        {
-          type: 'user' as const,
-          matches: 'alice',
-          policy: 'custom' as const,
-          customPlacement: 'root.users.alice',
-          fallbackResult: 'placeDefault' as const,
-          create: true,
-        },
-        {
-          type: 'group' as const,
-          matches: 'developers',
-          policy: 'custom' as const,
-          customPlacement: 'root.teams.dev',
-          fallbackResult: 'placeDefault' as const,
-          create: true,
-        },
-      ],
-      errors: [],
-    };
 
-    vi.mocked(migrationUtils.migrateLegacyRules).mockReturnValue(mockMigrationResult);
+    // Mock successful migration from store
+    mockStoreState.migrateLegacyRules.mockResolvedValue(undefined);
 
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const migrateButton = screen.getByRole('button', { name: 'Migrate to JSON' });
     await user.click(migrateButton);
 
-    // Check that migration utility was called
-    expect(migrationUtils.migrateLegacyRules).toHaveBeenCalledWith(mockStoreState.legacyRules);
-
-    // Check that stageGlobalChange was called with correct format
-    expect(mockStoreState.stageGlobalChange).toHaveBeenCalledWith(
-      SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
-      { rules: mockMigrationResult.rules },
-    );
+    // Check that store's migrateLegacyRules was called
+    expect(mockStoreState.migrateLegacyRules).toHaveBeenCalled();
 
     // Check success message
-    expect(screen.getByText(/Successfully converted 2 rules/)).toBeInTheDocument();
+    expect(screen.getByText(/Successfully converted/)).toBeInTheDocument();
     expect(screen.getByText(/Changes have been staged for review/)).toBeInTheDocument();
 
     // Check that dialog closes after timeout
     await waitFor(
       () => {
-        expect(mockStoreState.setShowMigrationDialog).toHaveBeenCalledWith(false);
+        expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false);
       },
       { timeout: 2500 },
     );
@@ -105,52 +72,42 @@ describe('PlacementRulesMigrationDialog', () => {
 
   it('should handle migration errors', async () => {
     const user = userEvent.setup();
-    const mockMigrationResult = {
-      success: false,
-      rules: [],
-      errors: [
-        'Failed to convert rule "invalid1": Invalid rule format',
-        'Failed to convert rule "invalid2": Missing matcher',
-      ],
-    };
 
-    vi.mocked(migrationUtils.migrateLegacyRules).mockReturnValue(mockMigrationResult);
+    // Mock failed migration from store
+    mockStoreState.migrateLegacyRules.mockRejectedValue(new Error('Migration failed'));
 
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const migrateButton = screen.getByRole('button', { name: 'Migrate to JSON' });
     await user.click(migrateButton);
 
     // Check error display
-    expect(screen.getByText('Migration failed:')).toBeInTheDocument();
-    expect(screen.getByText(/Failed to convert rule "invalid1"/)).toBeInTheDocument();
-    expect(screen.getByText(/Failed to convert rule "invalid2"/)).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Migration failed:')).toBeInTheDocument();
+      expect(screen.getByText('Migration failed')).toBeInTheDocument();
+    });
 
     // Dialog should not close on error
-    expect(mockStoreState.setShowMigrationDialog).not.toHaveBeenCalled();
+    expect(defaultProps.onOpenChange).not.toHaveBeenCalled();
   });
 
   it('should handle cancel button', async () => {
     const user = userEvent.setup();
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const cancelButton = screen.getByRole('button', { name: 'Keep Legacy Rules' });
     await user.click(cancelButton);
 
-    expect(mockStoreState.setShowMigrationDialog).toHaveBeenCalledWith(false);
+    expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false);
   });
 
   it('should disable migrate button after successful migration', async () => {
     const user = userEvent.setup();
-    const mockMigrationResult = {
-      success: true,
-      rules: [],
-      errors: [],
-    };
 
-    vi.mocked(migrationUtils.migrateLegacyRules).mockReturnValue(mockMigrationResult);
+    // Mock successful migration from store
+    mockStoreState.migrateLegacyRules.mockResolvedValue(undefined);
 
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const migrateButton = screen.getByRole('button', { name: 'Migrate to JSON' });
     await user.click(migrateButton);
@@ -167,7 +124,7 @@ describe('PlacementRulesMigrationDialog', () => {
       legacyRules: null,
     });
 
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const migrateButton = screen.getByRole('button', { name: 'Migrate to JSON' });
     expect(migrateButton).toBeDisabled();
@@ -175,29 +132,30 @@ describe('PlacementRulesMigrationDialog', () => {
 
   it('should handle exception during migration', async () => {
     const user = userEvent.setup();
-    const error = new Error('Unexpected error');
-    vi.mocked(migrationUtils.migrateLegacyRules).mockImplementation(() => {
-      throw error;
-    });
 
-    render(<PlacementRulesMigrationDialog />);
+    // Mock migration throwing an error from store
+    mockStoreState.migrateLegacyRules.mockRejectedValue(new Error('Unexpected error'));
+
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     const migrateButton = screen.getByRole('button', { name: 'Migrate to JSON' });
     await user.click(migrateButton);
 
     // Check error display
-    expect(screen.getByText('Migration failed:')).toBeInTheDocument();
-    expect(screen.getByText('Unexpected error')).toBeInTheDocument();
+    await waitFor(() => {
+      expect(screen.getByText('Migration failed:')).toBeInTheDocument();
+      expect(screen.getByText('Unexpected error')).toBeInTheDocument();
+    });
   });
 
   it('should handle closing dialog via X button', async () => {
     const user = userEvent.setup();
-    render(<PlacementRulesMigrationDialog />);
+    render(<PlacementRulesMigrationDialog {...defaultProps} />);
 
     // Find the close button (X) - it's usually in the dialog header
     const closeButton = screen.getByRole('button', { name: 'Close' });
     await user.click(closeButton);
 
-    expect(mockStoreState.setShowMigrationDialog).toHaveBeenCalledWith(false);
+    expect(defaultProps.onOpenChange).toHaveBeenCalledWith(false);
   });
 });
