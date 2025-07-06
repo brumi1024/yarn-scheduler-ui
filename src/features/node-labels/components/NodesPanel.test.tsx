@@ -74,6 +74,8 @@ describe('NodesPanel', () => {
     nodeLabels: mockNodeLabels,
     assignNodeToLabel: mockAssignNodeToLabel,
     isLoading: false,
+    searchQuery: '',
+    getFilteredNodes: vi.fn(() => []),
   };
 
   beforeEach(() => {
@@ -409,8 +411,14 @@ describe('NodesPanel', () => {
 
       // Find badges in the labels column
       const labelsCell = screen.getByRole('cell', { name: /gpu.*highmem/i });
-      const gpuBadge = within(labelsCell).getByText('gpu');
-      const highmemBadge = within(labelsCell).getByText('highmem');
+
+      // Get the badge elements (parent of the text)
+      const gpuBadgeText = within(labelsCell).getByText('gpu');
+      const highmemBadgeText = within(labelsCell).getByText('highmem');
+
+      // Get parent badge elements
+      const gpuBadge = gpuBadgeText.closest('[data-slot="badge"]');
+      const highmemBadge = highmemBadgeText.closest('[data-slot="badge"]');
 
       expect(gpuBadge).toHaveClass('bg-primary');
       expect(highmemBadge).toHaveClass('border');

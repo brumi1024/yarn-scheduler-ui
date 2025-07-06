@@ -108,10 +108,32 @@ export interface QueueDataSlice {
   getChildQueues: (parentPath: string) => QueueInfo[];
 }
 
+export interface SearchSlice {
+  // State
+  searchQuery: string;
+  searchContext: 'queues' | 'nodes' | 'settings' | null;
+  searchHistory: string[];
+  isSearchFocused: boolean;
+
+  // Actions
+  setSearchQuery: (query: string) => void;
+  setSearchContext: (context: 'queues' | 'nodes' | 'settings' | null) => void;
+  clearSearch: () => void;
+  addToSearchHistory: (query: string) => void;
+  setSearchFocused: (focused: boolean) => void;
+
+  // Computed
+  getFilteredQueues: () => SchedulerInfo | null;
+  getFilteredNodes: () => NodeInfo[];
+  getFilteredSettings: () => import('~/types').PropertyDescriptor[];
+  getSearchResults: () => { count: number; hasResults: boolean };
+}
+
 export type SchedulerStore = BaseStoreSlice &
   SchedulerDataSlice &
   NodeLabelsSlice &
   StagedChangesSlice &
   QueueSelectionSlice &
   QueueDataSlice &
-  PlacementRulesSlice;
+  PlacementRulesSlice &
+  SearchSlice;

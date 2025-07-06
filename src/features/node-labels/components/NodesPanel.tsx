@@ -22,13 +22,22 @@ import {
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import type { NodeInfo, NodeToLabelMapping } from '~/types';
 import { formatMemory } from '~/utils/formatUtils';
+import { HighlightedText } from '~/components/search/HighlightedText';
 
 interface NodesPanelProps {
   selectedLabel: string | null;
 }
 
 export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
-  const { nodes, nodeToLabels, nodeLabels, assignNodeToLabel, isLoading } = useSchedulerStore();
+  const {
+    nodes,
+    nodeToLabels,
+    nodeLabels,
+    assignNodeToLabel,
+    isLoading,
+    searchQuery,
+    getFilteredNodes,
+  } = useSchedulerStore();
 
   // Create a map of nodeId -> labels for quick lookup
   const nodeLabelsMap = useMemo(() => {
@@ -39,18 +48,21 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
     return map;
   }, [nodeToLabels]);
 
+  // Get nodes filtered by search query
+  const searchFilteredNodes = searchQuery ? getFilteredNodes() : nodes;
+
   // Filter nodes based on selected label
   const filteredNodes = useMemo(() => {
     if (!selectedLabel) {
       // When no label is selected, show all nodes (this is the "overview" mode)
-      return nodes;
+      return searchFilteredNodes;
     }
 
-    return nodes.filter((node: NodeInfo) => {
+    return searchFilteredNodes.filter((node: NodeInfo) => {
       const assignedLabels = nodeLabelsMap.get(node.id) || [];
       return assignedLabels.includes(selectedLabel);
     });
-  }, [nodes, nodeLabelsMap, selectedLabel]);
+  }, [searchFilteredNodes, nodeLabelsMap, selectedLabel]);
 
   const handleLabelChange = async (nodeId: string, newLabel: string | null) => {
     try {
@@ -134,8 +146,12 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
                   <TableRow key={node.id}>
                     <TableCell>
                       <div>
-                        <p className="font-medium">{node.nodeHostName}</p>
-                        <p className="text-xs text-muted-foreground">{node.rack}</p>
+                        <p className="font-medium">
+                          <HighlightedText text={node.nodeHostName} highlight={searchQuery} />
+                        </p>
+                        <p className="text-xs text-muted-foreground">
+                          <HighlightedText text={node.rack || ''} highlight={searchQuery} />
+                        </p>
                       </div>
                     </TableCell>
 
@@ -151,7 +167,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
                               key={label}
                               variant={label === selectedLabel ? 'default' : 'outline'}
                             >
-                              {label}
+                              <HighlightedText text={label} highlight={searchQuery} />
                             </Badge>
                           ))
                         ) : (
