@@ -14,21 +14,37 @@ import type {
   NodeToLabelsResponse,
   NodesResponse,
   VersionResponse,
+  YarnConfigResponse,
 } from '../../types';
 
 export class YarnApiClient {
   private readonly baseUrl: string;
   private readonly defaultHeaders: Record<string, string>;
   private readonly timeout: number;
+  private readonly userName: string;
+  private securityMode: 'simple' | 'kerberos' | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(baseUrl: string, config: ApiClientConfig = {}) {
     // Remove trailing slash if present
     this.baseUrl = baseUrl.endsWith('/') ? baseUrl.slice(0, -1) : baseUrl;
     this.timeout = config.timeout || 30000;
+    this.userName = config.userName || 'yarn';
     this.defaultHeaders = {
       Accept: 'application/json',
       ...config.headers,
     };
+
+    // Initialize security mode detection
+    this.initPromise = this.detectSecurityMode()
+      .catch((error) => {
+        console.error('Failed to detect YARN security mode:', error);
+        // Don't rethrow - allow requests to proceed without auth detection
+      })
+      .finally(() => {
+        // Clear the promise after detection completes
+        this.initPromise = null;
+      });
   }
 
   /**
@@ -143,14 +159,52 @@ export class YarnApiClient {
   }
 
   /**
+   * GET /conf?name=<config> - Fetch YARN configuration value
+   */
+  async getConfiguration(name: string): Promise<string> {
+    const response = await this.request<YarnConfigResponse>(
+      'GET',
+      `/conf?name=${encodeURIComponent(name)}`,
+      { skipAuth: true }, // Don't add user.name to config requests
+    );
+    return response.property.value;
+  }
+
+  /**
+   * Detect YARN security mode by checking hadoop.security.authentication
+   */
+  private async detectSecurityMode(): Promise<void> {
+    try {
+      const authMode = await this.getConfiguration('hadoop.security.authentication');
+      this.securityMode = authMode.toLowerCase() === 'simple' ? 'simple' : 'kerberos';
+    } catch {
+      // If we can't detect security mode, we'll throw an error
+      throw new Error('Failed to detect YARN security mode. Please check YARN availability.');
+    }
+  }
+
+  /**
    * Simple request method - React Query handles retries and error states
    */
   private async request<T = void>(
     method: string,
     path: string,
-    options: RequestInit = {},
+    options: RequestInit & { skipAuth?: boolean } = {},
   ): Promise<T> {
-    const url = `${this.baseUrl}${path}`;
+    // Wait for security mode detection to complete (if still in progress)
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
+    // Build URL with user.name if needed
+    let url = `${this.baseUrl}${path}`;
+
+    // Add user.name parameter for simple auth mode (unless skipAuth is true)
+    if (!options.skipAuth && this.securityMode === 'simple' && this.userName) {
+      const separator = url.includes('?') ? '&' : '?';
+      url += `${separator}user.name=${encodeURIComponent(this.userName)}`;
+    }
+
     const controller = new AbortController();
     const timeoutId = setTimeout(() => controller.abort(), this.timeout);
 
@@ -158,6 +212,7 @@ export class YarnApiClient {
       const response = await fetch(url, {
         method,
         signal: controller.signal,
+        credentials: 'include', // Include cookies for cross-origin requests
         ...options,
         headers: {
           ...this.defaultHeaders,

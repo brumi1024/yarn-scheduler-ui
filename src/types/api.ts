@@ -49,12 +49,19 @@ export type NodeToLabelsResponse = {
   };
 };
 
+export type YarnConfigResponse = {
+  property: {
+    value: string;
+  };
+};
+
 // API client configuration
 export type ApiClientConfig = {
   timeout?: number;
   headers?: Record<string, string>;
   retryAttempts?: number;
   retryDelay?: number;
+  userName?: string;
   requestInterceptor?: (request: Request) => Request | Promise<Request>;
   responseInterceptor?: (response: Response) => Response | Promise<Response>;
 };
