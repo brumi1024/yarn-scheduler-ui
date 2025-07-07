@@ -327,7 +327,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           <ContextMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              handleClick(new MouseEvent('click') as unknown as React.MouseEvent);
+              handleClick(e);
             }}
             disabled={stagedStatus === 'new'}
           >
