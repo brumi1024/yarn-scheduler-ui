@@ -48,6 +48,14 @@ export class YarnApiClient {
   }
 
   /**
+   * Get the root URL (origin) from the base URL
+   */
+  private get rootUrl(): string {
+    const url = new URL(this.baseUrl);
+    return url.origin;
+  }
+
+  /**
    * GET /scheduler - Fetch queue hierarchy with live metrics
    */
   async getScheduler(): Promise<SchedulerResponse> {
@@ -163,37 +171,12 @@ export class YarnApiClient {
    * Note: This endpoint is at the root level, not under /ws/v1/cluster
    */
   async getConfiguration(name: string): Promise<string> {
-    // Extract the root URL (before /ws/v1/cluster)
-    const rootUrl = this.baseUrl.replace(/\/ws\/v1\/cluster\/?$/, '');
-    const url = `${rootUrl}/conf?name=${encodeURIComponent(name)}`;
-
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
-
-    try {
-      const response = await fetch(url, {
-        method: 'GET',
-        headers: this.defaultHeaders,
-        credentials: 'include',
-        signal: controller.signal,
-      });
-
-      if (!response.ok) {
-        throw new Error(
-          `Failed to fetch configuration: HTTP ${response.status} ${response.statusText}`,
-        );
-      }
-
-      const data = (await response.json()) as YarnConfigResponse;
-      return data.property.value;
-    } catch (error) {
-      if (error instanceof Error && error.name === 'AbortError') {
-        throw new Error('Configuration request timed out');
-      }
-      throw error;
-    } finally {
-      clearTimeout(timeoutId);
-    }
+    const url = `${this.rootUrl}/conf?name=${encodeURIComponent(name)}`;
+    const response = await this.request<YarnConfigResponse>('GET', url, {
+      skipAuth: true,
+      absoluteUrl: true,
+    });
+    return response.property.value;
   }
 
   /**
@@ -215,15 +198,15 @@ export class YarnApiClient {
   private async request<T = void>(
     method: string,
     path: string,
-    options: RequestInit & { skipAuth?: boolean } = {},
+    options: RequestInit & { skipAuth?: boolean; absoluteUrl?: boolean } = {},
   ): Promise<T> {
     // Wait for security mode detection to complete (if still in progress)
     if (this.initPromise) {
       await this.initPromise;
     }
 
-    // Build URL with user.name if needed
-    let url = `${this.baseUrl}${path}`;
+    // Build URL - use path as-is if absolute, otherwise append to baseUrl
+    let url = options.absoluteUrl ? path : `${this.baseUrl}${path}`;
 
     // Add user.name parameter for simple auth mode (unless skipAuth is true)
     if (!options.skipAuth && this.securityMode === 'simple' && this.userName) {
