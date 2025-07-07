@@ -160,14 +160,40 @@ export class YarnApiClient {
 
   /**
    * GET /conf?name=<config> - Fetch YARN configuration value
+   * Note: This endpoint is at the root level, not under /ws/v1/cluster
    */
   async getConfiguration(name: string): Promise<string> {
-    const response = await this.request<YarnConfigResponse>(
-      'GET',
-      `/conf?name=${encodeURIComponent(name)}`,
-      { skipAuth: true }, // Don't add user.name to config requests
-    );
-    return response.property.value;
+    // Extract the root URL (before /ws/v1/cluster)
+    const rootUrl = this.baseUrl.replace(/\/ws\/v1\/cluster\/?$/, '');
+    const url = `${rootUrl}/conf?name=${encodeURIComponent(name)}`;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        headers: this.defaultHeaders,
+        credentials: 'include',
+        signal: controller.signal,
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Failed to fetch configuration: HTTP ${response.status} ${response.statusText}`,
+        );
+      }
+
+      const data = (await response.json()) as YarnConfigResponse;
+      return data.property.value;
+    } catch (error) {
+      if (error instanceof Error && error.name === 'AbortError') {
+        throw new Error('Configuration request timed out');
+      }
+      throw error;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**
