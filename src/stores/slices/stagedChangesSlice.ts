@@ -147,37 +147,39 @@ export const createStagedChangesSlice: StateCreator<
         );
       }
 
-      // Remove any existing add change for the same queue
-      state.stagedChanges = state.stagedChanges.filter(
-        (c) => !(c.type === 'add' && c.queuePath === newQueuePath),
-      );
+      // Remove any existing changes for the same queue
+      state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== newQueuePath);
 
-      const change: StagedChange = {
-        id: nanoid(),
-        type: 'add',
-        queuePath: newQueuePath,
-        property: SPECIAL_VALUES.CONFIG_PLACEHOLDER,
-        config,
-        timestamp: Date.now(),
-        validationErrors,
-      };
-
-      state.stagedChanges.push(change);
+      // Create one staged change per property
+      Object.entries(config).forEach(([property, value]) => {
+        const change: StagedChange = {
+          id: nanoid(),
+          type: 'add',
+          queuePath: newQueuePath,
+          property,
+          oldValue: undefined,
+          newValue: value,
+          timestamp: Date.now(),
+          // Only attach validation errors to the first property (capacity) to avoid duplication
+          validationErrors: property === 'capacity' ? validationErrors : undefined,
+        };
+        state.stagedChanges.push(change);
+      });
     });
   },
 
   stageQueueRemoval: (queuePath, validationErrors) => {
     set((state) => {
-      // Remove any existing remove change for the same queue
-      state.stagedChanges = state.stagedChanges.filter(
-        (c) => !(c.type === 'remove' && c.queuePath === queuePath),
-      );
+      // Remove any existing changes for the same queue
+      state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== queuePath);
 
       const change: StagedChange = {
         id: nanoid(),
         type: 'remove',
         queuePath,
-        property: SPECIAL_VALUES.CONFIG_PLACEHOLDER,
+        property: SPECIAL_VALUES.QUEUE_MARKER,
+        oldValue: 'exists',
+        newValue: undefined,
         timestamp: Date.now(),
         validationErrors,
       };
@@ -215,6 +217,7 @@ export const createStagedChangesSlice: StateCreator<
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = value;
+        state.stagedChanges[existingIndex].label = label;
         state.stagedChanges[existingIndex].validationErrors = validationErrors;
       } else if (value !== originalValue) {
         // Only create a new staged change if the value differs from the original
@@ -225,8 +228,8 @@ export const createStagedChangesSlice: StateCreator<
           property: fullPropertyName,
           oldValue: originalValue,
           newValue: value,
-          label,
           timestamp: Date.now(),
+          label,
           validationErrors,
         };
         state.stagedChanges.push(change);

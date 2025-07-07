@@ -45,9 +45,8 @@ const getChangeTypeVariant = (
 const formatPropertyName = (property: string | undefined): string => {
   if (!property) return 'Queue operation';
 
-  // Handle the __config__ placeholder for queue add/remove operations
-  if (property === SPECIAL_VALUES.CONFIG_PLACEHOLDER) {
-    return 'Queue configuration';
+  if (property === SPECIAL_VALUES.QUEUE_MARKER) {
+    return 'Queue removal';
   }
 
   // Handle node label properties with better formatting

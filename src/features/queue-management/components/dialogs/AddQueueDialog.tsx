@@ -36,11 +36,8 @@ const addQueueSchema = z.object({
     .refine((name) => !name.includes('.'), {
       message: 'Queue name cannot contain dots',
     }),
-  capacity: z.number().min(0, 'Capacity must be at least 0').max(100, 'Capacity cannot exceed 100'),
-  maxCapacity: z
-    .number()
-    .min(0, 'Max capacity must be at least 0')
-    .max(100, 'Max capacity cannot exceed 100'),
+  capacity: z.string().min(1, 'Capacity is required'),
+  maxCapacity: z.string().min(1, 'Max capacity is required'),
   state: z.enum(['RUNNING', 'STOPPED']),
 });
 
@@ -67,18 +64,12 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
     resolver: zodResolver(addQueueSchema),
     defaultValues: {
       queueName: '',
-      capacity: 10,
-      maxCapacity: 100,
+      capacity: '10',
+      maxCapacity: '100',
       state: 'RUNNING',
     },
     mode: 'onChange',
   });
-
-  const capacity = watch('capacity');
-  const maxCapacity = watch('maxCapacity');
-
-  // Custom validation: capacity should not exceed maxCapacity
-  const hasCapacityError = capacity > maxCapacity;
 
   const handleClose = () => {
     reset();
@@ -89,8 +80,8 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
     try {
       // Add the queue using our hook
       addChildQueue(parentQueuePath, data.queueName, {
-        capacity: data.capacity.toString(),
-        'maximum-capacity': data.maxCapacity.toString(),
+        capacity: data.capacity,
+        'maximum-capacity': data.maxCapacity,
         state: data.state,
       });
 
@@ -132,44 +123,39 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
           {/* Capacity */}
           <div className="space-y-2">
             <Label htmlFor="capacity">
-              Capacity (%) <span className="text-red-500">*</span>
+              Capacity <span className="text-red-500">*</span>
             </Label>
             <Input
-              {...register('capacity', { valueAsNumber: true })}
+              {...register('capacity')}
               id="capacity"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
+              type="text"
+              placeholder="e.g., 50, 10w, [memory=1024,vcores=1]"
             />
             {errors.capacity && <p className="text-sm text-red-500">{errors.capacity.message}</p>}
-            {!errors.capacity && hasCapacityError && (
-              <p className="text-sm text-red-500">Capacity cannot exceed max capacity</p>
-            )}
-            {!errors.capacity && !hasCapacityError && (
-              <p className="text-sm text-muted-foreground">Percentage of parent queue capacity</p>
+            {!errors.capacity && (
+              <p className="text-sm text-muted-foreground">
+                Percentage (50), weight (10w), or absolute ([memory=1024,vcores=1])
+              </p>
             )}
           </div>
 
           {/* Max Capacity */}
           <div className="space-y-2">
             <Label htmlFor="maxCapacity">
-              Max Capacity (%) <span className="text-red-500">*</span>
+              Max Capacity <span className="text-red-500">*</span>
             </Label>
             <Input
-              {...register('maxCapacity', { valueAsNumber: true })}
+              {...register('maxCapacity')}
               id="maxCapacity"
-              type="number"
-              min={0}
-              max={100}
-              step={1}
+              type="text"
+              placeholder="e.g., 100, 20w, [memory=2048,vcores=2]"
             />
             {errors.maxCapacity && (
               <p className="text-sm text-red-500">{errors.maxCapacity.message}</p>
             )}
             {!errors.maxCapacity && (
               <p className="text-sm text-muted-foreground">
-                Maximum capacity this queue can grow to
+                Maximum capacity this queue can grow to (percentage or absolute format)
               </p>
             )}
           </div>
@@ -191,20 +177,11 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
             </Select>
           </div>
 
-          {/* Capacity validation warning */}
-          {hasCapacityError && (
-            <Alert variant="destructive">
-              <AlertDescription>
-                Capacity ({capacity}%) cannot exceed max capacity ({maxCapacity}%)
-              </AlertDescription>
-            </Alert>
-          )}
-
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>
               Cancel
             </Button>
-            <Button type="submit" disabled={!isValid || hasCapacityError}>
+            <Button type="submit" disabled={!isValid}>
               <Plus className="mr-2 h-4 w-4" />
               Add Queue
             </Button>

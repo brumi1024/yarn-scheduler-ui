@@ -103,10 +103,17 @@ describe('lifetimeRules', () => {
 
     it('should fail for negative values', () => {
       const context = createMockContext();
-      const result = validateUserLimitFactor('-1', context);
+      const result = validateUserLimitFactor('-2', context);
       expect(result.valid).toBe(false);
       expect(result.errors).toHaveLength(1);
       expect(result.errors[0].rule).toBe('user-limit-factor-range');
+    });
+
+    it('should pass for -1 value', () => {
+      const context = createMockContext();
+      const result = validateUserLimitFactor('-1', context);
+      expect(result.valid).toBe(true);
+      expect(result.errors).toHaveLength(0);
     });
 
     it('should warn for zero value', () => {

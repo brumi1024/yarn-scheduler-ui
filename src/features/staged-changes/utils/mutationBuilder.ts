@@ -62,14 +62,17 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
           break;
         }
         case 'add': {
-          // Handle config object for queue additions
-          if (change.config) {
-            addsByQueue.set(queuePath, change.config);
-          }
+          if (!change.property || change.newValue === undefined) continue;
+
+          const adds = addsByQueue.get(queuePath) || {};
+          adds[change.property] = change.newValue;
+          addsByQueue.set(queuePath, adds);
           break;
         }
         case 'remove': {
-          removals.push(queuePath);
+          if (change.property === SPECIAL_VALUES.QUEUE_MARKER) {
+            removals.push(queuePath);
+          }
           break;
         }
       }
@@ -106,93 +109,6 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
 }
 
 /**
- * Builds a queue mutation object for update operations
- *
- * @param queuePath The queue path to update
- * @param changes Array of changes for this queue
- * @returns Mutation object for the queue
- */
-export function buildQueueMutation(
-  queuePath: string,
-  changes: StagedChange[],
-): { 'queue-name': string; params: Record<string, string> } {
-  const params: Record<string, string> = {};
-
-  for (const change of changes) {
-    if (change.queuePath === queuePath && change.property && change.newValue !== undefined) {
-      params[change.property] = change.newValue;
-    }
-  }
-
-  return {
-    'queue-name': queuePath,
-    params,
-  };
-}
-
-/**
- * Extracts global property updates from staged changes
- *
- * @param changes Array of staged changes
- * @returns Record of global property updates
- */
-export function buildGlobalMutation(changes: StagedChange[]): Record<string, string> {
-  const globalUpdates: Record<string, string> = {};
-
-  for (const change of changes) {
-    if (
-      change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
-      change.property &&
-      change.newValue !== undefined
-    ) {
-      globalUpdates[change.property] = change.newValue;
-    }
-  }
-
-  return globalUpdates;
-}
-
-/**
- * Builds an add queue mutation object
- *
- * @param queuePath The queue path to add
- * @param changes Array of changes for the new queue
- * @returns Mutation object for adding the queue
- */
-export function buildAddQueueMutation(
-  queuePath: string,
-  changes: StagedChange[],
-): { 'queue-name': string; params: Record<string, string> } {
-  // Find the add change with config for this queue
-  const addChange = changes.find(
-    (change) => change.queuePath === queuePath && change.type === 'add' && change.config,
-  );
-
-  return {
-    'queue-name': queuePath,
-    params: addChange?.config || {},
-  };
-}
-
-/**
- * Extracts queue paths to remove from staged changes
- *
- * @param changes Array of staged changes
- * @returns Array of queue paths to remove
- */
-export function buildRemoveQueueMutation(changes: StagedChange[]): string[] {
-  const removals = new Set<string>();
-
-  for (const change of changes) {
-    if (change.type === 'remove') {
-      removals.add(change.queuePath);
-    }
-  }
-
-  return Array.from(removals);
-}
-
-/**
  * Groups staged changes by queue path
  *
  * @param changes Array of staged changes
@@ -201,60 +117,4 @@ export function buildRemoveQueueMutation(changes: StagedChange[]): string[] {
 export function groupChangesByQueue(changes: StagedChange[]): Map<string, StagedChange[]> {
   const grouped = groupBy(changes, (change: StagedChange) => change.queuePath);
   return new Map(Object.entries(grouped));
-}
-
-/**
- * Validates a mutation request for common issues
- *
- * @param request The mutation request to validate
- * @returns Object with valid flag and optional error message
- */
-export function validateMutationRequest(request: SchedConfUpdateInfo): {
-  valid: boolean;
-  message?: string;
-} {
-  if (request[MUTATION_OPERATIONS.UPDATE_QUEUE]) {
-    for (const update of request[MUTATION_OPERATIONS.UPDATE_QUEUE]!) {
-      if (!update['queue-name'] || update['queue-name'].trim() === '') {
-        return { valid: false, message: 'Queue name cannot be empty' };
-      }
-
-      for (const [key, value] of Object.entries(update.params || {})) {
-        if (value === '') {
-          return { valid: false, message: 'Property value cannot be empty' };
-        }
-
-        if (key === 'capacity' || key === 'maximum-capacity') {
-          const numValue = parseFloat(value);
-          if (isNaN(numValue)) {
-            return { valid: false, message: 'Capacity must be a valid number' };
-          } else if (numValue < 0 || numValue > 100) {
-            return { valid: false, message: 'Capacity must be between 0 and 100' };
-          }
-        }
-      }
-    }
-  }
-
-  if (request[MUTATION_OPERATIONS.ADD_QUEUE]) {
-    for (const add of request[MUTATION_OPERATIONS.ADD_QUEUE]!) {
-      if (!add['queue-name'] || add['queue-name'].trim() === '') {
-        return { valid: false, message: 'Queue name cannot be empty' };
-      }
-
-      if (!add.params || !add.params.capacity) {
-        return { valid: false, message: 'New queues must have capacity property' };
-      }
-    }
-  }
-
-  if (request[MUTATION_OPERATIONS.REMOVE_QUEUE]) {
-    for (const queuePath of request[MUTATION_OPERATIONS.REMOVE_QUEUE]!) {
-      if (!queuePath || queuePath.trim() === '') {
-        return { valid: false, message: 'Queue path cannot be empty' };
-      }
-    }
-  }
-
-  return { valid: true };
 }

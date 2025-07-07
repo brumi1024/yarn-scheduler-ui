@@ -592,12 +592,20 @@ describe('schedulerStore', () => {
 
         store.getState().stageQueueAddition('root.production', 'team2', queueConfig);
 
-        expect(store.getState().stagedChanges).toHaveLength(1); // Single change with config
+        expect(store.getState().stagedChanges).toHaveLength(3); // Multiple changes for each property
 
-        const addChange = store.getState().stagedChanges[0];
-        expect(addChange.type).toBe('add');
-        expect(addChange.queuePath).toBe('root.production.team2');
-        expect(addChange.config).toEqual(queueConfig);
+        const changes = store.getState().stagedChanges;
+        expect(changes.every((c) => c.type === 'add')).toBe(true);
+        expect(changes.every((c) => c.queuePath === 'root.production.team2')).toBe(true);
+
+        const capacityChange = changes.find((c) => c.property === 'capacity');
+        expect(capacityChange?.newValue).toBe('20');
+
+        const maxCapacityChange = changes.find((c) => c.property === 'maximum-capacity');
+        expect(maxCapacityChange?.newValue).toBe('50');
+
+        const stateChange = changes.find((c) => c.property === 'state');
+        expect(stateChange?.newValue).toBe('RUNNING');
       });
     });
 
@@ -611,7 +619,7 @@ describe('schedulerStore', () => {
         expect(store.getState().stagedChanges[0]).toMatchObject({
           type: 'remove',
           queuePath: 'root.production.batch',
-          property: '__config__',
+          property: '__queue__',
         });
       });
     });
@@ -1134,17 +1142,15 @@ describe('utility functions', () => {
           id: '3',
           type: 'add',
           queuePath: 'root.test',
-          property: '__config__',
-          config: {
-            capacity: '20',
-          },
+          property: 'capacity',
+          newValue: '20',
           timestamp: Date.now(),
         },
         {
           id: '4',
           type: 'remove',
           queuePath: 'root.old',
-          property: undefined,
+          property: '__queue__',
           oldValue: undefined,
           newValue: undefined,
           timestamp: Date.now(),

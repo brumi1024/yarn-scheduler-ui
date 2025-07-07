@@ -251,11 +251,10 @@ function createNodes(
       const maxCapacityDisplay = getQueuePropertyValue(queuePath, 'maximum-capacity');
       const stateDisplay = getQueuePropertyValue(queuePath, 'state');
 
-      // Check for validation errors on the new queue from staged changes
-      const queueAddChange = stagedChanges.find(
-        (c) => c.type === 'add' && c.queuePath === queuePath,
-      );
-      const queueErrors = queueAddChange?.validationErrors || [];
+      // Collect validation errors from all staged changes for this queue
+      const queueErrors = stagedChanges
+        .filter((c) => c.type === 'add' && c.queuePath === queuePath && c.validationErrors)
+        .flatMap((c) => c.validationErrors || []);
 
       const nodeData: QueueCardData = {
         queueType: 'leaf' as const,

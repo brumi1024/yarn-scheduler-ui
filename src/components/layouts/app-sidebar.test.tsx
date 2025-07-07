@@ -55,7 +55,7 @@ describe('AppSidebar', () => {
     it('should display the application title', () => {
       render(<AppSidebar />);
 
-      expect(screen.getByText('YARN Scheduler')).toBeInTheDocument();
+      expect(screen.getByText('Capacity Scheduler UI')).toBeInTheDocument();
     });
   });
 

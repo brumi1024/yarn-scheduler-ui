@@ -3,6 +3,6 @@ export const SPECIAL_VALUES = {
   GLOBAL_QUEUE_PATH: 'global',
   ALL_USERS_ACL: '*',
   DEFAULT_PARTITION: '',
-  CONFIG_PLACEHOLDER: '__config__',
+  QUEUE_MARKER: '__queue__',
   MAPPING_RULE_JSON_PROPERTY: 'yarn.scheduler.capacity.mapping-rule-json',
 } as const;
