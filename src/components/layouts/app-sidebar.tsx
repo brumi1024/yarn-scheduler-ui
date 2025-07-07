@@ -16,9 +16,9 @@ const navigation = [
     icon: LayoutDashboard,
   },
   {
-    path: '/node-labels',
-    title: 'Node Labels',
-    icon: Tag,
+    path: '/global-settings',
+    title: 'Global Settings',
+    icon: Settings,
   },
   {
     path: '/placement-rules',
@@ -26,9 +26,9 @@ const navigation = [
     icon: ListFilter,
   },
   {
-    path: '/global-settings',
-    title: 'Global Settings',
-    icon: Settings,
+    path: '/node-labels',
+    title: 'Node Labels',
+    icon: Tag,
   },
 ];
 
@@ -39,7 +39,7 @@ export function AppSidebar() {
     <Sidebar variant="inset">
       <SidebarHeader>
         <div className="flex h-14 items-center px-4">
-          <h1 className="text-lg font-semibold">YARN Scheduler</h1>
+          <h1 className="text-lg font-semibold">Capacity Scheduler UI</h1>
         </div>
       </SidebarHeader>
       <SidebarContent>

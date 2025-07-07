@@ -53,9 +53,14 @@ describe('Business Validation Integration', () => {
     };
 
     // Negative value should fail
-    const negativeResult = businessValidation.validateField('user-limit-factor', '-1', context);
+    const negativeResult = businessValidation.validateField('user-limit-factor', '-2', context);
     expect(negativeResult.valid).toBe(false);
     expect(negativeResult.errors[0].severity).toBe('error');
+
+    // -1 value should pass as disabled
+    const minusOneResult = businessValidation.validateField('user-limit-factor', '-1', context);
+    expect(minusOneResult.valid).toBe(true);
+    expect(minusOneResult.errors).toHaveLength(0);
 
     // Zero should warn
     const zeroResult = businessValidation.validateField('user-limit-factor', '0', context);

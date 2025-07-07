@@ -108,7 +108,7 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const capacityInput = screen.getByLabelText('Capacity (%) *');
+    const capacityInput = screen.getByLabelText('Capacity *');
     const submitButton = screen.getByRole('button', { name: /add queue/i });
 
     await user.type(nameInput, 'valid-queue');
@@ -136,8 +136,8 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root.production" onClose={onClose} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const capacityInput = screen.getByLabelText('Capacity (%) *');
-    const maxCapacityInput = screen.getByLabelText('Max Capacity (%) *');
+    const capacityInput = screen.getByLabelText('Capacity *');
+    const maxCapacityInput = screen.getByLabelText('Max Capacity *');
 
     // Fill all required fields
     await user.type(nameInput, 'newqueue');

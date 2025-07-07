@@ -325,8 +325,9 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
 
         <ContextMenuContent className="w-48">
           <ContextMenuItem
-            onClick={() => {
-              handleClick(new MouseEvent('click') as unknown as React.MouseEvent);
+            onClick={(e) => {
+              e.stopPropagation();
+              handleClick(e);
             }}
             disabled={stagedStatus === 'new'}
           >
@@ -335,7 +336,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           </ContextMenuItem>
 
           <ContextMenuItem
-            onClick={() => {
+            onClick={(e) => {
+              e.stopPropagation();
               handleToggleState();
             }}
           >
@@ -354,7 +356,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
 
           {canAdd && (
             <ContextMenuItem
-              onClick={() => {
+              onClick={(e) => {
+                e.stopPropagation();
                 setAddDialogOpen(true);
               }}
             >
@@ -367,7 +370,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
             <>
               <ContextMenuSeparator />
               <ContextMenuItem
-                onClick={() => {
+                onClick={(e) => {
+                  e.stopPropagation();
                   setDeleteDialogOpen(true);
                 }}
                 className="text-red-600 focus:text-red-600"

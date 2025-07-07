@@ -68,10 +68,10 @@ export const validateUserLimitFactor: BusinessValidator<string> = (value, _conte
 
   const errors: BusinessValidationError[] = [];
 
-  if (factor < 0) {
+  if (factor < 0 && factor != -1) {
     errors.push({
       field: 'user-limit-factor',
-      message: 'User limit factor must be non-negative',
+      message: 'User limit factor must be non-negative or -1 (as disabled)',
       severity: 'error',
       rule: 'user-limit-factor-range',
     });
@@ -116,7 +116,8 @@ export const validateMinimumUserLimitPercent: BusinessValidator<string> = (value
   if (percent === 100) {
     errors.push({
       field: 'minimum-user-limit-percent',
-      message: 'Setting minimum user limit to 100% means each user gets the entire queue capacity',
+      message:
+        'Setting minimum user limit to 100% means each user can get the entire queue capacity',
       severity: 'warning',
       rule: 'minimum-user-limit-percent-warning',
     });

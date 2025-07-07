@@ -6,15 +6,11 @@ export type StagedChange = {
   id: string;
   type: StagedChangeType;
   queuePath: string | 'global';
-  property?: string;
+  property: string;
   oldValue?: string;
   newValue?: string;
   timestamp: number;
-  label?: string;
-  description?: string;
-  parentChangeId?: string;
-  // Add queue can have multiple properties as changes, but in the UI it's one "add" operation
-  config?: Record<string, string>;
+  label?: string; // Used for node label changes
   // Validation errors associated with this change
   validationErrors?: BusinessValidationError[];
 };

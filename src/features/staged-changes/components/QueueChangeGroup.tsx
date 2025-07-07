@@ -1,10 +1,10 @@
 import React, { useState } from 'react';
 import { SPECIAL_VALUES } from '~/types';
-import { ChevronDown, ChevronUp, Folder, GitBranch } from 'lucide-react';
+import { ChevronDown, ChevronUp, Folder, GitBranch, Plus, Edit2, Trash2 } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from '~/components/ui/collapsible';
-import type { StagedChange } from '~/types';
+import type { StagedChange, StagedChangeType } from '~/types';
 import { DiffView } from './DiffView';
 
 interface QueueChangeGroupProps {
@@ -19,15 +19,37 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
   onRevert,
 }) => {
   const [isOpen, setIsOpen] = useState(true);
+  const [expandedTypes, setExpandedTypes] = useState<Set<StagedChangeType>>(
+    new Set(['add', 'update', 'remove']),
+  );
 
-  // Calculate change summary
-  const summary = changes.reduce(
+  // Group changes by type
+  const changesByType = changes.reduce(
     (acc, change) => {
-      acc[change.type]++;
+      acc[change.type].push(change);
       return acc;
     },
-    { add: 0, update: 0, remove: 0 },
+    { add: [] as StagedChange[], update: [] as StagedChange[], remove: [] as StagedChange[] },
   );
+
+  // Calculate change summary
+  const summary = {
+    add: changesByType.add.length,
+    update: changesByType.update.length,
+    remove: changesByType.remove.length,
+  };
+
+  const toggleTypeExpanded = (type: StagedChangeType) => {
+    setExpandedTypes((prev) => {
+      const next = new Set(prev);
+      if (next.has(type)) {
+        next.delete(type);
+      } else {
+        next.add(type);
+      }
+      return next;
+    });
+  };
 
   return (
     <div className="border rounded-lg overflow-hidden bg-card">
@@ -73,15 +95,123 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
         </CollapsibleTrigger>
 
         <CollapsibleContent>
-          <div className="px-4 pb-4 space-y-2">
-            {changes.map((change) => (
-              <DiffView
-                key={change.id}
-                change={change}
-                onRevert={() => onRevert(change)}
-                timestamp={new Date(change.timestamp).toLocaleTimeString()}
-              />
-            ))}
+          <div className="px-4 pb-4 space-y-4">
+            {/* Add Changes */}
+            {summary.add > 0 && (
+              <div>
+                <Collapsible
+                  open={expandedTypes.has('add')}
+                  onOpenChange={() => toggleTypeExpanded('add')}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Plus className="h-3 w-3 text-green-600" />
+                        <span className="text-sm font-medium">Add ({summary.add})</span>
+                      </div>
+                      {expandedTypes.has('add') ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pl-5 pt-2 space-y-2">
+                      {changesByType.add.map((change) => (
+                        <DiffView
+                          key={change.id}
+                          change={change}
+                          onRevert={() => onRevert(change)}
+                          timestamp={new Date(change.timestamp).toLocaleTimeString()}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
+            {/* Update Changes */}
+            {summary.update > 0 && (
+              <div>
+                <Collapsible
+                  open={expandedTypes.has('update')}
+                  onOpenChange={() => toggleTypeExpanded('update')}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Edit2 className="h-3 w-3 text-blue-600" />
+                        <span className="text-sm font-medium">Modify ({summary.update})</span>
+                      </div>
+                      {expandedTypes.has('update') ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pl-5 pt-2 space-y-2">
+                      {changesByType.update.map((change) => (
+                        <DiffView
+                          key={change.id}
+                          change={change}
+                          onRevert={() => onRevert(change)}
+                          timestamp={new Date(change.timestamp).toLocaleTimeString()}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
+
+            {/* Remove Changes */}
+            {summary.remove > 0 && (
+              <div>
+                <Collapsible
+                  open={expandedTypes.has('remove')}
+                  onOpenChange={() => toggleTypeExpanded('remove')}
+                >
+                  <CollapsibleTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      className="w-full p-2 justify-between hover:bg-muted/30 h-auto"
+                    >
+                      <div className="flex items-center gap-2">
+                        <Trash2 className="h-3 w-3 text-red-600" />
+                        <span className="text-sm font-medium">Remove ({summary.remove})</span>
+                      </div>
+                      {expandedTypes.has('remove') ? (
+                        <ChevronUp className="h-3 w-3" />
+                      ) : (
+                        <ChevronDown className="h-3 w-3" />
+                      )}
+                    </Button>
+                  </CollapsibleTrigger>
+                  <CollapsibleContent>
+                    <div className="pl-5 pt-2 space-y-2">
+                      {changesByType.remove.map((change) => (
+                        <DiffView
+                          key={change.id}
+                          change={change}
+                          onRevert={() => onRevert(change)}
+                          timestamp={new Date(change.timestamp).toLocaleTimeString()}
+                        />
+                      ))}
+                    </div>
+                  </CollapsibleContent>
+                </Collapsible>
+              </div>
+            )}
           </div>
         </CollapsibleContent>
       </Collapsible>
