@@ -23,6 +23,7 @@ export class YarnApiClient {
   private readonly timeout: number;
   private readonly userName: string;
   private securityMode: 'simple' | 'kerberos' | null = null;
+  private initPromise: Promise<void> | null = null;
 
   constructor(baseUrl: string, config: ApiClientConfig = {}) {
     // Remove trailing slash if present
@@ -35,9 +36,15 @@ export class YarnApiClient {
     };
 
     // Initialize security mode detection
-    this.detectSecurityMode().catch((error) => {
-      console.error('Failed to detect YARN security mode:', error);
-    });
+    this.initPromise = this.detectSecurityMode()
+      .catch((error) => {
+        console.error('Failed to detect YARN security mode:', error);
+        // Don't rethrow - allow requests to proceed without auth detection
+      })
+      .finally(() => {
+        // Clear the promise after detection completes
+        this.initPromise = null;
+      });
   }
 
   /**
@@ -184,6 +191,11 @@ export class YarnApiClient {
     path: string,
     options: RequestInit & { skipAuth?: boolean } = {},
   ): Promise<T> {
+    // Wait for security mode detection to complete (if still in progress)
+    if (this.initPromise) {
+      await this.initPromise;
+    }
+
     // Build URL with user.name if needed
     let url = `${this.baseUrl}${path}`;
 

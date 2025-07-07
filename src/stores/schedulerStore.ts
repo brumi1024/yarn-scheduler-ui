@@ -40,7 +40,9 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
  * The default scheduler store instance
  */
 export const useSchedulerStore = create(
-  createStoreImplementation(new YarnApiClient(API_CONFIG.baseUrl)),
+  createStoreImplementation(
+    new YarnApiClient(API_CONFIG.baseUrl, { userName: API_CONFIG.userName }),
+  ),
 );
 
 /**
