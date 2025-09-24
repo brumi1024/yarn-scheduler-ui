@@ -185,7 +185,7 @@ function DropZoneRow({ index, onReorder }: DropZoneRowProps) {
     const rowEl = rowRef.current;
     if (!rowEl) return;
 
-    const cleanup = dropTargetForElements({
+    return dropTargetForElements({
       element: rowEl,
       canDrop: ({ source }) => {
         return source.data.type === 'placement-rule';
@@ -202,27 +202,6 @@ function DropZoneRow({ index, onReorder }: DropZoneRowProps) {
         setIsDraggedOver(false);
       },
     });
-
-    const monitorCleanup = monitorForElements({
-      onDrop({ source, location }) {
-        if (source.data.type !== 'placement-rule') return;
-
-        const destination = location.current.dropTargets[0];
-        if (!destination || !destination.data.isDropZone) return;
-
-        const sourceIndex = source.data.index as number;
-        const targetIndex = destination.data.index as number;
-
-        if (sourceIndex !== targetIndex) {
-          onReorder(sourceIndex, targetIndex);
-        }
-      },
-    });
-
-    return () => {
-      cleanup();
-      monitorCleanup();
-    };
   }, [index, onReorder]);
 
   return (
@@ -246,6 +225,30 @@ export function PlacementRulesTable({
   onSelect,
   onReorder,
 }: PlacementRulesTableProps) {
+  useEffect(() => {
+    const cleanup = monitorForElements({
+      onDrop({ source, location }) {
+        if (source.data.type !== 'placement-rule') return;
+
+        const dropTarget = location.current.dropTargets.find((target) => target.data?.isDropZone);
+        if (!dropTarget) return;
+
+        const sourceIndex = source.data.index as number;
+        const targetIndex = dropTarget.data.index as number;
+
+        if (typeof sourceIndex !== 'number' || typeof targetIndex !== 'number') {
+          return;
+        }
+
+        if (sourceIndex !== targetIndex) {
+          onReorder(sourceIndex, targetIndex);
+        }
+      },
+    });
+
+    return cleanup;
+  }, [onReorder]);
+
   return (
     <div className="border rounded-md overflow-auto">
       <Table>

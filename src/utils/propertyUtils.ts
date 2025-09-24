@@ -28,7 +28,12 @@ export function buildPropertyKey(queuePath: string, property: string): string {
  * @returns The full property key (e.g. 'yarn.scheduler.capacity.maximum-applications')
  */
 export function buildGlobalPropertyKey(property: string): string {
-  return `${YARN_SCHEDULER_PREFIX}.${property}`;
+  const prefix = `${YARN_SCHEDULER_PREFIX}.`;
+  // Avoid double-prefixing when callers already pass the fully-qualified key
+  if (property.startsWith(prefix) || property === YARN_SCHEDULER_PREFIX) {
+    return property;
+  }
+  return `${prefix}${property}`;
 }
 
 /**
