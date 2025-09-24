@@ -91,6 +91,13 @@ npm install
 
 ```env
 VITE_YARN_API_URL=http://your-yarn-rm:8088
+# Optional mock configuration
+# static  - serve local mock JSON (default in dev)
+# cluster - send all requests to a remote YARN ResourceManager (writes apply live)
+# off     - disable the mock service worker entirely
+VITE_API_MOCK_MODE=cluster
+VITE_MOCK_CLUSTER_URL=http://bteke-1.vpc.cloudera.com:8088/ws/v1/cluster
+VITE_YARN_USER_NAME=yarn
 ```
 
 ### Development

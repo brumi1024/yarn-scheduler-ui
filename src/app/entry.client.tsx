@@ -1,9 +1,14 @@
 import { HydratedRouter } from 'react-router/dom';
 import { startTransition, StrictMode } from 'react';
 import { hydrateRoot } from 'react-dom/client';
+import { API_CONFIG } from '~/lib/api/config';
 
 async function enableMocking() {
   if (!import.meta.env.DEV) {
+    return;
+  }
+
+  if (API_CONFIG.mockMode !== 'static') {
     return;
   }
 

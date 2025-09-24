@@ -1,24 +1,27 @@
-import { http, HttpResponse } from 'msw';
+import { http, HttpResponse, type HttpHandler } from 'msw';
 import { API_CONFIG } from '~/lib/api/config';
 
 // Base URL pattern that matches the API configuration
 // Use the same base URL as the API client for consistency
 
-export const handlers = [
-  // Scheduler endpoints - use actual mock files
-  http.get(`${API_CONFIG.baseUrl}/scheduler`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/scheduler.json');
+const { baseUrl, mockMode } = API_CONFIG;
+const MOCK_ASSET_BASE = '/mock/ws/v1/cluster';
+
+const staticHandlers: HttpHandler[] = [
+  // Scheduler endpoints - serve local mock files
+  http.get(`${baseUrl}/scheduler`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/scheduler.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
-  http.get(`${API_CONFIG.baseUrl}/scheduler-conf`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/scheduler-conf.json');
+  http.get(`${baseUrl}/scheduler-conf`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/scheduler-conf.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
-  http.put(`${API_CONFIG.baseUrl}/scheduler-conf`, async ({ request }) => {
+  http.put(`${baseUrl}/scheduler-conf`, async ({ request }) => {
     // Simulate processing time
     await new Promise((resolve) => setTimeout(resolve, 500));
 
@@ -30,53 +33,55 @@ export const handlers = [
     });
   }),
 
-  http.get(`${API_CONFIG.baseUrl}/scheduler-conf/version`, () => {
+  http.get(`${baseUrl}/scheduler-conf/version`, () => {
     return HttpResponse.json({
-      versionID: 1234567890,
+      versionID: 15,
     });
   }),
 
   // Node endpoints
-  http.get(`${API_CONFIG.baseUrl}/nodes`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/nodes.json');
+  http.get(`${baseUrl}/nodes`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/nodes.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
   // Node labels endpoints
-  http.get(`${API_CONFIG.baseUrl}/get-node-labels`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/get-node-labels.json');
+  http.get(`${baseUrl}/get-node-labels`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/get-node-labels.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
-  http.get(`${API_CONFIG.baseUrl}/get-node-to-labels`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/get-node-to-labels.json');
+  http.get(`${baseUrl}/get-node-to-labels`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/get-node-to-labels.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
-  http.get(`${API_CONFIG.baseUrl}/get-labels-to-nodes`, async () => {
-    const response = await fetch('/mock/ws/v1/cluster/get-labels-to-nodes.json');
+  http.get(`${baseUrl}/get-labels-to-nodes`, async () => {
+    const response = await fetch(`${MOCK_ASSET_BASE}/get-labels-to-nodes.json`);
     const data = await response.json();
     return HttpResponse.json(data);
   }),
 
-  http.post(`${API_CONFIG.baseUrl}/add-node-labels`, async ({ request }) => {
+  http.post(`${baseUrl}/add-node-labels`, async ({ request }) => {
     const body = await request.json();
     console.log('Mock: Adding node labels:', body);
     return HttpResponse.json({ message: 'Labels added successfully' });
   }),
 
-  http.post(`${API_CONFIG.baseUrl}/replace-node-to-labels`, async ({ request }) => {
+  http.post(`${baseUrl}/replace-node-to-labels`, async ({ request }) => {
     const body = await request.json();
     console.log('Mock: Replacing node labels:', body);
     return HttpResponse.json({ message: 'Node labels replaced successfully' });
   }),
 
-  http.post(`${API_CONFIG.baseUrl}/remove-node-labels`, async ({ request }) => {
+  http.post(`${baseUrl}/remove-node-labels`, async ({ request }) => {
     const body = await request.json();
     console.log('Mock: Removing node labels:', body);
     return HttpResponse.json({ message: 'Labels removed successfully' });
   }),
 ];
+
+export const handlers: HttpHandler[] = mockMode === 'cluster' ? [] : staticHandlers;
