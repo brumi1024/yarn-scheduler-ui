@@ -4,8 +4,8 @@
 
 import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
-import { SPECIAL_VALUES } from '~/types';
-import type { StagedChange } from '~/types';
+import { MUTATION_OPERATIONS, SPECIAL_VALUES } from '~/types';
+import type { SchedConfUpdateInfo, StagedChange } from '~/types';
 import type {
   BusinessValidationError,
   QueueValidationContext,
@@ -249,21 +249,85 @@ export const createStagedChangesSlice: StateCreator<
       state.error = null;
     });
 
-    try {
-      const mutationRequest = buildMutationRequest(changes);
+    const mutationRequest = buildMutationRequest(changes);
+    const { request: submissionRequest, childQueuesToStart } =
+      prepareMutationRequestForSubmission(mutationRequest);
 
-      await get().apiClient.updateSchedulerConf(mutationRequest);
+    const parentQueuesToStop = getParentQueuesForAdditions(
+      submissionRequest[MUTATION_OPERATIONS.ADD_QUEUE],
+    );
+
+    const parentQueuesStopped = new Set<string>();
+    const apiClient = get().apiClient;
+
+    const applyQueueState = async (queueName: string, state: 'STOPPED' | 'RUNNING') => {
+      const stateMutation: SchedConfUpdateInfo = {
+        [MUTATION_OPERATIONS.UPDATE_QUEUE]: [
+          {
+            'queue-name': queueName,
+            params: {
+              entry: [{ key: 'state', value: state }],
+            },
+          },
+        ],
+      };
+
+      await apiClient.updateSchedulerConf(stateMutation);
+    };
+
+    const restartParents = async () => {
+      if (parentQueuesStopped.size === 0) return;
+
+      const queues = Array.from(parentQueuesStopped);
+      for (const queueName of queues) {
+        try {
+          await applyQueueState(queueName, 'RUNNING');
+        } catch (startError) {
+          console.error(`Failed to restart queue ${queueName}:`, startError);
+        } finally {
+          parentQueuesStopped.delete(queueName);
+        }
+      }
+    };
+
+    try {
+      for (const parentQueue of parentQueuesToStop) {
+        await applyQueueState(parentQueue, 'STOPPED');
+        parentQueuesStopped.add(parentQueue);
+      }
+
+      const validationResponse = await apiClient.validateSchedulerConf(submissionRequest);
+
+      if (validationResponse.validation === 'failed') {
+        const validationMessage = validationResponse.errors?.join('; ').trim();
+        throw new Error(validationMessage || 'Scheduler configuration validation failed');
+      }
+
+      const mutationVersion =
+        validationResponse.versionId ??
+        validationResponse.mutationId ??
+        validationResponse.newVersionId;
+
+      const finalMutation = prepareMutationRequestWithVersion(submissionRequest, mutationVersion);
+
+      await apiClient.updateSchedulerConf(finalMutation);
+
+      await restartParents();
+
+      for (const queueName of childQueuesToStart) {
+        await applyQueueState(queueName, 'RUNNING');
+      }
 
       // Reload configuration after successful update
       const [config, version] = await Promise.all([
-        get().apiClient.getSchedulerConf(),
-        get().apiClient.getSchedulerConfVersion(),
+        apiClient.getSchedulerConf(),
+        apiClient.getSchedulerConfVersion(),
       ]);
 
       set((state) => {
         // Update config data
         state.configData = new Map(config.property.map((p) => [p.name, p.value]));
-        state.configVersion = version.versionID;
+        state.configVersion = version.versionId;
 
         // Clear staged changes
         state.stagedChanges = [];
@@ -285,6 +349,8 @@ export const createStagedChangesSlice: StateCreator<
         errorMessage,
         error,
       );
+    } finally {
+      await restartParents();
     }
   },
 
@@ -402,3 +468,106 @@ export const createStagedChangesSlice: StateCreator<
     });
   },
 });
+
+const MUTATION_VERSION_PROPERTY_KEY = 'yarn.webservice.mutation-api.version';
+
+function getParentQueuesForAdditions(
+  addQueueMutations: SchedConfUpdateInfo[typeof MUTATION_OPERATIONS.ADD_QUEUE],
+): string[] {
+  const parents = new Set<string>();
+
+  for (const mutation of addQueueMutations ?? []) {
+    const queueName = mutation['queue-name'];
+    const lastDotIndex = queueName.lastIndexOf('.');
+    if (lastDotIndex <= 0) {
+      continue;
+    }
+
+    const parentQueue = queueName.slice(0, lastDotIndex);
+    if (parentQueue === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+      continue;
+    }
+
+    parents.add(parentQueue);
+  }
+
+  return Array.from(parents);
+}
+
+function prepareMutationRequestForSubmission(request: SchedConfUpdateInfo): {
+  request: SchedConfUpdateInfo;
+  childQueuesToStart: string[];
+} {
+  const clonedRequest = JSON.parse(JSON.stringify(request)) as SchedConfUpdateInfo;
+  const childQueuesToStart: string[] = [];
+
+  const addQueueMutations = clonedRequest[MUTATION_OPERATIONS.ADD_QUEUE] ?? [];
+  for (const mutation of addQueueMutations) {
+    const stateEntry = mutation.params.entry.find((entry) => entry.key === 'state');
+    if (!stateEntry) continue;
+
+    const desiredState = stateEntry.value?.toUpperCase?.();
+    if (desiredState === 'RUNNING') {
+      childQueuesToStart.push(mutation['queue-name']);
+      stateEntry.value = 'STOPPED';
+    }
+  }
+
+  const globalUpdateBlocks = clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES];
+  if (globalUpdateBlocks) {
+    for (const block of globalUpdateBlocks) {
+      block.entry = block.entry.map(({ key, value }) => ({
+        key: buildGlobalPropertyKey(key),
+        value,
+      }));
+    }
+  }
+
+  return { request: clonedRequest, childQueuesToStart };
+}
+
+function prepareMutationRequestWithVersion(
+  request: SchedConfUpdateInfo,
+  version?: string | number,
+): SchedConfUpdateInfo {
+  const clonedRequest = JSON.parse(JSON.stringify(request)) as SchedConfUpdateInfo;
+
+  const existingGlobalUpdates =
+    clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES]?.filter((block) => block.entry.length > 0) ??
+    [];
+
+  for (const block of existingGlobalUpdates) {
+    block.entry = block.entry.map(({ key, value }) => ({
+      key: buildGlobalPropertyKey(key),
+      value,
+    }));
+  }
+
+  if (version !== undefined) {
+    const versionValue = String(version);
+    let versionEntryUpdated = false;
+
+    for (const block of existingGlobalUpdates) {
+      const entry = block.entry.find((item) => item.key === MUTATION_VERSION_PROPERTY_KEY);
+      if (entry) {
+        entry.value = versionValue;
+        versionEntryUpdated = true;
+        break;
+      }
+    }
+
+    if (!versionEntryUpdated) {
+      existingGlobalUpdates.unshift({
+        entry: [{ key: MUTATION_VERSION_PROPERTY_KEY, value: versionValue }],
+      });
+    }
+  }
+
+  if (existingGlobalUpdates.length > 0) {
+    clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES] = existingGlobalUpdates;
+  } else {
+    delete clonedRequest[MUTATION_OPERATIONS.GLOBAL_UPDATES];
+  }
+
+  return clonedRequest;
+}

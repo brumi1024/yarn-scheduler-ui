@@ -28,7 +28,7 @@ export const handlers = [
 
   http.get('/ws/v1/cluster/scheduler-conf/version', () => {
     return HttpResponse.json({
-      versionID: 1234567890,
+      versionId: 1234567890,
     });
   }),
 
@@ -71,7 +71,7 @@ export const handlers = [
   }),
 
   http.post('/ws/v1/cluster/remove-node-labels', async ({ request }) => {
-    const body = await request.json();
+    const body = await request.text();
     console.log('Mock: Removing node labels:', body);
     return HttpResponse.json({ message: 'Labels removed successfully' });
   }),

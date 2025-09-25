@@ -2,6 +2,18 @@ import { describe, it, expect } from 'vitest';
 import { buildMutationRequest, groupChangesByQueue } from './mutationBuilder';
 import type { StagedChange } from '~/types';
 
+const toParamRecord = (params?: { entry: Array<{ key: string; value: string }> }) =>
+  Object.fromEntries((params?.entry ?? []).map(({ key, value }) => [key, value]));
+
+const toGlobalRecord = (
+  global?: Array<{
+    entry: Array<{ key: string; value: string }>;
+  }>,
+) =>
+  Object.fromEntries(
+    (global ?? []).flatMap(({ entry }) => entry).map(({ key, value }) => [key, value]),
+  );
+
 describe('mutationBuilder', () => {
   const now = Date.now();
 
@@ -64,46 +76,28 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request).toEqual({
-        'update-queue': [
-          {
-            'queue-name': 'root.default',
-            params: {
-              capacity: '60',
-            },
-          },
-          {
-            'queue-name': 'root.production',
-            params: {
-              'maximum-capacity': '80',
-            },
-          },
-        ],
-        'add-queue': [
-          {
-            'queue-name': 'root.test',
-            params: {
-              capacity: '20',
-              state: 'RUNNING',
-            },
-          },
-        ],
-        'remove-queue': ['root.old'],
-        'global-updates': {
-          'maximum-applications': '15000',
-        },
+      const updateQueues = request['update-queue'] ?? [];
+      expect(updateQueues).toHaveLength(2);
+      expect(updateQueues[0]['queue-name']).toBe('root.default');
+      expect(toParamRecord(updateQueues[0].params)).toEqual({ capacity: '60' });
+      expect(updateQueues[1]['queue-name']).toBe('root.production');
+      expect(toParamRecord(updateQueues[1].params)).toEqual({ 'maximum-capacity': '80' });
+
+      const addQueues = request['add-queue'] ?? [];
+      expect(addQueues).toHaveLength(1);
+      expect(addQueues[0]['queue-name']).toBe('root.test');
+      expect(toParamRecord(addQueues[0].params)).toEqual({ capacity: '20', state: 'RUNNING' });
+
+      expect(request['remove-queue']).toBe('root.old');
+      expect(toGlobalRecord(request['global-updates'])).toEqual({
+        'yarn.scheduler.capacity.maximum-applications': '15000',
       });
     });
 
     it('should handle empty staged changes', () => {
       const request = buildMutationRequest([]);
 
-      expect(request).toEqual({
-        'update-queue': [],
-        'add-queue': [],
-        'remove-queue': [],
-        'global-updates': {},
-      });
+      expect(request).toEqual({});
     });
 
     it('should handle add queue with multiple property changes', () => {
@@ -136,16 +130,14 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request['add-queue']).toEqual([
-        {
-          'queue-name': 'root.production.team2',
-          params: {
-            capacity: '20',
-            'maximum-capacity': '50',
-            state: 'RUNNING',
-          },
-        },
-      ]);
+      expect(request['add-queue']).toHaveLength(1);
+      const addQueueParams = request['add-queue']![0];
+      expect(addQueueParams['queue-name']).toBe('root.production.team2');
+      expect(toParamRecord(addQueueParams.params)).toEqual({
+        capacity: '20',
+        'maximum-capacity': '50',
+        state: 'RUNNING',
+      });
     });
 
     it('should group multiple properties for same queue', () => {
@@ -182,13 +174,12 @@ describe('mutationBuilder', () => {
       const request = buildMutationRequest(stagedChanges);
 
       expect(request['update-queue']).toHaveLength(1);
-      expect(request['update-queue']![0]).toEqual({
-        'queue-name': 'root.default',
-        params: {
-          capacity: '60',
-          'maximum-capacity': '90',
-          state: 'STOPPED',
-        },
+      const updateParams = request['update-queue']![0];
+      expect(updateParams['queue-name']).toBe('root.default');
+      expect(toParamRecord(updateParams.params)).toEqual({
+        capacity: '60',
+        'maximum-capacity': '90',
+        state: 'STOPPED',
       });
     });
 
@@ -226,13 +217,12 @@ describe('mutationBuilder', () => {
       const request = buildMutationRequest(stagedChanges);
 
       expect(request['update-queue']).toHaveLength(1);
-      expect(request['update-queue']![0]).toEqual({
-        'queue-name': 'root.default',
-        params: {
-          'accessible-node-labels.gpu.capacity': '40',
-          'accessible-node-labels.gpu.maximum-capacity': '60',
-          'accessible-node-labels.ssd.capacity': '25',
-        },
+      const params = request['update-queue']![0];
+      expect(params['queue-name']).toBe('root.default');
+      expect(toParamRecord(params.params)).toEqual({
+        'accessible-node-labels.gpu.capacity': '40',
+        'accessible-node-labels.gpu.maximum-capacity': '60',
+        'accessible-node-labels.ssd.capacity': '25',
       });
     });
 
@@ -269,10 +259,11 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request['global-updates']).toEqual({
-        'maximum-applications': '15000',
-        'resource-calculator': 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
-        'user-metrics.enable': 'true',
+      expect(toGlobalRecord(request['global-updates'])).toEqual({
+        'yarn.scheduler.capacity.maximum-applications': '15000',
+        'yarn.scheduler.capacity.resource-calculator':
+          'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+        'yarn.scheduler.capacity.user-metrics.enable': 'true',
       });
     });
   });
@@ -440,44 +431,30 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request).toEqual({
-        'update-queue': [
-          {
-            'queue-name': 'root.default',
-            params: {
-              capacity: '30',
-            },
-          },
-          {
-            'queue-name': 'root.production',
-            params: {
-              capacity: '50',
-              'maximum-capacity': '80',
-            },
-          },
-        ],
-        'add-queue': [
-          {
-            'queue-name': 'root.ml',
-            params: {
-              capacity: '20',
-              state: 'RUNNING',
-              'accessible-node-labels.gpu.capacity': '100',
-            },
-          },
-        ],
-        'remove-queue': ['root.deprecated'],
-        'global-updates': {
-          'maximum-applications': '20000',
-          'resource-calculator': 'DominantResourceCalculator',
-        },
+      const updateQueues = request['update-queue'] ?? [];
+      expect(updateQueues).toHaveLength(2);
+      expect(updateQueues[0]['queue-name']).toBe('root.default');
+      expect(toParamRecord(updateQueues[0].params)).toEqual({ capacity: '30' });
+      expect(updateQueues[1]['queue-name']).toBe('root.production');
+      expect(toParamRecord(updateQueues[1].params)).toEqual({
+        capacity: '50',
+        'maximum-capacity': '80',
       });
 
-      // Verify the request structure is correct
-      expect(request['update-queue']).toBeDefined();
-      expect(request['add-queue']).toBeDefined();
-      expect(request['remove-queue']).toBeDefined();
-      expect(request['global-updates']).toBeDefined();
+      const addQueues = request['add-queue'] ?? [];
+      expect(addQueues).toHaveLength(1);
+      expect(addQueues[0]['queue-name']).toBe('root.ml');
+      expect(toParamRecord(addQueues[0].params)).toEqual({
+        capacity: '20',
+        state: 'RUNNING',
+        'accessible-node-labels.gpu.capacity': '100',
+      });
+
+      expect(request['remove-queue']).toBe('root.deprecated');
+      expect(toGlobalRecord(request['global-updates'])).toEqual({
+        'yarn.scheduler.capacity.maximum-applications': '20000',
+        'yarn.scheduler.capacity.resource-calculator': 'DominantResourceCalculator',
+      });
     });
 
     it('should handle edge case with only global changes', () => {
@@ -495,13 +472,11 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request).toEqual({
-        'update-queue': [],
-        'add-queue': [],
-        'remove-queue': [],
-        'global-updates': {
-          'maximum-applications': '15000',
-        },
+      expect(request['update-queue']).toBeUndefined();
+      expect(request['add-queue']).toBeUndefined();
+      expect(request['remove-queue']).toBeUndefined();
+      expect(toGlobalRecord(request['global-updates'])).toEqual({
+        'yarn.scheduler.capacity.maximum-applications': '15000',
       });
     });
 
@@ -529,12 +504,10 @@ describe('mutationBuilder', () => {
 
       const request = buildMutationRequest(stagedChanges);
 
-      expect(request).toEqual({
-        'update-queue': [],
-        'add-queue': [],
-        'remove-queue': ['root.old1', 'root.old2'],
-        'global-updates': {},
-      });
+      expect(request['update-queue']).toBeUndefined();
+      expect(request['add-queue']).toBeUndefined();
+      expect(request['remove-queue']).toEqual(['root.old1', 'root.old2']);
+      expect(request['global-updates']).toBeUndefined();
     });
   });
 });

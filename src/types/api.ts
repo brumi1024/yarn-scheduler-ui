@@ -27,7 +27,7 @@ export type YarnErrorResponse = {
 };
 
 export type VersionResponse = {
-  versionID: number;
+  versionId: number;
 };
 
 export type NodeLabelsResponse = {
@@ -36,6 +36,7 @@ export type NodeLabelsResponse = {
       name: string;
       exclusivity?: boolean;
       partitionName?: string;
+      activeNMs?: number;
     }>;
   };
 };

@@ -72,33 +72,38 @@ describe('MutationError interface', () => {
 describe('ValidationResponse interface', () => {
   it('should accept successful validation response', () => {
     const validResponse: ValidationResponse = {
-      valid: true,
+      validation: 'success',
+      versionId: 12345,
     };
 
-    expect(validResponse.valid).toBe(true);
+    expect(validResponse.validation).toBe('success');
     expect(validResponse.errors).toBeUndefined();
+    expect(validResponse.versionId).toBe(12345);
   });
 
   it('should accept validation failure response', () => {
     const invalidResponse: ValidationResponse = {
-      valid: false,
+      validation: 'failed',
       errors: [
         'Queue capacity for root.production children does not sum to 100%',
         'Maximum capacity cannot be less than capacity for queue root.dev',
       ],
+      mutationId: 'abc-123',
     };
 
-    expect(invalidResponse.valid).toBe(false);
+    expect(invalidResponse.validation).toBe('failed');
     expect(invalidResponse.errors).toHaveLength(2);
     expect(invalidResponse.errors?.[0]).toContain('sum to 100%');
+    expect(invalidResponse.mutationId).toBe('abc-123');
   });
 
   it('should handle single validation error', () => {
     const singleErrorResponse: ValidationResponse = {
-      valid: false,
+      validation: 'failed',
       errors: ['Queue name cannot contain dots'],
     };
 
+    expect(singleErrorResponse.validation).toBe('failed');
     expect(singleErrorResponse.errors).toHaveLength(1);
   });
 });
@@ -134,16 +139,20 @@ describe('ConfigVersionResponse interface', () => {
 describe('NodeLabelAddRequest interface', () => {
   it('should accept add node labels request', () => {
     const addRequest: NodeLabelAddRequest = {
-      nodeLabels: ['gpu', 'fpga', 'ssd'],
+      nodeLabels: [
+        { name: 'gpu', exclusivity: true },
+        { name: 'fpga', exclusivity: false },
+        { name: 'ssd', exclusivity: true },
+      ],
     };
 
     expect(addRequest.nodeLabels).toHaveLength(3);
-    expect(addRequest.nodeLabels).toContain('gpu');
+    expect(addRequest.nodeLabels.map((label) => label.name)).toContain('gpu');
   });
 
   it('should accept single label addition', () => {
     const singleLabelRequest: NodeLabelAddRequest = {
-      nodeLabels: ['high-memory'],
+      nodeLabels: [{ name: 'high-memory', exclusivity: true }],
     };
 
     expect(singleLabelRequest.nodeLabels).toHaveLength(1);
@@ -153,42 +162,42 @@ describe('NodeLabelAddRequest interface', () => {
 describe('NodeLabelRemoveRequest interface', () => {
   it('should accept remove node labels request', () => {
     const removeRequest: NodeLabelRemoveRequest = {
-      nodeLabels: ['deprecated-label', 'old-gpu'],
+      labels: ['deprecated-label', 'old-gpu'],
     };
 
-    expect(removeRequest.nodeLabels).toHaveLength(2);
-    expect(removeRequest.nodeLabels).toContain('deprecated-label');
+    expect(removeRequest.labels).toHaveLength(2);
+    expect(removeRequest.labels).toContain('deprecated-label');
   });
 });
 
 describe('NodeLabelReplaceRequest interface', () => {
   it('should accept replace node labels request', () => {
     const replaceRequest: NodeLabelReplaceRequest = {
-      nodeToLabels: {
-        'node1.example.com:8041': ['gpu', 'ssd'],
-        'node2.example.com:8041': ['fpga'],
-        'node3.example.com:8041': [],
-      },
+      nodeToLabels: [
+        { nodeId: 'node1.example.com:8041', labels: ['gpu'] },
+        { nodeId: 'node2.example.com:8041', labels: ['fpga'] },
+        { nodeId: 'node3.example.com:8041', labels: [] },
+      ],
     };
 
-    expect(Object.keys(replaceRequest.nodeToLabels)).toHaveLength(3);
-    expect(replaceRequest.nodeToLabels['node1.example.com:8041']).toContain('gpu');
-    expect(replaceRequest.nodeToLabels['node3.example.com:8041']).toHaveLength(0);
+    expect(replaceRequest.nodeToLabels).toHaveLength(3);
+    expect(replaceRequest.nodeToLabels[0].labels).toContain('gpu');
+    expect(replaceRequest.nodeToLabels[2].labels).toHaveLength(0);
   });
 
   it('should handle bulk label assignments', () => {
     const bulkRequest: NodeLabelReplaceRequest = {
-      nodeToLabels: {
-        'gpu-node-1:8041': ['gpu', 'high-memory'],
-        'gpu-node-2:8041': ['gpu', 'high-memory'],
-        'gpu-node-3:8041': ['gpu', 'high-memory'],
-        'cpu-node-1:8041': ['high-cpu'],
-        'cpu-node-2:8041': ['high-cpu'],
-      },
+      nodeToLabels: [
+        { nodeId: 'gpu-node-1:8041', labels: ['gpu'] },
+        { nodeId: 'gpu-node-2:8041', labels: ['gpu'] },
+        { nodeId: 'gpu-node-3:8041', labels: ['gpu'] },
+        { nodeId: 'cpu-node-1:8041', labels: ['high-cpu'] },
+        { nodeId: 'cpu-node-2:8041', labels: ['high-cpu'] },
+      ],
     };
 
-    const gpuNodes = Object.entries(bulkRequest.nodeToLabels).filter(([_, labels]) =>
-      labels.includes('gpu'),
+    const gpuNodes = bulkRequest.nodeToLabels.filter((mapping) =>
+      mapping.labels.includes('gpu'),
     ).length;
 
     expect(gpuNodes).toBe(3);

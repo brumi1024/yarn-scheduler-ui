@@ -15,6 +15,7 @@ import type {
   NodesResponse,
   VersionResponse,
   YarnConfigResponse,
+  ValidationResponse,
 } from '../../types';
 
 export class YarnApiClient {
@@ -93,13 +94,12 @@ export class YarnApiClient {
   /**
    * POST /scheduler-conf/validate - Validate configuration changes
    */
-  async validateSchedulerConf(updateInfo: SchedConfUpdateInfo): Promise<void> {
-    await this.request('POST', '/scheduler-conf/validate', {
+  async validateSchedulerConf(updateInfo: SchedConfUpdateInfo): Promise<ValidationResponse> {
+    return this.request<ValidationResponse>('POST', '/scheduler-conf/validate', {
       body: JSON.stringify(updateInfo),
       headers: {
         'Content-Type': 'application/json',
       },
-      expectJson: false,
     });
   }
 
@@ -123,12 +123,10 @@ export class YarnApiClient {
   async addNodeLabels(labels: { name: string; exclusivity: boolean }[]): Promise<void> {
     await this.request('POST', '/add-node-labels', {
       body: JSON.stringify({
-        nodeLabelsInfo: {
-          nodeLabelInfo: labels.map((label) => ({
-            name: label.name,
-            exclusivity: label.exclusivity,
-          })),
-        },
+        nodeLabelInfo: labels.map((label) => ({
+          name: label.name,
+          exclusivity: label.exclusivity,
+        })),
       }),
       headers: {
         'Content-Type': 'application/json',
@@ -141,11 +139,10 @@ export class YarnApiClient {
    * POST /ws/v1/cluster/remove-node-labels - Remove node labels
    */
   async removeNodeLabels(labels: string[]): Promise<void> {
-    await this.request('POST', '/remove-node-labels', {
-      body: JSON.stringify({ nodeLabels: labels }),
-      headers: {
-        'Content-Type': 'application/json',
-      },
+    const query = labels.map((label) => `labels=${encodeURIComponent(label)}`).join('&');
+    const path = query ? `/remove-node-labels?${query}` : '/remove-node-labels';
+
+    await this.request('POST', path, {
       expectJson: false,
     });
   }
@@ -170,9 +167,10 @@ export class YarnApiClient {
   async replaceNodeToLabels(nodeToLabels: { nodeId: string; labels: string[] }[]): Promise<void> {
     await this.request('POST', '/replace-node-to-labels', {
       body: JSON.stringify({
-        nodeToLabels: {
-          nodeLabels: nodeToLabels,
-        },
+        nodeToLabels: nodeToLabels.map((mapping) => ({
+          nodeId: mapping.nodeId,
+          labels: mapping.labels,
+        })),
       }),
       headers: {
         'Content-Type': 'application/json',
@@ -296,15 +294,36 @@ export class YarnApiClient {
     let errorMessage = `HTTP ${response.status}: ${response.statusText}`;
 
     try {
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        const errorData: YarnErrorResponse = await response.json();
-        if (errorData.RemoteException) {
-          errorMessage = errorData.RemoteException.message;
+      const rawBody = await response.text();
+      if (rawBody) {
+        try {
+          const parsed = JSON.parse(rawBody) as
+            | YarnErrorResponse
+            | { message?: string; errors?: string[] };
+
+          if ('RemoteException' in parsed && parsed.RemoteException?.message) {
+            errorMessage = parsed.RemoteException.message;
+          } else if (Array.isArray((parsed as { errors?: string[] }).errors)) {
+            const combined = (parsed as { errors: string[] }).errors.join('; ');
+            if (combined.trim().length > 0) {
+              errorMessage = combined;
+            }
+          } else if (typeof (parsed as { message?: string }).message === 'string') {
+            const msg = (parsed as { message: string }).message.trim();
+            if (msg.length > 0) {
+              errorMessage = msg;
+            }
+          } else if (rawBody.trim().length > 0) {
+            errorMessage = rawBody.trim();
+          }
+        } catch {
+          if (rawBody.trim().length > 0) {
+            errorMessage = rawBody.trim();
+          }
         }
       }
     } catch {
-      // Use the default error message if parsing fails
+      // Swallow secondary parsing errors and fall back to default message
     }
 
     throw new Error(errorMessage);

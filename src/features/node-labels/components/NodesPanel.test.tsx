@@ -151,7 +151,7 @@ describe('NodesPanel', () => {
 
     const mockNodeToLabels: NodeToLabelMapping[] = [
       { nodeId: 'node-1', nodeLabels: ['gpu'] },
-      { nodeId: 'node-2', nodeLabels: ['gpu', 'highmem'] },
+      { nodeId: 'node-2', nodeLabels: ['highmem'] },
       { nodeId: 'node-3', nodeLabels: ['ssd'] },
     ];
 
@@ -165,7 +165,7 @@ describe('NodesPanel', () => {
       render(<NodesPanel selectedLabel="gpu" />);
 
       expect(screen.getByText('node1.example.com')).toBeInTheDocument();
-      expect(screen.getByText('node2.example.com')).toBeInTheDocument();
+      expect(screen.queryByText('node2.example.com')).not.toBeInTheDocument();
       expect(screen.queryByText('node3.example.com')).not.toBeInTheDocument();
     });
 
@@ -185,7 +185,7 @@ describe('NodesPanel', () => {
       expect(strongTag?.textContent).toBe('gpu');
 
       // Check the count is shown - it's within the same paragraph
-      expect(header.textContent).toContain('(2)');
+      expect(header.textContent).toContain('(1)');
     });
 
     it('should show empty state for label with no nodes', () => {
@@ -363,7 +363,7 @@ describe('NodesPanel', () => {
 
   describe('Label assignment display', () => {
     const mockNodeToLabels: NodeToLabelMapping[] = [
-      { nodeId: 'node-1', nodeLabels: ['gpu', 'highmem'] },
+      { nodeId: 'node-1', nodeLabels: ['gpu'] },
       { nodeId: 'node-2', nodeLabels: [] },
     ];
 
@@ -378,10 +378,11 @@ describe('NodesPanel', () => {
 
       render(<NodesPanel selectedLabel={null} />);
 
-      // Find badges in the labels column
-      const labelsCell = screen.getByRole('cell', { name: /gpu.*highmem/i });
-      expect(within(labelsCell).getByText('gpu')).toBeInTheDocument();
-      expect(within(labelsCell).getByText('highmem')).toBeInTheDocument();
+      const nodeRow = screen.getByRole('row', { name: /node1\.example\.com/i });
+      const labelBadge = within(nodeRow)
+        .getAllByText('gpu')
+        .find((element) => element.closest('[data-slot="badge"]'));
+      expect(labelBadge).toBeDefined();
     });
 
     it('should display Default badge for nodes without labels', () => {
@@ -409,19 +410,14 @@ describe('NodesPanel', () => {
 
       render(<NodesPanel selectedLabel="gpu" />);
 
-      // Find badges in the labels column
-      const labelsCell = screen.getByRole('cell', { name: /gpu.*highmem/i });
-
-      // Get the badge elements (parent of the text)
-      const gpuBadgeText = within(labelsCell).getByText('gpu');
-      const highmemBadgeText = within(labelsCell).getByText('highmem');
-
-      // Get parent badge elements
-      const gpuBadge = gpuBadgeText.closest('[data-slot="badge"]');
-      const highmemBadge = highmemBadgeText.closest('[data-slot="badge"]');
+      const nodeRow = screen.getByRole('row', { name: /node1\.example\.com/i });
+      const gpuBadgeText = within(nodeRow)
+        .getAllByText('gpu')
+        .find((element) => element.closest('[data-slot="badge"]'));
+      expect(gpuBadgeText).toBeDefined();
+      const gpuBadge = gpuBadgeText!.closest('[data-slot="badge"]');
 
       expect(gpuBadge).toHaveClass('bg-primary');
-      expect(highmemBadge).toHaveClass('border');
     });
   });
 
@@ -616,7 +612,7 @@ describe('NodesPanel', () => {
 
       expect(screen.getByRole('columnheader', { name: 'Node' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'State' })).toBeInTheDocument();
-      expect(screen.getByRole('columnheader', { name: 'Labels' })).toBeInTheDocument();
+      expect(screen.getByRole('columnheader', { name: 'Label' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Memory' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Cores' })).toBeInTheDocument();
       expect(screen.getByRole('columnheader', { name: 'Containers' })).toBeInTheDocument();

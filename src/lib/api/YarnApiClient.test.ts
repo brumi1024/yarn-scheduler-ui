@@ -97,7 +97,7 @@ const mockSchedulerResponse: SchedulerResponse = {
 };
 
 const mockVersionResponse: VersionResponse = {
-  versionID: 1234567890,
+  versionId: 1234567890,
 };
 
 // Mock server setup using centralized handlers
@@ -231,8 +231,10 @@ describe('YarnApiClient', () => {
           {
             'queue-name': 'root.default',
             params: {
-              capacity: '60',
-              'maximum-capacity': '100',
+              entry: [
+                { key: 'capacity', value: '60' },
+                { key: 'maximum-capacity', value: '100' },
+              ],
             },
           },
         ],
@@ -252,7 +254,9 @@ describe('YarnApiClient', () => {
       );
 
       const client = new YarnApiClient('/ws/v1/cluster');
-      await client.updateSchedulerConf({ 'global-updates': { 'test.property': 'value' } });
+      await client.updateSchedulerConf({
+        'global-updates': [{ entry: [{ key: 'test.property', value: 'value' }] }],
+      });
 
       expect(capturedHeaders?.get('Content-Type')).toBe('application/json');
     });
@@ -273,8 +277,10 @@ describe('YarnApiClient', () => {
           {
             'queue-name': 'root.test',
             params: {
-              capacity: '10',
-              'maximum-capacity': '50',
+              entry: [
+                { key: 'capacity', value: '10' },
+                { key: 'maximum-capacity', value: '50' },
+              ],
             },
           },
         ],
@@ -282,15 +288,21 @@ describe('YarnApiClient', () => {
           {
             'queue-name': 'root.default',
             params: {
-              capacity: '45',
+              entry: [{ key: 'capacity', value: '45' }],
             },
           },
         ],
-        'remove-queue': ['root.production.interactive'],
-        'global-updates': {
-          'yarn.scheduler.capacity.resource-calculator':
-            'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
-        },
+        'remove-queue': 'root.production.interactive',
+        'global-updates': [
+          {
+            entry: [
+              {
+                key: 'yarn.scheduler.capacity.resource-calculator',
+                value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+              },
+            ],
+          },
+        ],
       };
 
       await client.updateSchedulerConf(complexUpdate);
@@ -298,7 +310,7 @@ describe('YarnApiClient', () => {
       expect(capturedBody).toEqual(complexUpdate);
       expect(capturedBody!['add-queue']).toHaveLength(1);
       expect(capturedBody!['update-queue']).toHaveLength(1);
-      expect(capturedBody!['remove-queue']).toHaveLength(1);
+      expect(capturedBody!['remove-queue']).toBe('root.production.interactive');
       expect(capturedBody!['global-updates']).toBeDefined();
     });
   });
@@ -307,7 +319,7 @@ describe('YarnApiClient', () => {
     it('should validate configuration successfully', async () => {
       server.use(
         http.post('*/ws/v1/cluster/scheduler-conf/validate', () => {
-          return new HttpResponse(null, { status: 200 });
+          return HttpResponse.json({ validation: 'success' });
         }),
       );
 
@@ -316,12 +328,14 @@ describe('YarnApiClient', () => {
         'update-queue': [
           {
             'queue-name': 'root.default',
-            params: { capacity: '60' },
+            params: { entry: [{ key: 'capacity', value: '60' }] },
           },
         ],
       };
 
-      await expect(client.validateSchedulerConf(updateRequest)).resolves.not.toThrow();
+      await expect(client.validateSchedulerConf(updateRequest)).resolves.toEqual({
+        validation: 'success',
+      });
     });
 
     it('should pass through request body correctly', async () => {
@@ -330,7 +344,7 @@ describe('YarnApiClient', () => {
       server.use(
         http.post('*/ws/v1/cluster/scheduler-conf/validate', async ({ request }) => {
           capturedBody = (await request.json()) as SchedConfUpdateInfo;
-          return new HttpResponse(null, { status: 200 });
+          return HttpResponse.json({ validation: 'failed', errors: ['oops'] });
         }),
       );
 
@@ -340,15 +354,18 @@ describe('YarnApiClient', () => {
           {
             'queue-name': 'root.newqueue',
             params: {
-              capacity: '10',
-              'maximum-capacity': '50',
+              entry: [
+                { key: 'capacity', value: '10' },
+                { key: 'maximum-capacity', value: '50' },
+              ],
             },
           },
         ],
       };
 
-      await client.validateSchedulerConf(validationRequest);
+      const response = await client.validateSchedulerConf(validationRequest);
       expect(capturedBody).toEqual(validationRequest);
+      expect(response).toEqual({ validation: 'failed', errors: ['oops'] });
     });
   });
 
@@ -358,7 +375,7 @@ describe('YarnApiClient', () => {
       const response = await client.getSchedulerConfVersion();
 
       expect(response).toEqual(mockVersionResponse);
-      expect(response.versionID).toBe(1234567890);
+      expect(response.versionId).toBe(1234567890);
     });
 
     it('should handle version endpoint errors', async () => {
@@ -380,14 +397,11 @@ describe('YarnApiClient', () => {
         const response = await client.getNodeLabels();
 
         expect(response.nodeLabelsInfo).toBeDefined();
-        expect(response.nodeLabelsInfo?.nodeLabelInfo).toBeDefined();
-        expect(Array.isArray(response.nodeLabelsInfo?.nodeLabelInfo)).toBe(true);
+        const labels = response.nodeLabelsInfo?.nodeLabelInfo;
+        expect(Array.isArray(labels)).toBe(true);
 
-        if (
-          response.nodeLabelsInfo?.nodeLabelInfo &&
-          response.nodeLabelsInfo.nodeLabelInfo.length > 0
-        ) {
-          const firstLabel = response.nodeLabelsInfo.nodeLabelInfo[0];
+        if (labels && labels.length > 0) {
+          const firstLabel = labels[0];
           expect(firstLabel.name).toBeDefined();
           expect(typeof firstLabel.exclusivity).toBe('boolean');
         }
@@ -403,7 +417,6 @@ describe('YarnApiClient', () => {
         const client = new YarnApiClient('/ws/v1/cluster');
         const response = await client.getNodeLabels();
 
-        expect(response.nodeLabelsInfo).toBeDefined();
         expect(response.nodeLabelsInfo?.nodeLabelInfo).toBeUndefined();
       });
     });
@@ -443,26 +456,28 @@ describe('YarnApiClient', () => {
         await client.addNodeLabels(labels);
 
         expect(capturedBody).toEqual({
-          nodeLabelsInfo: {
-            nodeLabelInfo: [
-              { name: 'label1', exclusivity: true },
-              { name: 'label2', exclusivity: false },
-            ],
-          },
+          nodeLabelInfo: [
+            { name: 'label1', exclusivity: true },
+            { name: 'label2', exclusivity: false },
+          ],
         });
       });
     });
 
     describe('removeNodeLabels', () => {
       it('should remove node labels successfully', async () => {
+        let capturedUrl: string | undefined;
+
         server.use(
-          http.post('*/ws/v1/cluster/remove-node-labels', () => {
+          http.post('*/ws/v1/cluster/remove-node-labels', ({ request }) => {
+            capturedUrl = request.url;
             return new HttpResponse(null, { status: 200 });
           }),
         );
 
         const client = new YarnApiClient('/ws/v1/cluster');
         await expect(client.removeNodeLabels(['deprecated-label'])).resolves.not.toThrow();
+        expect(capturedUrl).toContain('labels=deprecated-label');
       });
 
       it('should handle removal of non-existent labels', async () => {
@@ -492,7 +507,7 @@ describe('YarnApiClient', () => {
         const mockMappings: NodeToLabelsResponse = {
           nodeToLabelsInfo: {
             nodeToLabels: [
-              { nodeId: 'node1.cluster.com:8041', nodeLabels: ['gpu', 'ssd'] },
+              { nodeId: 'node1.cluster.com:8041', nodeLabels: ['gpu'] },
               { nodeId: 'node2.cluster.com:8041', nodeLabels: ['ssd'] },
             ],
           },
@@ -522,7 +537,7 @@ describe('YarnApiClient', () => {
 
         const client = new YarnApiClient('/ws/v1/cluster');
         const mapping = [
-          { nodeId: 'node1.cluster.com:8041', labels: ['gpu', 'highmem'] },
+          { nodeId: 'node1.cluster.com:8041', labels: ['gpu'] },
           { nodeId: 'node2.cluster.com:8041', labels: ['ssd'] },
         ];
 
@@ -542,18 +557,16 @@ describe('YarnApiClient', () => {
         const client = new YarnApiClient('/ws/v1/cluster');
         const mapping = [
           { nodeId: 'node1', labels: ['label1'] },
-          { nodeId: 'node2', labels: ['label2', 'label3'] },
+          { nodeId: 'node2', labels: ['label2'] },
         ];
 
         await client.replaceNodeToLabels(mapping);
 
         expect(capturedBody).toEqual({
-          nodeToLabels: {
-            nodeLabels: [
-              { nodeId: 'node1', labels: ['label1'] },
-              { nodeId: 'node2', labels: ['label2', 'label3'] },
-            ],
-          },
+          nodeToLabels: [
+            { nodeId: 'node1', labels: ['label1'] },
+            { nodeId: 'node2', labels: ['label2'] },
+          ],
         });
       });
     });
@@ -591,7 +604,9 @@ describe('YarnApiClient', () => {
 
       const client = new YarnApiClient('/ws/v1/cluster');
       await expect(
-        client.updateSchedulerConf({ 'global-updates': { test: 'value' } }),
+        client.updateSchedulerConf({
+          'global-updates': [{ entry: [{ key: 'test', value: 'value' }] }],
+        }),
       ).rejects.toThrow('User does not have admin privileges');
     });
 
@@ -643,7 +658,9 @@ describe('YarnApiClient', () => {
 
       const client = new YarnApiClient('/ws/v1/cluster');
       await expect(
-        client.updateSchedulerConf({ 'global-updates': { test: 'value' } }),
+        client.updateSchedulerConf({
+          'global-updates': [{ entry: [{ key: 'test', value: 'value' }] }],
+        }),
       ).resolves.not.toThrow();
     });
 
@@ -703,7 +720,7 @@ describe('YarnApiClient', () => {
       expect(results[0]).toHaveProperty('scheduler');
       expect(results[1]).toHaveProperty('property');
       expect(results[2]).toHaveProperty('nodeLabelsInfo');
-      expect(results[3]).toHaveProperty('versionID');
+      expect(results[3]).toHaveProperty('versionId');
     });
 
     it('should handle partial failure in concurrent requests', async () => {

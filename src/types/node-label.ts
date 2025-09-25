@@ -25,10 +25,8 @@ export type NodeLabelsInfo = {
 };
 
 export type NodeToLabels = {
-  nodeToLabels: Record<
-    string,
-    {
-      labels: string[];
-    }
-  >;
+  nodeToLabels: Array<{
+    nodeId: string;
+    nodeLabels: string[];
+  }>;
 };
