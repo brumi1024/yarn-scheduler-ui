@@ -1,9 +1,10 @@
 import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/types';
 
+// Specify the full config name
 export const globalPropertyDefinitions: PropertyDescriptor[] = [
   // Core Settings
   {
-    name: 'legacy-queue-mode.enabled',
+    name: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
     displayName: 'Enable Legacy Queue Mode',
     description:
       'Determines if legacy capacity calculation rules are enforced. Default is true. Disabling allows for more flexible capacity configurations but changes behavior significantly.',
@@ -13,7 +14,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'maximum-applications',
+    name: 'yarn.scheduler.capacity.maximum-applications',
     displayName: 'Maximum Applications (Global)',
     description: 'Maximum number of applications that can be pending and running.',
     type: 'number' as PropertyType,
@@ -30,7 +31,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'application.fail-fast',
+    name: 'yarn.scheduler.capacity.application.fail-fast',
     displayName: 'Application Fail Fast',
     description: 'Whether applications should fail fast if submitted to a non-existent queue.',
     type: 'boolean' as PropertyType,
@@ -39,64 +40,9 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
 
-  // Preemption Settings
-  {
-    name: 'preemption.disabled',
-    displayName: 'Disable Preemption Globally',
-    description: 'Globally disable or enable preemption. This can be overridden per queue.',
-    type: 'boolean' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: 'false',
-    required: false,
-  },
-  {
-    name: 'preemption.monitor_policy',
-    displayName: 'Preemption Monitor Policy',
-    description: 'Policy for monitoring containers for preemption.',
-    type: 'enum' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: 'ProportionalCapacityPreemptionPolicy',
-    required: false,
-    enumValues: ['ProportionalCapacityPreemptionPolicy', 'FifoPreemptionPolicy'],
-  },
-  {
-    name: 'preemption.monitoring_interval',
-    displayName: 'Preemption Monitoring Interval (ms)',
-    description: 'Time interval between preemption policy invocations.',
-    type: 'number' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: '3000',
-    required: false,
-    validationRules: [
-      {
-        type: 'range',
-        message: 'Must be between 1000 and 60000',
-        min: 1000,
-        max: 60000,
-      },
-    ],
-  },
-  {
-    name: 'preemption.max_wait_before_kill',
-    displayName: 'Max Wait Before Kill (ms)',
-    description: 'Maximum time to wait before forcefully killing a container during preemption.',
-    type: 'number' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: '15000',
-    required: false,
-    validationRules: [
-      {
-        type: 'range',
-        message: 'Must be between 1000 and 300000',
-        min: 1000,
-        max: 300000,
-      },
-    ],
-  },
-
   // Resource Settings
   {
-    name: 'resource-calculator',
+    name: 'yarn.scheduler.capacity.resource-calculator',
     displayName: 'Resource Calculator',
     description: 'Class used to calculate resource requirements.',
     type: 'enum' as PropertyType,
@@ -109,7 +55,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'user.max-parallel-apps',
+    name: 'yarn.scheduler.capacity.user.max-parallel-apps',
     displayName: 'Default Max Parallel Apps per User',
     description: 'Default maximum parallel applications per user',
     type: 'number' as PropertyType,
@@ -128,7 +74,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Locality Settings
   {
-    name: 'node-locality-delay',
+    name: 'yarn.scheduler.capacity.node-locality-delay',
     displayName: 'Node Locality Delay',
     description:
       'Number of missed scheduling opportunities after which the scheduler attempts to schedule rack-local containers. Set to -1 to disable node-locality constraint.',
@@ -146,7 +92,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'rack-locality-additional-delay',
+    name: 'yarn.scheduler.capacity.rack-locality-additional-delay',
     displayName: 'Rack Locality Additional Delay',
     description:
       'Number of additional missed scheduling opportunities over node-locality-delay after which the scheduler attempts to schedule off-switch containers.',
@@ -166,7 +112,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Queue Mapping Settings
   {
-    name: 'queue-mappings',
+    name: 'yarn.scheduler.capacity.queue-mappings',
     displayName: 'Queue Mappings',
     description:
       'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
@@ -176,7 +122,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'queue-mappings-override.enable',
+    name: 'yarn.scheduler.capacity.queue-mappings-override.enable',
     displayName: 'Enable Queue Mappings Override',
     description: 'If a queue mapping is present, will it override the value specified by the user?',
     type: 'boolean' as PropertyType,
@@ -185,7 +131,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'mapping-rule-format',
+    name: 'yarn.scheduler.capacity.mapping-rule-format',
     displayName: 'Mapping Rule Format',
     description: 'Format for queue mapping rules',
     type: 'enum' as PropertyType,
@@ -195,7 +141,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     enumValues: ['legacy', 'json'],
   },
   {
-    name: 'mapping-rule-json',
+    name: 'yarn.scheduler.capacity.mapping-rule-json',
     displayName: 'JSON Mapping Rules',
     description: 'Queue mapping rules in JSON format',
     type: 'string' as PropertyType,
@@ -204,7 +150,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'workflow-priority-mappings-override.enable',
+    name: 'yarn.scheduler.capacity.workflow-priority-mappings-override.enable',
     displayName: 'Enable Workflow Priority Mappings Override',
     description: 'Enable workflow priority mappings override.',
     type: 'boolean' as PropertyType,
@@ -215,7 +161,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Container Assignment Settings
   {
-    name: 'per-node-heartbeat.multiple-assignments-enabled',
+    name: 'yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled',
     displayName: 'Enable Multiple Container Assignments',
     description: 'Allow multiple container assignments per node heartbeat',
     type: 'boolean' as PropertyType,
@@ -224,7 +170,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'per-node-heartbeat.maximum-container-assignments',
+    name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments',
     displayName: 'Max Container Assignments per Heartbeat',
     description: 'Maximum containers assigned per heartbeat (-1 = unlimited)',
     type: 'number' as PropertyType,
@@ -241,7 +187,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'per-node-heartbeat.maximum-offswitch-assignments',
+    name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments',
     displayName: 'Maximum Off-switch Assignments Per Heartbeat',
     description: 'Controls the number of OFF_SWITCH assignments allowed during a node heartbeat.',
     type: 'number' as PropertyType,
@@ -260,7 +206,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Reservation Settings
   {
-    name: 'reservations-continue-look-all-nodes',
+    name: 'yarn.scheduler.capacity.reservations-continue-look-all-nodes',
     displayName: 'Continue Looking All Nodes for Reservations',
     description: 'Continue looking at all nodes even after reservation limit hit',
     type: 'boolean' as PropertyType,
@@ -271,7 +217,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Asynchronous Scheduling
   {
-    name: 'schedule-asynchronously.enable',
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.enable',
     displayName: 'Enable Asynchronous Scheduling',
     description: 'Enable asynchronous scheduling for better performance',
     type: 'boolean' as PropertyType,
@@ -280,7 +226,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     required: false,
   },
   {
-    name: 'schedule-asynchronously.scheduling-interval-ms',
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.scheduling-interval-ms',
     displayName: 'Async Scheduling Interval (ms)',
     description: 'Scheduling interval for async scheduling',
     type: 'number' as PropertyType,
@@ -297,7 +243,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'maximum-am-resource-percent',
+    name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
     displayName: 'Maximum AM Resource Percent',
     description:
       'Maximum percentage of resources that can be used for Application Masters (0.0-1.0)',

@@ -67,7 +67,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
       id: 'simulated',
       type: 'update',
       queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-      property: 'legacy-queue-mode.enabled',
+      property: property.name,
       oldValue: currentEnabled ? 'true' : 'false',
       newValue: simulatedLegacyMode ? 'true' : 'false',
       timestamp: Date.now(),
@@ -77,11 +77,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     // Merge current staged changes with the simulated change
     const simulatedStagedChanges = [
       ...stagedChanges.filter(
-        (c) =>
-          !(
-            c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
-            c.property === 'legacy-queue-mode.enabled'
-          ),
+        (c) => !(c.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH && c.property === property.name),
       ),
       simulatedStagedChange,
     ];

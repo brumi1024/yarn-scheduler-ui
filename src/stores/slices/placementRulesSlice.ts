@@ -19,6 +19,7 @@ export interface PlacementRulesSlice {
   selectedRuleIndex: number | null;
   legacyRules: string | null;
   isLegacyMode: boolean;
+  formatWarning: string | null;
 
   // Actions
   loadPlacementRules: () => void;
@@ -29,6 +30,28 @@ export interface PlacementRulesSlice {
   selectRule: (index: number | null) => void;
   resetRulesChanges: () => void;
   migrateLegacyRules: () => Promise<void>;
+}
+
+const MAPPING_RULE_FORMAT_WARNING_MISSING =
+  'Placement rule format is not set. Adding a rule will automatically stage the JSON format.';
+const MAPPING_RULE_FORMAT_WARNING_LEGACY =
+  'Placement rule format is set to "legacy". Update it to "json" so newly staged rules are applied when you commit the configuration.';
+
+function getFormatWarningMessage(formatValue?: string | null): string | null {
+  if (!formatValue || formatValue.trim() === '') {
+    return MAPPING_RULE_FORMAT_WARNING_MISSING;
+  }
+
+  const normalized = formatValue.trim().toLowerCase();
+  if (normalized === 'json') {
+    return null;
+  }
+
+  if (normalized === 'legacy') {
+    return MAPPING_RULE_FORMAT_WARNING_LEGACY;
+  }
+
+  return `Placement rule format is set to "${formatValue}". Update it to "json" so newly staged rules are applied when you commit the configuration.`;
 }
 
 export const createPlacementRulesSlice: StateCreator<
@@ -45,6 +68,7 @@ export const createPlacementRulesSlice: StateCreator<
   selectedRuleIndex: null,
   legacyRules: null,
   isLegacyMode: false,
+  formatWarning: null,
 
   // Load rules from existing config data
   loadPlacementRules: () => {
@@ -56,24 +80,26 @@ export const createPlacementRulesSlice: StateCreator<
     try {
       const configData = get().configData;
       const stagedChanges = get().stagedChanges;
+      const mergedConfig = getMergedConfigData(configData, stagedChanges);
+
+      const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
+      const formatWarning = getFormatWarningMessage(formatValue);
 
       // First, check the ORIGINAL config to detect if legacy rules exist
       const originalResponse = extractPlacementRulesFromConfig(configData);
 
       if (originalResponse.format === 'legacy' && originalResponse.requiresMigration) {
         // Legacy rules exist in original config
-        // Check if migration is already staged
         const formatStaged = stagedChanges.some(
           (change) =>
             change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
-            change.property === 'yarn.scheduler.capacity.mapping-rule-format' &&
+            change.property === SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY &&
             change.newValue === 'json' &&
             change.type === 'update',
         );
 
         if (formatStaged) {
-          // Migration is already staged
-          // Load JSON rules from staged changes
+          // Migration is already staged, load staged JSON rules
           const jsonRulesStaged = stagedChanges.find(
             (change) =>
               change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH &&
@@ -94,23 +120,24 @@ export const createPlacementRulesSlice: StateCreator<
                 state.isLoadingRules = false;
                 state.legacyRules = null;
                 state.isLegacyMode = false;
+                state.formatWarning = formatWarning;
               });
             } catch {
-              // If parsing fails, show empty rules
               set((state) => {
                 state.rules = [];
                 state.originalRules = [];
                 state.isLoadingRules = false;
                 state.isLegacyMode = false;
+                state.formatWarning = formatWarning;
               });
             }
           } else {
-            // Format is staged but no rules found, show empty
             set((state) => {
               state.rules = [];
               state.originalRules = [];
               state.isLoadingRules = false;
               state.isLegacyMode = false;
+              state.formatWarning = formatWarning;
             });
           }
         } else {
@@ -121,12 +148,11 @@ export const createPlacementRulesSlice: StateCreator<
             state.isLoadingRules = false;
             state.legacyRules = originalResponse.legacyRules || null;
             state.isLegacyMode = true;
+            state.formatWarning = null;
           });
         }
       } else {
-        // No legacy rules in original config
-        // Load rules normally using merged config
-        const mergedConfig = getMergedConfigData(configData, stagedChanges);
+        // No legacy rules in original config - load rules from merged config
         const response = extractPlacementRulesFromConfig(mergedConfig);
 
         if (response.format === 'json' && response.rules) {
@@ -137,15 +163,16 @@ export const createPlacementRulesSlice: StateCreator<
             state.isLoadingRules = false;
             state.legacyRules = null;
             state.isLegacyMode = false;
+            state.formatWarning = formatWarning;
           });
         } else {
-          // No rules found
           set((state) => {
             state.rules = [];
             state.originalRules = [];
             state.isLoadingRules = false;
             state.legacyRules = null;
             state.isLegacyMode = false;
+            state.formatWarning = formatWarning;
           });
         }
       }
@@ -154,13 +181,30 @@ export const createPlacementRulesSlice: StateCreator<
         state.isLoadingRules = false;
         state.rulesError =
           error instanceof Error ? error.message : 'Failed to load placement rules';
+        state.formatWarning = null;
       });
     }
   },
 
   // Add new rule
   addRule: (rule) => {
-    const { rules, stageGlobalChange } = get();
+    const { rules, stageGlobalChange, configData, stagedChanges } = get();
+
+    const mergedConfig = getMergedConfigData(configData, stagedChanges);
+    const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
+    const normalizedFormat = formatValue?.trim().toLowerCase() ?? '';
+
+    if (!normalizedFormat) {
+      stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
+      set((state) => {
+        state.formatWarning = null;
+      });
+    } else if (normalizedFormat !== 'json') {
+      set((state) => {
+        state.formatWarning = getFormatWarningMessage(formatValue);
+      });
+    }
+
     const newRules = [...rules, rule];
 
     set((state) => {
@@ -315,7 +359,7 @@ export const createPlacementRulesSlice: StateCreator<
         stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY, rulesConfig);
 
         // Also stage the format change to JSON
-        stageGlobalChange('yarn.scheduler.capacity.mapping-rule-format', 'json');
+        stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
 
         // Update local state
         set((state) => {

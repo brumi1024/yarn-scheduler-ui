@@ -10,6 +10,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import { Info, ChevronRight } from 'lucide-react';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
 import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { SPECIAL_VALUES } from '~/types';
 import { SearchBar } from '~/components/search/SearchBar';
 
 export default function Layout() {
@@ -23,7 +24,7 @@ export default function Layout() {
   // Get legacy mode status considering staged changes
   const legacyModeEnabled = useMemo(() => {
     const mergedData = getMergedConfigData(configData, stagedChanges);
-    return mergedData.get('yarn.scheduler.capacity.legacy-queue-mode.enabled') !== 'false';
+    return mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
   }, [configData, stagedChanges]);
 
   useEffect(() => {

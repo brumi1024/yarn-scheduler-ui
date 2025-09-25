@@ -67,6 +67,7 @@ describe('placementRulesSlice', () => {
       expect(state.rulesError).toBeNull();
       expect(state.selectedRuleIndex).toBeNull();
       expect(state.legacyRules).toBeNull();
+      expect(state.formatWarning).toBeNull();
     });
   });
 
@@ -81,7 +82,9 @@ describe('placementRulesSlice', () => {
       const mockExtract = vi.mocked(extractPlacementRulesFromConfig);
 
       // Mock config data
-      store.setState({ configData: new Map([['test', 'value']]) });
+      store.setState({
+        configData: new Map([[SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json']]),
+      });
 
       // Mock successful extraction
       mockExtract.mockReturnValue({
@@ -96,6 +99,7 @@ describe('placementRulesSlice', () => {
       expect(store.getState().isLoadingRules).toBe(false);
       expect(store.getState().rulesError).toBeNull();
       expect(store.getState().isLegacyMode).toBe(false);
+      expect(store.getState().formatWarning).toBeNull();
     });
 
     it('should handle legacy format and set legacy mode', () => {
@@ -119,6 +123,7 @@ describe('placementRulesSlice', () => {
         'u:alice:root.users.alice\\ng:production:root.production',
       );
       expect(store.getState().isLegacyMode).toBe(true);
+      expect(store.getState().formatWarning).toBeNull();
     });
 
     it('should handle no rules configured', () => {

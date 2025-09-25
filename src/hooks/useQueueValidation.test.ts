@@ -85,7 +85,7 @@ describe('useQueueValidation with staged changes', () => {
     const stagedChanges: StagedChange[] = [
       createTestStagedChange({
         queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-        property: 'legacy-queue-mode.enabled',
+        property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
         oldValue: 'true',
         newValue: 'false',
       }),
@@ -146,7 +146,7 @@ describe('useQueueValidation with staged changes', () => {
     const stagedChanges: StagedChange[] = [
       createTestStagedChange({
         queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-        property: 'legacy-queue-mode.enabled',
+        property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
         oldValue: 'true',
         newValue: 'false', // Disable legacy mode
       }),

@@ -6,6 +6,7 @@ import {
   getPropertyDefinition,
 } from '../properties/helpers';
 import { globalPropertyDefinitions } from '../properties/global-properties';
+import { CONFIG_PREFIXES } from '~/types';
 import {
   capacityValueSchema,
   percentageSchema,
@@ -147,14 +148,14 @@ describe('propertyDefinitions', () => {
     it('includes global YARN properties', () => {
       const propertyNames = globalPropertyDefinitions.map((p) => p.name);
 
-      expect(propertyNames).toContain('maximum-applications');
-      expect(propertyNames).toContain('maximum-am-resource-percent');
-      expect(propertyNames).toContain('resource-calculator');
+      expect(propertyNames).toContain(`${CONFIG_PREFIXES.BASE}.maximum-applications`);
+      expect(propertyNames).toContain(`${CONFIG_PREFIXES.BASE}.maximum-am-resource-percent`);
+      expect(propertyNames).toContain(`${CONFIG_PREFIXES.BASE}.resource-calculator`);
     });
 
     it('has correct enum values for resource calculator', () => {
       const resourceCalcProperty = globalPropertyDefinitions.find(
-        (p) => p.name === 'resource-calculator',
+        (p) => p.name === `${CONFIG_PREFIXES.BASE}.resource-calculator`,
       );
       expect(resourceCalcProperty?.type).toBe('enum');
       expect(resourceCalcProperty?.enumValues).toContain(
