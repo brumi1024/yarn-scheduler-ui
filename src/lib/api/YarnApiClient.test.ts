@@ -443,10 +443,12 @@ describe('YarnApiClient', () => {
         await client.addNodeLabels(labels);
 
         expect(capturedBody).toEqual({
-          nodeLabels: [
-            { name: 'label1', exclusivity: true },
-            { name: 'label2', exclusivity: false },
-          ],
+          nodeLabelsInfo: {
+            nodeLabelInfo: [
+              { name: 'label1', exclusivity: true },
+              { name: 'label2', exclusivity: false },
+            ],
+          },
         });
       });
     });

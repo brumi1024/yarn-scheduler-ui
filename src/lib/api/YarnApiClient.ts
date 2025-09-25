@@ -51,8 +51,16 @@ export class YarnApiClient {
    * Get the root URL (origin) from the base URL
    */
   private get rootUrl(): string {
-    const url = new URL(this.baseUrl);
-    return url.origin;
+    if (/^https?:\/\//i.test(this.baseUrl)) {
+      return new URL(this.baseUrl).origin;
+    }
+
+    if (typeof window !== 'undefined') {
+      return window.location.origin;
+    }
+
+    // Fallback for non-browser environments (tests/SSR)
+    return 'http://localhost:8088';
   }
 
   /**
@@ -78,6 +86,7 @@ export class YarnApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      expectJson: false,
     });
   }
 
@@ -90,6 +99,7 @@ export class YarnApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      expectJson: false,
     });
   }
 
@@ -113,14 +123,17 @@ export class YarnApiClient {
   async addNodeLabels(labels: { name: string; exclusivity: boolean }[]): Promise<void> {
     await this.request('POST', '/add-node-labels', {
       body: JSON.stringify({
-        nodeLabels: labels.map((label) => ({
-          name: label.name,
-          exclusivity: label.exclusivity,
-        })),
+        nodeLabelsInfo: {
+          nodeLabelInfo: labels.map((label) => ({
+            name: label.name,
+            exclusivity: label.exclusivity,
+          })),
+        },
       }),
       headers: {
         'Content-Type': 'application/json',
       },
+      expectJson: false,
     });
   }
 
@@ -133,6 +146,7 @@ export class YarnApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      expectJson: false,
     });
   }
 
@@ -163,6 +177,7 @@ export class YarnApiClient {
       headers: {
         'Content-Type': 'application/json',
       },
+      expectJson: false,
     });
   }
 
@@ -186,9 +201,22 @@ export class YarnApiClient {
     try {
       const authMode = await this.getConfiguration('hadoop.security.authentication');
       this.securityMode = authMode.toLowerCase() === 'simple' ? 'simple' : 'kerberos';
-    } catch {
-      // If we can't detect security mode, we'll throw an error
-      throw new Error('Failed to detect YARN security mode. Please check YARN availability.');
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (
+        /user\s+not\s+authenticated/i.test(message) ||
+        /unable to obtain user name/i.test(message)
+      ) {
+        this.securityMode = 'simple';
+        return;
+      }
+
+      // Fallback to simple mode when detection fails (common in dev proxies)
+      this.securityMode = 'simple';
+
+      // Surface unexpected errors for visibility
+      console.warn('Proceeding with simple auth mode due to detection failure:', message);
     }
   }
 
@@ -198,7 +226,7 @@ export class YarnApiClient {
   private async request<T = void>(
     method: string,
     path: string,
-    options: RequestInit & { skipAuth?: boolean; absoluteUrl?: boolean } = {},
+    options: RequestInit & { skipAuth?: boolean; absoluteUrl?: boolean; expectJson?: boolean } = {},
   ): Promise<T> {
     // Wait for security mode detection to complete (if still in progress)
     if (this.initPromise) {
@@ -206,10 +234,11 @@ export class YarnApiClient {
     }
 
     // Build URL - use path as-is if absolute, otherwise append to baseUrl
-    let url = options.absoluteUrl ? path : `${this.baseUrl}${path}`;
+    const { skipAuth, absoluteUrl, expectJson = true, ...fetchOptions } = options;
+    let url = absoluteUrl ? path : `${this.baseUrl}${path}`;
 
     // Add user.name parameter for simple auth mode (unless skipAuth is true)
-    if (!options.skipAuth && this.securityMode === 'simple' && this.userName) {
+    if (!skipAuth && this.securityMode === 'simple' && this.userName) {
       const separator = url.includes('?') ? '&' : '?';
       url += `${separator}user.name=${encodeURIComponent(this.userName)}`;
     }
@@ -222,10 +251,10 @@ export class YarnApiClient {
         method,
         signal: controller.signal,
         credentials: 'include', // Include cookies for cross-origin requests
-        ...options,
+        ...fetchOptions,
         headers: {
           ...this.defaultHeaders,
-          ...options.headers,
+          ...fetchOptions.headers,
         },
       });
 
@@ -238,9 +267,19 @@ export class YarnApiClient {
         return undefined as T;
       }
 
-      const contentType = response.headers.get('content-type');
-      if (contentType?.includes('application/json')) {
-        return await response.json();
+      const contentType = response.headers.get('content-type') || '';
+      if (!expectJson) {
+        return undefined as T;
+      }
+
+      if (contentType.includes('application/json')) {
+        try {
+          return await response.json();
+        } catch (parseError) {
+          throw parseError instanceof Error
+            ? parseError
+            : new Error('Failed to parse JSON response from YARN API.');
+        }
       }
 
       // Return empty for successful non-JSON responses
