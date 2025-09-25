@@ -396,28 +396,28 @@ describe('YarnApiClient', () => {
         const client = new YarnApiClient('/ws/v1/cluster');
         const response = await client.getNodeLabels();
 
-        expect(response.nodeLabelsInfo).toBeDefined();
-        const labels = response.nodeLabelsInfo?.nodeLabelInfo;
+        const labels = response.nodeLabelInfo;
+        expect(labels).toBeDefined();
         expect(Array.isArray(labels)).toBe(true);
 
         if (labels && labels.length > 0) {
           const firstLabel = labels[0];
           expect(firstLabel.name).toBeDefined();
-          expect(typeof firstLabel.exclusivity).toBe('boolean');
+          expect(['boolean', 'string']).toContain(typeof firstLabel.exclusivity);
         }
       });
 
       it('should handle empty node labels', async () => {
         server.use(
           http.get('*/ws/v1/cluster/get-node-labels', () => {
-            return HttpResponse.json({ nodeLabelsInfo: {} });
+            return HttpResponse.json({ nodeLabelInfo: [] });
           }),
         );
 
         const client = new YarnApiClient('/ws/v1/cluster');
         const response = await client.getNodeLabels();
 
-        expect(response.nodeLabelsInfo?.nodeLabelInfo).toBeUndefined();
+        expect(response.nodeLabelInfo).toEqual([]);
       });
     });
 
@@ -505,10 +505,26 @@ describe('YarnApiClient', () => {
     describe('getNodeToLabels', () => {
       it('should fetch node to label mappings', async () => {
         const mockMappings: NodeToLabelsResponse = {
-          nodeToLabelsInfo: {
-            nodeToLabels: [
-              { nodeId: 'node1.cluster.com:8041', nodeLabels: ['gpu'] },
-              { nodeId: 'node2.cluster.com:8041', nodeLabels: ['ssd'] },
+          nodeToLabels: {
+            entry: [
+              {
+                key: 'node1.cluster.com:8041',
+                value: {
+                  nodeLabelInfo: {
+                    name: 'gpu',
+                    exclusivity: 'true',
+                  },
+                },
+              },
+              {
+                key: 'node2.cluster.com:8041',
+                value: {
+                  nodeLabelInfo: {
+                    name: 'ssd',
+                    exclusivity: 'false',
+                  },
+                },
+              },
             ],
           },
         };
@@ -522,8 +538,12 @@ describe('YarnApiClient', () => {
         const client = new YarnApiClient('/ws/v1/cluster');
         const response = await client.getNodeToLabels();
 
-        expect(response.nodeToLabelsInfo?.nodeToLabels).toHaveLength(2);
-        expect(response.nodeToLabelsInfo?.nodeToLabels?.[0].nodeLabels).toContain('gpu');
+        const entries = response.nodeToLabels?.entry;
+        expect(entries).toBeDefined();
+
+        const arrayEntries = Array.isArray(entries) ? entries : entries ? [entries] : [];
+        expect(arrayEntries).toHaveLength(2);
+        expect(arrayEntries[0]?.value?.nodeLabelInfo).toBeDefined();
       });
     });
 
@@ -719,7 +739,8 @@ describe('YarnApiClient', () => {
       expect(results).toHaveLength(4);
       expect(results[0]).toHaveProperty('scheduler');
       expect(results[1]).toHaveProperty('property');
-      expect(results[2]).toHaveProperty('nodeLabelsInfo');
+      const nodeLabelsResponse = results[2] as NodeLabelsResponse;
+      expect(nodeLabelsResponse.nodeLabelInfo).toBeDefined();
       expect(results[3]).toHaveProperty('versionId');
     });
 

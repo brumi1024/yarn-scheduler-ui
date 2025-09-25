@@ -3,7 +3,15 @@
  */
 
 import type { StateCreator } from 'zustand';
-import type { ConfigProperty, NodeLabel } from '~/types';
+import type {
+  ConfigProperty,
+  NodeLabel,
+  NodeLabelInfoItem,
+  NodeLabelsResponse,
+  NodeToLabelMapping,
+  NodeToLabelsMapEntry,
+  NodeToLabelsResponse,
+} from '~/types';
 import {
   createDetailedErrorMessage,
   createStoreError,
@@ -45,9 +53,9 @@ export const createSchedulerDataSlice: StateCreator<
         state.configData = new Map(config.property.map((p: ConfigProperty) => [p.name, p.value]));
 
         // Update node labels data
-        state.nodeLabels = normalizeNodeLabels(labels.nodeLabelsInfo?.nodeLabelInfo);
+        state.nodeLabels = normalizeNodeLabels(labels);
         state.nodes = nodes.nodes?.node || [];
-        state.nodeToLabels = nodeToLabels.nodeToLabelsInfo?.nodeToLabels || [];
+        state.nodeToLabels = normalizeNodeToLabels(nodeToLabels);
 
         state.configVersion = version.versionId;
         state.isLoading = false;
@@ -102,15 +110,66 @@ export const createSchedulerDataSlice: StateCreator<
  * Helper function to normalize node labels from API response
  * Ensures exclusivity defaults to true if not specified (YARN default)
  */
-function normalizeNodeLabels(
-  nodeLabelsInfo?: {
-    name: string;
-    exclusivity?: boolean;
-    partitionName?: string;
-  }[],
-): NodeLabel[] {
-  return (nodeLabelsInfo || []).map((label) => ({
+function normalizeNodeLabels(response?: NodeLabelsResponse): NodeLabel[] {
+  const nodeLabelInfo = response?.nodeLabelInfo || [];
+
+  return nodeLabelInfo.map((label) => ({
     ...label,
-    exclusivity: label.exclusivity ?? true, // Default to exclusive if not specified
+    exclusivity: parseExclusivity(label.exclusivity),
   }));
+}
+
+function parseExclusivity(value?: boolean | 'true' | 'false'): boolean {
+  if (typeof value === 'string') {
+    return value.toLowerCase() !== 'false';
+  }
+
+  return value ?? true;
+}
+
+type NodeLabelInfoLike =
+  | NodeLabelInfoItem
+  | NodeLabelInfoItem[]
+  | {
+      nodeLabelInfo?: NodeLabelInfoItem | NodeLabelInfoItem[];
+    };
+
+function normalizeNodeToLabels(response?: NodeToLabelsResponse): NodeToLabelMapping[] {
+  const entries = extractEntries(response?.nodeToLabels);
+
+  return entries.map((entry) => ({
+    nodeId: entry.key,
+    nodeLabels: extractLabelNames(entry.value?.nodeLabelInfo),
+  }));
+}
+
+function extractEntries(data?: NodeToLabelsResponse['nodeToLabels']): NodeToLabelsMapEntry[] {
+  if (!data || !data.entry) {
+    return [];
+  }
+
+  const { entry } = data;
+  return Array.isArray(entry) ? entry : [entry];
+}
+
+function extractLabelNames(info?: NodeLabelInfoLike): string[] {
+  if (!info) {
+    return [];
+  }
+
+  if (Array.isArray(info)) {
+    return info.map((item) => item?.name).filter((name): name is string => Boolean(name));
+  }
+
+  if ('nodeLabelInfo' in info && info.nodeLabelInfo) {
+    // Some responses nest nodeLabelInfo inside another object
+    return extractLabelNames(info.nodeLabelInfo as NodeLabelInfoItem | NodeLabelInfoItem[]);
+  }
+
+  if (typeof info === 'object' && info !== null && 'name' in info) {
+    const name = (info as NodeLabelInfoItem).name;
+    return name ? [name] : [];
+  }
+
+  return [];
 }

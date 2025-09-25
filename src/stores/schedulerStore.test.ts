@@ -9,6 +9,7 @@ import type {
   ConfigData,
   NodeLabelsInfo,
   NodeLabelsResponse,
+  NodeToLabelsResponse,
   NodesResponse,
   VersionResponse,
   SchedulerResponse,
@@ -216,13 +217,11 @@ const mockConfigResponse: ConfigData = {
 };
 
 const mockNodeLabelsResponse: NodeLabelsResponse = {
-  nodeLabelsInfo: {
-    nodeLabelInfo: [
-      { name: 'gpu', exclusivity: true },
-      { name: 'ssd', exclusivity: false },
-      { name: 'high-memory', exclusivity: true },
-    ],
-  },
+  nodeLabelInfo: [
+    { name: 'gpu', exclusivity: 'true' },
+    { name: 'ssd', exclusivity: 'false' },
+    { name: 'high-memory', exclusivity: true },
+  ],
 };
 
 const mockNodesResponse: NodesResponse = {
@@ -262,12 +261,17 @@ const mockNodesResponse: NodesResponse = {
   },
 };
 
-const mockNodeToLabelsResponse = {
-  nodeToLabelsInfo: {
-    nodeToLabels: [
+const mockNodeToLabelsResponse: NodeToLabelsResponse = {
+  nodeToLabels: {
+    entry: [
       {
-        nodeId: 'node1.example.com:8041',
-        nodeLabels: ['high-memory'],
+        key: 'node1.example.com:8041',
+        value: {
+          nodeLabelInfo: {
+            name: 'high-memory',
+            exclusivity: 'true',
+          },
+        },
       },
     ],
   },
