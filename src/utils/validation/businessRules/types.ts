@@ -1,4 +1,8 @@
-import type { QueueInfo as _QueueInfo, SchedulerInfo as _SchedulerInfo } from '~/types';
+import type {
+  QueueInfo as _QueueInfo,
+  SchedulerInfo as _SchedulerInfo,
+  StagedChange as _StagedChange,
+} from '~/types';
 
 export type QueueInfo = _QueueInfo;
 export type SchedulerInfo = _SchedulerInfo;
@@ -22,6 +26,7 @@ export interface QueueValidationContext {
   configData: Map<string, string>;
   parentQueue?: QueueInfo;
   siblingQueues?: QueueInfo[];
+  stagedChanges?: _StagedChange[];
   field?: string;
 }
 

@@ -133,7 +133,8 @@ vi.mock('../hooks/useQueueTreeData', () => ({
     nodes: [],
     edges: [],
     isLoading: true,
-    error: null,
+    loadError: null,
+    applyError: null,
   })),
 }));
 
@@ -173,7 +174,8 @@ describe('QueueVisualizationContainer', () => {
       nodes: [],
       edges: [],
       isLoading: false,
-      error: 'Failed to fetch queue data',
+      loadError: 'Failed to fetch queue data',
+      applyError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -182,12 +184,38 @@ describe('QueueVisualizationContainer', () => {
     expect(screen.getByText('Failed to fetch queue data')).toBeInTheDocument();
   });
 
+  it('should surface apply error without hiding the queue hierarchy', () => {
+    const mockNodes: Node<QueueCardData>[] = [
+      {
+        id: 'root',
+        type: 'queueCard',
+        position: { x: 0, y: 0 },
+        data: getMockQueueCardData({ queueName: 'root', queuePath: 'root' }),
+      },
+    ];
+
+    vi.mocked(useQueueTreeData).mockReturnValue({
+      nodes: mockNodes,
+      edges: [],
+      isLoading: false,
+      loadError: null,
+      applyError: 'HTTP 400: Invalid configuration',
+    });
+
+    renderWithProviders(<QueueVisualizationContainer />);
+
+    expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
+    expect(screen.getByText('HTTP 400: Invalid configuration')).toBeInTheDocument();
+    expect(screen.queryByText('Error Loading Queue Data')).not.toBeInTheDocument();
+  });
+
   it('should show empty state when no queue data exists', () => {
     vi.mocked(useQueueTreeData).mockReturnValue({
       nodes: [],
       edges: [],
       isLoading: false,
-      error: null,
+      loadError: null,
+      applyError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -239,7 +267,8 @@ describe('QueueVisualizationContainer', () => {
       nodes: mockNodes,
       edges: mockEdges,
       isLoading: false,
-      error: null,
+      loadError: null,
+      applyError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -318,7 +347,8 @@ describe('QueueVisualizationContainer', () => {
       nodes: mockNodes,
       edges: [],
       isLoading: false,
-      error: null,
+      loadError: null,
+      applyError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -361,7 +391,8 @@ describe('QueueVisualizationContainer', () => {
       nodes: mockNodes,
       edges: [],
       isLoading: false,
-      error: null,
+      loadError: null,
+      applyError: null,
     });
 
     // Test with dark theme

@@ -443,6 +443,7 @@ describe('schedulerStore', () => {
       expect(error).toBeDefined();
 
       expect(store.getState().error).toBe('Failed to load initial data: Network error');
+      expect(store.getState().errorContext).toBe('load');
       expect(store.getState().isLoading).toBe(false);
     });
 
@@ -463,6 +464,7 @@ describe('schedulerStore', () => {
       expect(error).toBeDefined();
 
       expect(store.getState().error).toBe('Failed to load initial data: HTTP 403: Forbidden');
+      expect(store.getState().errorContext).toBe('load');
       expect(store.getState().isLoading).toBe(false);
     });
   });
@@ -776,6 +778,30 @@ describe('schedulerStore', () => {
       // Changes should not be cleared on failure
       expect(store.getState().stagedChanges).toHaveLength(1);
       expect(store.getState().error).toBe('HTTP 400: Invalid configuration');
+      expect(store.getState().errorContext).toBe('mutation');
+      expect(store.getState().applyError).toBe('HTTP 400: Invalid configuration');
+    });
+
+    it('should clear mutation error when staged changes are modified after a failure', async () => {
+      const store = createTestStore();
+      const mockApiClient = vi.mocked(store.getState().apiClient);
+
+      store.getState().stageQueueChange('root.default', 'capacity', '60');
+
+      mockApiClient.validateSchedulerConf.mockResolvedValue({ validation: 'success' });
+      mockApiClient.updateSchedulerConf.mockRejectedValue(
+        new Error('HTTP 400: Invalid configuration'),
+      );
+
+      await expect(store.getState().applyChanges()).rejects.toBeDefined();
+
+      expect(store.getState().applyError).toBe('HTTP 400: Invalid configuration');
+
+      store.getState().stageQueueChange('root.default', 'capacity', '61');
+
+      expect(store.getState().applyError).toBeNull();
+      expect(store.getState().error).toBeNull();
+      expect(store.getState().errorContext).toBeNull();
     });
 
     it('should stop and restart parent queues when adding a new queue', async () => {

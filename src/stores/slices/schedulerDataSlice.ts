@@ -31,11 +31,15 @@ export const createSchedulerDataSlice: StateCreator<
   configVersion: 0,
   isLoading: false,
   error: null,
+  errorContext: null,
 
   loadInitialData: async () => {
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'load') {
+        state.error = null;
+        state.errorContext = null;
+      }
     });
 
     try {
@@ -59,12 +63,17 @@ export const createSchedulerDataSlice: StateCreator<
 
         state.configVersion = version.versionId;
         state.isLoading = false;
+        if (state.errorContext === 'load') {
+          state.error = null;
+          state.errorContext = null;
+        }
       });
     } catch (error) {
       const errorMessage = createDetailedErrorMessage('load initial data', error);
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'load';
         state.isLoading = false;
       });
 
@@ -79,7 +88,10 @@ export const createSchedulerDataSlice: StateCreator<
   refreshSchedulerData: async () => {
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'load') {
+        state.error = null;
+        state.errorContext = null;
+      }
     });
 
     try {
@@ -88,12 +100,17 @@ export const createSchedulerDataSlice: StateCreator<
       set((state) => {
         state.schedulerData = scheduler.scheduler.schedulerInfo;
         state.isLoading = false;
+        if (state.errorContext === 'load') {
+          state.error = null;
+          state.errorContext = null;
+        }
       });
     } catch (error) {
       const errorMessage = createDetailedErrorMessage('refresh scheduler data', error);
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'load';
         state.isLoading = false;
       });
 

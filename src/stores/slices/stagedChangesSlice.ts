@@ -25,6 +25,17 @@ import {
   selectivelyValidateStagedChanges,
 } from '~/utils/validation/crossQueueValidation';
 
+type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
+const clearMutationError = (state: MutationErrorState) => {
+  if (state.applyError) {
+    state.applyError = null;
+  }
+  if (state.errorContext === 'mutation') {
+    state.error = null;
+    state.errorContext = null;
+  }
+};
+
 export const createStagedChangesSlice: StateCreator<
   SchedulerStore,
   [['zustand/immer', never]],
@@ -32,6 +43,7 @@ export const createStagedChangesSlice: StateCreator<
   StagedChangesSlice
 > = (set, get) => ({
   stagedChanges: [],
+  applyError: null,
 
   stageQueueChange: (queuePath, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
@@ -45,6 +57,7 @@ export const createStagedChangesSlice: StateCreator<
       throw createStoreError(ERROR_CODES.INVALID_PROPERTY_NAME, 'Property name cannot be empty');
     }
 
+    let mutated = false;
     set((state) => {
       const propertyKey = buildPropertyKey(queuePath, property);
       const originalValue = state.configData.get(propertyKey);
@@ -56,10 +69,12 @@ export const createStagedChangesSlice: StateCreator<
       // If the new value matches the original value, remove the staged change
       if (value === originalValue && existingIndex >= 0) {
         state.stagedChanges.splice(existingIndex, 1);
+        mutated = true;
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = value;
         state.stagedChanges[existingIndex].validationErrors = validationErrors;
+        mutated = true;
       } else if (value !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -73,6 +88,11 @@ export const createStagedChangesSlice: StateCreator<
           validationErrors,
         };
         state.stagedChanges.push(change);
+        mutated = true;
+      }
+
+      if (mutated) {
+        clearMutationError(state);
       }
     });
 
@@ -81,6 +101,7 @@ export const createStagedChangesSlice: StateCreator<
   },
 
   stageGlobalChange: (property, value, validationErrors) => {
+    let mutated = false;
     set((state) => {
       // For JSON properties like placement rules, stringify the value if it's an object
       let stringValue: string;
@@ -100,10 +121,12 @@ export const createStagedChangesSlice: StateCreator<
       // If the new value matches the original value, remove the staged change
       if (stringValue === originalValue && existingIndex >= 0) {
         state.stagedChanges.splice(existingIndex, 1);
+        mutated = true;
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = stringValue;
         state.stagedChanges[existingIndex].validationErrors = validationErrors;
+        mutated = true;
       } else if (stringValue !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -117,6 +140,11 @@ export const createStagedChangesSlice: StateCreator<
           validationErrors,
         };
         state.stagedChanges.push(change);
+        mutated = true;
+      }
+
+      if (mutated) {
+        clearMutationError(state);
       }
     });
 
@@ -138,6 +166,7 @@ export const createStagedChangesSlice: StateCreator<
         : `${parentPath}.${queueName}`;
 
     set((state) => {
+      let mutated = false;
       // Check if queue already exists
       const queue = get().getQueueByPath(newQueuePath);
       if (queue) {
@@ -148,7 +177,11 @@ export const createStagedChangesSlice: StateCreator<
       }
 
       // Remove any existing changes for the same queue
+      const beforeLength = state.stagedChanges.length;
       state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== newQueuePath);
+      if (state.stagedChanges.length !== beforeLength) {
+        mutated = true;
+      }
 
       // Create one staged change per property
       Object.entries(config).forEach(([property, value]) => {
@@ -164,14 +197,24 @@ export const createStagedChangesSlice: StateCreator<
           validationErrors: property === 'capacity' ? validationErrors : undefined,
         };
         state.stagedChanges.push(change);
+        mutated = true;
       });
+
+      if (mutated) {
+        clearMutationError(state);
+      }
     });
   },
 
   stageQueueRemoval: (queuePath, validationErrors) => {
     set((state) => {
-      // Remove any existing changes for the same queue
+      let mutated = false;
+
+      const beforeLength = state.stagedChanges.length;
       state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== queuePath);
+      if (state.stagedChanges.length !== beforeLength) {
+        mutated = true;
+      }
 
       const change: StagedChange = {
         id: nanoid(),
@@ -185,6 +228,11 @@ export const createStagedChangesSlice: StateCreator<
       };
 
       state.stagedChanges.push(change);
+      mutated = true;
+
+      if (mutated) {
+        clearMutationError(state);
+      }
     });
   },
 
@@ -203,6 +251,7 @@ export const createStagedChangesSlice: StateCreator<
 
     const fullPropertyName = `accessible-node-labels.${label}.${property}`;
 
+    let mutated = false;
     set((state) => {
       const propertyKey = buildNodeLabelPropertyKey(queuePath, label, property);
       const originalValue = state.configData.get(propertyKey);
@@ -214,11 +263,13 @@ export const createStagedChangesSlice: StateCreator<
       // If the new value matches the original value, remove the staged change
       if (value === originalValue && existingIndex >= 0) {
         state.stagedChanges.splice(existingIndex, 1);
+        mutated = true;
       } else if (existingIndex >= 0) {
         // Update existing staged change
         state.stagedChanges[existingIndex].newValue = value;
         state.stagedChanges[existingIndex].label = label;
         state.stagedChanges[existingIndex].validationErrors = validationErrors;
+        mutated = true;
       } else if (value !== originalValue) {
         // Only create a new staged change if the value differs from the original
         const change: StagedChange = {
@@ -233,6 +284,11 @@ export const createStagedChangesSlice: StateCreator<
           validationErrors,
         };
         state.stagedChanges.push(change);
+        mutated = true;
+      }
+
+      if (mutated) {
+        clearMutationError(state);
       }
     });
 
@@ -246,7 +302,11 @@ export const createStagedChangesSlice: StateCreator<
 
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'mutation') {
+        state.error = null;
+        state.errorContext = null;
+      }
+      state.applyError = null;
     });
 
     const mutationRequest = buildMutationRequest(changes);
@@ -367,6 +427,11 @@ export const createStagedChangesSlice: StateCreator<
         // Clear staged changes
         state.stagedChanges = [];
         state.isLoading = false;
+        if (state.errorContext === 'mutation') {
+          state.error = null;
+          state.errorContext = null;
+        }
+        state.applyError = null;
       });
 
       // Refresh scheduler data to get updated queue information
@@ -376,6 +441,8 @@ export const createStagedChangesSlice: StateCreator<
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'mutation';
+        state.applyError = errorMessage;
         state.isLoading = false;
       });
 
@@ -394,7 +461,11 @@ export const createStagedChangesSlice: StateCreator<
 
   revertChange: (changeId) => {
     set((state) => {
+      const beforeLength = state.stagedChanges.length;
       state.stagedChanges = state.stagedChanges.filter((c) => c.id !== changeId);
+      if (state.stagedChanges.length !== beforeLength) {
+        clearMutationError(state);
+      }
     });
 
     // Refresh validation errors for remaining staged changes
@@ -403,13 +474,20 @@ export const createStagedChangesSlice: StateCreator<
 
   clearAllChanges: () => {
     set((state) => {
-      state.stagedChanges = [];
+      if (state.stagedChanges.length > 0) {
+        state.stagedChanges = [];
+        clearMutationError(state);
+      }
     });
   },
 
   clearQueueChanges: (queuePath) => {
     set((state) => {
+      const beforeLength = state.stagedChanges.length;
       state.stagedChanges = state.stagedChanges.filter((c) => c.queuePath !== queuePath);
+      if (state.stagedChanges.length !== beforeLength) {
+        clearMutationError(state);
+      }
     });
 
     // Refresh validation errors for remaining staged changes

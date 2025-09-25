@@ -38,7 +38,7 @@ const FlowInner: React.FC = () => {
   const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
   const { theme } = useTheme();
 
-  const { nodes, edges, isLoading, error } = useQueueTreeData();
+  const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
 
   // Calculate validation summary
   const validationSummary = useMemo(() => {
@@ -95,13 +95,13 @@ const FlowInner: React.FC = () => {
     );
   }
 
-  if (error) {
+  if (loadError && nodes.length === 0) {
     return (
       <div className="flex h-full items-center justify-center p-4">
         <Alert variant="destructive" className="max-w-md">
           <AlertCircle className="h-4 w-4" />
           <AlertTitle>Error Loading Queue Data</AlertTitle>
-          <AlertDescription>{error}</AlertDescription>
+          <AlertDescription>{loadError}</AlertDescription>
         </Alert>
       </div>
     );
@@ -124,14 +124,25 @@ const FlowInner: React.FC = () => {
 
   return (
     <div className="relative h-full w-full flex flex-col">
+      {applyError && (
+        <div className="absolute top-4 left-1/2 z-10 flex w-full max-w-xl -translate-x-1/2 justify-center px-4">
+          <Alert variant="destructive" className="w-full">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to Apply Changes</AlertTitle>
+            <AlertDescription>{applyError}</AlertDescription>
+          </Alert>
+        </div>
+      )}
       {/* Header with controls */}
-      <div className="absolute top-4 right-4 z-10 flex items-center gap-4">
+      <div
+        className={`absolute right-4 z-10 flex items-center gap-4 ${applyError ? 'top-24' : 'top-4'}`}
+      >
         <NodeLabelSelector />
       </div>
 
       {/* Label filter information */}
       {selectedNodeLabelFilter && (
-        <div className="absolute top-4 left-4 z-10">
+        <div className={`absolute left-4 z-10 ${applyError ? 'top-24' : 'top-4'}`}>
           <Alert className="py-2 px-4">
             <Tag className="h-4 w-4" />
             <AlertDescription>
@@ -146,7 +157,9 @@ const FlowInner: React.FC = () => {
 
       {/* Validation summary banner */}
       {validationSummary.errorCount > 0 && (
-        <div className="absolute top-16 left-1/2 transform -translate-x-1/2 z-10">
+        <div
+          className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${applyError ? 'top-32' : 'top-16'}`}
+        >
           <Alert className="flex items-center gap-3 py-2 px-4 shadow-lg border-destructive">
             <AlertCircle className="h-4 w-4 text-destructive" />
             <div className="flex items-center gap-3">

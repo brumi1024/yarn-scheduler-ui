@@ -23,6 +23,7 @@ export interface SchedulerDataSlice {
   configVersion: number;
   isLoading: boolean;
   error: string | null;
+  errorContext: 'load' | 'mutation' | 'nodeLabels' | null;
 
   loadInitialData: () => Promise<void>;
   refreshSchedulerData: () => Promise<void>;
@@ -44,6 +45,7 @@ import type { BusinessValidationError } from '~/utils/validation/businessRules/t
 
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
+  applyError: string | null;
 
   stageQueueChange: (
     queuePath: string,
