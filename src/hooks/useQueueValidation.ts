@@ -57,8 +57,9 @@ export function useQueueValidation({
       queuePath,
       schedulerData,
       configData: mergedConfigData,
+      stagedChanges,
     });
-  }, [queuePath, mergedConfigData, schedulerData]);
+  }, [queuePath, mergedConfigData, schedulerData, stagedChanges]);
 
   const validateBusinessRules = useCallback(
     (field: string, value: string) => {

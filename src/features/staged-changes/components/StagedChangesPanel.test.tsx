@@ -94,6 +94,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -106,6 +107,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -132,6 +134,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -150,6 +153,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -177,6 +181,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -197,6 +202,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -218,6 +224,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -246,6 +253,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -262,6 +270,24 @@ describe('StagedChangesPanel', () => {
     consoleErrorSpy.mockRestore();
   });
 
+  it('should display apply error alert when present', () => {
+    (useSchedulerStore as any).mockImplementation((selector: any) => {
+      const state = {
+        stagedChanges: mockStagedChanges,
+        revertChange: mockRevertChange,
+        clearAllChanges: mockClearAllChanges,
+        applyChanges: mockApplyChanges,
+        applyError: 'HTTP 400: Invalid configuration',
+      };
+      return selector ? selector(state) : state;
+    });
+
+    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
+
+    expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
+    expect(screen.getByText('HTTP 400: Invalid configuration')).toBeInTheDocument();
+  });
+
   it('should disable actions while applying changes', async () => {
     const user = userEvent.setup();
     mockApplyChanges.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
@@ -272,6 +298,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -296,6 +323,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -343,6 +371,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -359,6 +388,7 @@ describe('StagedChangesPanel', () => {
         revertChange: mockRevertChange,
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
+        applyError: null,
       };
       return selector ? selector(state) : state;
     });

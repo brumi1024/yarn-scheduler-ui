@@ -39,7 +39,10 @@ export const createNodeLabelsSlice: StateCreator<
   addNodeLabel: async (name, exclusivity) => {
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'nodeLabels') {
+        state.error = null;
+        state.errorContext = null;
+      }
     });
 
     try {
@@ -51,12 +54,17 @@ export const createNodeLabelsSlice: StateCreator<
       set((state) => {
         state.nodeLabels = normalizeNodeLabels(labels);
         state.isLoading = false;
+        if (state.errorContext === 'nodeLabels') {
+          state.error = null;
+          state.errorContext = null;
+        }
       });
     } catch (error) {
       const errorMessage = createDetailedErrorMessage(`add node label "${name}"`, error);
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
         state.isLoading = false;
       });
 
@@ -71,7 +79,10 @@ export const createNodeLabelsSlice: StateCreator<
   removeNodeLabel: async (name) => {
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'nodeLabels') {
+        state.error = null;
+        state.errorContext = null;
+      }
     });
 
     try {
@@ -92,12 +103,18 @@ export const createNodeLabelsSlice: StateCreator<
         if (state.selectedNodeLabel === name) {
           state.selectedNodeLabel = null;
         }
+
+        if (state.errorContext === 'nodeLabels') {
+          state.error = null;
+          state.errorContext = null;
+        }
       });
     } catch (error) {
       const errorMessage = createDetailedErrorMessage(`remove node label "${name}"`, error);
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
         state.isLoading = false;
       });
 
@@ -112,7 +129,10 @@ export const createNodeLabelsSlice: StateCreator<
   assignNodeToLabel: async (nodeId, labelName) => {
     set((state) => {
       state.isLoading = true;
-      state.error = null;
+      if (state.errorContext === 'nodeLabels') {
+        state.error = null;
+        state.errorContext = null;
+      }
     });
 
     try {
@@ -127,6 +147,10 @@ export const createNodeLabelsSlice: StateCreator<
       set((state) => {
         state.nodeToLabels = normalizeNodeToLabels(nodeToLabels);
         state.isLoading = false;
+        if (state.errorContext === 'nodeLabels') {
+          state.error = null;
+          state.errorContext = null;
+        }
       });
     } catch (error) {
       const errorMessage = createDetailedErrorMessage(
@@ -136,6 +160,7 @@ export const createNodeLabelsSlice: StateCreator<
 
       set((state) => {
         state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
         state.isLoading = false;
       });
 

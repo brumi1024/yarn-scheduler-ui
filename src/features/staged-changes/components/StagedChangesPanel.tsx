@@ -9,6 +9,7 @@ import {
 } from '~/components/ui/drawer';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { StagedChange } from '~/types';
 import { QueueChangeGroup } from './QueueChangeGroup';
@@ -23,7 +24,8 @@ interface StagedChangesPanelProps {
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
 
-  const { stagedChanges, revertChange, clearAllChanges, applyChanges } = useSchedulerStore();
+  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError } =
+    useSchedulerStore();
 
   // Group changes by queue path for organized display
   const changesByQueue = React.useMemo(() => {
@@ -112,6 +114,13 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
           {/* Header */}
           <DrawerHeader className="border-b pb-4">
             <div className="space-y-3">
+              {applyError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Failed to Apply Changes</AlertTitle>
+                  <AlertDescription>{applyError}</AlertDescription>
+                </Alert>
+              )}
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
                   <DrawerTitle>Staged Changes</DrawerTitle>

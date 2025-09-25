@@ -47,7 +47,8 @@ export function validatePropertyChange({
     timestamp: Date.now(),
   };
 
-  const mergedConfig = getMergedConfigData(configData, [...stagedChanges, tempChange]);
+  const stagedChangesWithTemp = [...stagedChanges, tempChange];
+  const mergedConfig = getMergedConfigData(configData, stagedChangesWithTemp);
 
   const allValidationErrors: BusinessValidationError[] = [];
 
@@ -57,6 +58,7 @@ export function validatePropertyChange({
       queuePath: affectedQueuePath,
       schedulerData,
       configData: mergedConfig,
+      stagedChanges: stagedChangesWithTemp,
       field: propertyName,
     });
 

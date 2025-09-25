@@ -1,11 +1,17 @@
 import type { QueueValidationContext } from './businessRules/types';
-import type { SchedulerInfo, QueueInfo } from '~/types';
-import { findQueueByPath, getParentPath, getSiblingQueues } from './businessRules/utils';
+import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
+import {
+  createSyntheticQueueInfo,
+  findQueueByPath,
+  getParentPath,
+  getSiblingQueues,
+} from './businessRules/utils';
 
 interface CreateValidationContextOptions {
   queuePath: string;
   schedulerData: SchedulerInfo | null;
   configData: Map<string, string>;
+  stagedChanges?: StagedChange[];
   field?: string;
 }
 
@@ -17,6 +23,7 @@ export function createValidationContext({
   queuePath,
   schedulerData,
   configData,
+  stagedChanges = [],
   field,
 }: CreateValidationContextOptions): QueueValidationContext {
   const legacyModeEnabled =
@@ -33,6 +40,44 @@ export function createValidationContext({
     siblingQueues = getSiblingQueues(schedulerData, queuePath);
   }
 
+  const parentPath = getParentPath(queuePath);
+
+  if (parentPath) {
+    const siblingMap = new Map<string, QueueInfo>();
+
+    (siblingQueues ?? []).forEach((queue) => {
+      siblingMap.set(queue.queuePath, queue);
+    });
+
+    if (stagedChanges.length > 0) {
+      const additionPaths = new Set(
+        stagedChanges
+          .filter(
+            (change) => change.type === 'add' && getParentPath(change.queuePath) === parentPath,
+          )
+          .map((change) => change.queuePath),
+      );
+
+      const removalPaths = new Set(
+        stagedChanges
+          .filter(
+            (change) => change.type === 'remove' && getParentPath(change.queuePath) === parentPath,
+          )
+          .map((change) => change.queuePath),
+      );
+
+      removalPaths.forEach((path) => siblingMap.delete(path));
+
+      additionPaths.forEach((path) => {
+        if (!siblingMap.has(path)) {
+          siblingMap.set(path, createSyntheticQueueInfo(path));
+        }
+      });
+    }
+
+    siblingQueues = Array.from(siblingMap.values());
+  }
+
   return {
     queuePath,
     legacyModeEnabled,
@@ -40,6 +85,7 @@ export function createValidationContext({
     configData,
     parentQueue,
     siblingQueues,
+    stagedChanges,
     field,
   };
 }

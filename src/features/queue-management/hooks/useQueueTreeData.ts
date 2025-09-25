@@ -30,7 +30,8 @@ export type UseQueueTreeDataResult = {
   nodes: Node<QueueCardData>[];
   edges: Edge[];
   isLoading: boolean;
-  error: string | null;
+  loadError: string | null;
+  applyError: string | null;
 };
 
 const layoutEngine = new DagreLayout({
@@ -498,7 +499,10 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
   const schedulerData = useSchedulerStore((state) => state.schedulerData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const isLoading = useSchedulerStore((state) => state.isLoading);
-  const error = useSchedulerStore((state) => state.error);
+  const loadError = useSchedulerStore((state) =>
+    state.errorContext === 'load' ? state.error : null,
+  );
+  const applyError = useSchedulerStore((state) => state.applyError);
   const searchQuery = useSchedulerStore((state) => state.searchQuery);
   const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
 
@@ -540,6 +544,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
     nodes,
     edges,
     isLoading,
-    error,
+    loadError,
+    applyError,
   };
 }

@@ -1,4 +1,5 @@
 import type { QueueInfo, SchedulerInfo } from '~/types';
+import { QUEUE_STATES, QUEUE_TYPES } from '~/types/constants/queue';
 
 export function findQueueByPath(
   schedulerData: SchedulerInfo | undefined,
@@ -53,4 +54,24 @@ export function getSiblingQueues(
 
   const parentQueue = findQueueByPath(schedulerData, parentPath);
   return parentQueue?.queues?.queue || [];
+}
+
+export function createSyntheticQueueInfo(queuePath: string): QueueInfo {
+  const queueName = queuePath.split('.').pop() || queuePath;
+
+  return {
+    queueType: QUEUE_TYPES.LEAF,
+    capacity: 0,
+    usedCapacity: 0,
+    maxCapacity: 100,
+    absoluteCapacity: 0,
+    absoluteMaxCapacity: 100,
+    absoluteUsedCapacity: 0,
+    numApplications: 0,
+    numActiveApplications: 0,
+    numPendingApplications: 0,
+    queueName,
+    queuePath,
+    state: QUEUE_STATES.RUNNING,
+  };
 }
