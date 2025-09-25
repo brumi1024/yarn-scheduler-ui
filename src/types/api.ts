@@ -30,23 +30,33 @@ export type VersionResponse = {
   versionId: number;
 };
 
+export type NodeLabelInfoItem = {
+  name: string;
+  exclusivity?: boolean | 'true' | 'false';
+  partitionName?: string;
+  activeNMs?: number;
+  partitionInfo?: unknown;
+};
+
 export type NodeLabelsResponse = {
-  nodeLabelsInfo?: {
-    nodeLabelInfo?: Array<{
-      name: string;
-      exclusivity?: boolean;
-      partitionName?: string;
-      activeNMs?: number;
-    }>;
+  nodeLabelInfo?: NodeLabelInfoItem[];
+};
+
+export type NodeToLabelsMapEntry = {
+  key: string;
+  value?: {
+    nodeLabelInfo?:
+      | NodeLabelInfoItem
+      | NodeLabelInfoItem[]
+      | {
+          nodeLabelInfo?: NodeLabelInfoItem | NodeLabelInfoItem[];
+        };
   };
 };
 
 export type NodeToLabelsResponse = {
-  nodeToLabelsInfo?: {
-    nodeToLabels?: Array<{
-      nodeId: string;
-      nodeLabels: string[];
-    }>;
+  nodeToLabels?: {
+    entry?: NodeToLabelsMapEntry | NodeToLabelsMapEntry[];
   };
 };
 

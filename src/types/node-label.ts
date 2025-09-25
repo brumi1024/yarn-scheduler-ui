@@ -17,10 +17,11 @@ export type NodeLabel = {
 };
 
 export type NodeLabelsInfo = {
-  nodeLabelsInfo: Array<{
+  nodeLabelInfo: Array<{
     name: string;
-    exclusivity: boolean;
+    exclusivity: boolean | 'true' | 'false';
     activeNMs?: number;
+    partitionInfo?: unknown;
   }>;
 };
 

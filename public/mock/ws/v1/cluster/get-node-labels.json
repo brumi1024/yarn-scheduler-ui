@@ -1,18 +1,22 @@
 {
-    "nodeLabelsInfo": {
-        "nodeLabelInfo": [
-            {
-                "name": "default",
-                "exclusivity": false
-            },
-            {
-                "name": "fpga",
-                "exclusivity": true
-            },
-            {
-                "name": "gpu",
-                "exclusivity": true
-            }
-        ]
+  "nodeLabelInfo": [
+    {
+      "name": "default",
+      "exclusivity": "false",
+      "partitionInfo": {
+        "resourceAvailable": {
+          "memory": "0",
+          "vCores": "0"
+        }
+      }
+    },
+    {
+      "name": "fpga",
+      "exclusivity": "true"
+    },
+    {
+      "name": "gpu",
+      "exclusivity": "true"
     }
+  ]
 }

@@ -80,7 +80,7 @@ describe('LabelConfig interface', () => {
 describe('NodeLabelsInfo interface', () => {
   it('should accept node labels response', () => {
     const nodeLabelsInfo: NodeLabelsInfo = {
-      nodeLabelsInfo: [
+      nodeLabelInfo: [
         {
           name: 'gpu',
           exclusivity: true,
@@ -94,17 +94,17 @@ describe('NodeLabelsInfo interface', () => {
       ],
     };
 
-    expect(nodeLabelsInfo.nodeLabelsInfo).toHaveLength(2);
-    expect(nodeLabelsInfo.nodeLabelsInfo[0].name).toBe('gpu');
-    expect(nodeLabelsInfo.nodeLabelsInfo[1].exclusivity).toBe(false);
+    expect(nodeLabelsInfo.nodeLabelInfo).toHaveLength(2);
+    expect(nodeLabelsInfo.nodeLabelInfo[0].name).toBe('gpu');
+    expect(nodeLabelsInfo.nodeLabelInfo[1].exclusivity).toBe(false);
   });
 
   it('should handle empty node labels', () => {
     const emptyLabels: NodeLabelsInfo = {
-      nodeLabelsInfo: [],
+      nodeLabelInfo: [],
     };
 
-    expect(emptyLabels.nodeLabelsInfo).toHaveLength(0);
+    expect(emptyLabels.nodeLabelInfo).toHaveLength(0);
   });
 });
 

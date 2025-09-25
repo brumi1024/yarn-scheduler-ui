@@ -421,7 +421,7 @@ describe('Integration Tests - Complete API Responses', () => {
   describe('Node Labels API Response', () => {
     it('should handle node labels response', () => {
       const nodeLabelsResponse: NodeLabelsInfo = {
-        nodeLabelsInfo: [
+        nodeLabelInfo: [
           {
             name: 'gpu',
             exclusivity: true,
@@ -440,13 +440,13 @@ describe('Integration Tests - Complete API Responses', () => {
         ],
       };
 
-      expect(nodeLabelsResponse.nodeLabelsInfo).toHaveLength(3);
+      expect(nodeLabelsResponse.nodeLabelInfo).toHaveLength(3);
 
-      const gpuLabel = nodeLabelsResponse.nodeLabelsInfo.find((l) => l.name === 'gpu');
+      const gpuLabel = nodeLabelsResponse.nodeLabelInfo.find((l) => l.name === 'gpu');
       expect(gpuLabel?.exclusivity).toBe(true);
       expect(gpuLabel?.activeNMs).toBe(4);
 
-      const nonExclusiveLabels = nodeLabelsResponse.nodeLabelsInfo.filter((l) => !l.exclusivity);
+      const nonExclusiveLabels = nodeLabelsResponse.nodeLabelInfo.filter((l) => !l.exclusivity);
       expect(nonExclusiveLabels).toHaveLength(2);
     });
   });
