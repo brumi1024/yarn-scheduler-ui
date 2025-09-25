@@ -7,6 +7,7 @@
 
 import type { StagedChange, SchedConfUpdateInfo } from '~/types';
 import { SPECIAL_VALUES, MUTATION_OPERATIONS } from '~/types';
+import { buildGlobalPropertyKey } from '~/utils/propertyUtils';
 import { groupBy } from 'es-toolkit';
 
 /**
@@ -19,12 +20,7 @@ import { groupBy } from 'es-toolkit';
  * @returns SchedConfUpdateInfo object ready to be sent to the API
  */
 export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUpdateInfo {
-  const request: SchedConfUpdateInfo = {
-    [MUTATION_OPERATIONS.UPDATE_QUEUE]: [],
-    [MUTATION_OPERATIONS.ADD_QUEUE]: [],
-    [MUTATION_OPERATIONS.REMOVE_QUEUE]: [],
-    [MUTATION_OPERATIONS.GLOBAL_UPDATES]: {},
-  };
+  const request: SchedConfUpdateInfo = {};
 
   // Separate global changes from queue-specific changes
   const globalChanges = stagedChanges.filter(
@@ -83,7 +79,9 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
     request[MUTATION_OPERATIONS.UPDATE_QUEUE] = Array.from(updatesByQueue.entries()).map(
       ([queuePath, params]) => ({
         'queue-name': queuePath,
-        params,
+        params: {
+          entry: Object.entries(params).map(([key, value]) => ({ key, value })),
+        },
       }),
     );
   }
@@ -92,17 +90,30 @@ export function buildMutationRequest(stagedChanges: StagedChange[]): SchedConfUp
     request[MUTATION_OPERATIONS.ADD_QUEUE] = Array.from(addsByQueue.entries()).map(
       ([queuePath, params]) => ({
         'queue-name': queuePath,
-        params,
+        params: {
+          entry: Object.entries(params).map(([key, value]) => ({ key, value })),
+        },
       }),
     );
   }
 
-  if (removals.length > 0) {
+  if (removals.length === 1) {
+    request[MUTATION_OPERATIONS.REMOVE_QUEUE] = removals[0];
+  } else if (removals.length > 1) {
     request[MUTATION_OPERATIONS.REMOVE_QUEUE] = removals;
   }
 
-  if (Object.keys(globalUpdates).length > 0) {
-    request[MUTATION_OPERATIONS.GLOBAL_UPDATES] = globalUpdates;
+  const globalUpdateEntries = Object.entries(globalUpdates).map(([key, value]) => ({
+    key: buildGlobalPropertyKey(key),
+    value,
+  }));
+
+  if (globalUpdateEntries.length > 0) {
+    request[MUTATION_OPERATIONS.GLOBAL_UPDATES] = [
+      {
+        entry: globalUpdateEntries,
+      },
+    ];
   }
 
   return request;

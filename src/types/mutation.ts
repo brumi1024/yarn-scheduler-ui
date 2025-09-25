@@ -13,8 +13,11 @@ export type MutationError = {
 };
 
 export type ValidationResponse = {
-  valid: boolean;
+  validation: 'success' | 'failed';
   errors?: string[];
+  versionId?: number | string;
+  mutationId?: number | string;
+  newVersionId?: number | string;
 };
 
 export type ConfigVersionResponse = {
@@ -26,13 +29,19 @@ export type ConfigVersionResponse = {
 };
 
 export type NodeLabelAddRequest = {
-  nodeLabels: string[];
+  nodeLabels: Array<{
+    name: string;
+    exclusivity: boolean;
+  }>;
 };
 
 export type NodeLabelRemoveRequest = {
-  nodeLabels: string[];
+  labels: string[];
 };
 
 export type NodeLabelReplaceRequest = {
-  nodeToLabels: Record<string, string[]>;
+  nodeToLabels: Array<{
+    nodeId: string;
+    labels: string[];
+  }>;
 };

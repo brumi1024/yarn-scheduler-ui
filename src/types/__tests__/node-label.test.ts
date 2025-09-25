@@ -111,44 +111,23 @@ describe('NodeLabelsInfo interface', () => {
 describe('NodeToLabels interface', () => {
   it('should accept node to labels mapping', () => {
     const nodeToLabels: NodeToLabels = {
-      nodeToLabels: {
-        'node1.example.com:8041': {
-          labels: ['gpu', 'ssd'],
-        },
-        'node2.example.com:8041': {
-          labels: ['fpga'],
-        },
-        'node3.example.com:8041': {
-          labels: [],
-        },
-      },
+      nodeToLabels: [
+        { nodeId: 'node1.example.com:8041', nodeLabels: ['gpu'] },
+        { nodeId: 'node2.example.com:8041', nodeLabels: ['fpga'] },
+        { nodeId: 'node3.example.com:8041', nodeLabels: [] },
+      ],
     };
 
-    expect(nodeToLabels.nodeToLabels['node1.example.com:8041'].labels).toContain('gpu');
-    expect(nodeToLabels.nodeToLabels['node1.example.com:8041'].labels).toContain('ssd');
-    expect(nodeToLabels.nodeToLabels['node2.example.com:8041'].labels).toContain('fpga');
-    expect(nodeToLabels.nodeToLabels['node3.example.com:8041'].labels).toHaveLength(0);
+    expect(nodeToLabels.nodeToLabels[0].nodeLabels).toContain('gpu');
+    expect(nodeToLabels.nodeToLabels[1].nodeLabels).toContain('fpga');
+    expect(nodeToLabels.nodeToLabels[2].nodeLabels).toHaveLength(0);
   });
 
   it('should handle empty node to labels mapping', () => {
     const emptyMapping: NodeToLabels = {
-      nodeToLabels: {},
+      nodeToLabels: [],
     };
 
-    expect(Object.keys(emptyMapping.nodeToLabels)).toHaveLength(0);
-  });
-
-  it('should handle nodes with multiple labels', () => {
-    const multiLabelNode: NodeToLabels = {
-      nodeToLabels: {
-        'multi-node.example.com:8041': {
-          labels: ['gpu', 'fpga', 'ssd', 'high-memory'],
-        },
-      },
-    };
-
-    const labels = multiLabelNode.nodeToLabels['multi-node.example.com:8041'].labels;
-    expect(labels).toHaveLength(4);
-    expect(labels).toContain('high-memory');
+    expect(emptyMapping.nodeToLabels).toHaveLength(0);
   });
 });

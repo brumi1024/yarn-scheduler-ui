@@ -35,7 +35,7 @@ const staticHandlers: HttpHandler[] = [
 
   http.get(`${baseUrl}/scheduler-conf/version`, () => {
     return HttpResponse.json({
-      versionID: 15,
+      versionId: 15,
     });
   }),
 
@@ -78,7 +78,7 @@ const staticHandlers: HttpHandler[] = [
   }),
 
   http.post(`${baseUrl}/remove-node-labels`, async ({ request }) => {
-    const body = await request.json();
+    const body = await request.text();
     console.log('Mock: Removing node labels:', body);
     return HttpResponse.json({ message: 'Labels removed successfully' });
   }),

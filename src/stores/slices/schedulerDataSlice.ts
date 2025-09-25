@@ -49,7 +49,7 @@ export const createSchedulerDataSlice: StateCreator<
         state.nodes = nodes.nodes?.node || [];
         state.nodeToLabels = nodeToLabels.nodeToLabelsInfo?.nodeToLabels || [];
 
-        state.configVersion = version.versionID;
+        state.configVersion = version.versionId;
         state.isLoading = false;
       });
     } catch (error) {

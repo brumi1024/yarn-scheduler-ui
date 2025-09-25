@@ -3,7 +3,7 @@ import type {
   ConfigData,
   ConfigProperty,
   SchedConfUpdateInfo,
-  QueueUpdateParams,
+  QueueMutationParams,
   GlobalUpdateParams,
 } from '../config';
 
@@ -80,8 +80,10 @@ describe('SchedConfUpdateInfo interface', () => {
         {
           'queue-name': 'root.production.batch',
           params: {
-            capacity: '60',
-            'maximum-capacity': '100',
+            entry: [
+              { key: 'capacity', value: '60' },
+              { key: 'maximum-capacity', value: '100' },
+            ],
           },
         },
       ],
@@ -89,7 +91,10 @@ describe('SchedConfUpdateInfo interface', () => {
 
     expect(addQueueMutation['add-queue']).toHaveLength(1);
     expect(addQueueMutation['add-queue']?.[0]['queue-name']).toBe('root.production.batch');
-    expect(addQueueMutation['add-queue']?.[0].params.capacity).toBe('60');
+    expect(addQueueMutation['add-queue']?.[0].params.entry[0]).toEqual({
+      key: 'capacity',
+      value: '60',
+    });
   });
 
   it('should accept update queue mutation', () => {
@@ -98,38 +103,53 @@ describe('SchedConfUpdateInfo interface', () => {
         {
           'queue-name': 'root.production',
           params: {
-            capacity: '80',
-            'user-limit-factor': '2',
+            entry: [
+              { key: 'capacity', value: '80' },
+              { key: 'user-limit-factor', value: '2' },
+            ],
           },
         },
       ],
     };
 
     expect(updateQueueMutation['update-queue']).toHaveLength(1);
-    expect(updateQueueMutation['update-queue']?.[0].params.capacity).toBe('80');
+    expect(updateQueueMutation['update-queue']?.[0].params.entry[0]).toEqual({
+      key: 'capacity',
+      value: '80',
+    });
   });
 
   it('should accept remove queue mutation', () => {
     const removeQueueMutation: SchedConfUpdateInfo = {
-      'remove-queue': ['root.development.experimental'],
+      'remove-queue': 'root.development.experimental',
     };
 
-    expect(removeQueueMutation['remove-queue']).toHaveLength(1);
-    expect(removeQueueMutation['remove-queue']?.[0]).toBe('root.development.experimental');
+    expect(removeQueueMutation['remove-queue']).toBe('root.development.experimental');
   });
 
   it('should accept global updates', () => {
     const globalUpdateMutation: SchedConfUpdateInfo = {
-      'global-updates': {
-        'yarn.scheduler.capacity.maximum-applications': '20000',
-        'yarn.scheduler.capacity.maximum-am-resource-percent': '0.3',
-      },
+      'global-updates': [
+        {
+          entry: [
+            {
+              key: 'yarn.scheduler.capacity.maximum-applications',
+              value: '20000',
+            },
+            {
+              key: 'yarn.scheduler.capacity.maximum-am-resource-percent',
+              value: '0.3',
+            },
+          ],
+        },
+      ],
     };
 
     expect(globalUpdateMutation['global-updates']).toBeDefined();
-    expect(
-      globalUpdateMutation['global-updates']?.['yarn.scheduler.capacity.maximum-applications'],
-    ).toBe('20000');
+    expect(globalUpdateMutation['global-updates']?.[0].entry[0]).toEqual({
+      key: 'yarn.scheduler.capacity.maximum-applications',
+      value: '20000',
+    });
   });
 
   it('should accept combined mutations', () => {
@@ -138,7 +158,7 @@ describe('SchedConfUpdateInfo interface', () => {
         {
           'queue-name': 'root.production.interactive',
           params: {
-            capacity: '40',
+            entry: [{ key: 'capacity', value: '40' }],
           },
         },
       ],
@@ -146,79 +166,101 @@ describe('SchedConfUpdateInfo interface', () => {
         {
           'queue-name': 'root.production.batch',
           params: {
-            capacity: '60',
+            entry: [{ key: 'capacity', value: '60' }],
           },
         },
       ],
-      'remove-queue': ['root.production.old-queue'],
-      'global-updates': {
-        'yarn.scheduler.capacity.resource-calculator':
-          'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
-      },
+      'remove-queue': 'root.production.old-queue',
+      'global-updates': [
+        {
+          entry: [
+            {
+              key: 'yarn.scheduler.capacity.resource-calculator',
+              value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+            },
+          ],
+        },
+      ],
     };
 
     expect(combinedMutation['add-queue']).toHaveLength(1);
     expect(combinedMutation['update-queue']).toHaveLength(1);
-    expect(combinedMutation['remove-queue']).toHaveLength(1);
+    expect(combinedMutation['remove-queue']).toBe('root.production.old-queue');
     expect(combinedMutation['global-updates']).toBeDefined();
   });
 });
 
-describe('QueueUpdateParams interface', () => {
+describe('QueueMutationParams interface', () => {
   it('should accept queue-specific parameters', () => {
-    const params: QueueUpdateParams = {
+    const params: QueueMutationParams = {
       'queue-name': 'root.production',
       params: {
-        capacity: '70',
-        'maximum-capacity': '100',
-        'user-limit-factor': '1.5',
-        state: 'RUNNING',
-        queues: 'batch,interactive',
-        'accessible-node-labels': 'gpu,fpga',
-        'default-node-label-expression': 'gpu',
-        'maximum-am-resource-percent': '0.2',
-        'minimum-user-limit-percent': '10',
-        'maximum-applications': '1000',
-        'acl-submit-applications': 'user1,user2',
-        'acl-administer-queue': 'admin1,admin2',
+        entry: [
+          { key: 'capacity', value: '70' },
+          { key: 'maximum-capacity', value: '100' },
+          { key: 'user-limit-factor', value: '1.5' },
+          { key: 'state', value: 'RUNNING' },
+          { key: 'queues', value: 'batch,interactive' },
+          { key: 'accessible-node-labels', value: 'gpu,fpga' },
+          { key: 'default-node-label-expression', value: 'gpu' },
+          { key: 'maximum-am-resource-percent', value: '0.2' },
+          { key: 'minimum-user-limit-percent', value: '10' },
+          { key: 'maximum-applications', value: '1000' },
+          { key: 'acl-submit-applications', value: 'user1,user2' },
+          { key: 'acl-administer-queue', value: 'admin1,admin2' },
+        ],
       },
     };
 
     expect(params['queue-name']).toBe('root.production');
-    expect(params.params.capacity).toBe('70');
-    expect(params.params.queues).toBe('batch,interactive');
-    expect(params.params['accessible-node-labels']).toBe('gpu,fpga');
+    const paramMap = Object.fromEntries(params.params.entry.map(({ key, value }) => [key, value]));
+    expect(paramMap.capacity).toBe('70');
+    expect(paramMap.queues).toBe('batch,interactive');
+    expect(paramMap['accessible-node-labels']).toBe('gpu,fpga');
   });
 
   it('should accept node label specific capacity', () => {
-    const labelParams: QueueUpdateParams = {
+    const labelParams: QueueMutationParams = {
       'queue-name': 'root.production',
       params: {
-        'accessible-node-labels.gpu.capacity': '80',
-        'accessible-node-labels.gpu.maximum-capacity': '100',
-        'accessible-node-labels.fpga.capacity': '50',
+        entry: [
+          { key: 'accessible-node-labels.gpu.capacity', value: '80' },
+          { key: 'accessible-node-labels.gpu.maximum-capacity', value: '100' },
+          { key: 'accessible-node-labels.fpga.capacity', value: '50' },
+        ],
       },
     };
 
-    expect(labelParams.params['accessible-node-labels.gpu.capacity']).toBe('80');
-    expect(labelParams.params['accessible-node-labels.fpga.capacity']).toBe('50');
+    const paramMap = Object.fromEntries(
+      labelParams.params.entry.map(({ key, value }) => [key, value]),
+    );
+    expect(paramMap['accessible-node-labels.gpu.capacity']).toBe('80');
+    expect(paramMap['accessible-node-labels.fpga.capacity']).toBe('50');
   });
 });
 
 describe('GlobalUpdateParams interface', () => {
   it('should accept global scheduler parameters', () => {
     const globalParams: GlobalUpdateParams = {
-      'yarn.scheduler.capacity.maximum-applications': '10000',
-      'yarn.scheduler.capacity.maximum-am-resource-percent': '0.1',
-      'yarn.scheduler.capacity.resource-calculator':
-        'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
-      'yarn.scheduler.capacity.root.queues': 'production,development,marketing',
-      'yarn.scheduler.capacity.queue-mappings-override.enable': 'true',
-      'yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments': '1',
+      entry: [
+        { key: 'yarn.scheduler.capacity.maximum-applications', value: '10000' },
+        { key: 'yarn.scheduler.capacity.maximum-am-resource-percent', value: '0.1' },
+        {
+          key: 'yarn.scheduler.capacity.resource-calculator',
+          value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+        },
+        { key: 'yarn.scheduler.capacity.root.queues', value: 'production,development,marketing' },
+        { key: 'yarn.scheduler.capacity.queue-mappings-override.enable', value: 'true' },
+        {
+          key: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments',
+          value: '1',
+        },
+      ],
     };
 
-    expect(globalParams['yarn.scheduler.capacity.maximum-applications']).toBe('10000');
-    expect(globalParams['yarn.scheduler.capacity.root.queues']).toBe(
+    const paramMap = Object.fromEntries(globalParams.entry.map(({ key, value }) => [key, value]));
+    expect(paramMap['yarn.scheduler.capacity.maximum-applications']).toBe('10000');
+    expect(paramMap['yarn.scheduler.capacity.root.queues']).toBe(
       'production,development,marketing',
     );
   });

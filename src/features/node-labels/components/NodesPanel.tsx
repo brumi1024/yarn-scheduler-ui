@@ -127,7 +127,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
               <TableRow>
                 <TableHead>Node</TableHead>
                 <TableHead>State</TableHead>
-                <TableHead>Labels</TableHead>
+                <TableHead>Label</TableHead>
                 <TableHead>Memory</TableHead>
                 <TableHead>Cores</TableHead>
                 <TableHead>Containers</TableHead>
@@ -137,6 +137,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
             <TableBody>
               {filteredNodes.map((node: NodeInfo) => {
                 const assignedLabels = nodeLabelsMap.get(node.id) || [];
+                const primaryLabel = assignedLabels[0] || null;
                 const totalMemory = node.usedMemoryMB + node.availMemoryMB;
                 const totalCores = node.usedVirtualCores + node.availableVirtualCores;
                 const memoryUsedPercent = (node.usedMemoryMB / totalMemory) * 100;
@@ -161,15 +162,10 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
 
                     <TableCell>
                       <div className="flex flex-wrap gap-1">
-                        {assignedLabels.length > 0 ? (
-                          assignedLabels.map((label) => (
-                            <Badge
-                              key={label}
-                              variant={label === selectedLabel ? 'default' : 'outline'}
-                            >
-                              <HighlightedText text={label} highlight={searchQuery} />
-                            </Badge>
-                          ))
+                        {primaryLabel ? (
+                          <Badge variant={primaryLabel === selectedLabel ? 'default' : 'outline'}>
+                            <HighlightedText text={primaryLabel} highlight={searchQuery} />
+                          </Badge>
                         ) : (
                           <Badge variant={selectedLabel === null ? 'default' : 'outline'}>
                             Default
@@ -215,7 +211,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
                     <TableCell>
                       <div className="flex items-center gap-2">
                         <Select
-                          value={assignedLabels[0] || 'default'}
+                          value={primaryLabel || 'default'}
                           onValueChange={(value) =>
                             handleLabelChange(node.id, value === 'default' ? null : value)
                           }
@@ -246,7 +242,7 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
                           </SelectContent>
                         </Select>
 
-                        {assignedLabels.length > 0 && (
+                        {primaryLabel && (
                           <Tooltip>
                             <TooltipTrigger asChild>
                               <Button

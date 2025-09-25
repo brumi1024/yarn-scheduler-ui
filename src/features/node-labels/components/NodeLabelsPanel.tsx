@@ -34,7 +34,6 @@ export const NodeLabelsPanel: React.FC = () => {
       const nodeToLabels = useSchedulerStore.getState().nodeToLabels;
       const nodeAssignments = new Map<string, string[]>();
 
-      // Convert nodeToLabels array to Map format expected by validation
       nodeToLabels.forEach((mapping) => {
         nodeAssignments.set(mapping.nodeId, mapping.nodeLabels);
       });
