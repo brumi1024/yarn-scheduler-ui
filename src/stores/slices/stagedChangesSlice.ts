@@ -256,9 +256,15 @@ export const createStagedChangesSlice: StateCreator<
     const parentQueuesToStop = getParentQueuesForAdditions(
       submissionRequest[MUTATION_OPERATIONS.ADD_QUEUE],
     );
+    const queuesToStopForRemoval = getQueuesForRemoval(
+      submissionRequest[MUTATION_OPERATIONS.REMOVE_QUEUE],
+    );
 
     const parentQueuesStopped = new Set<string>();
+    const removalQueuesStopped = new Set<string>();
+    const stoppedQueues = new Set<string>();
     const apiClient = get().apiClient;
+    let mutationApplied = false;
 
     const applyQueueState = async (queueName: string, state: 'STOPPED' | 'RUNNING') => {
       const stateMutation: SchedConfUpdateInfo = {
@@ -273,6 +279,16 @@ export const createStagedChangesSlice: StateCreator<
       };
 
       await apiClient.updateSchedulerConf(stateMutation);
+    };
+
+    const stopQueueIfNeeded = async (queueName: string, trackingSet: Set<string>) => {
+      if (stoppedQueues.has(queueName)) {
+        return;
+      }
+
+      await applyQueueState(queueName, 'STOPPED');
+      trackingSet.add(queueName);
+      stoppedQueues.add(queueName);
     };
 
     const restartParents = async () => {
@@ -290,10 +306,28 @@ export const createStagedChangesSlice: StateCreator<
       }
     };
 
+    const restartRemovalQueues = async () => {
+      if (removalQueuesStopped.size === 0) return;
+
+      const queues = Array.from(removalQueuesStopped);
+      for (const queueName of queues) {
+        try {
+          await applyQueueState(queueName, 'RUNNING');
+        } catch (startError) {
+          console.error(`Failed to restart queue ${queueName}:`, startError);
+        } finally {
+          removalQueuesStopped.delete(queueName);
+        }
+      }
+    };
+
     try {
       for (const parentQueue of parentQueuesToStop) {
-        await applyQueueState(parentQueue, 'STOPPED');
-        parentQueuesStopped.add(parentQueue);
+        await stopQueueIfNeeded(parentQueue, parentQueuesStopped);
+      }
+
+      for (const queueName of queuesToStopForRemoval) {
+        await stopQueueIfNeeded(queueName, removalQueuesStopped);
       }
 
       const validationResponse = await apiClient.validateSchedulerConf(submissionRequest);
@@ -311,6 +345,7 @@ export const createStagedChangesSlice: StateCreator<
       const finalMutation = prepareMutationRequestWithVersion(submissionRequest, mutationVersion);
 
       await apiClient.updateSchedulerConf(finalMutation);
+      mutationApplied = true;
 
       await restartParents();
 
@@ -351,6 +386,9 @@ export const createStagedChangesSlice: StateCreator<
       );
     } finally {
       await restartParents();
+      if (!mutationApplied) {
+        await restartRemovalQueues();
+      }
     }
   },
 
@@ -492,6 +530,24 @@ function getParentQueuesForAdditions(
   }
 
   return Array.from(parents);
+}
+
+function getQueuesForRemoval(
+  removeQueueMutations: SchedConfUpdateInfo[typeof MUTATION_OPERATIONS.REMOVE_QUEUE],
+): string[] {
+  if (!removeQueueMutations) {
+    return [];
+  }
+
+  if (Array.isArray(removeQueueMutations)) {
+    return removeQueueMutations.filter((queue): queue is string => typeof queue === 'string');
+  }
+
+  if (typeof removeQueueMutations === 'string') {
+    return [removeQueueMutations];
+  }
+
+  return [];
 }
 
 function prepareMutationRequestForSubmission(request: SchedConfUpdateInfo): {

@@ -856,6 +856,58 @@ describe('schedulerStore', () => {
         ],
       });
     });
+
+    it('should stop a queue before removing it', async () => {
+      const store = createTestStore();
+      const mockApiClient = vi.mocked(store.getState().apiClient);
+
+      store.getState().stageQueueRemoval('root.production.batch');
+
+      mockApiClient.validateSchedulerConf.mockResolvedValue({
+        validation: 'success',
+        versionId: 13579,
+      });
+      mockApiClient.updateSchedulerConf.mockResolvedValue(undefined);
+
+      mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+      mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+      mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+      mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+      mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
+      mockApiClient.getSchedulerConfVersion.mockResolvedValue({ versionId: 1234567893 });
+
+      await store.getState().applyChanges();
+
+      expect(mockApiClient.validateSchedulerConf).toHaveBeenCalledTimes(1);
+      expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(2);
+
+      const stopPayload = mockApiClient.updateSchedulerConf.mock.calls[0][0];
+      expect(stopPayload).toEqual({
+        'update-queue': [
+          {
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          },
+        ],
+      });
+
+      const removalPayload = mockApiClient.updateSchedulerConf.mock.calls[1][0];
+      expect(removalPayload?.['remove-queue']).toBe('root.production.batch');
+      expect(removalPayload?.['global-updates']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            entry: expect.arrayContaining([
+              expect.objectContaining({
+                key: 'yarn.webservice.mutation-api.version',
+                value: '13579',
+              }),
+            ]),
+          }),
+        ]),
+      );
+    });
   });
 
   describe('computed values', () => {
