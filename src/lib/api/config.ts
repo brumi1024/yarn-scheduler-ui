@@ -11,6 +11,11 @@ const normalizeUrl = (url: string | undefined | null): string | null => {
 
   const trimmed = url.trim();
 
+  // Support relative paths so a dev server proxy can share the browser origin
+  if (trimmed.startsWith('/')) {
+    return trimmed.endsWith('/') ? trimmed.slice(0, -1) : trimmed;
+  }
+
   const protocolNormalized = trimmed.replace(
     /^([a-z]+):?\/\/?/i,
     (_, proto: string) => `${proto}://`,
