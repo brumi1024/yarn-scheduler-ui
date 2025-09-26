@@ -2,6 +2,10 @@ import { describe, it, expect } from 'vitest';
 import { buildMutationRequest, groupChangesByQueue } from './mutationBuilder';
 import type { StagedChange } from '~/types';
 
+const CONFIG_BASE = 'yarn.scheduler.capacity';
+const globalProp = (suffix: string) => `${CONFIG_BASE}.${suffix}`;
+const MAXIMUM_APPLICATIONS_PROPERTY = globalProp('maximum-applications');
+
 const toParamRecord = (params?: { entry: Array<{ key: string; value: string }> }) =>
   Object.fromEntries((params?.entry ?? []).map(({ key, value }) => [key, value]));
 
@@ -43,7 +47,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '15000',
         },
@@ -233,7 +237,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '15000',
         },
@@ -242,7 +246,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'resource-calculator',
+          property: globalProp('resource-calculator'),
           oldValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
           newValue: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
         },
@@ -251,7 +255,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'user-metrics.enable',
+          property: globalProp('user-metrics.enable'),
           oldValue: 'false',
           newValue: 'true',
         },
@@ -303,7 +307,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '15000',
         },
@@ -414,7 +418,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '20000',
         },
@@ -423,7 +427,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'resource-calculator',
+          property: globalProp('resource-calculator'),
           oldValue: 'DefaultResourceCalculator',
           newValue: 'DominantResourceCalculator',
         },
@@ -464,7 +468,7 @@ describe('mutationBuilder', () => {
           type: 'update',
           timestamp: now,
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '15000',
         },

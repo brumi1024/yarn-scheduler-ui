@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { Plus, InfoIcon, HelpCircle } from 'lucide-react';
+import { Plus, InfoIcon, HelpCircle, AlertCircle } from 'lucide-react';
 import { PlacementRuleForm } from './PlacementRuleForm';
 import { PlacementRulesTable } from './PlacementRulesTable';
 import { PolicyReferenceDialog } from './PolicyReferenceDialog';
@@ -24,6 +24,7 @@ export function PlacementRulesList() {
     legacyRules,
     configData,
     stagedChanges,
+    formatWarning,
   } = useSchedulerStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -98,6 +99,13 @@ export function PlacementRulesList() {
 
   return (
     <div className="space-y-4">
+      {!isLegacyMode && formatWarning && (
+        <Alert className="border-warning/70">
+          <AlertCircle className="h-4 w-4 text-warning" />
+          <AlertDescription className="text-warning">{formatWarning}</AlertDescription>
+        </Alert>
+      )}
+
       <div className="space-y-4">
         <Alert>
           <InfoIcon className="h-4 w-4" />

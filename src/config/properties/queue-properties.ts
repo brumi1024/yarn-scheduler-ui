@@ -2,6 +2,7 @@ import { capacityValueSchema, integerSchema, aclFormatSchema } from '../schemas/
 import { SPECIAL_VALUES } from '~/types';
 import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/types';
 
+// Specify only the short config name (without the yarn.scheduler.capacity.<queue-path> prefix)
 export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'capacity',

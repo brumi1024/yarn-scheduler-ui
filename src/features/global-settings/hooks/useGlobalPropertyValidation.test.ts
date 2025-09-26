@@ -2,6 +2,9 @@ import { describe, it, expect, vi } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import { useGlobalPropertyValidation } from './useGlobalPropertyValidation';
 import { useSchedulerStore } from '~/stores/schedulerStore';
+import { SPECIAL_VALUES } from '~/types';
+
+const MAXIMUM_APPLICATIONS_PROPERTY = 'yarn.scheduler.capacity.maximum-applications';
 
 vi.mock('~/stores/schedulerStore');
 
@@ -15,7 +18,7 @@ describe('useGlobalPropertyValidation', () => {
     };
 
     (useSchedulerStore as any).mockReturnValue({
-      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
+      configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'true']]),
       schedulerData: mockSchedulerData,
       stagedChanges: [],
     });
@@ -23,7 +26,7 @@ describe('useGlobalPropertyValidation', () => {
     const { result } = renderHook(() => useGlobalPropertyValidation());
 
     // Test a valid property change
-    const errors = result.current.validateGlobalProperty('maximum-applications', '10000');
+    const errors = result.current.validateGlobalProperty(MAXIMUM_APPLICATIONS_PROPERTY, '10000');
     expect(errors).toHaveLength(0);
   });
 
@@ -36,7 +39,7 @@ describe('useGlobalPropertyValidation', () => {
     };
 
     (useSchedulerStore as any).mockReturnValue({
-      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
+      configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'true']]),
       schedulerData: mockSchedulerData,
       stagedChanges: [],
     });

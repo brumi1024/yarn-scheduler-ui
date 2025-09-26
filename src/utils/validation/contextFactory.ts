@@ -1,5 +1,6 @@
 import type { QueueValidationContext } from './businessRules/types';
 import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
+import { SPECIAL_VALUES } from '~/types';
 import {
   createSyntheticQueueInfo,
   findQueueByPath,
@@ -26,8 +27,7 @@ export function createValidationContext({
   stagedChanges = [],
   field,
 }: CreateValidationContextOptions): QueueValidationContext {
-  const legacyModeEnabled =
-    configData.get('yarn.scheduler.capacity.legacy-queue-mode.enabled') !== 'false';
+  const legacyModeEnabled = configData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
   let parentQueue: QueueInfo | undefined;
   let siblingQueues: QueueInfo[] | undefined;

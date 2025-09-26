@@ -2,6 +2,7 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { useSchedulerStore } from '~/stores/schedulerStore';
+import { SPECIAL_VALUES } from '~/types';
 
 vi.mock('~/stores/schedulerStore');
 
@@ -27,7 +28,7 @@ describe('LegacyModeToggle', () => {
     isStaged: false,
     onChange: mockOnChange,
     property: {
-      name: 'legacy-queue-mode.enabled',
+      name: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
       displayName: 'Enable Legacy Queue Mode',
       description: 'Test description',
     },
@@ -41,7 +42,7 @@ describe('LegacyModeToggle', () => {
         queuePath: 'root',
         queues: { queue: [] },
       },
-      configData: new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]),
+      configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'true']]),
       stagedChanges: [],
     });
   });

@@ -9,7 +9,7 @@ import { SPECIAL_VALUES } from '~/types/constants/special-values';
 export function extractPlacementRulesFromConfig(
   configData: Map<string, string>,
 ): PlacementRulesData {
-  const format = configData.get('yarn.scheduler.capacity.mapping-rule-format');
+  const format = configData.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
 
   if (format === 'json') {
     const jsonStr = configData.get(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY);

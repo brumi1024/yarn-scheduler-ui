@@ -204,7 +204,6 @@ The application integrates with YARN ResourceManager REST API endpoints:
 
 - `/ws/v1/cluster/scheduler` - Scheduler information
 - `/ws/v1/cluster/scheduler-conf` - Scheduler configuration
-- `/ws/v1/cluster/node-labels` - Node label management
 
 ## Contributing
 

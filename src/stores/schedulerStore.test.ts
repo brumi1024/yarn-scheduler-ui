@@ -19,6 +19,9 @@ import { QUEUE_TYPES, SPECIAL_VALUES } from '../types/constants';
 const toEntryRecord = (entries?: Array<{ key: string; value: string }>) =>
   Object.fromEntries((entries ?? []).map(({ key, value }) => [key, value]));
 
+const MAXIMUM_APPLICATIONS_PROPERTY = 'yarn.scheduler.capacity.maximum-applications';
+const LEGACY_MODE_PROPERTY = SPECIAL_VALUES.LEGACY_MODE_PROPERTY;
+
 // Mock data for tests
 const mockSchedulerResponse: SchedulerResponse = {
   scheduler: {
@@ -536,13 +539,13 @@ describe('schedulerStore', () => {
       it('should stage a global property change', () => {
         const store = createTestStore();
 
-        store.getState().stageGlobalChange('maximum-applications', '15000');
+        store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '15000');
 
         expect(store.getState().stagedChanges).toHaveLength(1);
         expect(store.getState().stagedChanges[0]).toMatchObject({
           type: 'update',
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: undefined,
           newValue: '15000',
         });
@@ -686,7 +689,7 @@ describe('schedulerStore', () => {
         const store = createTestStore();
 
         store.getState().stageQueueChange('root.default', 'capacity', '60');
-        store.getState().stageGlobalChange('maximum-applications', '15000');
+        store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '15000');
 
         expect(store.getState().stagedChanges).toHaveLength(2);
 
@@ -704,7 +707,7 @@ describe('schedulerStore', () => {
 
       // Stage some changes
       store.getState().stageQueueChange('root.default', 'capacity', '60');
-      store.getState().stageGlobalChange('maximum-applications', '15000');
+      store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '15000');
 
       // Mock successful mutation response
       mockApiClient.validateSchedulerConf.mockResolvedValue({
@@ -968,7 +971,7 @@ describe('schedulerStore', () => {
         const store = createTestStore();
         await setupStoreWithData(store);
 
-        const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+        const displayValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
         expect(displayValue).toEqual({
           value: '10000',
           isStaged: false,
@@ -979,9 +982,9 @@ describe('schedulerStore', () => {
         const store = createTestStore();
         await setupStoreWithData(store);
 
-        store.getState().stageGlobalChange('maximum-applications', '15000');
+        store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '15000');
 
-        const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+        const displayValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
         expect(displayValue).toEqual({
           value: '15000',
           isStaged: true,
@@ -1006,7 +1009,7 @@ describe('schedulerStore', () => {
         await setupStoreWithData(store);
 
         // The mockConfigResponse already includes 'yarn.scheduler.capacity.maximum-applications': '10000'
-        const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+        const displayValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
         expect(displayValue).toEqual({
           value: '10000',
           isStaged: false,
@@ -1018,9 +1021,9 @@ describe('schedulerStore', () => {
         await setupStoreWithData(store);
 
         // Stage a global change
-        store.getState().stageGlobalChange('maximum-applications', '15000');
+        store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '15000');
 
-        const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+        const displayValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
         expect(displayValue).toEqual({
           value: '15000',
           isStaged: true,
@@ -1033,9 +1036,9 @@ describe('schedulerStore', () => {
 
         // mockConfigResponse already has 'yarn.scheduler.capacity.maximum-applications': '10000'
         // Stage a different value
-        store.getState().stageGlobalChange('maximum-applications', '20000');
+        store.getState().stageGlobalChange(MAXIMUM_APPLICATIONS_PROPERTY, '20000');
 
-        const displayValue = store.getState().getGlobalPropertyValue('maximum-applications');
+        const displayValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
         expect(displayValue).toEqual({
           value: '20000',
           isStaged: true,
@@ -1048,12 +1051,10 @@ describe('schedulerStore', () => {
 
         // mockConfigResponse has 'yarn.scheduler.capacity.maximum-applications': '10000'
         // Stage a change for a different property
-        store.getState().stageGlobalChange('legacy-queue-mode.enabled', 'false');
+        store.getState().stageGlobalChange(LEGACY_MODE_PROPERTY, 'false');
 
-        const maxAppsValue = store.getState().getGlobalPropertyValue('maximum-applications');
-        const legacyModeValue = store
-          .getState()
-          .getGlobalPropertyValue('legacy-queue-mode.enabled');
+        const maxAppsValue = store.getState().getGlobalPropertyValue(MAXIMUM_APPLICATIONS_PROPERTY);
+        const legacyModeValue = store.getState().getGlobalPropertyValue(LEGACY_MODE_PROPERTY);
 
         expect(maxAppsValue).toEqual({
           value: '10000',
@@ -1319,7 +1320,7 @@ describe('utility functions', () => {
           id: '2',
           type: 'update',
           queuePath: 'global',
-          property: 'maximum-applications',
+          property: MAXIMUM_APPLICATIONS_PROPERTY,
           oldValue: '10000',
           newValue: '15000',
           timestamp: Date.now(),

@@ -15,7 +15,7 @@ export function useGlobalPropertyValidation() {
 
       // Determine legacy mode status from merged data
       const legacyModeEnabled =
-        mergedConfigData.get('yarn.scheduler.capacity.legacy-queue-mode.enabled') !== 'false';
+        mergedConfigData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
       // Create validation context
       const context = {

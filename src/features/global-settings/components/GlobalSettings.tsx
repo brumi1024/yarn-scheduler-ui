@@ -88,7 +88,7 @@ export const GlobalSettings: React.FC = () => {
 
                       return (
                         <div key={property.name}>
-                          {property.name === 'legacy-queue-mode.enabled' ? (
+                          {property.name === SPECIAL_VALUES.LEGACY_MODE_PROPERTY ? (
                             <LegacyModeToggle
                               property={property}
                               value={value}

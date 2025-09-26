@@ -554,7 +554,7 @@ export const createStagedChangesSlice: StateCreator<
     if (triggeringProperty === 'capacity') {
       affectedProperties.add('capacity');
       affectedProperties.add('maximum-capacity');
-    } else if (triggeringProperty === 'yarn.scheduler.capacity.legacy-queue-mode.enabled') {
+    } else if (triggeringProperty === SPECIAL_VALUES.LEGACY_MODE_PROPERTY) {
       // Legacy mode affects all capacity validations
       affectedProperties.add('capacity');
       affectedProperties.add('maximum-capacity');

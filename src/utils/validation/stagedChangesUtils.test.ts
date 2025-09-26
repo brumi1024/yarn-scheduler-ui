@@ -51,7 +51,7 @@ describe('stagedChangesUtils', () => {
       const stagedChanges: StagedChange[] = [
         createTestStagedChange({
           queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-          property: 'legacy-queue-mode.enabled',
+          property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
           oldValue: 'true',
           newValue: 'false',
         }),
@@ -143,7 +143,7 @@ describe('stagedChangesUtils', () => {
       const stagedChanges: StagedChange[] = [
         createTestStagedChange({
           queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-          property: 'legacy-queue-mode.enabled',
+          property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
           oldValue: 'true',
           newValue: 'false',
         }),
@@ -153,7 +153,7 @@ describe('stagedChangesUtils', () => {
         configData,
         stagedChanges,
         SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
-        'legacy-queue-mode.enabled',
+        SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
       );
 
       expect(result).toBe('false');
