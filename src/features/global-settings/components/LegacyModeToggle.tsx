@@ -204,7 +204,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     ]).size;
 
     return { added, removed, affectedQueues };
-  }, [currentEnabled, schedulerData, configData, stagedChanges]);
+  }, [currentEnabled, schedulerData, configData, stagedChanges, property.name]);
 
   return (
     <div className="flex items-center justify-between space-x-2">
