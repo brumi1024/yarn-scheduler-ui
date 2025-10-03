@@ -74,6 +74,63 @@ describe('BusinessValidationService', () => {
       expect(result.errors.length).toBeGreaterThan(0);
       expect(result.errors.some((e) => e.rule === 'capacity-type-consistency')).toBe(true);
     });
+
+    it('should enforce parent label access for accessible-node-labels', () => {
+      context.queuePath = 'root.a.leaf';
+      context.configData.set('yarn.scheduler.capacity.root.a.accessible-node-labels', 'gpu');
+
+      const allowedResult = service.validateField('accessible-node-labels', 'gpu', context);
+      expect(allowedResult.valid).toBe(true);
+
+      const deniedResult = service.validateField('accessible-node-labels', 'cpu', context);
+      expect(deniedResult.valid).toBe(false);
+      expect(deniedResult.errors.some((e) => e.rule === 'queue-label-access')).toBe(true);
+    });
+
+    it('should ensure label capacities sum to 100 across siblings', () => {
+      context.queuePath = 'root.a';
+      context.configData.set('yarn.scheduler.capacity.root.a.accessible-node-labels', 'gpu');
+      context.configData.set('yarn.scheduler.capacity.root.b.accessible-node-labels', 'gpu');
+      context.configData.set(
+        'yarn.scheduler.capacity.root.b.accessible-node-labels.gpu.capacity',
+        '40',
+      );
+
+      const validResult = service.validateField(
+        'accessible-node-labels.gpu.capacity',
+        '60',
+        context,
+      );
+      expect(validResult.valid).toBe(true);
+
+      context.configData.set(
+        'yarn.scheduler.capacity.root.b.accessible-node-labels.gpu.capacity',
+        '10',
+      );
+
+      const invalidResult = service.validateField(
+        'accessible-node-labels.gpu.capacity',
+        '60',
+        context,
+      );
+      expect(invalidResult.valid).toBe(false);
+      expect(invalidResult.errors.some((e) => e.rule === 'label-capacity-sum')).toBe(true);
+    });
+
+    it('should skip label capacity validation when legacy mode disabled', () => {
+      context.queuePath = 'root.a';
+      context.legacyModeEnabled = false;
+      context.configData.set('yarn.scheduler.capacity.root.a.accessible-node-labels', 'gpu');
+      context.configData.set('yarn.scheduler.capacity.root.b.accessible-node-labels', 'gpu');
+      context.configData.set(
+        'yarn.scheduler.capacity.root.b.accessible-node-labels.gpu.capacity',
+        '10',
+      );
+
+      const result = service.validateField('accessible-node-labels.gpu.capacity', '60', context);
+      expect(result.valid).toBe(true);
+      expect(result.errors.some((e) => e.rule === 'label-capacity-sum')).toBe(false);
+    });
   });
 
   describe('validateQueue', () => {
@@ -177,6 +234,11 @@ describe('BusinessValidationService', () => {
       expect(validators.length).toBeGreaterThan(0);
     });
 
+    it('should return validators for label capacity pattern fields', () => {
+      const validators = service.getFieldValidators('accessible-node-labels.gpu.capacity');
+      expect(validators.length).toBeGreaterThan(0);
+    });
+
     it('should return empty array for unregistered fields', () => {
       const validators = service.getFieldValidators('unknown-field');
       expect(validators).toEqual([]);
@@ -188,6 +250,10 @@ describe('BusinessValidationService', () => {
       expect(service.hasFieldValidators('capacity')).toBe(true);
       expect(service.hasFieldValidators('maximum-capacity')).toBe(true);
       expect(service.hasFieldValidators('state')).toBe(true);
+    });
+
+    it('should return true for label capacity pattern fields', () => {
+      expect(service.hasFieldValidators('accessible-node-labels.gpu.capacity')).toBe(true);
     });
 
     it('should return false for unregistered fields', () => {

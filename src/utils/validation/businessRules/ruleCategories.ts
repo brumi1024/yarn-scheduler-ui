@@ -8,6 +8,7 @@ export const CROSS_QUEUE_RULES = [
   'child-capacity-sum', // Children must sum to 100%
   'capacity-type-consistency', // Siblings must use same capacity type
   'parent-child-capacity-constraint', // Child shouldn't exceed parent (warning level)
+  'label-capacity-sum', // Label-specific capacities must sum to 100%
 ] as const;
 
 // Queue-specific rules that must be resolved before staging
@@ -24,6 +25,7 @@ export const QUEUE_SPECIFIC_RULES = [
   'deletion-no-children-requirement', // Must have no children to delete
   'conversion-state-requirement', // Must be stopped to convert
   'conversion-empty-requirement', // Must have no apps to convert
+  'queue-label-access', // Child label access must be allowed by parent
 ] as const;
 
 // Warning-only rules that don't block staging
