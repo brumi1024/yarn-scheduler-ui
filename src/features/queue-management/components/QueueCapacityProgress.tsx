@@ -6,6 +6,9 @@ interface QueueCapacityProgressProps {
   maxCapacity: number;
   usedCapacity: number;
   className?: string;
+  title?: string;
+  showHeader?: boolean;
+  usedLabelFormatter?: (usedCapacity: number) => string;
 }
 
 export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
@@ -13,6 +16,9 @@ export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
   maxCapacity,
   usedCapacity,
   className,
+  title = 'Live Resource Usage',
+  showHeader = true,
+  usedLabelFormatter = (used) => `${used.toFixed(1)}% used`,
 }) => {
   const getUsageColor = (used: number): string => {
     if (capacity === 0) return 'bg-muted-foreground/30';
@@ -29,22 +35,10 @@ export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
 
   return (
     <div className={cn('mb-3 relative', className)}>
-      <div className="flex justify-between text-xs text-muted-foreground mb-1">
-        <span>Live Resource Usage</span>
-        <span>{usedCapacity.toFixed(1)}% used</span>
-      </div>
-
-      {/* Max capacity marker label (positioned above) */}
-      {maxCapacity < 100 && (
-        <div
-          className="absolute text-[10px] text-destructive font-medium"
-          style={{
-            left: `${maxCapacity}%`,
-            top: '16px',
-            transform: 'translateX(-50%)',
-          }}
-        >
-          max
+      {showHeader && (
+        <div className="flex justify-between text-xs text-muted-foreground mb-1">
+          <span>{title}</span>
+          <span>{usedLabelFormatter(usedCapacity)}</span>
         </div>
       )}
 

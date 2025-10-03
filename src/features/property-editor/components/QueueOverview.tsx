@@ -3,7 +3,7 @@ import { ChevronDown, Sparkles, RefreshCw } from 'lucide-react';
 import { cn } from '~/utils/cn';
 import { Card, CardContent } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
-import { Progress } from '~/components/ui/progress';
+import { QueueCapacityProgress } from '~/features/queue-management/components/QueueCapacityProgress';
 import {
   Accordion,
   AccordionContent,
@@ -69,20 +69,12 @@ export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
               <span className="font-medium">{capacityPercent}%</span>
             </div>
 
-            <div className="relative mb-2">
-              {/* Background bar */}
-              <Progress value={100} />
-              {/* Capacity bar */}
-              <Progress
-                value={Math.min(capacityPercent, 100)}
-                className="absolute top-0 left-0 right-0"
-              />
-              {/* Usage bar */}
-              <Progress
-                value={Math.min((queue.usedCapacity / Math.max(queue.maxCapacity, 1)) * 100, 100)}
-                className="absolute top-0 left-0 right-0"
-              />
-            </div>
+            <QueueCapacityProgress
+              capacity={capacityPercent}
+              maxCapacity={queue.maxCapacity}
+              usedCapacity={queue.usedCapacity}
+              showHeader={false}
+            />
 
             <div className="flex justify-between text-xs text-muted-foreground">
               <span>{queue.usedCapacity.toFixed(1)}% used</span>
