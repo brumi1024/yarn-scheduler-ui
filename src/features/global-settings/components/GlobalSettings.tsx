@@ -29,8 +29,15 @@ export const GlobalSettings: React.FC = () => {
   const activePropertyDefinitions = searchQuery ? getFilteredSettings() : globalPropertyDefinitions;
 
   const getGlobalPropertyCategories = () => {
-    const categories = new Set(activePropertyDefinitions.map((prop) => prop.category));
-    return Array.from(categories).sort();
+    const categories: string[] = [];
+
+    activePropertyDefinitions.forEach((prop) => {
+      if (!categories.includes(prop.category)) {
+        categories.push(prop.category);
+      }
+    });
+
+    return categories;
   };
 
   const getGlobalPropertiesByCategory = (category: string) => {
