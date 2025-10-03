@@ -28,13 +28,6 @@ export function extractErrorMessage(error: unknown): string {
 }
 
 /**
- * Type guard to check if an error is a SchedulerStoreError
- */
-export function isSchedulerStoreError(error: unknown): error is SchedulerStoreError {
-  return error instanceof SchedulerStoreError;
-}
-
-/**
  * Type guard to check if an error is a network error
  */
 export function isNetworkError(error: unknown): boolean {

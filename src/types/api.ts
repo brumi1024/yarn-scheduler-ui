@@ -72,6 +72,7 @@ export type ApiClientConfig = {
   retryAttempts?: number;
   retryDelay?: number;
   userName?: string;
+  detectSecurityMode?: boolean;
   requestInterceptor?: (request: Request) => Request | Promise<Request>;
   responseInterceptor?: (response: Response) => Response | Promise<Response>;
 };
