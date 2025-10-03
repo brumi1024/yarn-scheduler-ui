@@ -1,5 +1,4 @@
 import React from 'react';
-import { ChevronDown } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { SPECIAL_VALUES } from '~/types';
@@ -15,8 +14,6 @@ import {
 import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
-import type { PropertyDescriptor } from '~/types/property-descriptor';
-import { HighlightedText } from '~/components/search/HighlightedText';
 
 export const GlobalSettings: React.FC = () => {
   const {

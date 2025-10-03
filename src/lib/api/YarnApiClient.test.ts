@@ -5,7 +5,6 @@ import { YarnApiClient } from './YarnApiClient';
 import { serverHandlers } from './mocks/server-handlers';
 import type {
   SchedulerResponse,
-  SchedulerConfResponse,
   SchedConfUpdateInfo,
   YarnErrorResponse,
   NodeLabelsResponse,

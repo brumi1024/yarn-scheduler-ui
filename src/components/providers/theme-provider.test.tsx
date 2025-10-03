@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, renderHook, act, waitFor } from '@testing-library/react';
 import { vi } from 'vitest';
 import { ThemeProvider } from './theme-provider';

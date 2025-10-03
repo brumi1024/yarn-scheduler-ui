@@ -1,4 +1,4 @@
-import type { BusinessValidator, QueueValidationContext, BusinessValidationError } from './types';
+import type { BusinessValidator, BusinessValidationError } from './types';
 import { findQueueByPath } from './utils';
 
 export const validateQueueStateTransition: BusinessValidator<string> = (newState, context) => {

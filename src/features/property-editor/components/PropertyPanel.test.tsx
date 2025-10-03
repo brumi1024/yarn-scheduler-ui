@@ -1,4 +1,3 @@
-import React from 'react';
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '~/testing/setup/setup';
 import { PropertyPanel } from './PropertyPanel';
@@ -279,7 +278,7 @@ describe('PropertyPanel', () => {
     await user.click(errorBadge);
     expect(screen.getByText('Validation Errors:')).toBeInTheDocument();
     // The error text is combined with the bullet point, so we need to look for the full text
-    const errorText = screen.getByText((content, element) => {
+    const errorText = screen.getByText((_, element) => {
       return element?.textContent === '• capacity: Invalid value';
     });
     expect(errorText).toBeInTheDocument();

@@ -34,11 +34,6 @@ const resolveBaseUrl = () => {
   }
 
   if (typeof window !== 'undefined') {
-    // For development
-    if (window.location.hostname === 'localhost' && window.location.port === '3000') {
-      return 'http://localhost:8088/ws/v1/cluster';
-    }
-    // For production
     return `${window.location.origin}/ws/v1/cluster`;
   }
 

@@ -1,6 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchedulerStore } from '../schedulerStore';
-import type { SchedulerStore } from './types';
 
 describe('searchSlice - node label filtering', () => {
   let store: ReturnType<typeof createSchedulerStore>;

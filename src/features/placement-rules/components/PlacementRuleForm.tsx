@@ -1,4 +1,3 @@
-import React from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import {
@@ -21,8 +20,6 @@ import {
 } from '~/components/ui/select';
 import { Switch } from '~/components/ui/switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
-import { Alert, AlertDescription } from '~/components/ui/alert';
-import { InfoIcon } from 'lucide-react';
 import { Combobox } from '~/components/ui/combobox';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {

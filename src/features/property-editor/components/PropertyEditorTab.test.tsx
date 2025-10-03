@@ -1,4 +1,3 @@
-import React from 'react';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { PropertyEditorTab } from './PropertyEditorTab';
@@ -127,7 +126,7 @@ describe('PropertyEditorTab', () => {
     // Mock the store to indicate the queue has inherited access to labels
     vi.mocked(useSchedulerStore).mockReturnValue({
       nodeLabels: mockNodeLabels,
-      getQueueAccessibility: vi.fn((queuePath, label) => {
+      getQueueAccessibility: vi.fn((_, label) => {
         // Simulate inherited access - queue has access to gpu label but not ssd
         return label === 'gpu';
       }),

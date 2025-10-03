@@ -5,9 +5,7 @@ import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
   QueueInfo,
   StagedChange,
-  SchedulerInfo,
   ConfigData,
-  NodeLabelsInfo,
   NodeLabelsResponse,
   NodeToLabelsResponse,
   NodesResponse,

@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
 import { migrateLegacyRules } from './migration';
-import type { PlacementRule } from '~/types/features/placement-rules';
 
 describe('migrateLegacyRules', () => {
   it('should return empty rules for empty input', () => {

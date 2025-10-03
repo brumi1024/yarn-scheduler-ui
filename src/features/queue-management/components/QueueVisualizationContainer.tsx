@@ -18,7 +18,6 @@ import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
 import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
-import { Badge } from '~/components/ui/badge';
 import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
 import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
 
@@ -78,7 +77,7 @@ const FlowInner: React.FC = () => {
   }, []);
 
   const onNodeClick: NodeMouseHandler = useCallback(
-    (event, node) => {
+    (_, node) => {
       selectQueue?.(node.id);
     },
     [selectQueue],

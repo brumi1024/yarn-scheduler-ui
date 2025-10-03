@@ -4,7 +4,6 @@
 
 import type { SchedulerInfo } from './scheduler';
 import type { ConfigProperty } from './config';
-import type { SchedConfUpdateInfo } from './config';
 
 // Response types that match the actual YARN API
 

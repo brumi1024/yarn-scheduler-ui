@@ -101,7 +101,7 @@ Start the development server:
 npm run dev
 ```
 
-The React Router dev server runs at `http://localhost:3000`. In development, MSW boots automatically when mock mode is `static`.
+The React Router dev server runs at `http://localhost:5173`. In development, MSW boots automatically when mock mode is `static`.
 
 To switch between mocked data and a live cluster, update `.env` and restart the dev server. The bundler is configured for SPA mode (`react-router.config.ts` sets `ssr: false`); flip this flag if you need server rendering.
 
