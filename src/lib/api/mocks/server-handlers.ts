@@ -15,6 +15,17 @@ function loadMockData(filename: string) {
 }
 
 export const serverHandlers = [
+  http.get('*/conf', ({ request }) => {
+    const url = new URL(request.url);
+    const name = url.searchParams.get('name');
+
+    if (name === 'hadoop.security.authentication') {
+      return HttpResponse.json({ property: { value: 'simple' } });
+    }
+
+    return HttpResponse.json({ property: { value: '' } });
+  }),
+
   // Scheduler endpoints - load from static files for testing
   http.get('/ws/v1/cluster/scheduler', () => {
     const data = loadMockData('scheduler.json');
