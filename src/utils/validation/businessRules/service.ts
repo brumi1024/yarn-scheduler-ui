@@ -20,9 +20,14 @@ import {
   validateUserLimitFactor,
   validateMinimumUserLimitPercent,
 } from './lifetimeRules';
+import { validateAccessibleNodeLabels, validateLabelSpecificCapacities } from './labelRules';
 
 export class BusinessValidationService {
   private validators = new Map<string, BusinessValidator<unknown>[]>();
+  private patternValidators: Array<{
+    pattern: RegExp;
+    validators: BusinessValidator<unknown>[];
+  }> = [];
 
   constructor() {
     this.registerValidators();
@@ -41,6 +46,14 @@ export class BusinessValidationService {
 
     this.addValidator('state', [validateQueueStateTransition as BusinessValidator<unknown>]);
 
+    this.addValidator('accessible-node-labels', [
+      validateAccessibleNodeLabels as BusinessValidator<unknown>,
+    ]);
+
+    this.addPatternValidator(/^accessible-node-labels\.[^.]+\.capacity$/, [
+      validateLabelSpecificCapacities as BusinessValidator<unknown>,
+    ]);
+
     this.addValidator('default-application-lifetime', [
       validateApplicationLifetime as BusinessValidator<unknown>,
     ]);
@@ -58,12 +71,16 @@ export class BusinessValidationService {
     this.validators.set(field, validators);
   }
 
+  private addPatternValidator(pattern: RegExp, validators: BusinessValidator<unknown>[]) {
+    this.patternValidators.push({ pattern, validators });
+  }
+
   validateField(
     field: string,
     value: unknown,
     context: QueueValidationContext,
   ): BusinessValidationResult {
-    const validators = this.validators.get(field) || [];
+    const validators = this.getFieldValidators(field);
     const errors: BusinessValidationError[] = [];
 
     for (const validator of validators) {
@@ -116,11 +133,24 @@ export class BusinessValidationService {
   }
 
   getFieldValidators(field: string): BusinessValidator[] {
-    return this.validators.get(field) || [];
+    const directValidators = this.validators.get(field) || [];
+    const patternValidators = this.patternValidators.flatMap(({ pattern, validators }) => {
+      pattern.lastIndex = 0;
+      return pattern.test(field) ? validators : [];
+    });
+
+    return [...directValidators, ...patternValidators];
   }
 
   hasFieldValidators(field: string): boolean {
-    return this.validators.has(field);
+    if (this.validators.has(field)) {
+      return true;
+    }
+
+    return this.patternValidators.some(({ pattern }) => {
+      pattern.lastIndex = 0;
+      return pattern.test(field);
+    });
   }
 }
 

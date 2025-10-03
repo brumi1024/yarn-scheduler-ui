@@ -362,40 +362,53 @@ export function usePropertyEditor({
   // Get combined errors and validity state
   const combinedErrors = useMemo(() => {
     const zodErrors = form.formState.errors;
+
+    const normalizeFieldName = (field: string): string => {
+      const property = allProperties.find(
+        (p) => p.formFieldName === field || p.originalName === field || p.name === field,
+      );
+
+      if (property) {
+        return property.originalName || property.name;
+      }
+
+      return field.replace(/__DOT__/g, '.');
+    };
+
     const businessErrorsMap: Record<string, string[]> = {};
 
-    // Map business errors to form field names
     businessErrors.forEach((error) => {
-      const property = allProperties.find(
-        (p) => p.originalName === error.field || p.name === error.field,
-      );
-      const fieldName = property?.formFieldName || error.field;
+      if (error.severity !== 'error') {
+        return;
+      }
+
+      const fieldName = normalizeFieldName(error.field);
 
       if (!businessErrorsMap[fieldName]) {
         businessErrorsMap[fieldName] = [];
       }
 
-      if (error.severity === 'error') {
-        businessErrorsMap[fieldName].push(error.message);
-      }
+      businessErrorsMap[fieldName].push(error.message);
     });
 
-    // Combine Zod and business errors
     const combined: Record<string, { type: string; message: string }> = {};
 
-    // Copy Zod errors
     Object.entries(zodErrors).forEach(([field, error]) => {
-      if (error) {
-        combined[field] = {
-          type: typeof error.type === 'string' ? error.type : 'validation',
-          message: typeof error.message === 'string' ? error.message : 'Validation error',
-        };
+      if (!error) {
+        return;
       }
+
+      const normalizedField = normalizeFieldName(field);
+      const message = typeof error.message === 'string' ? error.message : 'Validation error';
+
+      combined[normalizedField] = {
+        type: typeof error.type === 'string' ? error.type : 'validation',
+        message,
+      };
     });
 
     Object.entries(businessErrorsMap).forEach(([field, messages]) => {
       if (combined[field]) {
-        // If there's already a Zod error, append business errors
         const existingMessage = combined[field].message || '';
         combined[field] = {
           ...combined[field],
@@ -404,7 +417,6 @@ export function usePropertyEditor({
             : messages.join('. '),
         };
       } else {
-        // Create new error entry for business errors
         combined[field] = {
           type: 'business',
           message: messages.join('. '),
