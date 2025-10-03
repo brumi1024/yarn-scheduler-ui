@@ -618,6 +618,61 @@ describe('schedulerStore', () => {
         const stateChange = changes.find((c) => c.property === 'state');
         expect(stateChange?.newValue).toBe('RUNNING');
       });
+
+      it('should attach validation errors when addition breaks parent capacity sum', async () => {
+        const store = createTestStore();
+        await setupStoreWithData(store);
+
+        store.getState().stageQueueAddition('root', 'analytics', {
+          capacity: '10',
+          'maximum-capacity': '100',
+          state: 'RUNNING',
+        });
+
+        const capacityChange = store
+          .getState()
+          .stagedChanges.find(
+            (change) => change.queuePath === 'root.analytics' && change.property === 'capacity',
+          );
+
+        expect(capacityChange?.validationErrors).toBeDefined();
+        expect(
+          capacityChange?.validationErrors?.some((error) => error.rule === 'child-capacity-sum'),
+        ).toBe(true);
+      });
+
+      it('should update staged sibling errors when multiple additions are staged', async () => {
+        const store = createTestStore();
+        await setupStoreWithData(store);
+
+        store.getState().stageQueueAddition('root', 'analytics', {
+          capacity: '10',
+          'maximum-capacity': '100',
+          state: 'RUNNING',
+        });
+
+        const firstAddition = store
+          .getState()
+          .stagedChanges.find(
+            (change) => change.queuePath === 'root.analytics' && change.property === 'capacity',
+          );
+
+        expect(firstAddition?.validationErrors?.[0].message).toContain('110.0%');
+
+        store.getState().stageQueueAddition('root', 'ml', {
+          capacity: '10',
+          'maximum-capacity': '100',
+          state: 'RUNNING',
+        });
+
+        const updatedFirstAddition = store
+          .getState()
+          .stagedChanges.find(
+            (change) => change.queuePath === 'root.analytics' && change.property === 'capacity',
+          );
+
+        expect(updatedFirstAddition?.validationErrors?.[0].message).toContain('120.0%');
+      });
     });
 
     describe('stageQueueRemoval', () => {

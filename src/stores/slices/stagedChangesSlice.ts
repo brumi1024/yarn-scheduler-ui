@@ -19,6 +19,7 @@ import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueue
 import {
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,
+  validatePropertyChange,
 } from '~/utils/validation/crossQueueValidation';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
@@ -161,6 +162,38 @@ export const createStagedChangesSlice: StateCreator<
         ? `${SPECIAL_VALUES.ROOT_QUEUE_NAME}.${queueName}`
         : `${parentPath}.${queueName}`;
 
+    const { schedulerData, configData, stagedChanges: existingStagedChanges } = get();
+    const capacityValue = config.capacity;
+
+    const previewStagedChanges =
+      typeof capacityValue === 'string'
+        ? [
+            ...existingStagedChanges,
+            {
+              id: 'preview-add-capacity',
+              type: 'add' as const,
+              queuePath: newQueuePath,
+              property: 'capacity',
+              oldValue: undefined,
+              newValue: capacityValue,
+              timestamp: Date.now(),
+            },
+          ]
+        : existingStagedChanges;
+
+    const computedCapacityErrors =
+      typeof capacityValue === 'string'
+        ? validatePropertyChange({
+            propertyName: 'capacity',
+            propertyValue: capacityValue,
+            queuePath: newQueuePath,
+            schedulerData,
+            configData,
+            stagedChanges: previewStagedChanges,
+            includeBlockingErrors: true,
+          })
+        : [];
+
     set((state) => {
       let mutated = false;
       // Check if queue already exists
@@ -190,7 +223,11 @@ export const createStagedChangesSlice: StateCreator<
           newValue: value,
           timestamp: Date.now(),
           // Only attach validation errors to the first property (capacity) to avoid duplication
-          validationErrors: property === 'capacity' ? validationErrors : undefined,
+          validationErrors:
+            property === 'capacity'
+              ? validationErrors ||
+                (computedCapacityErrors.length > 0 ? computedCapacityErrors : undefined)
+              : undefined,
         };
         state.stagedChanges.push(change);
         mutated = true;
@@ -200,6 +237,10 @@ export const createStagedChangesSlice: StateCreator<
         clearMutationError(state);
       }
     });
+
+    if (typeof capacityValue === 'string') {
+      get().refreshAffectedValidationErrors(newQueuePath, 'capacity');
+    }
   },
 
   stageQueueRemoval: (queuePath, validationErrors) => {
@@ -541,6 +582,7 @@ export const createStagedChangesSlice: StateCreator<
       triggeringProperty,
       triggeringQueuePath,
       schedulerData,
+      stagedChanges,
     );
 
     const affectedQueuePaths = new Set(affectedQueues);

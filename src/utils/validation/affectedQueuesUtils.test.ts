@@ -3,7 +3,7 @@ import {
   getAffectedQueuesForValidation,
   collectAffectedQueuesValidationErrors,
 } from './affectedQueuesUtils';
-import type { SchedulerInfo, QueueInfo } from '~/types';
+import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
 
 describe('affectedQueuesUtils', () => {
   const createMockSchedulerData = (queues: QueueInfo[]): SchedulerInfo => ({
@@ -57,6 +57,42 @@ describe('affectedQueuesUtils', () => {
 
       expect(affected).toContain('root.parent.child');
       expect(affected).toContain('root.parent');
+    });
+
+    it('should include parent queue for capacity changes when queue is staged', () => {
+      const mockData = createMockSchedulerData([createMockQueue('root.parent', 'parent')]);
+
+      const affected = getAffectedQueuesForValidation('capacity', 'root.parent.new', mockData);
+
+      expect(affected).toContain('root.parent');
+      expect(affected).toContain('root.parent.new');
+    });
+
+    it('should include staged siblings for capacity validation', () => {
+      const mockData = createMockSchedulerData([createMockQueue('root.parent', 'parent')]);
+
+      const stagedChanges: StagedChange[] = [
+        {
+          id: 'add-1',
+          type: 'add' as const,
+          queuePath: 'root.parent.first',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '10',
+          timestamp: Date.now(),
+        },
+      ];
+
+      const affected = getAffectedQueuesForValidation(
+        'capacity',
+        'root.parent.second',
+        mockData,
+        stagedChanges,
+      );
+
+      expect(affected).toContain('root.parent');
+      expect(affected).toContain('root.parent.first');
+      expect(affected).toContain('root.parent.second');
     });
 
     it('should include child queues for capacity changes on parent', () => {

@@ -34,7 +34,12 @@ export function validatePropertyChange({
   }
 
   // Get affected queues for this property change
-  const affectedQueues = getAffectedQueuesForValidation(propertyName, queuePath, schedulerData);
+  const affectedQueues = getAffectedQueuesForValidation(
+    propertyName,
+    queuePath,
+    schedulerData,
+    stagedChanges,
+  );
 
   // Create merged config with this change applied
   const tempChange: StagedChange = {
@@ -109,9 +114,24 @@ export function validateAllStagedChanges({
 
   // Process each staged change
   stagedChanges.forEach((change) => {
-    // Skip validation for 'add' and 'remove' operations
+    if (change.type === 'add' && change.property === 'capacity') {
+      const errors = validatePropertyChange({
+        propertyName: 'capacity',
+        propertyValue: change.newValue || '',
+        queuePath: change.queuePath,
+        schedulerData,
+        configData,
+        stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
+        includeBlockingErrors: false,
+      });
+
+      validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+      return;
+    }
+
+    // Skip validation for other non-update operations, but preserve existing errors
     if (change.type !== 'update' || !change.property) {
-      validationResults.set(change.id, undefined);
+      validationResults.set(change.id, change.validationErrors);
       return;
     }
 
@@ -164,14 +184,28 @@ export function selectivelyValidateStagedChanges({
       (change.property && affectedProperties.has(change.property));
 
     if (!isAffected) {
-      // Keep existing validation errors
       validationResults.set(change.id, change.validationErrors);
       return;
     }
 
-    // Skip validation for 'add' and 'remove' operations
+    if (change.type === 'add' && change.property === 'capacity') {
+      const errors = validatePropertyChange({
+        propertyName: 'capacity',
+        propertyValue: change.newValue || '',
+        queuePath: change.queuePath,
+        schedulerData,
+        configData,
+        stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
+        includeBlockingErrors: false,
+      });
+
+      validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+      return;
+    }
+
+    // Skip validation for other non-update operations, but preserve existing errors
     if (change.type !== 'update' || !change.property) {
-      validationResults.set(change.id, undefined);
+      validationResults.set(change.id, change.validationErrors);
       return;
     }
 

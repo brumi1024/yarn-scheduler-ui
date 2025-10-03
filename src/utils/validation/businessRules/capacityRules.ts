@@ -1,6 +1,6 @@
 import { parseCapacityValue, getCapacityType } from '~/utils/capacityUtils';
 import type { BusinessValidator, BusinessValidationError } from './types';
-import { findQueueByPath } from './utils';
+import { findQueueByPath, getParentPath } from './utils';
 
 export const validateCapacityTypeConsistency: BusinessValidator<string> = (value, context) => {
   if (!context.legacyModeEnabled || !context.siblingQueues) {
@@ -56,11 +56,27 @@ export const validateChildCapacitySum: BusinessValidator = (_, context) => {
     return { valid: true, errors: [] };
   }
 
+  const childQueuePaths = new Set(queue.queues.queue.map((child) => child.queuePath));
+
+  if (context.stagedChanges?.length) {
+    for (const change of context.stagedChanges) {
+      if (change.queuePath === 'global') continue;
+      const changeParentPath = getParentPath(change.queuePath);
+      if (changeParentPath !== context.queuePath) continue;
+
+      if (change.type === 'remove') {
+        childQueuePaths.delete(change.queuePath);
+      } else if (change.type === 'add') {
+        childQueuePaths.add(change.queuePath);
+      }
+    }
+  }
+
   const childCapacities: number[] = [];
   let allPercentages = true;
 
-  for (const child of queue.queues.queue) {
-    const capacity = context.configData.get(`yarn.scheduler.capacity.${child.queuePath}.capacity`);
+  for (const childPath of childQueuePaths) {
+    const capacity = context.configData.get(`yarn.scheduler.capacity.${childPath}.capacity`);
 
     if (!capacity) continue;
 

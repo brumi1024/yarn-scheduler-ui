@@ -1,4 +1,4 @@
-import type { SchedulerInfo, QueueInfo } from '~/types';
+import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
 
 /**
  * Finds a queue by path in the scheduler data, searching recursively
@@ -63,6 +63,7 @@ export function getAffectedQueuesForValidation(
   propertyName: string,
   queuePath: string,
   schedulerData: SchedulerInfo | null,
+  stagedChanges: StagedChange[] = [],
 ): string[] {
   const affectedQueues: string[] = [queuePath]; // Always include the current queue
 
@@ -73,16 +74,11 @@ export function getAffectedQueuesForValidation(
   // For capacity changes, include parent queue for child sum validation
   if (propertyName === 'capacity') {
     const currentQueue = findQueueInScheduler(schedulerData, queuePath);
-    if (!currentQueue) {
-      return affectedQueues;
-    }
-
-    // If this queue has a parent, add it to affected queues
     const parentPath = getParentQueuePath(queuePath);
-    if (parentPath) {
+
+    if (parentPath && !affectedQueues.includes(parentPath)) {
       affectedQueues.push(parentPath);
 
-      // Also add sibling queues for capacity type consistency validation
       const parentQueue = findQueueInScheduler(schedulerData, parentPath);
       if (parentQueue?.queues?.queue) {
         parentQueue.queues.queue.forEach((sibling) => {
@@ -91,10 +87,19 @@ export function getAffectedQueuesForValidation(
           }
         });
       }
+
+      stagedChanges
+        .filter(
+          (change) => change.type === 'add' && getParentQueuePath(change.queuePath) === parentPath,
+        )
+        .forEach((change) => {
+          if (!affectedQueues.includes(change.queuePath)) {
+            affectedQueues.push(change.queuePath);
+          }
+        });
     }
 
-    // If this queue has children, they might be affected by capacity type consistency
-    if (currentQueue.queues?.queue?.length) {
+    if (currentQueue?.queues?.queue?.length) {
       currentQueue.queues.queue.forEach((child) => {
         if (!affectedQueues.includes(child.queuePath)) {
           affectedQueues.push(child.queuePath);
