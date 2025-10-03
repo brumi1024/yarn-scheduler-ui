@@ -1,107 +1,99 @@
 # YARN Scheduler UI
 
-A modern web-based interface for managing Apache Hadoop YARN Capacity Scheduler configurations. This application provides visual tools for viewing and editing queue hierarchies, managing capacity allocations, and configuring scheduler settings.
+A modern web interface for managing Apache Hadoop YARN Capacity Scheduler configurations. The app provides visual tools for exploring queue hierarchies, adjusting capacities, validating placement rules, and applying changes with confidence.
 
 ## Features
 
 - **Queue Management**
-  - Visual queue hierarchy with interactive tree view
-  - Create, edit, and delete queues
-  - Configure queue capacities and resource allocations
-  - Set queue states (RUNNING, STOPPED, DRAINING)
-
-- **Resource Allocation**
-  - Configure queue capacities using percentage, weight, or absolute modes
-  - Set minimum and maximum capacity limits
-  - Manage user and application limits
-
+  - Draggable, zoomable tree view
+  - Create, edit, and delete queues with live validation
+  - Configure capacities, states (RUNNING, STOPPED, DRAINING), ACLs, and limits
+- **Placement Rules**
+  - Author and validate placement rules with guided forms
+  - Preview rule evaluation context before applying updates
+- **Queue Comparison**
+  - Compare staged changes against the live scheduler configuration
+  - Highlight deltas before saving
 - **Node Labels**
-  - Create and manage node labels
-  - Assign labels to queues
-  - Configure label-specific capacities
-
+  - Manage labels and assignments with per-label capacity controls
 - **Global Settings**
-  - Configure cluster-wide scheduler properties
-  - Set maximum applications and AM resource limits
-  - Configure resource calculator and other global parameters
-
+  - Configure cluster-wide scheduler properties and resource calculators
 - **Staged Changes**
-  - Preview all pending configuration changes
-  - Apply changes in batch
-  - Revert individual changes or clear all
+  - Review all pending edits, apply in batches, or revert granularly
 
-## Tech Stack
+## Tech Stack & Tooling
 
-- **Frontend**: React 19 with TypeScript
-- **Routing**: React Router v7
-- **State Management**: Zustand
-- **UI Components**: Shadcn with Tailwind CSS
-- **Data Visualization**: React Flow (xyflow)
-- **Build Tool**: Vite
-- **Testing**: Vitest with React Testing Library
-- **API Client**: Custom YARN REST API client
+- **Framework**: React 19 + TypeScript (strict mode)
+- **Routing & Bundler**: React Router v7 CLI (SPA mode, powered by Vite tooling)
+- **State Management**: Zustand with Immer
+- **UI / Styling**: Tailwind CSS + shadcn/ui + Radix primitives
+- **Data Visualization**: XYFlow (React Flow)
+- **Forms & Validation**: React Hook Form + Zod
+- **Testing**: Vitest, React Testing Library, MSW
+- **Code Quality**: ESLint, Prettier, Husky/lint-staged
 
 ## Project Structure
 
 ```
 yarn-scheduler-ui/
 ├── src/
-│   ├── app/              # Application entry points and routes
-│   ├── components/       # Shared UI components
-│   ├── features/         # Feature-specific modules
-│   │   ├── global-settings/
-│   │   ├── node-labels/
-│   │   ├── property-editor/
-│   │   ├── queue-management/
-│   │   └── staged-changes/
-│   ├── hooks/            # Custom React hooks
-│   ├── lib/              # Utilities and helpers
-│   ├── stores/           # Zustand stores
-│   ├── types/            # TypeScript type definitions
-│   └── utils/            # Utility functions
-├── public/               # Static assets
-├── docs/                 # Documentation
-└── tests/                # Test files
+│   ├── app/               # React Router entry points and route modules
+│   ├── config/            # Scheduler schemas, defaults, property metadata
+│   ├── features/          # Feature slices (queues, placement-rules, comparison, etc.)
+│   ├── hooks/             # Shared React hooks
+│   ├── lib/               # API client, msw handlers, utilities
+│   ├── stores/            # Zustand stores and selectors
+│   ├── testing/           # Test factories, mocks, and setup utilities
+│   ├── types/             # Shared TypeScript types and constants
+│   └── utils/             # Domain-specific helpers and validation
+├── public/                # Static assets and mock API payloads
+├── docs/                  # YARN scheduler reference docs
+├── test-helpers/          # Legacy helpers consumed by vitest suites
+├── react-router.config.ts # React Router bundler configuration
+└── vitest.config.ts       # Vitest configuration
 ```
 
 ## Getting Started
 
 ### Prerequisites
 
-- Node.js 18+ and npm 9+
-- Access to a YARN ResourceManager REST API
+- Node.js 22.16.0 (see `.tool-versions`)
+- npm 10+
+- Access to a YARN ResourceManager REST API (for live integrations)
 
 ### Installation
-
-1. Clone the repository:
 
 ```bash
 git clone <repository-url>
 cd yarn-scheduler-ui
-```
-
-2. Install dependencies:
-
-```bash
 npm install
 ```
 
-3. Configure the YARN API endpoint (optional):
-   Create a `.env` file with your YARN ResourceManager URL:
+### Environment configuration
+
+Create a `.env` file to describe how the UI should reach YARN APIs:
 
 ```env
-VITE_YARN_API_URL=http://your-yarn-rm:8088
-# Optional mock configuration
-# static  - serve local mock JSON (default in dev)
-# cluster - send all requests to a remote YARN ResourceManager (writes apply live)
-# off     - disable the mock service worker entirely
-VITE_API_MOCK_MODE=cluster
-VITE_MOCK_CLUSTER_URL=/ws/v1/cluster
+# Base ResourceManager endpoint (optional; defaults to /ws/v1/cluster relative to the origin)
+VITE_YARN_API_URL=http://rm-host:8088/ws/v1/cluster
+
+# Mock service modes (defaults to `static` in dev builds)
+# static  - serves JSON fixtures from public/mock/ws/v1/cluster via MSW
+# cluster - proxies browser requests to the configured cluster target
+# off     - disables the mock service worker entirely
+VITE_API_MOCK_MODE=static
+
+# Required when VITE_API_MOCK_MODE=cluster to proxy through the dev server
 VITE_CLUSTER_PROXY_TARGET=http://rm-host:8088
+VITE_MOCK_CLUSTER_URL=/ws/v1/cluster
+
+# Username used for simple-authenticated clusters
 VITE_YARN_USER_NAME=yarn
 ```
 
-### Development
+Mock payloads live in `public/mock/ws/v1/cluster/*.json` and are served automatically when `VITE_API_MOCK_MODE=static` (the default for `npm run dev`).
+
+## Development
 
 Start the development server:
 
@@ -109,113 +101,45 @@ Start the development server:
 npm run dev
 ```
 
-The application will be available at `http://localhost:5173`.
+The React Router dev server runs at `http://localhost:5173`. In development, MSW boots automatically when mock mode is `static`.
 
-### Building
+To switch between mocked data and a live cluster, update `.env` and restart the dev server. The bundler is configured for SPA mode (`react-router.config.ts` sets `ssr: false`); flip this flag if you need server rendering.
 
-Build for production:
+## Building & Deployment
+
+Build the production bundles:
 
 ```bash
 npm run build
 ```
 
-Start the production server:
+Serve the built app locally (uses `react-router-serve`):
 
 ```bash
 npm start
 ```
 
-## Testing
+Artifacts are emitted to `./build`. Provide the same environment variables at runtime to point at the desired ResourceManager.
 
-Run all tests:
+## Testing & Quality
 
-```bash
-npm test
-```
-
-Run tests in watch mode:
-
-```bash
-npm run test
-```
-
-Run tests with UI:
-
-```bash
-npm run test:ui
-```
-
-Generate coverage report:
-
-```bash
-npm run test:coverage
-```
-
-## Code Quality
-
-### Type Checking
-
-```bash
-npm run typecheck
-```
-
-### Linting
-
-```bash
-npm run lint
-npm run lint:fix
-```
-
-### Formatting
-
-```bash
-npm run format
-npm run format:check
-```
-
-## Development Guidelines
-
-### Component Structure
-
-- Use functional components with TypeScript
-- Place feature-specific components in their feature directory
-- Share common components in `src/components`
-
-### State Management
-
-- Global state is managed with Zustand stores
-- Keep component state local when possible
-
-### Testing
-
-- Write tests for all new features
-- Use React Testing Library for component tests
-- Mock external dependencies appropriately
-
-### Type Safety
-
-- TypeScript strict mode is enabled
-- Avoid `any` types
-- Use proper type definitions for all data structures
-
-## API Integration
-
-The application integrates with YARN ResourceManager REST API endpoints:
-
-- `/ws/v1/cluster/scheduler` - Scheduler information
-- `/ws/v1/cluster/scheduler-conf` - Scheduler configuration
+- **Unit / integration tests (watch)**: `npm run test`
+- **CI-friendly test run**: `npm run test:run`
+- **Coverage report**: `npm run test:coverage`
+- **Interactive test UI**: `npm run test:ui`
+- **Type generation + type checking**: `npm run typecheck`
+- **Linting**: `npm run lint` (or `npm run lint:fix` to auto-fix)
+- **Lint SARIF for CI**: `npm run lint:ci`
+- **Formatting**: `npm run format` / `npm run format:check`
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/your-feature`)
-3. Make your changes
-4. Write/update tests
-5. Ensure all tests pass and code quality checks succeed
-6. Commit your changes
-7. Push to your fork
-8. Create a Pull Request
+1. Fork the repository and create a feature branch (`git checkout -b feature/your-feature`).
+2. Make changes and add tests where appropriate.
+3. Run linting, formatting, typecheck, and the relevant test commands.
+4. Commit with clear messages and push to your fork.
+5. Open a Pull Request describing the change and any manual verification performed.
 
 ## Support
 
-For issues and feature requests, please use the GitHub issue tracker.
+Report bugs and request features through the GitHub issue tracker. Contributions, questions, and feedback are welcome!

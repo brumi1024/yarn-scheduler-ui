@@ -6,10 +6,6 @@ import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
 import { MUTATION_OPERATIONS, SPECIAL_VALUES } from '~/types';
 import type { SchedConfUpdateInfo, StagedChange } from '~/types';
-import type {
-  BusinessValidationError,
-  QueueValidationContext,
-} from '~/utils/validation/businessRules/types';
 import {
   buildGlobalPropertyKey,
   buildNodeLabelPropertyKey,

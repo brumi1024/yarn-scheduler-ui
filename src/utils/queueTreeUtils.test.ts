@@ -181,7 +181,7 @@ describe('queueTreeUtils', () => {
       const root = createTestQueueTree();
       const parents: Array<QueueInfo | undefined> = [];
 
-      queueTreeUtils.traverseQueueTree(root, (queue, depth, parent) => {
+      queueTreeUtils.traverseQueueTree(root, (_1, _2, parent) => {
         parents.push(parent);
       });
 

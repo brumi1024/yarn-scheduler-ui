@@ -18,7 +18,7 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle, Tag } from 'lucide-react';
+import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle } from 'lucide-react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';

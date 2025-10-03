@@ -4,7 +4,6 @@
 
 import type { SchedulerInfo } from './scheduler';
 import type { ConfigProperty } from './config';
-import type { SchedConfUpdateInfo } from './config';
 
 // Response types that match the actual YARN API
 
@@ -73,6 +72,7 @@ export type ApiClientConfig = {
   retryAttempts?: number;
   retryDelay?: number;
   userName?: string;
+  detectSecurityMode?: boolean;
   requestInterceptor?: (request: Request) => Request | Promise<Request>;
   responseInterceptor?: (response: Response) => Response | Promise<Response>;
 };

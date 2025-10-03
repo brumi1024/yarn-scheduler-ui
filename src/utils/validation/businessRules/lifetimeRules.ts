@@ -1,4 +1,4 @@
-import type { BusinessValidator, QueueValidationContext, BusinessValidationError } from './types';
+import type { BusinessValidator, BusinessValidationError } from './types';
 
 export const validateApplicationLifetime: BusinessValidator<string> = (value, context) => {
   const field = context.field || 'default-application-lifetime';

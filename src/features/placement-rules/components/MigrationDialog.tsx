@@ -13,7 +13,7 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { ExternalLink, AlertCircle, CheckCircle2 } from 'lucide-react';
+import { AlertCircle, CheckCircle2 } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { MigrationResult } from '~/types/features/placement-rules';
 

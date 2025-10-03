@@ -1,4 +1,4 @@
-import type { PropertyDescriptor, LabelPropertyDescriptor } from '~/types/property-descriptor';
+import type { LabelPropertyDescriptor } from '~/types/property-descriptor';
 import type { NodeLabel } from '~/types';
 import { capacityValueSchema } from '~/config/schemas/validation';
 

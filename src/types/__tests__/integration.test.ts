@@ -1,11 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type {
-  SchedulerData,
-  ConfigData,
-  NodeLabelsInfo,
-  QueueInfo,
-  CapacitySchedulerInfo,
-} from '../index';
+import type { SchedulerData, ConfigData, NodeLabelsInfo, CapacitySchedulerInfo } from '../index';
 import { isQueueInfo, isCapacitySchedulerInfo, isLeafQueue, isParentQueue } from '../guards';
 import { QUEUE_STATES, SCHEDULER_TYPES } from '../constants';
 

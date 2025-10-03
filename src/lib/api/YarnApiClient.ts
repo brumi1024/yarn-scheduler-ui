@@ -36,16 +36,28 @@ export class YarnApiClient {
       ...config.headers,
     };
 
-    // Initialize security mode detection
-    this.initPromise = this.detectSecurityMode()
-      .catch((error) => {
-        console.error('Failed to detect YARN security mode:', error);
-        // Don't rethrow - allow requests to proceed without auth detection
-      })
-      .finally(() => {
-        // Clear the promise after detection completes
-        this.initPromise = null;
-      });
+    const isTestEnv =
+      (typeof process !== 'undefined' && Boolean(process.env?.VITEST)) ||
+      (typeof import.meta !== 'undefined' &&
+        (import.meta.env?.VITEST || import.meta.env?.MODE === 'test'));
+    const shouldDetectSecurityMode = config.detectSecurityMode ?? !isTestEnv;
+
+    if (shouldDetectSecurityMode) {
+      // Initialize security mode detection
+      this.initPromise = this.detectSecurityMode()
+        .catch((error) => {
+          console.error('Failed to detect YARN security mode:', error);
+          // Don't rethrow - allow requests to proceed without auth detection
+        })
+        .finally(() => {
+          // Clear the promise after detection completes
+          this.initPromise = null;
+        });
+    } else {
+      // Default to simple mode when skipping detection (e.g., unit tests)
+      this.securityMode = 'simple';
+      this.initPromise = null;
+    }
   }
 
   /**
