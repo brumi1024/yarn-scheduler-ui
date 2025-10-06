@@ -20,6 +20,7 @@ import { useQueueValidation } from '~/hooks/useQueueValidation';
 import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
 import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
 import { validatePropertyChange } from '~/utils/validation/crossQueueValidation';
+import { buildPropertyKey } from '~/utils/propertyUtils';
 
 function createFormSchema(
   properties: Array<
@@ -122,17 +123,11 @@ export function usePropertyEditor({
   const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
   // Use the new validation hook for business rules
-  const {
-    businessErrors,
-    handleBlur: handleBusinessBlur,
-    getFieldErrors,
-    getFieldWarnings,
-    validateAll,
-  } = useQueueValidation({
+  const { businessErrors, getFieldErrors, getFieldWarnings, validateAll } = useQueueValidation({
     queuePath,
     schema: formSchema,
     properties: allProperties,
-    mode: 'onBlur',
+    mode: 'onSubmit',
   });
 
   const form = useForm({
@@ -197,19 +192,9 @@ export function usePropertyEditor({
     [setValue],
   );
 
-  const handleFieldBlur = useCallback(
-    (propertyName: string, value: string) => {
-      // Find the original property name from the escaped name
-      const property = allProperties.find(
-        (p) => p.formFieldName === propertyName || p.name === propertyName,
-      );
-      const originalName = property?.originalName || propertyName;
-
-      // Validate business rules on blur
-      handleBusinessBlur(originalName, value);
-    },
-    [allProperties, handleBusinessBlur],
-  );
+  const handleFieldBlur = useCallback(() => {
+    // Validation now runs on save; blur handler intentionally left blank
+  }, []);
 
   const onSubmit = useCallback(
     async (data: Record<string, string>) => {
@@ -233,6 +218,8 @@ export function usePropertyEditor({
           }
         });
 
+        const pendingEntries = Object.entries(changedData);
+
         // Run business validation on all changed fields
         const currentValues: Record<string, string> = {};
         allProperties.forEach((property) => {
@@ -243,7 +230,21 @@ export function usePropertyEditor({
 
         // Merge current values with changes for validation
         const validationData = { ...currentValues, ...changedData };
-        await validateAll(validationData);
+
+        const previewConfigData = new Map(configData);
+        pendingEntries.forEach(([propertyName, value]) => {
+          const propertyKey = buildPropertyKey(queuePath, propertyName);
+          if (!value.trim()) {
+            previewConfigData.delete(propertyKey);
+          } else {
+            previewConfigData.set(propertyKey, value);
+          }
+        });
+
+        await validateAll(validationData, {
+          configData: previewConfigData,
+          stagedChanges,
+        });
 
         // Check for blocking errors
         const blockingErrors = businessErrors.filter(
@@ -262,14 +263,14 @@ export function usePropertyEditor({
 
         // Stage changes with validation metadata including cross-queue errors
         let stagedCount = 0;
-        Object.entries(changedData).forEach(([propertyName, value]) => {
+        pendingEntries.forEach(([propertyName, value]) => {
           // Get cross-queue validation errors using shared logic
           const crossQueueErrors = validatePropertyChange({
             propertyName,
             propertyValue: value,
             queuePath,
             schedulerData,
-            configData,
+            configData: previewConfigData,
             stagedChanges,
             includeBlockingErrors: false,
           });

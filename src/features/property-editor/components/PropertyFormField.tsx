@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Control, ControllerRenderProps, FormState } from 'react-hook-form';
+import type { Control, ControllerRenderProps, FormState, UseFormSetValue } from 'react-hook-form';
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
 import { Switch } from '~/components/ui/switch';
@@ -8,6 +8,11 @@ import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '~/components/ui/form';
 import { HelpCircle, Info, AlertTriangle } from 'lucide-react';
+import {
+  CapacityAdjustPopover,
+  type CapacityAdjustmentMap,
+} from '~/features/queue-management/components/CapacityAdjustPopover';
+import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 
 interface PropertyFormFieldProps {
@@ -17,6 +22,11 @@ interface PropertyFormFieldProps {
   dependentValues?: Record<string, string>;
   onBlur?: (propertyName: string, value: string) => void;
   warnings?: string[];
+  queuePath?: string;
+  queueName?: string;
+  parentQueuePath?: string;
+  currentValues?: Partial<Record<string, string>>;
+  setFormValue?: UseFormSetValue<Record<string, string>>;
 }
 
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
@@ -26,7 +36,29 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   dependentValues = {},
   onBlur,
   warnings = [],
+  queuePath,
+  queueName,
+  parentQueuePath,
+  currentValues,
+  setFormValue,
 }) => {
+  const { updateQueueProperty } = useQueueActions();
+
+  const handleApplyAdjustments = React.useCallback(
+    async (changes: CapacityAdjustmentMap) => {
+      Object.entries(changes).forEach(([path, change]) => {
+        if (change.capacity !== undefined) {
+          updateQueueProperty(path, 'capacity', change.capacity);
+        }
+
+        if (change.maxCapacity !== undefined) {
+          updateQueueProperty(path, 'maximum-capacity', change.maxCapacity);
+        }
+      });
+    },
+    [updateQueueProperty],
+  );
+
   // Check if field should be enabled based on dependencies
   const isFieldEnabled = React.useMemo(() => {
     if (!property.enableWhen) return true;
@@ -196,28 +228,84 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           </FormItem>
         );
 
-      default: // string and capacity types
+      default: {
+        // string and capacity types
+        const fieldValue = typeof field.value === 'string' ? field.value : '';
+        const isCapacityField = property.name === 'capacity';
+        const isMaxCapacityField = property.name === 'maximum-capacity';
+        const capacityFieldValue = isCapacityField
+          ? fieldValue
+          : (currentValues?.['capacity'] ?? '');
+        const maxCapacityFieldValue = isMaxCapacityField
+          ? fieldValue
+          : (currentValues?.['maximum-capacity'] ?? '');
+        const shouldShowPopover = Boolean(parentQueuePath && isCapacityField);
+
+        const applyActiveQueueChanges = (changes: { capacity?: string; maxCapacity?: string }) => {
+          if (changes.capacity !== undefined) {
+            setFormValue?.('capacity', changes.capacity, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            });
+
+            if (property.name === 'capacity') {
+              field.onChange(changes.capacity);
+            }
+          }
+
+          if (changes.maxCapacity !== undefined) {
+            setFormValue?.('maximum-capacity', changes.maxCapacity, {
+              shouldDirty: true,
+              shouldTouch: true,
+              shouldValidate: true,
+            });
+
+            if (property.name === 'maximum-capacity') {
+              field.onChange(changes.maxCapacity);
+            }
+          }
+        };
+
         return (
           <FormItem>
             <FormLabel
-              className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
-            >
-              <span className="truncate">
-                {property.displayName}
-                {property.required ? ' *' : ''}
-              </span>
-              {stagedStatus === 'modified' && (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
+              className={cn(
+                'flex items-center gap-2 justify-between',
+                !isFieldEnabled && 'text-muted-foreground',
               )}
-              {property.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                </Tooltip>
+            >
+              <div className="flex items-center gap-1 min-w-0">
+                <span className="truncate">
+                  {property.displayName}
+                  {property.required ? ' *' : ''}
+                </span>
+                {stagedStatus === 'modified' && (
+                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                    Staged
+                  </Badge>
+                )}
+                {property.description && (
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
+                    </TooltipTrigger>
+                    <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
+                  </Tooltip>
+                )}
+              </div>
+
+              {shouldShowPopover && (
+                <CapacityAdjustPopover
+                  parentQueuePath={parentQueuePath}
+                  activeQueuePath={queuePath}
+                  activeQueueName={queueName}
+                  capacityValue={capacityFieldValue}
+                  maxCapacityValue={maxCapacityFieldValue}
+                  triggerVariant="default"
+                  onActiveQueueChange={applyActiveQueueChanges}
+                  onApply={handleApplyAdjustments}
+                />
               )}
             </FormLabel>
             <FormControl>
@@ -286,6 +374,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             )}
           </FormItem>
         );
+      }
     }
   };
 

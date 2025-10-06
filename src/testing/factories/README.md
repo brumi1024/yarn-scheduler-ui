@@ -1,6 +1,6 @@
 # Test Factories Organization
 
-This directory contains factory functions for creating test data, following the pattern described in CLAUDE.md.
+This directory contains factory functions for creating test data.
 
 ## Current Structure
 

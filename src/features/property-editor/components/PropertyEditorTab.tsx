@@ -175,6 +175,15 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     const accessibleLabels = getAccessibleLabels();
     const hasAccessibleLabels = accessibleLabels.length > 0;
 
+    const parentQueuePath = React.useMemo(() => {
+      const parts = queue.queuePath.split('.');
+      if (parts.length <= 1) {
+        return undefined;
+      }
+
+      return parts.slice(0, -1).join('.');
+    }, [queue.queuePath]);
+
     // Notify parent about hasChanges state
     React.useEffect(() => {
       onHasChangesChange?.(hasChanges);
@@ -370,6 +379,11 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                                     stagedStatus={getStagedStatus(prop.originalName || prop.name)}
                                     onBlur={handleFieldBlur}
                                     warnings={getFieldWarnings(prop.formFieldName || prop.name)}
+                                    queuePath={queue.queuePath}
+                                    queueName={queue.queueName}
+                                    parentQueuePath={parentQueuePath}
+                                    currentValues={watchedValues}
+                                    setFormValue={form.setValue}
                                   />
                                 ))}
                               </div>
@@ -408,6 +422,11 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                             stagedStatus={getStagedStatus(prop.originalName || prop.name)}
                             onBlur={handleFieldBlur}
                             warnings={getFieldWarnings(prop.formFieldName || prop.name)}
+                            queuePath={queue.queuePath}
+                            queueName={queue.queueName}
+                            parentQueuePath={parentQueuePath}
+                            currentValues={watchedValues}
+                            setFormValue={form.setValue}
                           />
                         ))}
                       </div>

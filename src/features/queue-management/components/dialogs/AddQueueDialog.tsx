@@ -1,3 +1,4 @@
+import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -21,6 +22,7 @@ import {
 } from '~/components/ui/select';
 import { Plus } from 'lucide-react';
 import { useQueueActions } from '../../hooks/useQueueActions';
+import { CapacityAdjustPopover, type CapacityAdjustmentMap } from '../CapacityAdjustPopover';
 
 const addQueueSchema = z.object({
   queueName: z
@@ -48,8 +50,10 @@ interface AddQueueDialogProps {
 }
 
 export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialogProps) {
-  const { addChildQueue } = useQueueActions();
+  const { addChildQueue, updateQueueProperty } = useQueueActions();
   const parentQueueName = parentQueuePath.split('.').pop() || parentQueuePath;
+
+  const [siblingAdjustments, setSiblingAdjustments] = useState<CapacityAdjustmentMap>({});
 
   const {
     register,
@@ -71,8 +75,34 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
 
   const handleClose = () => {
     reset();
+    setSiblingAdjustments({});
     onClose();
   };
+
+  const queueNameValue = watch('queueName');
+  const capacityValue = watch('capacity');
+  const maxCapacityValue = watch('maxCapacity');
+
+  const handleActiveQueueChange = useCallback(
+    (changes: { capacity?: string; maxCapacity?: string }) => {
+      if (changes.capacity !== undefined) {
+        setValue('capacity', changes.capacity, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+      }
+
+      if (changes.maxCapacity !== undefined) {
+        setValue('maxCapacity', changes.maxCapacity, {
+          shouldDirty: true,
+          shouldTouch: true,
+          shouldValidate: true,
+        });
+      }
+    },
+    [setValue],
+  );
 
   const onSubmit = (data: AddQueueFormData) => {
     try {
@@ -81,6 +111,16 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
         capacity: data.capacity,
         'maximum-capacity': data.maxCapacity,
         state: data.state,
+      });
+
+      Object.entries(siblingAdjustments).forEach(([queuePath, change]) => {
+        if (change.capacity !== undefined) {
+          updateQueueProperty(queuePath, 'capacity', change.capacity);
+        }
+
+        if (change.maxCapacity !== undefined) {
+          updateQueueProperty(queuePath, 'maximum-capacity', change.maxCapacity);
+        }
       });
 
       handleClose();
@@ -92,7 +132,7 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -156,6 +196,17 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
                 Maximum capacity this queue can grow to (percentage or absolute format)
               </p>
             )}
+          </div>
+          <div className="flex justify-end">
+            <CapacityAdjustPopover
+              parentQueuePath={parentQueuePath}
+              activeQueueName={queueNameValue}
+              capacityValue={capacityValue}
+              maxCapacityValue={maxCapacityValue}
+              adjustments={siblingAdjustments}
+              onAdjustmentsChange={setSiblingAdjustments}
+              onActiveQueueChange={handleActiveQueueChange}
+            />
           </div>
 
           {/* State */}

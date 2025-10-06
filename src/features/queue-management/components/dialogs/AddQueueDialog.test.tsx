@@ -5,13 +5,17 @@ import userEvent from '@testing-library/user-event';
 
 // Mock the useQueueActions hook
 const mockAddChildQueue = vi.fn();
+const mockUpdateQueueProperty = vi.fn();
 const mockCanAddChildQueue = vi.fn();
 const mockGetQueueByPath = vi.fn();
+const mockGetChildQueues = vi.fn();
+const mockGetQueuePropertyValue = vi.fn();
 const mockStageQueueAddition = vi.fn();
 
 vi.mock('../../hooks/useQueueActions', () => ({
   useQueueActions: () => ({
     addChildQueue: mockAddChildQueue,
+    updateQueueProperty: mockUpdateQueueProperty,
     canAddChildQueue: mockCanAddChildQueue,
   }),
 }));
@@ -21,6 +25,9 @@ vi.mock('~/stores/schedulerStore', () => ({
   useSchedulerStore: vi.fn((selector) => {
     const state = {
       getQueueByPath: mockGetQueueByPath,
+      getChildQueues: mockGetChildQueues,
+      getQueuePropertyValue: mockGetQueuePropertyValue,
+      stagedChanges: [],
       stageQueueAddition: mockStageQueueAddition,
     };
 
@@ -42,6 +49,9 @@ describe('AddQueueDialog', () => {
     mockCanAddChildQueue.mockReturnValue(true);
     // Default: parent queue exists
     mockGetQueueByPath.mockReturnValue({ queuePath: 'root.production', queueName: 'production' });
+    mockGetChildQueues.mockReturnValue([]);
+    mockGetQueuePropertyValue.mockReturnValue({ value: '', isStaged: false });
+    mockUpdateQueueProperty.mockReset();
   });
 
   afterAll(() => {
