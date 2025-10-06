@@ -6,6 +6,8 @@ import {
   validateParentChildCapacityConstraints,
 } from './capacityRules';
 import type { QueueValidationContext, QueueInfo } from './types';
+import type { StagedChange } from '~/types';
+import { SPECIAL_VALUES } from '~/types';
 
 const createMockContext = (
   overrides?: Partial<QueueValidationContext>,
@@ -158,6 +160,77 @@ describe('capacityRules', () => {
 
       const result = validateChildCapacitySum('', context);
       expect(result.valid).toBe(true);
+    });
+
+    it('should include staged additions when summing child capacities', () => {
+      const childQueues: QueueInfo[] = [
+        { queuePath: 'root.a', queueName: 'a' } as unknown as QueueInfo,
+        { queuePath: 'root.b', queueName: 'b' } as unknown as QueueInfo,
+      ];
+
+      const stagedAddition: StagedChange = {
+        id: 'add-1',
+        type: 'add',
+        queuePath: 'root.c',
+        property: 'capacity',
+        oldValue: undefined,
+        newValue: '40%',
+        timestamp: 1,
+      };
+
+      const context = createMockContext({
+        queuePath: 'root',
+        schedulerData: {
+          queueName: 'root',
+          queuePath: 'root',
+          queues: { queue: childQueues },
+        } as unknown as import('~/types').SchedulerInfo,
+        configData: new Map([
+          ['yarn.scheduler.capacity.root.a.capacity', '50%'],
+          ['yarn.scheduler.capacity.root.b.capacity', '30%'],
+          ['yarn.scheduler.capacity.root.c.capacity', '40%'],
+        ]),
+        stagedChanges: [stagedAddition],
+      });
+
+      const result = validateChildCapacitySum('', context);
+      expect(result.valid).toBe(false);
+      expect(result.errors?.[0].message).toContain('120.0%');
+    });
+
+    it('should exclude staged removals when summing child capacities', () => {
+      const childQueues: QueueInfo[] = [
+        { queuePath: 'root.a', queueName: 'a' } as unknown as QueueInfo,
+        { queuePath: 'root.b', queueName: 'b' } as unknown as QueueInfo,
+      ];
+
+      const stagedRemoval: StagedChange = {
+        id: 'remove-1',
+        type: 'remove',
+        queuePath: 'root.b',
+        property: SPECIAL_VALUES.QUEUE_MARKER,
+        oldValue: 'exists',
+        newValue: undefined,
+        timestamp: 1,
+      };
+
+      const context = createMockContext({
+        queuePath: 'root',
+        schedulerData: {
+          queueName: 'root',
+          queuePath: 'root',
+          queues: { queue: childQueues },
+        } as unknown as import('~/types').SchedulerInfo,
+        configData: new Map([
+          ['yarn.scheduler.capacity.root.a.capacity', '60%'],
+          ['yarn.scheduler.capacity.root.b.capacity', '40%'],
+        ]),
+        stagedChanges: [stagedRemoval],
+      });
+
+      const result = validateChildCapacitySum('', context);
+      expect(result.valid).toBe(false);
+      expect(result.errors?.[0].message).toContain('60.0%');
     });
   });
 

@@ -101,6 +101,49 @@ describe('stagedChangesUtils', () => {
 
       expect(result.get('yarn.scheduler.capacity.root.prod.capacity')).toBe('80');
     });
+
+    it('should include properties from staged queue additions', () => {
+      const configData = new Map([['yarn.scheduler.capacity.root.existing.capacity', '100']]);
+
+      const stagedChanges: StagedChange[] = [
+        createTestStagedChange({
+          type: 'add',
+          queuePath: 'root.new',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '25%',
+        }),
+      ];
+
+      const result = getMergedConfigData(configData, stagedChanges);
+
+      expect(result.get('yarn.scheduler.capacity.root.new.capacity')).toBe('25%');
+      expect(result.get('yarn.scheduler.capacity.root.existing.capacity')).toBe('100');
+    });
+
+    it('should remove queue properties when a staged removal is present', () => {
+      const configData = new Map([
+        ['yarn.scheduler.capacity.root.remove.capacity', '40%'],
+        ['yarn.scheduler.capacity.root.remove.maximum-capacity', '60%'],
+        ['yarn.scheduler.capacity.root.keep.capacity', '60%'],
+      ]);
+
+      const stagedChanges: StagedChange[] = [
+        createTestStagedChange({
+          type: 'remove',
+          queuePath: 'root.remove',
+          property: SPECIAL_VALUES.QUEUE_MARKER,
+          oldValue: 'exists',
+          newValue: undefined,
+        }),
+      ];
+
+      const result = getMergedConfigData(configData, stagedChanges);
+
+      expect(result.has('yarn.scheduler.capacity.root.remove.capacity')).toBe(false);
+      expect(result.has('yarn.scheduler.capacity.root.remove.maximum-capacity')).toBe(false);
+      expect(result.get('yarn.scheduler.capacity.root.keep.capacity')).toBe('60%');
+    });
   });
 
   describe('getEffectivePropertyValue', () => {

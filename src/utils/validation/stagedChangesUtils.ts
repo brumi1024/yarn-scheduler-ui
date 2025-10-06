@@ -1,6 +1,6 @@
 import type { StagedChange } from '~/types';
 import { buildGlobalPropertyKey, buildPropertyKey } from '~/utils/propertyUtils';
-import { SPECIAL_VALUES } from '~/types';
+import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
 
 /**
  * Merges staged changes with base configuration data to create a view
@@ -24,6 +24,21 @@ export function getMergedConfigData(
   stagedChanges.forEach((change) => {
     // Skip changes without property (e.g., queue operations)
     if (!change.property) return;
+
+    // Handle queue removals by clearing all properties under the queue path
+    if (change.type === 'remove' && change.queuePath !== SPECIAL_VALUES.GLOBAL_QUEUE_PATH) {
+      const queuePrefix = `${CONFIG_PREFIXES.BASE}.${change.queuePath}.`;
+      for (const key of Array.from(mergedData.keys())) {
+        if (key.startsWith(queuePrefix)) {
+          mergedData.delete(key);
+        }
+      }
+
+      // Queue removal markers don't carry a property value to merge
+      if (change.property === SPECIAL_VALUES.QUEUE_MARKER) {
+        return;
+      }
+    }
 
     // Build the full property key
     const propertyKey =
