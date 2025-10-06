@@ -1,7 +1,5 @@
 import type { QueueInfo, PropertyDescriptor, StagedChange, NodeLabel } from '~/types';
 
-// Factory functions for test data following CLAUDE.md pattern
-
 export const getMockQueueInfo = (overrides?: Partial<QueueInfo>): QueueInfo => {
   return {
     queueType: 'leaf',

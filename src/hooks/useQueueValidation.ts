@@ -11,6 +11,7 @@ import type {
   QueueValidationContext,
 } from '~/utils/validation/businessRules/types';
 import type { PropertyDescriptor } from '~/types';
+import type { StagedChange } from '~/types';
 
 interface UseQueueValidationOptions {
   queuePath: string;
@@ -26,7 +27,13 @@ interface UseQueueValidationReturn {
   validateBusinessRules: (field: string, value: string) => boolean;
   getFieldErrors: (field: string) => string[];
   getFieldWarnings: (field: string) => string[];
-  validateAll: (data: Record<string, string>) => Promise<boolean>;
+  validateAll: (
+    data: Record<string, string>,
+    overrideContext?: {
+      configData: Map<string, string>;
+      stagedChanges?: StagedChange[];
+    },
+  ) => Promise<boolean>;
   isValid: boolean;
   hasWarnings: boolean;
   clearBusinessErrors: () => void;
@@ -107,15 +114,27 @@ export function useQueueValidation({
   );
 
   const validateAll = useCallback(
-    async (data: Record<string, string>) => {
+    async (
+      data: Record<string, string>,
+      overrideContext?: { configData: Map<string, string>; stagedChanges?: StagedChange[] },
+    ) => {
       const zodValid = schema ? await form.trigger() : true;
 
-      const businessResult = businessValidation.validateQueue(queuePath, data, context);
+      const validationContext = overrideContext
+        ? createValidationContext({
+            queuePath,
+            schedulerData,
+            configData: overrideContext.configData,
+            stagedChanges: overrideContext.stagedChanges ?? stagedChanges,
+          })
+        : context;
+
+      const businessResult = businessValidation.validateQueue(queuePath, data, validationContext);
       setBusinessErrors(businessResult.errors);
 
       return zodValid && businessResult.valid;
     },
-    [form, schema, queuePath, context],
+    [form, schema, queuePath, context, schedulerData, stagedChanges],
   );
 
   const clearBusinessErrors = useCallback(() => {

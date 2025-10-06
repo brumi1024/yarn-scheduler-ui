@@ -369,6 +369,40 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
 
   const siblingChangeCount = Object.keys(siblingDiff).length;
 
+  const activeQueueChange = React.useMemo(() => {
+    const activeRow = draftRows.find(
+      (row) => row.isActiveQueue && row.queuePath && row.queuePath !== 'pending',
+    );
+
+    if (!activeRow) {
+      return null;
+    }
+
+    const capacityChanged =
+      sanitizeValue(activeRow.capacity) !== sanitizeValue(activeRow.baseCapacity);
+    const maxCapacityChanged =
+      sanitizeValue(activeRow.maxCapacity) !== sanitizeValue(activeRow.baseMaxCapacity);
+
+    if (!capacityChanged && !maxCapacityChanged) {
+      return null;
+    }
+
+    const change: CapacityAdjustment = {};
+
+    if (capacityChanged) {
+      change.capacity = sanitizeValue(activeRow.capacity);
+    }
+
+    if (maxCapacityChanged) {
+      change.maxCapacity = sanitizeValue(activeRow.maxCapacity);
+    }
+
+    return {
+      queuePath: activeRow.queuePath,
+      change,
+    };
+  }, [draftRows]);
+
   const hasNewSiblingChanges = React.useMemo(() => {
     if (siblingChangeCount === 0) {
       return false;
@@ -401,28 +435,27 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
     });
   }, [normalizedAdjustments, siblingDiff, siblingChangeCount]);
 
-  const activeRowChanged = React.useMemo(
-    () =>
-      draftRows.some(
-        (row) =>
-          row.isActiveQueue &&
-          (sanitizeValue(row.capacity) !== sanitizeValue(row.baseCapacity) ||
-            sanitizeValue(row.maxCapacity) !== sanitizeValue(row.baseMaxCapacity)),
-      ),
-    [draftRows],
-  );
-
-  const hasAnyChanges = siblingChangeCount > 0 || activeRowChanged;
+  const hasNewChanges = hasNewSiblingChanges || Boolean(activeQueueChange);
+  const hasAnyChanges = siblingChangeCount > 0 || Boolean(activeQueueChange);
 
   const handleApply = React.useCallback(async () => {
     onAdjustmentsChange?.(siblingDiff);
 
-    if (Object.keys(siblingDiff).length === 0) {
+    const changesToApply: CapacityAdjustmentMap = { ...siblingDiff };
+
+    if (activeQueueChange) {
+      changesToApply[activeQueueChange.queuePath] = {
+        ...(changesToApply[activeQueueChange.queuePath] || {}),
+        ...activeQueueChange.change,
+      };
+    }
+
+    if (Object.keys(changesToApply).length === 0) {
       setOpen(false);
       return;
     }
 
-    if (!hasNewSiblingChanges) {
+    if (!hasNewChanges) {
       setOpen(false);
       return;
     }
@@ -434,12 +467,12 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
 
     try {
       setInternalApplying(true);
-      await onApply(siblingDiff);
+      await onApply(changesToApply);
       setOpen(false);
     } finally {
       setInternalApplying(false);
     }
-  }, [hasNewSiblingChanges, onAdjustmentsChange, onApply, siblingDiff]);
+  }, [activeQueueChange, hasNewChanges, onAdjustmentsChange, onApply, siblingDiff]);
 
   if (!parentQueuePath) {
     return null;
@@ -575,7 +608,7 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
               type="button"
               size="sm"
               className="text-xs"
-              disabled={!hasNewSiblingChanges || applying}
+              disabled={!hasNewChanges || applying}
               onClick={handleApply}
             >
               {applying ? (
