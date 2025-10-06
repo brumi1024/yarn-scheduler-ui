@@ -187,7 +187,6 @@ export function usePropertyEditor({
   const handleFieldChange = useCallback(
     (propertyName: string) => (value: string) => {
       setValue(propertyName, value);
-      // Note: No auto-staging - only update form state
     },
     [setValue],
   );

@@ -7,6 +7,7 @@ import type {
   StagedChange,
   SchedulerInfo,
   CapacitySchedulerInfo,
+  QueueCapacitiesByPartition,
 } from '~/types';
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
@@ -42,32 +43,121 @@ const layoutEngine = new DagreLayout({
   orientation: 'horizontal',
 });
 
-function createRootQueueInfo(schedulerInfo: SchedulerInfo): QueueInfo {
+type QueueWithPartitions = QueueInfo & {
+  capacities?: {
+    queueCapacitiesByPartition?: QueueCapacitiesByPartition[] | QueueCapacitiesByPartition;
+  };
+};
+
+type PartitionSource = CapacitySchedulerInfo | QueueWithPartitions;
+
+const DEFAULT_PARTITION = '';
+
+function toArray<T>(value: T | T[] | undefined): T[] {
+  if (!value) {
+    return [];
+  }
+
+  return Array.isArray(value) ? value : [value];
+}
+
+function normalizePartitionName(name?: string | null): string {
+  return name ?? DEFAULT_PARTITION;
+}
+
+function getPartitionEntry(
+  source: PartitionSource,
+  partitionName: string,
+): QueueCapacitiesByPartition | undefined {
+  const partitions = source.capacities?.queueCapacitiesByPartition;
+  if (!partitions) {
+    return undefined;
+  }
+
+  const partitionArray = toArray(partitions);
+  const normalizedTarget = normalizePartitionName(partitionName);
+
+  const exactMatch = partitionArray.find(
+    (entry) => normalizePartitionName(entry.partitionName) === normalizedTarget,
+  );
+
+  if (exactMatch) {
+    return exactMatch;
+  }
+
+  return partitionArray.find(
+    (entry) => normalizePartitionName(entry.partitionName) === DEFAULT_PARTITION,
+  );
+}
+
+function applyPartitionCapacities(queueInfo: QueueInfo, partitionName: string): QueueInfo {
+  const queueWithPartitions = { ...queueInfo } as QueueWithPartitions;
+  const partitionEntry = getPartitionEntry(queueWithPartitions, partitionName);
+
+  if (partitionEntry) {
+    queueWithPartitions.capacity = partitionEntry.capacity ?? queueWithPartitions.capacity;
+    queueWithPartitions.maxCapacity = partitionEntry.maxCapacity ?? queueWithPartitions.maxCapacity;
+    queueWithPartitions.usedCapacity =
+      partitionEntry.usedCapacity ?? queueWithPartitions.usedCapacity;
+    queueWithPartitions.absoluteCapacity =
+      partitionEntry.absoluteCapacity ?? queueWithPartitions.absoluteCapacity;
+    queueWithPartitions.absoluteMaxCapacity =
+      partitionEntry.absoluteMaxCapacity ?? queueWithPartitions.absoluteMaxCapacity;
+    queueWithPartitions.absoluteUsedCapacity =
+      partitionEntry.absoluteUsedCapacity ?? queueWithPartitions.absoluteUsedCapacity;
+
+    if (partitionEntry.usedResource) {
+      queueWithPartitions.resourcesUsed = partitionEntry.usedResource;
+    }
+  }
+
+  if (queueInfo.queues?.queue) {
+    const children = toArray(queueInfo.queues.queue);
+    queueWithPartitions.queues = {
+      queue: children.map((child) => applyPartitionCapacities(child, partitionName)),
+    };
+  }
+
+  return queueWithPartitions;
+}
+
+function createRootQueueInfo(schedulerInfo: SchedulerInfo, partitionName: string): QueueInfo {
   const capacitySchedulerInfo = schedulerInfo as CapacitySchedulerInfo;
+  const partitionEntry = getPartitionEntry(capacitySchedulerInfo, partitionName);
+
+  const resolvedCapacity = partitionEntry?.capacity ?? schedulerInfo.capacity;
+  const resolvedUsedCapacity = partitionEntry?.usedCapacity ?? schedulerInfo.usedCapacity;
+  const resolvedMaxCapacity = partitionEntry?.maxCapacity ?? schedulerInfo.maxCapacity;
+  const resolvedAbsoluteCapacity = partitionEntry?.absoluteCapacity ?? schedulerInfo.capacity;
+  const resolvedAbsoluteMaxCapacity =
+    partitionEntry?.absoluteMaxCapacity ?? schedulerInfo.maxCapacity;
+  const resolvedAbsoluteUsedCapacity =
+    partitionEntry?.absoluteUsedCapacity ?? schedulerInfo.usedCapacity;
+
+  const resourcesUsed = partitionEntry?.usedResource ??
+    capacitySchedulerInfo.usedResources ?? { memory: 0, vCores: 0 };
+
+  const childQueues = toArray(schedulerInfo.queues?.queue).map((queue) =>
+    applyPartitionCapacities(queue, partitionName),
+  );
 
   // Create a synthetic root queue that contains the scheduler's queues
   return {
     queueType: 'parent' as QueueType,
-    capacity: schedulerInfo.capacity,
-    usedCapacity: schedulerInfo.usedCapacity,
-    maxCapacity: schedulerInfo.maxCapacity,
-    absoluteCapacity:
-      capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteCapacity ??
-      schedulerInfo.capacity,
-    absoluteMaxCapacity:
-      capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteMaxCapacity ??
-      schedulerInfo.maxCapacity,
-    absoluteUsedCapacity:
-      capacitySchedulerInfo.capacities?.queueCapacitiesByPartition?.[0]?.absoluteUsedCapacity ??
-      schedulerInfo.usedCapacity,
+    capacity: resolvedCapacity,
+    usedCapacity: resolvedUsedCapacity,
+    maxCapacity: resolvedMaxCapacity,
+    absoluteCapacity: resolvedAbsoluteCapacity,
+    absoluteMaxCapacity: resolvedAbsoluteMaxCapacity,
+    absoluteUsedCapacity: resolvedAbsoluteUsedCapacity,
     numApplications: 0,
     numActiveApplications: 0,
     numPendingApplications: 0,
-    resourcesUsed: capacitySchedulerInfo.usedResources || { memory: 0, vCores: 0 },
+    resourcesUsed,
     queueName: schedulerInfo.queueName,
     queuePath: 'root',
     state: 'RUNNING' as QueueStateValue,
-    queues: schedulerInfo.queues,
+    queues: { queue: childQueues },
     autoCreationEligibility: capacitySchedulerInfo.autoCreationEligibility,
   };
 }
@@ -201,9 +291,7 @@ function flattenQueueTree(queueInfo: QueueInfo, stagedChanges: StagedChange[]): 
   result.push(transformToCardData(queueInfo, stagedChanges));
 
   if (queueInfo.queues?.queue) {
-    const children = Array.isArray(queueInfo.queues.queue)
-      ? queueInfo.queues.queue
-      : [queueInfo.queues.queue];
+    const children = toArray(queueInfo.queues.queue);
 
     for (const child of children) {
       result.push(...flattenQueueTree(child, stagedChanges));
@@ -317,9 +405,7 @@ function createEdges(
   const MIN_SEGMENT_HEIGHT = 4; // Minimum visible height for very small capacity percentages
 
   if (queueInfo.queues?.queue) {
-    const children = Array.isArray(queueInfo.queues.queue)
-      ? queueInfo.queues.queue
-      : [queueInfo.queues.queue];
+    const children = toArray(queueInfo.queues.queue);
 
     // Calculate total capacity of all children for proportional allocation
     const totalChildCapacity = children.reduce((sum, child) => sum + (child.capacity || 0), 0);
@@ -475,9 +561,7 @@ function augmentQueueTreeWithStagedQueues(
 
       // Recursively search in children
       if (queue.queues?.queue) {
-        const children = Array.isArray(queue.queues.queue)
-          ? queue.queues.queue
-          : [queue.queues.queue];
+        const children = toArray(queue.queues.queue);
 
         for (const child of children) {
           if (findAndAddQueue(child)) {
@@ -505,6 +589,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
   const applyError = useSchedulerStore((state) => state.applyError);
   const searchQuery = useSchedulerStore((state) => state.searchQuery);
   const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
+  const selectedNodeLabelFilter = useSchedulerStore((state) => state.selectedNodeLabelFilter);
 
   const { nodes, edges } = useMemo(() => {
     if (!schedulerData || isLoading) {
@@ -512,6 +597,8 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
     }
 
     try {
+      const partitionName = normalizePartitionName(selectedNodeLabelFilter);
+
       // Use filtered data if search is active
       const dataToUse = searchQuery ? getFilteredQueues() : schedulerData;
 
@@ -520,7 +607,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
       }
 
       // Create a root queue wrapper for visualization purposes
-      const rootQueue = createRootQueueInfo(dataToUse);
+      const rootQueue = createRootQueueInfo(dataToUse, partitionName);
 
       // Augment the tree with staged new queues
       const augmentedRootQueue = augmentQueueTreeWithStagedQueues(rootQueue, stagedChanges);
@@ -538,7 +625,14 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
       console.error('Error processing queue tree data:', err);
       return { nodes: [], edges: [] };
     }
-  }, [schedulerData, stagedChanges, isLoading, searchQuery, getFilteredQueues]);
+  }, [
+    schedulerData,
+    stagedChanges,
+    isLoading,
+    searchQuery,
+    getFilteredQueues,
+    selectedNodeLabelFilter,
+  ]);
 
   return {
     nodes,
