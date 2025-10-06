@@ -225,7 +225,12 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
       });
     }
 
-    return rows;
+    return rows.sort((a, b) => {
+      if (a.isActiveQueue === b.isActiveQueue) {
+        return 0;
+      }
+      return a.isActiveQueue ? -1 : 1;
+    });
   }, [
     combinedSiblingSummaries,
     activeQueuePath,
@@ -444,13 +449,13 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
     triggerVariant === 'inline'
       ? {
           variant: 'ghost' as const,
-          size: 'xs' as const,
-          className: 'h-6 px-2 text-xs text-muted-foreground hover:text-foreground',
+          size: 'sm' as const,
+          className: 'h-7 px-2 text-xs text-muted-foreground hover:text-foreground',
         }
       : {
           variant: 'outline' as const,
           size: 'sm' as const,
-          className: 'text-xs',
+          className: 'text-xs font-medium border-primary/40 text-primary hover:bg-primary/10',
         };
 
   return (

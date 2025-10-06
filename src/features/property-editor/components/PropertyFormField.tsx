@@ -231,14 +231,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       default: {
         // string and capacity types
         const fieldValue = typeof field.value === 'string' ? field.value : '';
-        const isCapacityField =
-          property.name === 'capacity' || property.name === 'maximum-capacity';
-        const capacityFieldValue =
-          property.name === 'capacity' ? fieldValue : (currentValues?.['capacity'] ?? '');
-        const maxCapacityFieldValue =
-          property.name === 'maximum-capacity'
-            ? fieldValue
-            : (currentValues?.['maximum-capacity'] ?? '');
+        const isCapacityField = property.name === 'capacity';
+        const isMaxCapacityField = property.name === 'maximum-capacity';
+        const capacityFieldValue = isCapacityField
+          ? fieldValue
+          : (currentValues?.['capacity'] ?? '');
+        const maxCapacityFieldValue = isMaxCapacityField
+          ? fieldValue
+          : (currentValues?.['maximum-capacity'] ?? '');
+        const shouldShowPopover = Boolean(parentQueuePath && isCapacityField);
 
         const applyActiveQueueChanges = (changes: { capacity?: string; maxCapacity?: string }) => {
           if (changes.capacity !== undefined) {
@@ -294,14 +295,14 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 )}
               </div>
 
-              {isCapacityField && parentQueuePath && (
+              {shouldShowPopover && (
                 <CapacityAdjustPopover
                   parentQueuePath={parentQueuePath}
                   activeQueuePath={queuePath}
                   activeQueueName={queueName}
                   capacityValue={capacityFieldValue}
                   maxCapacityValue={maxCapacityFieldValue}
-                  triggerVariant="inline"
+                  triggerVariant="default"
                   onActiveQueueChange={applyActiveQueueChanges}
                   onApply={handleApplyAdjustments}
                 />

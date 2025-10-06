@@ -132,7 +132,7 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
-      <DialogContent className="sm:max-w-md" onClick={(e) => e.stopPropagation()}>
+      <DialogContent onClick={(e) => e.stopPropagation()}>
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Plus className="h-5 w-5" />
@@ -169,17 +169,6 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
               type="text"
               placeholder="e.g., 50, 10w, [memory=1024,vcores=1]"
             />
-            <div className="flex justify-end">
-              <CapacityAdjustPopover
-                parentQueuePath={parentQueuePath}
-                activeQueueName={queueNameValue}
-                capacityValue={capacityValue}
-                maxCapacityValue={maxCapacityValue}
-                adjustments={siblingAdjustments}
-                onAdjustmentsChange={setSiblingAdjustments}
-                onActiveQueueChange={handleActiveQueueChange}
-              />
-            </div>
             {errors.capacity && <p className="text-sm text-red-500">{errors.capacity.message}</p>}
             {!errors.capacity && (
               <p className="text-sm text-muted-foreground">
@@ -207,6 +196,17 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
                 Maximum capacity this queue can grow to (percentage or absolute format)
               </p>
             )}
+          </div>
+          <div className="flex justify-end">
+            <CapacityAdjustPopover
+              parentQueuePath={parentQueuePath}
+              activeQueueName={queueNameValue}
+              capacityValue={capacityValue}
+              maxCapacityValue={maxCapacityValue}
+              adjustments={siblingAdjustments}
+              onAdjustmentsChange={setSiblingAdjustments}
+              onActiveQueueChange={handleActiveQueueChange}
+            />
           </div>
 
           {/* State */}
