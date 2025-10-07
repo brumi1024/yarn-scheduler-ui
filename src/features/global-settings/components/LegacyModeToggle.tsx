@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
@@ -26,7 +26,6 @@ import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
-import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
 
 interface LegacyModeToggleProps {
   value: string;
@@ -207,152 +206,143 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   }, [currentEnabled, schedulerData, configData, stagedChanges, property.name]);
 
   return (
-    <Field className="flex items-center justify-between space-x-2">
-      <div className="space-y-0.5">
-        <div className="flex items-center gap-2">
-          <FieldLabel htmlFor={property.name} className="text-base">
-            {property.displayName}
-          </FieldLabel>
-          <LegacyModeDocumentation>
-            <Button
-              variant="ghost"
-              size="sm"
-              className="h-5 w-5 p-0 hover:bg-transparent"
-              type="button"
-            >
-              <Info className="h-3.5 w-3.5 text-muted-foreground" />
-            </Button>
-          </LegacyModeDocumentation>
-        </div>
-        <FieldDescription className="text-sm text-muted-foreground">
-          {property.description}
-        </FieldDescription>
-      </div>
-      <div className="flex items-center gap-2">
-        {isStaged && (
-          <Badge variant="outline" className="border-warning text-warning">
-            Modified
-          </Badge>
-        )}
+    <FieldSwitch
+      id={property.name}
+      label={property.displayName}
+      labelSuffix={
+        <LegacyModeDocumentation>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="h-5 w-5 p-0 hover:bg-transparent"
+            type="button"
+          >
+            <Info className="h-3.5 w-3.5 text-muted-foreground" />
+          </Button>
+        </LegacyModeDocumentation>
+      }
+      description={property.description}
+      addon={
+        <>
+          {isStaged && (
+            <Badge variant="outline" className="border-warning text-warning">
+              Modified
+            </Badge>
+          )}
 
-        <Dialog open={showPreview} onOpenChange={setShowPreview}>
-          <DialogTrigger asChild>
-            <Button variant="ghost" size="sm" className="h-8 px-2" disabled={!schedulerData}>
-              {showPreview ? (
-                <ChevronUp className="h-4 w-4" />
-              ) : (
-                <ChevronDown className="h-4 w-4" />
-              )}
-              Preview
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-2xl max-h-[80vh]">
-            <DialogHeader>
-              <DialogTitle>Validation Preview</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-3 overflow-y-auto max-h-[calc(80vh-8rem)]">
-              <div>
-                <h4 className="font-medium text-sm">Validation Preview</h4>
-                <p className="text-xs text-muted-foreground mt-1">
-                  Changes that would occur when switching to{' '}
-                  {currentEnabled ? 'Flexible' : 'Legacy'} Mode
-                </p>
+          <Dialog open={showPreview} onOpenChange={setShowPreview}>
+            <DialogTrigger asChild>
+              <Button variant="ghost" size="sm" className="h-8 px-2" disabled={!schedulerData}>
+                {showPreview ? (
+                  <ChevronUp className="h-4 w-4" />
+                ) : (
+                  <ChevronDown className="h-4 w-4" />
+                )}
+                Preview
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-2xl max-h-[80vh]">
+              <DialogHeader>
+                <DialogTitle>Validation Preview</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-3 overflow-y-auto max-h-[calc(80vh-8rem)]">
+                <div>
+                  <h4 className="font-medium text-sm">Validation Preview</h4>
+                  <p className="text-xs text-muted-foreground mt-1">
+                    Changes that would occur when switching to{' '}
+                    {currentEnabled ? 'Flexible' : 'Legacy'} Mode
+                  </p>
+                </div>
+
+                {validationPreview.affectedQueues === 0 ? (
+                  <p className="text-sm text-muted-foreground py-2">
+                    No validation changes would occur.
+                  </p>
+                ) : (
+                  <>
+                    <div className="text-sm">
+                      <span className="font-medium">{validationPreview.affectedQueues}</span> queue
+                      {validationPreview.affectedQueues !== 1 ? 's' : ''} would be affected
+                    </div>
+
+                    <div className="w-full rounded-md border p-3">
+                      <div className="space-y-4">
+                        {validationPreview.removed.length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2">
+                              Errors that would be removed:
+                            </h5>
+                            <div className="space-y-2">
+                              {validationPreview.removed.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  <div className="text-xs font-medium">{item.queuePath}</div>
+                                  {item.errors.map((error, errorIdx) => (
+                                    <div
+                                      key={errorIdx}
+                                      className={cn(
+                                        'flex items-start gap-2 text-xs p-2 rounded-md bg-green-50 dark:bg-green-950/20',
+                                      )}
+                                    >
+                                      <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
+                                      <span>{error.message}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+
+                        {validationPreview.added.length > 0 && (
+                          <div>
+                            <h5 className="text-xs font-medium text-destructive mb-2">
+                              New errors that would appear:
+                            </h5>
+                            <div className="space-y-2">
+                              {validationPreview.added.map((item, idx) => (
+                                <div key={idx} className="space-y-1">
+                                  <div className="text-xs font-medium">{item.queuePath}</div>
+                                  {item.errors.map((error, errorIdx) => (
+                                    <div
+                                      key={errorIdx}
+                                      className={cn(
+                                        'flex items-start gap-2 text-xs p-2 rounded-md',
+                                        error.severity === 'error'
+                                          ? 'bg-destructive/10'
+                                          : 'bg-amber-500/10',
+                                      )}
+                                    >
+                                      {error.severity === 'error' ? (
+                                        <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-destructive" />
+                                      ) : (
+                                        <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
+                                      )}
+                                      <span>{error.message}</span>
+                                    </div>
+                                  ))}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {currentEnabled && validationPreview.added.length > 0 && (
+                      <div className="text-xs text-muted-foreground border-t pt-2">
+                        <strong>Note:</strong> These errors can be temporarily staged when working
+                        with multiple queues.
+                      </div>
+                    )}
+                  </>
+                )}
               </div>
-
-              {validationPreview.affectedQueues === 0 ? (
-                <p className="text-sm text-muted-foreground py-2">
-                  No validation changes would occur.
-                </p>
-              ) : (
-                <>
-                  <div className="text-sm">
-                    <span className="font-medium">{validationPreview.affectedQueues}</span> queue
-                    {validationPreview.affectedQueues !== 1 ? 's' : ''} would be affected
-                  </div>
-
-                  <div className="w-full rounded-md border p-3">
-                    <div className="space-y-4">
-                      {validationPreview.removed.length > 0 && (
-                        <div>
-                          <h5 className="text-xs font-medium text-green-600 dark:text-green-400 mb-2">
-                            Errors that would be removed:
-                          </h5>
-                          <div className="space-y-2">
-                            {validationPreview.removed.map((item, idx) => (
-                              <div key={idx} className="space-y-1">
-                                <div className="text-xs font-medium">{item.queuePath}</div>
-                                {item.errors.map((error, errorIdx) => (
-                                  <div
-                                    key={errorIdx}
-                                    className={cn(
-                                      'flex items-start gap-2 text-xs p-2 rounded-md bg-green-50 dark:bg-green-950/20',
-                                    )}
-                                  >
-                                    <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-green-600 dark:text-green-400" />
-                                    <span>{error.message}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-
-                      {validationPreview.added.length > 0 && (
-                        <div>
-                          <h5 className="text-xs font-medium text-destructive mb-2">
-                            New errors that would appear:
-                          </h5>
-                          <div className="space-y-2">
-                            {validationPreview.added.map((item, idx) => (
-                              <div key={idx} className="space-y-1">
-                                <div className="text-xs font-medium">{item.queuePath}</div>
-                                {item.errors.map((error, errorIdx) => (
-                                  <div
-                                    key={errorIdx}
-                                    className={cn(
-                                      'flex items-start gap-2 text-xs p-2 rounded-md',
-                                      error.severity === 'error'
-                                        ? 'bg-destructive/10'
-                                        : 'bg-amber-500/10',
-                                    )}
-                                  >
-                                    {error.severity === 'error' ? (
-                                      <AlertCircle className="h-3 w-3 mt-0.5 flex-shrink-0 text-destructive" />
-                                    ) : (
-                                      <AlertTriangle className="h-3 w-3 mt-0.5 flex-shrink-0 text-amber-600 dark:text-amber-400" />
-                                    )}
-                                    <span>{error.message}</span>
-                                  </div>
-                                ))}
-                              </div>
-                            ))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {currentEnabled && validationPreview.added.length > 0 && (
-                    <div className="text-xs text-muted-foreground border-t pt-2">
-                      <strong>Note:</strong> These errors can be temporarily staged when working
-                      with multiple queues.
-                    </div>
-                  )}
-                </>
-              )}
-            </div>
-          </DialogContent>
-        </Dialog>
-
-        <FieldControl>
-          <Switch
-            id={property.name}
-            checked={currentEnabled}
-            onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
-          />
-        </FieldControl>
-      </div>
-    </Field>
+            </DialogContent>
+          </Dialog>
+        </>
+      }
+      checked={currentEnabled}
+      onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+    />
   );
 };

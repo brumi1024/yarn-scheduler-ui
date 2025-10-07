@@ -17,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Combobox } from '~/components/ui/combobox';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -280,19 +280,14 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                   control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                   name="create"
                   render={({ field }) => (
-                    <Field className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FieldLabel className="text-base">
-                          Create queue if it doesn't exist
-                        </FieldLabel>
-                        <FieldDescription>
-                          Automatically create the target queue with default settings if not found
-                        </FieldDescription>
-                      </div>
-                      <FieldControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FieldControl>
-                    </Field>
+                    <FieldSwitch
+                      id="create"
+                      fieldName={field.name}
+                      label="Create queue if it doesn't exist"
+                      description="Automatically create the target queue with default settings if not found"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   )}
                 />
               )}

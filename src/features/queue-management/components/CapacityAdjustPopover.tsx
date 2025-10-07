@@ -532,7 +532,8 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
           <div className="space-y-1 px-4 pt-4">
             <p className="text-sm font-medium">Sibling capacities</p>
             <p className="text-xs text-muted-foreground">
-              Plan adjustments for queues under {parentQueueName} without leaving this editor.
+              Adjust capacities for queues under {parentQueueName}. Adjustments here are staged
+              alongside your current changes.
             </p>
           </div>
 
@@ -660,11 +661,6 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
                 )}
               </Button>
             </div>
-
-            <p className="text-[11px] text-muted-foreground">
-              Adjustments here are staged alongside your current changes so you can apply them
-              together.
-            </p>
           </div>
         </div>
       </PopoverContent>

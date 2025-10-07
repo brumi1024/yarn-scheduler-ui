@@ -1,6 +1,6 @@
 import React from 'react';
 import { Input } from '~/components/ui/input';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import {
   Select,
@@ -53,28 +53,14 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <Field className="flex items-center justify-between space-x-2">
-            <div className="space-y-0.5">
-              <FieldLabel htmlFor={property.name} className="text-base">
-                {labelNode}
-              </FieldLabel>
-              {descriptionNode && (
-                <FieldDescription className="text-sm text-muted-foreground">
-                  {descriptionNode}
-                </FieldDescription>
-              )}
-            </div>
-            <div className="flex items-center gap-2">
-              {stagedBadge}
-              <FieldControl>
-                <Switch
-                  id={property.name}
-                  checked={value === 'true'}
-                  onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
-                />
-              </FieldControl>
-            </div>
-          </Field>
+          <FieldSwitch
+            id={property.name}
+            label={labelNode}
+            description={descriptionNode}
+            addon={stagedBadge}
+            checked={value === 'true'}
+            onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+          />
         );
 
       case 'enum':

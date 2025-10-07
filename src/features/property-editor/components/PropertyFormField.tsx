@@ -2,7 +2,7 @@ import React from 'react';
 import type { Control, ControllerRenderProps, FormState, UseFormSetValue } from 'react-hook-form';
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
@@ -95,38 +95,27 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <Field className="flex flex-row items-center justify-between rounded-lg border p-3">
-            <div className="flex-1 min-w-0 space-y-1">
-              <FieldLabel
-                className={cn(
-                  'flex items-center gap-1',
-                  !isFieldEnabled && 'text-muted-foreground',
-                )}
-              >
-                <span className="truncate">
-                  {property.displayName}
-                  {property.required ? ' *' : ''}
-                </span>
-                {stagedStatus === 'modified' && (
-                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                    Staged
-                  </Badge>
-                )}
-              </FieldLabel>
-              {property.description && (
-                <FieldDescription className="text-xs text-muted-foreground">
-                  {property.description}
-                </FieldDescription>
-              )}
-            </div>
-            <FieldControl>
-              <Switch
-                checked={field.value === 'true'}
-                onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
-                disabled={!isFieldEnabled}
-              />
-            </FieldControl>
-          </Field>
+          <FieldSwitch
+            id={fieldName}
+            fieldName={fieldName}
+            label={`${property.displayName}${property.required ? ' *' : ''}`}
+            labelSuffix={
+              stagedStatus === 'modified' ? (
+                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                  Staged
+                </Badge>
+              ) : null
+            }
+            description={property.description}
+            labelProps={{
+              className: cn(!isFieldEnabled && 'text-muted-foreground'),
+            }}
+            disabled={!isFieldEnabled}
+            checked={field.value === 'true'}
+            onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
+            switchClassName={commonProps.className}
+            message={error ? String(error.message ?? '') : undefined}
+          />
         );
 
       case 'enum':
@@ -269,10 +258,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         return (
           <Field>
             <FieldLabel
-              className={cn(
-                'flex items-center gap-2 justify-between',
-                !isFieldEnabled && 'text-muted-foreground',
-              )}
+            //</Field>className={cn(
+            //  'flex items-center gap-2 justify-between',
+            //  !isFieldEnabled && 'text-muted-foreground',
+            //)}
             >
               <div className="flex items-center gap-1 min-w-0">
                 <span className="truncate">
@@ -342,7 +331,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               </FieldDescription>
             )}
             {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
-            {/* Business validation warnings */}
             {warnings.length > 0 && (
               <div className="mt-1 space-y-1">
                 {warnings.map((warning, index) => {

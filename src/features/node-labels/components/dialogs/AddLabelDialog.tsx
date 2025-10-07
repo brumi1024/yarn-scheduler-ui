@@ -8,7 +8,7 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { Input } from '~/components/ui/input';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Button } from '~/components/ui/button';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { validateLabelName } from '~/features/node-labels/utils/labelValidation';
@@ -92,12 +92,12 @@ export const AddLabelDialog: React.FC<AddLabelDialogProps> = ({
             )}
           </Field>
 
-          <Field className="flex items-center space-x-2">
-            <FieldLabel htmlFor="exclusive">Exclusive Label</FieldLabel>
-            <FieldControl>
-              <Switch id="exclusive" checked={exclusivity} onCheckedChange={setExclusivity} />
-            </FieldControl>
-          </Field>
+          <FieldSwitch
+            id="exclusive"
+            label="Exclusive Label"
+            checked={exclusivity}
+            onCheckedChange={setExclusivity}
+          />
 
           <Alert>
             <AlertDescription>
