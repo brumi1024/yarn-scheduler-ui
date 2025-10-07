@@ -1,6 +1,5 @@
 import React, { useState, useMemo } from 'react';
 import { Switch } from '~/components/ui/switch';
-import { Label } from '~/components/ui/label';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
@@ -27,6 +26,7 @@ import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
+import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
 
 interface LegacyModeToggleProps {
   value: string;
@@ -207,12 +207,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   }, [currentEnabled, schedulerData, configData, stagedChanges, property.name]);
 
   return (
-    <div className="flex items-center justify-between space-x-2">
+    <Field className="flex items-center justify-between space-x-2">
       <div className="space-y-0.5">
         <div className="flex items-center gap-2">
-          <Label htmlFor={property.name} className="text-base">
+          <FieldLabel htmlFor={property.name} className="text-base">
             {property.displayName}
-          </Label>
+          </FieldLabel>
           <LegacyModeDocumentation>
             <Button
               variant="ghost"
@@ -224,7 +224,9 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
             </Button>
           </LegacyModeDocumentation>
         </div>
-        <p className="text-sm text-muted-foreground">{property.description}</p>
+        <FieldDescription className="text-sm text-muted-foreground">
+          {property.description}
+        </FieldDescription>
       </div>
       <div className="flex items-center gap-2">
         {isStaged && (
@@ -343,12 +345,14 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
           </DialogContent>
         </Dialog>
 
-        <Switch
-          id={property.name}
-          checked={currentEnabled}
-          onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
-        />
+        <FieldControl>
+          <Switch
+            id={property.name}
+            checked={currentEnabled}
+            onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+          />
+        </FieldControl>
       </div>
-    </div>
+    </Field>
   );
 };

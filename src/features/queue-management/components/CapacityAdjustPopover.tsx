@@ -3,7 +3,7 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
+import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
@@ -556,38 +556,50 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
                 </div>
 
                 <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                  <Field
+                    id={`${row.queuePath}-capacity`}
+                    name={`${row.queuePath}-capacity`}
+                    className="space-y-1"
+                  >
+                    <FieldLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Capacity
-                    </Label>
-                    <Input
-                      value={row.capacity}
-                      onChange={(event) =>
-                        handleRowChange(row.queuePath, 'capacity', event.target.value)
-                      }
-                      className="h-8 text-sm"
-                      disabled={applying}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
+                    </FieldLabel>
+                    <FieldControl>
+                      <Input
+                        value={row.capacity}
+                        onChange={(event) =>
+                          handleRowChange(row.queuePath, 'capacity', event.target.value)
+                        }
+                        className="h-8 text-sm"
+                        disabled={applying}
+                      />
+                    </FieldControl>
+                    <FieldDescription className="text-[11px] text-muted-foreground">
                       Base: {row.baseCapacity ? `${row.baseCapacity}` : '—'}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                    </FieldDescription>
+                  </Field>
+                  <Field
+                    id={`${row.queuePath}-max-capacity`}
+                    name={`${row.queuePath}-max-capacity`}
+                    className="space-y-1"
+                  >
+                    <FieldLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
                       Max capacity
-                    </Label>
-                    <Input
-                      value={row.maxCapacity}
-                      onChange={(event) =>
-                        handleRowChange(row.queuePath, 'maxCapacity', event.target.value)
-                      }
-                      className="h-8 text-sm"
-                      disabled={applying}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
+                    </FieldLabel>
+                    <FieldControl>
+                      <Input
+                        value={row.maxCapacity}
+                        onChange={(event) =>
+                          handleRowChange(row.queuePath, 'maxCapacity', event.target.value)
+                        }
+                        className="h-8 text-sm"
+                        disabled={applying}
+                      />
+                    </FieldControl>
+                    <FieldDescription className="text-[11px] text-muted-foreground">
                       Base: {row.baseMaxCapacity ? `${row.baseMaxCapacity}` : '—'}
-                    </p>
-                  </div>
+                    </FieldDescription>
+                  </Field>
                 </div>
               </div>
             ))}

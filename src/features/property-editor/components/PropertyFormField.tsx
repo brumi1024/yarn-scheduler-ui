@@ -6,7 +6,8 @@ import { Switch } from '~/components/ui/switch';
 import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '~/components/ui/form';
+import { FormField } from '~/components/ui/form';
+import { Field, FieldControl, FieldLabel, FieldMessage } from '~/components/ui/field';
 import { HelpCircle, Info, AlertTriangle } from 'lucide-react';
 import {
   CapacityAdjustPopover,
@@ -88,9 +89,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
+          <Field className="flex flex-row items-center justify-between rounded-lg border p-3">
             <div className="space-y-0.5 flex-1 min-w-0">
-              <FormLabel
+              <FieldLabel
                 className={cn(
                   'flex items-center gap-1',
                   !isFieldEnabled && 'text-muted-foreground',
@@ -113,22 +114,22 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
                   </Tooltip>
                 )}
-              </FormLabel>
+              </FieldLabel>
             </div>
-            <FormControl>
+            <FieldControl>
               <Switch
                 checked={field.value === 'true'}
                 onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
                 disabled={!isFieldEnabled}
               />
-            </FormControl>
-          </FormItem>
+            </FieldControl>
+          </Field>
         );
 
       case 'enum':
         return (
-          <FormItem>
-            <FormLabel
+          <Field>
+            <FieldLabel
               className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
@@ -148,8 +149,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
                 </Tooltip>
               )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               <ToggleGroup
                 type="single"
                 value={field.value || ''}
@@ -169,15 +170,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+            </FieldControl>
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+          </Field>
         );
 
       case 'number':
         return (
-          <FormItem>
-            <FormLabel
+          <Field>
+            <FieldLabel
               className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
@@ -197,8 +198,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
                 </Tooltip>
               )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               <div className="relative">
                 <Input
                   type="number"
@@ -212,6 +213,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   min={property.validationRules?.find((r) => r.type === 'range')?.min}
                   max={property.validationRules?.find((r) => r.type === 'range')?.max}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
                     error && 'ring-2 ring-destructive ring-offset-1',
@@ -223,9 +225,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </span>
                 )}
               </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+            </FieldControl>
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+          </Field>
         );
 
       default: {
@@ -268,8 +270,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         };
 
         return (
-          <FormItem>
-            <FormLabel
+          <Field>
+            <FieldLabel
               className={cn(
                 'flex items-center gap-2 justify-between',
                 !isFieldEnabled && 'text-muted-foreground',
@@ -307,8 +309,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   onApply={handleApplyAdjustments}
                 />
               )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               {property.name.includes('acl') ? (
                 <textarea
                   value={field.value || ''}
@@ -324,6 +326,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     commonProps.className,
                   )}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                 />
               ) : (
                 <Input
@@ -336,14 +339,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   }}
                   placeholder={property.defaultValue || undefined}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
                     error && 'ring-2 ring-destructive ring-offset-1',
                   )}
                 />
               )}
-            </FormControl>
-            <FormMessage />
+            </FieldControl>
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
             {/* Business validation warnings */}
             {warnings.length > 0 && (
               <div className="mt-1 space-y-1">
@@ -372,7 +376,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 })}
               </div>
             )}
-          </FormItem>
+          </Field>
         );
       }
     }

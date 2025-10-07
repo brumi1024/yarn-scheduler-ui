@@ -8,11 +8,17 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
 import { Switch } from '~/components/ui/switch';
 import { Button } from '~/components/ui/button';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { validateLabelName } from '~/features/node-labels/utils/labelValidation';
+import {
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
 
 interface AddLabelDialogProps {
   open: boolean;
@@ -61,28 +67,37 @@ export const AddLabelDialog: React.FC<AddLabelDialogProps> = ({
         </DialogHeader>
 
         <div className="space-y-4 py-4">
-          <div className="space-y-2">
-            <Label htmlFor="label-name">Label Name</Label>
-            <Input
-              id="label-name"
-              value={name}
-              onChange={(e) => {
-                setName(e.target.value);
-                setError('');
-              }}
-              placeholder="e.g., gpu, highmem, ssd"
-              className={error ? 'border-destructive' : ''}
-              autoFocus
-            />
-            <p className={`text-sm ${error ? 'text-destructive' : 'text-muted-foreground'}`}>
-              {error || 'Use letters, numbers, hyphens, and underscores only'}
-            </p>
-          </div>
+          <Field>
+            <FieldLabel htmlFor="label-name">Label Name</FieldLabel>
+            <FieldControl>
+              <Input
+                id="label-name"
+                value={name}
+                onChange={(e) => {
+                  setName(e.target.value);
+                  setError('');
+                }}
+                placeholder="e.g., gpu, highmem, ssd"
+                className={error ? 'border-destructive' : ''}
+                autoFocus
+                aria-invalid={Boolean(error)}
+              />
+            </FieldControl>
+            {error ? (
+              <FieldMessage>{error}</FieldMessage>
+            ) : (
+              <FieldDescription className="text-sm text-muted-foreground">
+                Use letters, numbers, hyphens, and underscores only
+              </FieldDescription>
+            )}
+          </Field>
 
-          <div className="flex items-center space-x-2">
-            <Switch id="exclusive" checked={exclusivity} onCheckedChange={setExclusivity} />
-            <Label htmlFor="exclusive">Exclusive Label</Label>
-          </div>
+          <Field className="flex items-center space-x-2">
+            <FieldLabel htmlFor="exclusive">Exclusive Label</FieldLabel>
+            <FieldControl>
+              <Switch id="exclusive" checked={exclusivity} onCheckedChange={setExclusivity} />
+            </FieldControl>
+          </Field>
 
           <Alert>
             <AlertDescription>
