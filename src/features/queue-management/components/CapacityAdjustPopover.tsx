@@ -3,10 +3,12 @@ import { Loader2 } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
+import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
+import { ScrollArea } from '~/components/ui/scroll-area';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
+import type { QueueInfo } from '~/types';
 import { cn } from '~/utils/cn';
 
 export type CapacityAdjustment = {
@@ -74,12 +76,27 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
   const [internalApplying, setInternalApplying] = React.useState(false);
   const wasOpenRef = React.useRef(false);
 
-  const siblingSelector = React.useMemo(
-    () => (state: SchedulerStore) => (parentQueuePath ? state.getChildQueues(parentQueuePath) : []),
-    [parentQueuePath],
+  const parentQueueChildren = useSchedulerStore(
+    React.useCallback(
+      (state: SchedulerStore) => {
+        if (!parentQueuePath) {
+          return null;
+        }
+
+        const parentQueue = state.getQueueByPath(parentQueuePath);
+        return parentQueue?.queues?.queue ?? null;
+      },
+      [parentQueuePath],
+    ),
   );
 
-  const siblingQueues = useSchedulerStore(siblingSelector);
+  const siblingQueues = React.useMemo<QueueInfo[]>(() => {
+    if (!parentQueueChildren) {
+      return [];
+    }
+
+    return Array.isArray(parentQueueChildren) ? parentQueueChildren : [parentQueueChildren];
+  }, [parentQueueChildren]);
   const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
 
@@ -505,127 +522,146 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent className="w-[420px]" align="end" sideOffset={8}>
-        <div className="space-y-3">
-          <div className="space-y-1">
+      <PopoverContent
+        className="w-[420px] max-h-[min(80vh,32rem)] overflow-hidden p-0"
+        align="end"
+        sideOffset={8}
+        collisionPadding={16}
+      >
+        <div className="flex h-[min(80vh,32rem)] max-h-full flex-col">
+          <div className="space-y-1 px-4 pt-4">
             <p className="text-sm font-medium">Sibling capacities</p>
             <p className="text-xs text-muted-foreground">
-              Plan adjustments for queues under {parentQueueName} without leaving this editor.
+              Adjust capacities for queues under {parentQueueName}. Adjustments here are staged
+              alongside your current changes.
             </p>
           </div>
 
-          <div className="max-h-72 overflow-y-auto space-y-2 pr-1">
-            {draftRows.length === 0 && (
-              <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
-                No sibling queues found for this parent.
-              </div>
-            )}
-
-            {draftRows.map((row) => (
-              <div
-                key={row.queuePath}
-                className={cn(
-                  'rounded-md border p-3 text-xs ring-offset-background transition',
-                  row.isActiveQueue && 'border-primary/60 bg-primary/5',
-                  row.hasStagedChange && !row.isActiveQueue && 'border-amber-500/70 bg-amber-50/60',
-                  row.isStagedNew && !row.isActiveQueue && 'border-dashed',
-                )}
-              >
-                <div className="flex items-start justify-between gap-3">
-                  <div className="space-y-1">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span className="text-sm font-medium text-foreground">{row.queueName}</span>
-                      {row.isActiveQueue && (
-                        <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                          This queue
-                        </Badge>
-                      )}
-                      {row.hasStagedChange && !row.isActiveQueue && (
-                        <Badge variant="outline" className="h-4 px-1 text-[10px]">
-                          Staged
-                        </Badge>
-                      )}
-                      {row.isStagedNew && !row.isActiveQueue && (
-                        <Badge variant="secondary" className="h-4 px-1 text-[10px]">
-                          New
-                        </Badge>
-                      )}
-                    </div>
-                    <p className="text-muted-foreground break-all text-[11px]">{row.queuePath}</p>
-                  </div>
+          <ScrollArea className="flex-1 px-4">
+            <div className="space-y-2 pb-4 pr-2">
+              {draftRows.length === 0 && (
+                <div className="rounded-md border border-dashed p-3 text-xs text-muted-foreground">
+                  No sibling queues found for this parent.
                 </div>
-
-                <div className="mt-3 grid grid-cols-2 gap-3">
-                  <div className="space-y-1">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Capacity
-                    </Label>
-                    <Input
-                      value={row.capacity}
-                      onChange={(event) =>
-                        handleRowChange(row.queuePath, 'capacity', event.target.value)
-                      }
-                      className="h-8 text-sm"
-                      disabled={applying}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Base: {row.baseCapacity ? `${row.baseCapacity}` : '—'}
-                    </p>
-                  </div>
-                  <div className="space-y-1">
-                    <Label className="text-[11px] uppercase tracking-wide text-muted-foreground">
-                      Max capacity
-                    </Label>
-                    <Input
-                      value={row.maxCapacity}
-                      onChange={(event) =>
-                        handleRowChange(row.queuePath, 'maxCapacity', event.target.value)
-                      }
-                      className="h-8 text-sm"
-                      disabled={applying}
-                    />
-                    <p className="text-[11px] text-muted-foreground">
-                      Base: {row.baseMaxCapacity ? `${row.baseMaxCapacity}` : '—'}
-                    </p>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-
-          <div className="flex items-center justify-between gap-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              disabled={!hasAnyChanges || applying}
-              onClick={handleReset}
-            >
-              Reset
-            </Button>
-            <Button
-              type="button"
-              size="sm"
-              className="text-xs"
-              disabled={!hasNewChanges || applying}
-              onClick={handleApply}
-            >
-              {applying ? (
-                <>
-                  <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
-                  Applying…
-                </>
-              ) : (
-                'Apply adjustments'
               )}
-            </Button>
-          </div>
 
-          <p className="text-[11px] text-muted-foreground">
-            Adjustments here are staged alongside your current changes so you can apply them
-            together.
-          </p>
+              {draftRows.map((row) => (
+                <div
+                  key={row.queuePath}
+                  className={cn(
+                    'rounded-md border p-3 text-xs ring-offset-background transition',
+                    row.isActiveQueue && 'border-primary/60 bg-primary/5',
+                    row.hasStagedChange &&
+                      !row.isActiveQueue &&
+                      'border-amber-500/70 bg-amber-50/60',
+                    row.isStagedNew && !row.isActiveQueue && 'border-dashed',
+                  )}
+                >
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="space-y-1">
+                      <div className="flex flex-wrap items-center gap-2">
+                        <span className="text-sm font-medium text-foreground">{row.queueName}</span>
+                        {row.isActiveQueue && (
+                          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                            This queue
+                          </Badge>
+                        )}
+                        {row.hasStagedChange && !row.isActiveQueue && (
+                          <Badge variant="outline" className="h-4 px-1 text-[10px]">
+                            Staged
+                          </Badge>
+                        )}
+                        {row.isStagedNew && !row.isActiveQueue && (
+                          <Badge variant="secondary" className="h-4 px-1 text-[10px]">
+                            New
+                          </Badge>
+                        )}
+                      </div>
+                      <p className="break-all text-[11px] text-muted-foreground">{row.queuePath}</p>
+                    </div>
+                  </div>
+
+                  <div className="mt-3 grid grid-cols-2 gap-3">
+                    <Field
+                      id={`${row.queuePath}-capacity`}
+                      name={`${row.queuePath}-capacity`}
+                      className="space-y-1"
+                    >
+                      <FieldLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Capacity
+                      </FieldLabel>
+                      <FieldControl>
+                        <Input
+                          value={row.capacity}
+                          onChange={(event) =>
+                            handleRowChange(row.queuePath, 'capacity', event.target.value)
+                          }
+                          className="h-8 text-sm"
+                          disabled={applying}
+                        />
+                      </FieldControl>
+                      <FieldDescription className="text-[11px] text-muted-foreground">
+                        Base: {row.baseCapacity ? `${row.baseCapacity}` : '—'}
+                      </FieldDescription>
+                    </Field>
+                    <Field
+                      id={`${row.queuePath}-max-capacity`}
+                      name={`${row.queuePath}-max-capacity`}
+                      className="space-y-1"
+                    >
+                      <FieldLabel className="text-[11px] uppercase tracking-wide text-muted-foreground">
+                        Max capacity
+                      </FieldLabel>
+                      <FieldControl>
+                        <Input
+                          value={row.maxCapacity}
+                          onChange={(event) =>
+                            handleRowChange(row.queuePath, 'maxCapacity', event.target.value)
+                          }
+                          className="h-8 text-sm"
+                          disabled={applying}
+                        />
+                      </FieldControl>
+                      <FieldDescription className="text-[11px] text-muted-foreground">
+                        Base: {row.baseMaxCapacity ? `${row.baseMaxCapacity}` : '—'}
+                      </FieldDescription>
+                    </Field>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </ScrollArea>
+
+          <div className="space-y-2 px-4 pb-4">
+            <div className="flex items-center justify-between gap-2">
+              <Button
+                type="button"
+                variant="ghost"
+                size="sm"
+                className="text-xs"
+                disabled={!hasAnyChanges || applying}
+                onClick={handleReset}
+              >
+                Reset
+              </Button>
+              <Button
+                type="button"
+                size="sm"
+                className="text-xs"
+                disabled={!hasNewChanges || applying}
+                onClick={handleApply}
+              >
+                {applying ? (
+                  <>
+                    <Loader2 className="mr-2 h-3.5 w-3.5 animate-spin" />
+                    Applying…
+                  </>
+                ) : (
+                  'Apply adjustments'
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </PopoverContent>
     </Popover>

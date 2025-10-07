@@ -12,7 +12,13 @@ import {
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
-import { Label } from '~/components/ui/label';
+import {
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -145,58 +151,67 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           {/* Queue Name */}
-          <div className="space-y-2">
-            <Label htmlFor="queueName">
+          <Field>
+            <FieldLabel htmlFor="queueName">
               Queue Name <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              {...register('queueName')}
-              id="queueName"
-              placeholder="e.g., production, development"
-              autoFocus
-            />
-            {errors.queueName && <p className="text-sm text-red-500">{errors.queueName.message}</p>}
-          </div>
+            </FieldLabel>
+            <FieldControl>
+              <Input
+                {...register('queueName')}
+                id="queueName"
+                placeholder="e.g., production, development"
+                autoFocus
+                aria-invalid={Boolean(errors.queueName)}
+              />
+            </FieldControl>
+            {errors.queueName && <FieldMessage>{errors.queueName.message}</FieldMessage>}
+          </Field>
 
           {/* Capacity */}
-          <div className="space-y-2">
-            <Label htmlFor="capacity">
+          <Field>
+            <FieldLabel htmlFor="capacity">
               Capacity <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              {...register('capacity')}
-              id="capacity"
-              type="text"
-              placeholder="e.g., 50, 10w, [memory=1024,vcores=1]"
-            />
-            {errors.capacity && <p className="text-sm text-red-500">{errors.capacity.message}</p>}
-            {!errors.capacity && (
-              <p className="text-sm text-muted-foreground">
+            </FieldLabel>
+            <FieldControl>
+              <Input
+                {...register('capacity')}
+                id="capacity"
+                type="text"
+                placeholder="e.g., 50, 10w, [memory=1024,vcores=1]"
+                aria-invalid={Boolean(errors.capacity)}
+              />
+            </FieldControl>
+            {errors.capacity ? (
+              <FieldMessage>{errors.capacity.message}</FieldMessage>
+            ) : (
+              <FieldDescription>
                 Percentage (50), weight (10w), or absolute ([memory=1024,vcores=1])
-              </p>
+              </FieldDescription>
             )}
-          </div>
+          </Field>
 
           {/* Max Capacity */}
-          <div className="space-y-2">
-            <Label htmlFor="maxCapacity">
+          <Field>
+            <FieldLabel htmlFor="maxCapacity">
               Max Capacity <span className="text-red-500">*</span>
-            </Label>
-            <Input
-              {...register('maxCapacity')}
-              id="maxCapacity"
-              type="text"
-              placeholder="e.g., 100, 20w, [memory=2048,vcores=2]"
-            />
-            {errors.maxCapacity && (
-              <p className="text-sm text-red-500">{errors.maxCapacity.message}</p>
-            )}
-            {!errors.maxCapacity && (
-              <p className="text-sm text-muted-foreground">
+            </FieldLabel>
+            <FieldControl>
+              <Input
+                {...register('maxCapacity')}
+                id="maxCapacity"
+                type="text"
+                placeholder="e.g., 100, 20w, [memory=2048,vcores=2]"
+                aria-invalid={Boolean(errors.maxCapacity)}
+              />
+            </FieldControl>
+            {errors.maxCapacity ? (
+              <FieldMessage>{errors.maxCapacity.message}</FieldMessage>
+            ) : (
+              <FieldDescription>
                 Maximum capacity this queue can grow to (percentage or absolute format)
-              </p>
+              </FieldDescription>
             )}
-          </div>
+          </Field>
           <div className="flex justify-end">
             <CapacityAdjustPopover
               parentQueuePath={parentQueuePath}
@@ -210,21 +225,23 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
           </div>
 
           {/* State */}
-          <div className="space-y-2">
-            <Label htmlFor="state">State</Label>
+          <Field>
+            <FieldLabel htmlFor="state">State</FieldLabel>
             <Select
               value={watch('state')}
               onValueChange={(value) => setValue('state', value as 'RUNNING' | 'STOPPED')}
             >
-              <SelectTrigger id="state">
-                <SelectValue />
-              </SelectTrigger>
+              <FieldControl>
+                <SelectTrigger id="state">
+                  <SelectValue />
+                </SelectTrigger>
+              </FieldControl>
               <SelectContent>
                 <SelectItem value="RUNNING">Running</SelectItem>
                 <SelectItem value="STOPPED">Stopped</SelectItem>
               </SelectContent>
             </Select>
-          </div>
+          </Field>
 
           <DialogFooter>
             <Button type="button" variant="outline" onClick={handleClose}>

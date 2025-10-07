@@ -398,9 +398,10 @@ describe('AddLabelDialog', () => {
       expect(nameLabel).toHaveAttribute('for', 'label-name');
       expect(nameInput).toHaveAttribute('id', 'label-name');
 
-      const exclusiveLabel = screen.getByText('Exclusive Label');
+      const exclusiveLabel = screen.getByText('Exclusive Label').closest('label');
       const exclusiveSwitch = screen.getByRole('switch');
-      expect(exclusiveLabel).toHaveAttribute('for', 'exclusive');
+      expect(exclusiveLabel).not.toBeNull();
+      expect(exclusiveLabel as HTMLLabelElement).toHaveAttribute('for', 'exclusive');
       expect(exclusiveSwitch).toHaveAttribute('id', 'exclusive');
     });
 

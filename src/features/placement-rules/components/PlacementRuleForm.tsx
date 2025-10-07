@@ -1,14 +1,13 @@
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
+import { Form, FormField } from '~/components/ui/form';
 import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '~/components/ui/form';
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
 import {
@@ -18,7 +17,7 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '~/components/ui/card';
 import { Combobox } from '~/components/ui/combobox';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -95,47 +94,55 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="type"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Rule Type</FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Rule Type</FieldLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
+                      <FieldControl aria-invalid={Boolean(fieldState.error)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select rule type" />
                         </SelectTrigger>
-                      </FormControl>
+                      </FieldControl>
                       <SelectContent>
                         <SelectItem value="user">User</SelectItem>
                         <SelectItem value="group">Group</SelectItem>
                         <SelectItem value="application">Application</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>
+                    <FieldDescription>
                       Match applications based on submitting user, group, or application name
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
 
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="matches"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Match Pattern</FormLabel>
-                    <FormControl>
-                      <Input {...field} placeholder="* for all, or specific pattern" />
-                    </FormControl>
-                    <FormDescription>
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Match Pattern</FieldLabel>
+                    <FieldControl>
+                      <Input
+                        {...field}
+                        placeholder="* for all, or specific pattern"
+                        aria-invalid={Boolean(fieldState.error)}
+                      />
+                    </FieldControl>
+                    <FieldDescription>
                       {selectedType === 'user' && 'Use * to match all users, or specify usernames'}
                       {selectedType === 'group' &&
                         'Use * to match all groups, or specify group names'}
                       {selectedType === 'application' &&
                         'Use * to match all apps, or patterns like spark-*'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
             </div>
@@ -143,15 +150,15 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
             <FormField
               control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
               name="policy"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Placement Policy</FormLabel>
+              render={({ field, fieldState }) => (
+                <Field>
+                  <FieldLabel>Placement Policy</FieldLabel>
                   <Select onValueChange={field.onChange} value={field.value}>
-                    <FormControl>
+                    <FieldControl aria-invalid={Boolean(fieldState.error)}>
                       <SelectTrigger>
                         <SelectValue placeholder="Select placement policy" />
                       </SelectTrigger>
-                    </FormControl>
+                    </FieldControl>
                     <SelectContent>
                       {Object.entries(POLICY_DISPLAY_NAMES).map(([value, label]) => (
                         <SelectItem key={value} value={value}>
@@ -160,16 +167,18 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                       ))}
                     </SelectContent>
                   </Select>
-                  <FormDescription>
+                  <FieldDescription>
                     {(() => {
                       const policy = getPolicyDescription(field.value);
                       return policy
                         ? policy.description
                         : 'Determines how the queue path is constructed for matching applications';
                     })()}
-                  </FormDescription>
-                  <FormMessage />
-                </FormItem>
+                  </FieldDescription>
+                  {fieldState.error && (
+                    <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                  )}
+                </Field>
               )}
             />
 
@@ -177,12 +186,12 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="value"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>
                       {selectedPolicy === 'setDefaultQueue' ? 'Default Queue' : 'Queue Value'}
-                    </FormLabel>
-                    <FormControl>
+                    </FieldLabel>
+                    <FieldControl aria-invalid={Boolean(fieldState.error)}>
                       <Combobox
                         value={field.value || ''}
                         onValueChange={field.onChange}
@@ -194,14 +203,16 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                           selectedPolicy === 'setDefaultQueue' ? 'Default Queue' : 'Queue Value'
                         }
                       />
-                    </FormControl>
-                    <FormDescription>
+                    </FieldControl>
+                    <FieldDescription>
                       {selectedPolicy === 'setDefaultQueue'
                         ? 'The new default queue path that will be used by subsequent defaultQueue policies'
                         : 'The specific queue path where matching applications will be placed'}
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
             )}
@@ -210,10 +221,10 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="parentQueue"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Parent Queue</FormLabel>
-                    <FormControl>
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Parent Queue</FieldLabel>
+                    <FieldControl aria-invalid={Boolean(fieldState.error)}>
                       <Combobox
                         value={field.value || ''}
                         onValueChange={field.onChange}
@@ -223,12 +234,14 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                         emptyText="No parent queues found."
                         aria-label="Parent Queue"
                       />
-                    </FormControl>
-                    <FormDescription>
+                    </FieldControl>
+                    <FieldDescription>
                       The parent queue under which user/group queues will be created
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
             )}
@@ -237,20 +250,26 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="customPlacement"
-                render={({ field }) => (
-                  <FormItem>
+                render={({ field, fieldState }) => (
+                  <Field>
                     <div className="flex items-center justify-between">
-                      <FormLabel>Custom Placement Pattern</FormLabel>
+                      <FieldLabel>Custom Placement Pattern</FieldLabel>
                       <CustomPlacementHelpDialog triggerText="View Variables" />
                     </div>
-                    <FormControl>
-                      <Input {...field} placeholder="e.g., root.%primary_group.%user" />
-                    </FormControl>
-                    <FormDescription>
+                    <FieldControl>
+                      <Input
+                        {...field}
+                        placeholder="e.g., root.%primary_group.%user"
+                        aria-invalid={Boolean(fieldState.error)}
+                      />
+                    </FieldControl>
+                    <FieldDescription>
                       Use variables to construct dynamic queue paths based on user attributes
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
             )}
@@ -261,19 +280,14 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                   control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                   name="create"
                   render={({ field }) => (
-                    <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                      <div className="space-y-0.5">
-                        <FormLabel className="text-base">
-                          Create queue if it doesn't exist
-                        </FormLabel>
-                        <FormDescription>
-                          Automatically create the target queue with default settings if not found
-                        </FormDescription>
-                      </div>
-                      <FormControl>
-                        <Switch checked={field.value} onCheckedChange={field.onChange} />
-                      </FormControl>
-                    </FormItem>
+                    <FieldSwitch
+                      id="create"
+                      fieldName={field.name}
+                      label="Create queue if it doesn't exist"
+                      description="Automatically create the target queue with default settings if not found"
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
                   )}
                 />
               )}
@@ -281,26 +295,28 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="fallbackResult"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Fallback Behavior</FormLabel>
+                render={({ field, fieldState }) => (
+                  <Field>
+                    <FieldLabel>Fallback Behavior</FieldLabel>
                     <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
+                      <FieldControl aria-invalid={Boolean(fieldState.error)}>
                         <SelectTrigger>
                           <SelectValue placeholder="Select fallback behavior" />
                         </SelectTrigger>
-                      </FormControl>
+                      </FieldControl>
                       <SelectContent>
                         <SelectItem value="skip">Skip to next rule</SelectItem>
                         <SelectItem value="placeDefault">Place in default queue</SelectItem>
                         <SelectItem value="reject">Reject application</SelectItem>
                       </SelectContent>
                     </Select>
-                    <FormDescription>
+                    <FieldDescription>
                       What happens if this rule matches but cannot place the application
-                    </FormDescription>
-                    <FormMessage />
-                  </FormItem>
+                    </FieldDescription>
+                    {fieldState.error && (
+                      <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
+                    )}
+                  </Field>
                 )}
               />
             </div>

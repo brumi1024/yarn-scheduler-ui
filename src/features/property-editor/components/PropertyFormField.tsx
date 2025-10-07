@@ -2,12 +2,19 @@ import React from 'react';
 import type { Control, ControllerRenderProps, FormState, UseFormSetValue } from 'react-hook-form';
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
-import { Switch } from '~/components/ui/switch';
+import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '~/components/ui/form';
-import { HelpCircle, Info, AlertTriangle } from 'lucide-react';
+import { FormField } from '~/components/ui/form';
+import {
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
+import { Info, AlertTriangle } from 'lucide-react';
 import {
   CapacityAdjustPopover,
   type CapacityAdjustmentMap,
@@ -88,47 +95,33 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5 flex-1 min-w-0">
-              <FormLabel
-                className={cn(
-                  'flex items-center gap-1',
-                  !isFieldEnabled && 'text-muted-foreground',
-                )}
-              >
-                <span className="truncate">
-                  {property.displayName}
-                  {property.required ? ' *' : ''}
-                </span>
-                {stagedStatus === 'modified' && (
-                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                    Staged
-                  </Badge>
-                )}
-                {property.description && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                  </Tooltip>
-                )}
-              </FormLabel>
-            </div>
-            <FormControl>
-              <Switch
-                checked={field.value === 'true'}
-                onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
-                disabled={!isFieldEnabled}
-              />
-            </FormControl>
-          </FormItem>
+          <FieldSwitch
+            id={fieldName}
+            fieldName={fieldName}
+            label={`${property.displayName}${property.required ? ' *' : ''}`}
+            labelSuffix={
+              stagedStatus === 'modified' ? (
+                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                  Staged
+                </Badge>
+              ) : null
+            }
+            description={property.description}
+            labelProps={{
+              className: cn(!isFieldEnabled && 'text-muted-foreground'),
+            }}
+            disabled={!isFieldEnabled}
+            checked={field.value === 'true'}
+            onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
+            switchClassName={commonProps.className}
+            message={error ? String(error.message ?? '') : undefined}
+          />
         );
 
       case 'enum':
         return (
-          <FormItem>
-            <FormLabel
+          <Field>
+            <FieldLabel
               className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
@@ -140,16 +133,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   Staged
                 </Badge>
               )}
-              {property.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                </Tooltip>
-              )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               <ToggleGroup
                 type="single"
                 value={field.value || ''}
@@ -169,15 +154,20 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+            </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+          </Field>
         );
 
       case 'number':
         return (
-          <FormItem>
-            <FormLabel
+          <Field>
+            <FieldLabel
               className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
@@ -189,16 +179,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   Staged
                 </Badge>
               )}
-              {property.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                </Tooltip>
-              )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               <div className="relative">
                 <Input
                   type="number"
@@ -212,6 +194,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   min={property.validationRules?.find((r) => r.type === 'range')?.min}
                   max={property.validationRules?.find((r) => r.type === 'range')?.max}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
                     error && 'ring-2 ring-destructive ring-offset-1',
@@ -223,9 +206,14 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </span>
                 )}
               </div>
-            </FormControl>
-            <FormMessage />
-          </FormItem>
+            </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+          </Field>
         );
 
       default: {
@@ -268,12 +256,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         };
 
         return (
-          <FormItem>
-            <FormLabel
-              className={cn(
-                'flex items-center gap-2 justify-between',
-                !isFieldEnabled && 'text-muted-foreground',
-              )}
+          <Field>
+            <FieldLabel
+            //</Field>className={cn(
+            //  'flex items-center gap-2 justify-between',
+            //  !isFieldEnabled && 'text-muted-foreground',
+            //)}
             >
               <div className="flex items-center gap-1 min-w-0">
                 <span className="truncate">
@@ -284,14 +272,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
                     Staged
                   </Badge>
-                )}
-                {property.description && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                  </Tooltip>
                 )}
               </div>
 
@@ -307,8 +287,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   onApply={handleApplyAdjustments}
                 />
               )}
-            </FormLabel>
-            <FormControl>
+            </FieldLabel>
+            <FieldControl>
               {property.name.includes('acl') ? (
                 <textarea
                   value={field.value || ''}
@@ -324,6 +304,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     commonProps.className,
                   )}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                 />
               ) : (
                 <Input
@@ -336,15 +317,20 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   }}
                   placeholder={property.defaultValue || undefined}
                   disabled={!isFieldEnabled}
+                  aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
                     error && 'ring-2 ring-destructive ring-offset-1',
                   )}
                 />
               )}
-            </FormControl>
-            <FormMessage />
-            {/* Business validation warnings */}
+            </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
             {warnings.length > 0 && (
               <div className="mt-1 space-y-1">
                 {warnings.map((warning, index) => {
@@ -372,7 +358,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 })}
               </div>
             )}
-          </FormItem>
+          </Field>
         );
       }
     }
