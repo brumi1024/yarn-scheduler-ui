@@ -29,6 +29,12 @@ export type DisplayFormat = {
   decimals?: number;
 };
 
+export type PropertyEnumOption = {
+  value: string;
+  label: string;
+  description?: string;
+};
+
 export type PropertyDescriptor = {
   name: string;
   displayName: string;
@@ -38,7 +44,8 @@ export type PropertyDescriptor = {
   defaultValue: string;
   required: boolean;
   validationRules?: ValidationRule[];
-  enumValues?: string[];
+  enumValues?: PropertyEnumOption[];
+  enumDisplay?: 'toggle' | 'choiceCard' | 'select';
   dependsOn?: string[];
   enableWhen?: Record<string, (value: string) => boolean>;
   displayFormat?: DisplayFormat;

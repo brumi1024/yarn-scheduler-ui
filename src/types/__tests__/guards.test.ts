@@ -238,7 +238,10 @@ describe('Type Guards', () => {
     it('should validate enum properties', () => {
       const descriptor = {
         type: 'enum' as const,
-        enumValues: ['RUNNING', 'STOPPED', 'DRAINING'],
+        enumValues: [
+          { value: 'RUNNING', label: 'Running' },
+          { value: 'STOPPED', label: 'Stopped' },
+        ],
       };
 
       expect(isValidPropertyValue('RUNNING', descriptor)).toBe(true);

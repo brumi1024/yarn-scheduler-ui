@@ -78,13 +78,13 @@ describe('propertyDefinitions', () => {
     it('has enum values for enum type properties', () => {
       const stateProperty = queuePropertyDefinitions.find((p) => p.name === 'state');
       expect(stateProperty?.type).toBe('enum');
-      expect(stateProperty?.enumValues).toContain('RUNNING');
-      expect(stateProperty?.enumValues).toContain('STOPPED');
+      expect(stateProperty?.enumValues?.some((option) => option.value === 'RUNNING')).toBe(true);
+      expect(stateProperty?.enumValues?.some((option) => option.value === 'STOPPED')).toBe(true);
 
       const orderingPolicy = queuePropertyDefinitions.find((p) => p.name === 'ordering-policy');
       expect(orderingPolicy?.type).toBe('enum');
-      expect(orderingPolicy?.enumValues).toContain('fifo');
-      expect(orderingPolicy?.enumValues).toContain('fair');
+      expect(orderingPolicy?.enumValues?.some((option) => option.value === 'fifo')).toBe(true);
+      expect(orderingPolicy?.enumValues?.some((option) => option.value === 'fair')).toBe(true);
     });
 
     it('has conditional enableWhen for dependent properties', () => {
@@ -158,12 +158,18 @@ describe('propertyDefinitions', () => {
         (p) => p.name === `${CONFIG_PREFIXES.BASE}.resource-calculator`,
       );
       expect(resourceCalcProperty?.type).toBe('enum');
-      expect(resourceCalcProperty?.enumValues).toContain(
-        'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
-      );
-      expect(resourceCalcProperty?.enumValues).toContain(
-        'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
-      );
+      expect(
+        resourceCalcProperty?.enumValues?.some(
+          (option) =>
+            option.value === 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+        ),
+      ).toBe(true);
+      expect(
+        resourceCalcProperty?.enumValues?.some(
+          (option) =>
+            option.value === 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+        ),
+      ).toBe(true);
     });
   });
 

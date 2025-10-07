@@ -107,7 +107,7 @@ export function isValidPropertyValue(
       return value.toLowerCase() === 'true' || value.toLowerCase() === 'false';
 
     case 'enum':
-      return descriptor.enumValues?.includes(value) ?? false;
+      return descriptor.enumValues?.some((option) => option.value === value) ?? false;
 
     case 'string':
       if (descriptor.validationRules) {
