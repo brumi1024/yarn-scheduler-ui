@@ -117,8 +117,7 @@ describe('PropertyFormField', () => {
     expect(screen.getByText('Capacity *')).toBeInTheDocument();
   });
 
-  it('should show tooltip with property description', async () => {
-    const user = userEvent.setup();
+  it('should display the property description inline', () => {
     const property = getMockPropertyDescriptor({
       name: 'capacity',
       displayName: 'Capacity',
@@ -126,21 +125,13 @@ describe('PropertyFormField', () => {
       type: 'string',
     });
 
-    const { container } = render(
+    render(
       <FormWrapper>
         <PropertyFormField property={property} control={undefined as any} />
       </FormWrapper>,
     );
 
-    const helpIcon = container.querySelector('svg[class*="lucide"]');
-
-    if (helpIcon) {
-      await user.hover(helpIcon);
-      const tooltipText = await screen.findAllByText('This is the capacity description');
-      expect(tooltipText.length).toBeGreaterThan(0);
-    } else {
-      throw new Error('Help icon not found');
-    }
+    expect(screen.getByText('This is the capacity description')).toBeInTheDocument();
   });
 
   it('should show staged badge when field is modified', () => {

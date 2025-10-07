@@ -7,8 +7,14 @@ import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { FormField } from '~/components/ui/form';
-import { Field, FieldControl, FieldLabel, FieldMessage } from '~/components/ui/field';
-import { HelpCircle, Info, AlertTriangle } from 'lucide-react';
+import {
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
+import { Info, AlertTriangle } from 'lucide-react';
 import {
   CapacityAdjustPopover,
   type CapacityAdjustmentMap,
@@ -90,7 +96,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       case 'boolean':
         return (
           <Field className="flex flex-row items-center justify-between rounded-lg border p-3">
-            <div className="space-y-0.5 flex-1 min-w-0">
+            <div className="flex-1 min-w-0 space-y-1">
               <FieldLabel
                 className={cn(
                   'flex items-center gap-1',
@@ -106,15 +112,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     Staged
                   </Badge>
                 )}
-                {property.description && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                  </Tooltip>
-                )}
               </FieldLabel>
+              {property.description && (
+                <FieldDescription className="text-xs text-muted-foreground">
+                  {property.description}
+                </FieldDescription>
+              )}
             </div>
             <FieldControl>
               <Switch
@@ -141,14 +144,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   Staged
                 </Badge>
               )}
-              {property.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                </Tooltip>
-              )}
             </FieldLabel>
             <FieldControl>
               <ToggleGroup
@@ -171,6 +166,11 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 ))}
               </ToggleGroup>
             </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
             {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
           </Field>
         );
@@ -189,14 +189,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
                   Staged
                 </Badge>
-              )}
-              {property.description && (
-                <Tooltip>
-                  <TooltipTrigger asChild>
-                    <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                  </TooltipTrigger>
-                  <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                </Tooltip>
               )}
             </FieldLabel>
             <FieldControl>
@@ -226,6 +218,11 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 )}
               </div>
             </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
             {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
           </Field>
         );
@@ -287,14 +284,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     Staged
                   </Badge>
                 )}
-                {property.description && (
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <HelpCircle className="h-3.5 w-3.5 text-muted-foreground cursor-help shrink-0" />
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">{property.description}</TooltipContent>
-                  </Tooltip>
-                )}
               </div>
 
               {shouldShowPopover && (
@@ -347,6 +336,11 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 />
               )}
             </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
             {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
             {/* Business validation warnings */}
             {warnings.length > 0 && (
