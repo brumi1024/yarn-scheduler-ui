@@ -51,7 +51,18 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'general' as PropertyCategory,
     defaultValue: 'RUNNING',
     required: false,
-    enumValues: ['RUNNING', 'STOPPED'],
+    enumValues: [
+      {
+        value: 'RUNNING',
+        label: 'Running',
+        description: 'Queue accepts and schedules new applications.',
+      },
+      {
+        value: 'STOPPED',
+        label: 'Stopped',
+        description: 'Queue rejects new applications but continues existing workloads.',
+      },
+    ],
   },
 
   {
@@ -155,7 +166,18 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
-    enumValues: ['fifo', 'fair'],
+    enumValues: [
+      {
+        value: 'fifo',
+        label: 'FIFO',
+        description: 'First-in First-out scheduling; simple ordering for predictable workloads.',
+      },
+      {
+        value: 'fair',
+        label: 'Fair',
+        description: 'Balances resource allocation across applications for fairness.',
+      },
+    ],
   },
   {
     name: 'ordering-policy.fair.enable-size-based-weight',

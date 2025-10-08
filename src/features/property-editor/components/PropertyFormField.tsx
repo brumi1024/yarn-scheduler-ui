@@ -118,8 +118,90 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           />
         );
 
-      case 'enum':
-        return (
+      case 'enum': {
+        const enumOptions = property.enumValues ?? [];
+
+        if (!enumOptions.length) {
+          return (
+            <Field>
+              <FieldLabel>{property.displayName}</FieldLabel>
+              <FieldDescription className="text-xs text-muted-foreground">
+                No options available.
+              </FieldDescription>
+            </Field>
+          );
+        }
+
+        const renderChoiceCards = () => (
+          <Field>
+            <FieldLabel
+              className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
+            >
+              <span className="truncate">
+                {property.displayName}
+                {property.required ? ' *' : ''}
+              </span>
+              {stagedStatus === 'modified' && (
+                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                  Staged
+                </Badge>
+              )}
+            </FieldLabel>
+            <FieldControl>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {enumOptions.map((option) => {
+                  const isSelected = field.value === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'relative flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition',
+                        'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+                        isSelected
+                          ? 'border-primary ring-2 ring-primary'
+                          : 'border-border hover:border-primary/60',
+                        !isFieldEnabled && 'cursor-not-allowed opacity-60',
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name={fieldName}
+                          value={option.value}
+                          checked={isSelected}
+                          onChange={() => field.onChange(option.value)}
+                          disabled={!isFieldEnabled}
+                          className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-sm font-medium leading-none">{option.label}</span>
+                            {isSelected && (
+                              <Badge variant="secondary" className="text-[10px] px-1.5 py-0">
+                                Selected
+                              </Badge>
+                            )}
+                          </div>
+                          {option.description && (
+                            <p className="text-xs text-muted-foreground">{option.description}</p>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+            </FieldControl>
+            {property.description && (
+              <FieldDescription className="text-xs text-muted-foreground">
+                {property.description}
+              </FieldDescription>
+            )}
+            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+          </Field>
+        );
+
+        const renderToggleGroup = () => (
           <Field>
             <FieldLabel
               className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
@@ -139,7 +221,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 type="single"
                 value={field.value || ''}
                 onValueChange={(value) => {
-                  // Prevent deselection - keep current value if empty
                   if (value) {
                     field.onChange(value);
                   }
@@ -148,9 +229,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 className="justify-start flex-wrap"
                 variant="outline"
               >
-                {property.enumValues?.map((option) => (
-                  <ToggleGroupItem key={option} value={option} className="text-xs">
-                    {option}
+                {enumOptions.map((option) => (
+                  <ToggleGroupItem key={option.value} value={option.value} className="text-xs">
+                    {option.label}
                   </ToggleGroupItem>
                 ))}
               </ToggleGroup>
@@ -163,6 +244,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
           </Field>
         );
+
+        if (property.enumDisplay === 'choiceCard') {
+          return renderChoiceCards();
+        }
+        return renderToggleGroup();
+      }
 
       case 'number':
         return (
@@ -258,10 +345,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         return (
           <Field>
             <FieldLabel
-            //</Field>className={cn(
-            //  'flex items-center gap-2 justify-between',
-            //  !isFieldEnabled && 'text-muted-foreground',
-            //)}
+              className={cn(
+                'flex items-center gap-2 justify-between',
+                !isFieldEnabled && 'text-muted-foreground',
+              )}
             >
               <div className="flex items-center gap-1 min-w-0">
                 <span className="truncate">

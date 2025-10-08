@@ -79,13 +79,15 @@ describe('PropertyDescriptor interface', () => {
       category: 'general',
       defaultValue: 'RUNNING',
       required: true,
-      enumValues: ['RUNNING', 'STOPPED', 'DRAINING'],
+      enumValues: [
+        { value: 'RUNNING', label: 'Running' },
+        { value: 'STOPPED', label: 'Stopped' },
+      ],
     };
 
     expect(enumDescriptor.type).toBe('enum');
-    expect(enumDescriptor.enumValues).toContain('RUNNING');
-    expect(enumDescriptor.enumValues).toContain('STOPPED');
-    expect(enumDescriptor.enumValues).toContain('DRAINING');
+    expect(enumDescriptor.enumValues?.some((option) => option.value === 'RUNNING')).toBe(true);
+    expect(enumDescriptor.enumValues?.some((option) => option.value === 'STOPPED')).toBe(true);
   });
 
   it('should handle string property with pattern validation', () => {

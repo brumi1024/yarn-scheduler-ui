@@ -47,12 +47,22 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     description: 'Class used to calculate resource requirements.',
     type: 'enum' as PropertyType,
     category: 'resource' as PropertyCategory,
-    defaultValue: 'DefaultResourceCalculator',
+    defaultValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
     required: false,
     enumValues: [
-      'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
-      'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+      {
+        value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+        label: 'Default (Memory Only)',
+        description: 'Memory-based calculator suitable for clusters without CPU enforcement.',
+      },
+      {
+        value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+        label: 'Dominant Resource',
+        description:
+          'Considers the dominant resource usage across memory and CPU for fair scheduling.',
+      },
     ],
+    enumDisplay: 'choiceCard',
   },
   {
     name: 'yarn.scheduler.capacity.user.max-parallel-apps',
@@ -138,7 +148,18 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: 'legacy',
     required: false,
-    enumValues: ['legacy', 'json'],
+    enumValues: [
+      {
+        value: 'legacy',
+        label: 'Legacy',
+        description: 'Comma-separated mapping rules compatible with earlier scheduler versions.',
+      },
+      {
+        value: 'json',
+        label: 'JSON',
+        description: 'Structured JSON mapping rules for complex placement policies.',
+      },
+    ],
   },
   {
     name: 'yarn.scheduler.capacity.mapping-rule-json',

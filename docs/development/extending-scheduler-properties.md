@@ -17,7 +17,8 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    - Global descriptors must use the fully qualified key (for example, `yarn.scheduler.capacity.maximum-applications`).
    - Set `displayName`, `description`, `type`, `category`, `defaultValue`, and `required`.
    - Add `validationRules` for basic checks (`range`, `pattern`, or `custom`). Import helpers from `src/config/schemas/validation.ts` when possible.
-   - Provide `enumValues` when `type` is `enum`, and use `displayFormat` for human-friendly suffixes.
+   - Provide `enumValues` when `type` is `enum`. Each option must supply `{ value, label, description? }` so the UI has user-facing copy while keeping the serialized value. Use `enumDisplay` to opt into alternative layouts (`choiceCard`, `toggle`, or `select`).
+   - Use `displayFormat` for human-friendly suffixes on numeric inputs.
 
    ```ts
    {
@@ -34,6 +35,33 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    },
    ```
 
+   For enum properties:
+
+   ```ts
+   {
+     name: 'yarn.scheduler.capacity.resource-calculator',
+     displayName: 'Resource Calculator',
+     description: 'Select the class that evaluates multi-resource usage.',
+     type: 'enum',
+     category: 'resource',
+     defaultValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+     required: false,
+     enumDisplay: 'choiceCard',
+     enumValues: [
+       {
+         value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+         label: 'Default (Memory Only)',
+         description: 'Legacy calculator that considers memory usage exclusively.',
+       },
+       {
+         value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+         label: 'Dominant Resource',
+         description: 'Balances allocations across memory, CPU, and custom resources.',
+       },
+     ],
+   },
+   ```
+
 2. **Adjust the UI if needed.** The global settings screen renders inputs based on `PropertyDescriptor.type`. For custom widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
 3. **Update tests.** If the new property should be covered by `propertyDefinitions.test.ts`, add expectations there.
 4. **Verify** by running the app or unit tests (`npm run test`) and confirming the new field appears under the correct category with the expected validation message.
@@ -43,6 +71,7 @@ This guide explains how to make new Capacity Scheduler properties editable in th
 1. **Add a descriptor** in `src/config/properties/queue-properties.ts`.
    - Queue descriptors omit the scheduler prefix; use the short key (`capacity`, `ordering-policy`, etc.).
    - Populate the same core fields as for global descriptors. Use `enableWhen` to express dependencies on other fields, and `dependsOn` to record soft dependencies for search.
+   - For enum properties, use the `{ value, label, description? }` shape for `enumValues` and choose a `enumDisplay` variant when the default toggle group is not appropriate.
    - If the property should be required for new queues, set `required: true` so the property editor enforces it.
 
    ```ts

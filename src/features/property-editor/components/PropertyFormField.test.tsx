@@ -85,7 +85,10 @@ describe('PropertyFormField', () => {
       name: 'state',
       displayName: 'State',
       type: 'enum',
-      enumValues: ['RUNNING', 'STOPPED'],
+      enumValues: [
+        { value: 'RUNNING', label: 'Running' },
+        { value: 'STOPPED', label: 'Stopped' },
+      ],
       required: false,
     });
 
@@ -95,9 +98,40 @@ describe('PropertyFormField', () => {
       </FormWrapper>,
     );
 
-    expect(screen.getByRole('radio', { name: 'RUNNING' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'STOPPED' })).toBeInTheDocument();
-    expect(screen.getByRole('radio', { name: 'RUNNING' })).toHaveAttribute('data-state', 'on');
+    expect(screen.getByRole('radio', { name: 'Running' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Stopped' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Running' })).toHaveAttribute('data-state', 'on');
+  });
+
+  it('renders choice cards for enum properties requesting card layout', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'resource-calculator',
+      displayName: 'Resource Calculator',
+      type: 'enum',
+      enumDisplay: 'choiceCard',
+      enumValues: [
+        {
+          value: 'default',
+          label: 'Default (Memory Only)',
+          description: 'Memory-based calculator for simple clusters.',
+        },
+        {
+          value: 'dominant',
+          label: 'Dominant Resource',
+          description: 'Considers both memory and CPU for fairness.',
+        },
+      ],
+    });
+
+    render(
+      <FormWrapper defaultValues={{ 'resource-calculator': 'default' }}>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    expect(screen.getByRole('radio', { name: /Default \(Memory Only\)/i })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: /Dominant Resource/i })).toBeInTheDocument();
+    expect(screen.getByText('Memory-based calculator for simple clusters.')).toBeInTheDocument();
   });
 
   it('should show required indicator for required fields', () => {
@@ -219,7 +253,10 @@ describe('PropertyFormField', () => {
       name: 'state',
       displayName: 'State',
       type: 'enum',
-      enumValues: ['RUNNING', 'STOPPED'],
+      enumValues: [
+        { value: 'RUNNING', label: 'Running' },
+        { value: 'STOPPED', label: 'Stopped' },
+      ],
     });
 
     render(
@@ -228,7 +265,7 @@ describe('PropertyFormField', () => {
       </FormWrapper>,
     );
 
-    const runningToggle = screen.getByRole('radio', { name: 'RUNNING' });
+    const runningToggle = screen.getByRole('radio', { name: 'Running' });
     expect(runningToggle).toHaveAttribute('data-state', 'on');
 
     // Try to click the already selected toggle

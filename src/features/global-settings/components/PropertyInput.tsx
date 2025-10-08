@@ -10,6 +10,7 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
+import { cn } from '~/utils/cn';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import { HighlightedText } from '~/components/search/HighlightedText';
 
@@ -63,7 +64,70 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
           />
         );
 
-      case 'enum':
+      case 'enum': {
+        const enumOptions = property.enumValues ?? [];
+
+        if (property.enumDisplay === 'choiceCard' && enumOptions.length > 0) {
+          const currentValue = value || property.defaultValue || '';
+
+          return (
+            <Field className="space-y-2">
+              <div className="flex items-center justify-between">
+                <FieldLabel htmlFor={property.name}>{labelNode}</FieldLabel>
+                {stagedBadge}
+              </div>
+              <div className="grid gap-3 sm:grid-cols-2">
+                {enumOptions.map((option) => {
+                  const isSelected = currentValue === option.value;
+                  return (
+                    <label
+                      key={option.value}
+                      className={cn(
+                        'relative flex cursor-pointer flex-col gap-2 rounded-lg border p-4 text-left transition',
+                        'focus-within:outline-none focus-within:ring-2 focus-within:ring-ring focus-within:ring-offset-2',
+                        isSelected
+                          ? 'border-primary ring-2 ring-primary'
+                          : 'border-border hover:border-primary/60',
+                      )}
+                    >
+                      <div className="flex items-start gap-3">
+                        <input
+                          type="radio"
+                          name={property.name}
+                          value={option.value}
+                          checked={isSelected}
+                          onChange={() => onChange(option.value)}
+                          className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                        />
+                        <div className="flex-1 space-y-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <span className="text-sm font-medium leading-none">{option.label}</span>
+                            {isSelected && (
+                              <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                                Selected
+                              </Badge>
+                            )}
+                          </div>
+                          {option.description && (
+                            <span className="text-xs text-muted-foreground">
+                              {option.description}
+                            </span>
+                          )}
+                        </div>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+              {descriptionNode && (
+                <FieldDescription className="text-sm text-muted-foreground">
+                  {descriptionNode}
+                </FieldDescription>
+              )}
+            </Field>
+          );
+        }
+
         return (
           <Field className="space-y-2">
             <div className="flex items-center justify-between">
@@ -77,9 +141,14 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 </SelectTrigger>
               </FieldControl>
               <SelectContent>
-                {property.enumValues?.map((enumValue) => (
-                  <SelectItem key={enumValue} value={enumValue}>
-                    {enumValue}
+                {property.enumValues?.map((option) => (
+                  <SelectItem key={option.value} value={option.value}>
+                    <div className="flex flex-col gap-1 text-left">
+                      <span>{option.label}</span>
+                      {option.description && (
+                        <span className="text-xs text-muted-foreground">{option.description}</span>
+                      )}
+                    </div>
                   </SelectItem>
                 ))}
               </SelectContent>
@@ -91,6 +160,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
             )}
           </Field>
         );
+      }
 
       case 'number':
         return (
