@@ -9,7 +9,7 @@ import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { Info, ChevronRight } from 'lucide-react';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
-import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { getMergedConfigData } from '~/features/validation/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types';
 import { SearchBar } from '~/components/search/SearchBar';
 

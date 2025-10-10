@@ -1,10 +1,9 @@
-import type { BusinessValidationError } from './businessRules/types';
-import type { StagedChange, SchedulerInfo } from '~/types';
-import { businessValidation } from './businessRules/service';
-import { isBlockingError } from './businessRules/ruleCategories';
-import { getMergedConfigData } from './stagedChangesUtils';
-import { getAffectedQueuesForValidation } from './affectedQueuesUtils';
-import { createValidationContext } from './contextFactory';
+import type { SchedulerInfo, StagedChange } from '~/types';
+import type { ValidationIssue } from './types';
+import { validateQueue } from './service';
+import { isBlockingError } from './ruleCategories';
+import { mergeStagedConfig } from './utils/configUtils';
+import { getAffectedQueuesForValidation } from './utils/affectedQueues';
 
 interface ValidatePropertyChangeOptions {
   propertyName: string;
@@ -16,10 +15,6 @@ interface ValidatePropertyChangeOptions {
   includeBlockingErrors?: boolean;
 }
 
-/**
- * Validates a property change and collects all cross-queue validation errors.
- * This shared logic is used by both usePropertyEditor and refreshValidationErrors.
- */
 export function validatePropertyChange({
   propertyName,
   propertyValue,
@@ -28,12 +23,11 @@ export function validatePropertyChange({
   configData,
   stagedChanges,
   includeBlockingErrors = false,
-}: ValidatePropertyChangeOptions): BusinessValidationError[] {
+}: ValidatePropertyChangeOptions): ValidationIssue[] {
   if (!schedulerData) {
     return [];
   }
 
-  // Get affected queues for this property change
   const affectedQueues = getAffectedQueuesForValidation(
     propertyName,
     queuePath,
@@ -41,7 +35,6 @@ export function validatePropertyChange({
     stagedChanges,
   );
 
-  // Create merged config with this change applied
   const tempChange: StagedChange = {
     id: `temp-${Date.now()}`,
     type: 'update',
@@ -53,42 +46,36 @@ export function validatePropertyChange({
   };
 
   const stagedChangesWithTemp = [...stagedChanges, tempChange];
-  const mergedConfig = getMergedConfigData(configData, stagedChangesWithTemp);
+  const mergedConfig = mergeStagedConfig(configData, stagedChangesWithTemp);
 
-  const allValidationErrors: BusinessValidationError[] = [];
+  const issues: ValidationIssue[] = [];
 
-  // For each affected queue, run validation
   affectedQueues.forEach((affectedQueuePath) => {
-    const context = createValidationContext({
-      queuePath: affectedQueuePath,
-      schedulerData,
-      configData: mergedConfig,
-      stagedChanges: stagedChangesWithTemp,
-      field: propertyName,
+    const queueProperties: Record<string, string> = {};
+
+    mergedConfig.forEach((value, key) => {
+      if (key.startsWith(`yarn.scheduler.capacity.${affectedQueuePath}.`)) {
+        const property = key.replace(`yarn.scheduler.capacity.${affectedQueuePath}.`, '');
+        queueProperties[property] = value;
+      }
     });
 
-    // Run validation for the queue
-    const queueResult = businessValidation.validateQueue(
-      affectedQueuePath,
-      { [propertyName]: propertyValue },
-      context,
-    );
+    const result = validateQueue({
+      queuePath: affectedQueuePath,
+      properties: queueProperties,
+      configData: mergedConfig,
+      stagedChanges: stagedChangesWithTemp,
+      schedulerData,
+    });
 
-    // Filter errors based on includeBlockingErrors flag
-    const filteredErrors = includeBlockingErrors
-      ? queueResult.errors
-      : queueResult.errors.filter((error) => !isBlockingError(error.rule || '', error.severity));
+    const filtered = includeBlockingErrors
+      ? result.issues
+      : result.issues.filter((issue) => !isBlockingError(issue.rule, issue.severity));
 
-    allValidationErrors.push(...filteredErrors);
+    issues.push(...filtered);
   });
 
-  // Remove duplicates based on message and field
-  const uniqueErrors = allValidationErrors.filter(
-    (error, index, self) =>
-      index === self.findIndex((e) => e.message === error.message && e.field === error.field),
-  );
-
-  return uniqueErrors;
+  return dedupeIssues(issues);
 }
 
 interface ValidateAllStagedChangesOptions {
@@ -97,25 +84,20 @@ interface ValidateAllStagedChangesOptions {
   configData: Map<string, string>;
 }
 
-/**
- * Re-validates all staged changes and returns a map of change IDs to their validation errors.
- * Used by refreshValidationErrors to efficiently update all staged changes.
- */
 export function validateAllStagedChanges({
   stagedChanges,
   schedulerData,
   configData,
-}: ValidateAllStagedChangesOptions): Map<string, BusinessValidationError[] | undefined> {
-  const validationResults = new Map<string, BusinessValidationError[] | undefined>();
+}: ValidateAllStagedChangesOptions): Map<string, ValidationIssue[] | undefined> {
+  const validationResults = new Map<string, ValidationIssue[] | undefined>();
 
   if (!schedulerData || stagedChanges.length === 0) {
     return validationResults;
   }
 
-  // Process each staged change
   stagedChanges.forEach((change) => {
     if (change.type === 'add' && change.property === 'capacity') {
-      const errors = validatePropertyChange({
+      const issues = validatePropertyChange({
         propertyName: 'capacity',
         propertyValue: change.newValue || '',
         queuePath: change.queuePath,
@@ -125,27 +107,26 @@ export function validateAllStagedChanges({
         includeBlockingErrors: false,
       });
 
-      validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+      validationResults.set(change.id, issues.length > 0 ? issues : undefined);
       return;
     }
 
-    // Skip validation for other non-update operations, but preserve existing errors
     if (change.type !== 'update' || !change.property) {
       validationResults.set(change.id, change.validationErrors);
       return;
     }
 
-    const errors = validatePropertyChange({
+    const issues = validatePropertyChange({
       propertyName: change.property,
       propertyValue: change.newValue || '',
       queuePath: change.queuePath,
       schedulerData,
       configData,
-      stagedChanges: stagedChanges.filter((c) => c.id !== change.id), // Exclude current change
+      stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
       includeBlockingErrors: false,
     });
 
-    validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+    validationResults.set(change.id, issues.length > 0 ? issues : undefined);
   });
 
   return validationResults;
@@ -159,26 +140,20 @@ interface SelectiveValidateOptions {
   configData: Map<string, string>;
 }
 
-/**
- * Selectively re-validates only the staged changes that could be affected by a new change.
- * This is more efficient than re-validating all changes.
- */
 export function selectivelyValidateStagedChanges({
   affectedQueuePaths,
   affectedProperties,
   stagedChanges,
   schedulerData,
   configData,
-}: SelectiveValidateOptions): Map<string, BusinessValidationError[] | undefined> {
-  const validationResults = new Map<string, BusinessValidationError[] | undefined>();
+}: SelectiveValidateOptions): Map<string, ValidationIssue[] | undefined> {
+  const validationResults = new Map<string, ValidationIssue[] | undefined>();
 
   if (!schedulerData || stagedChanges.length === 0) {
     return validationResults;
   }
 
-  // Process each staged change
   stagedChanges.forEach((change) => {
-    // Skip if not affected
     const isAffected =
       affectedQueuePaths.has(change.queuePath) ||
       (change.property && affectedProperties.has(change.property));
@@ -189,7 +164,7 @@ export function selectivelyValidateStagedChanges({
     }
 
     if (change.type === 'add' && change.property === 'capacity') {
-      const errors = validatePropertyChange({
+      const issues = validatePropertyChange({
         propertyName: 'capacity',
         propertyValue: change.newValue || '',
         queuePath: change.queuePath,
@@ -199,28 +174,42 @@ export function selectivelyValidateStagedChanges({
         includeBlockingErrors: false,
       });
 
-      validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+      validationResults.set(change.id, issues.length > 0 ? issues : undefined);
       return;
     }
 
-    // Skip validation for other non-update operations, but preserve existing errors
     if (change.type !== 'update' || !change.property) {
       validationResults.set(change.id, change.validationErrors);
       return;
     }
 
-    const errors = validatePropertyChange({
+    const issues = validatePropertyChange({
       propertyName: change.property,
       propertyValue: change.newValue || '',
       queuePath: change.queuePath,
       schedulerData,
       configData,
-      stagedChanges: stagedChanges.filter((c) => c.id !== change.id), // Exclude current change
+      stagedChanges: stagedChanges.filter((c) => c.id !== change.id),
       includeBlockingErrors: false,
     });
 
-    validationResults.set(change.id, errors.length > 0 ? errors : undefined);
+    validationResults.set(change.id, issues.length > 0 ? issues : undefined);
   });
 
   return validationResults;
+}
+
+function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
+  const seen = new Set<string>();
+  const result: ValidationIssue[] = [];
+
+  issues.forEach((issue) => {
+    const key = `${issue.queuePath}|${issue.field}|${issue.rule}|${issue.message}|${issue.severity}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(issue);
+    }
+  });
+
+  return result;
 }

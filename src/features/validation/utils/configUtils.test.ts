@@ -1,12 +1,12 @@
 import { describe, it, expect } from 'vitest';
-import { getMergedConfigData, getEffectivePropertyValue } from './stagedChangesUtils';
+import { getMergedConfigData, getEffectivePropertyValue } from './configUtils';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
-import { createTestStagedChange } from '../../../test-helpers/stagedChange';
+import { createTestStagedChange } from '../../../../test-helpers/stagedChange';
 
-describe('stagedChangesUtils', () => {
+describe('configUtils', () => {
   describe('getMergedConfigData', () => {
-    it('should return a copy of configData when no staged changes', () => {
+    it('returns a copy when there are no staged changes', () => {
       const configData = new Map([
         ['yarn.scheduler.capacity.root.capacity', '100'],
         ['yarn.scheduler.capacity.root.queues', 'prod,dev'],
@@ -15,10 +15,10 @@ describe('stagedChangesUtils', () => {
       const result = getMergedConfigData(configData, []);
 
       expect(result).toEqual(configData);
-      expect(result).not.toBe(configData); // Should be a new Map
+      expect(result).not.toBe(configData);
     });
 
-    it('should apply staged changes to queue properties', () => {
+    it('applies staged queue property changes', () => {
       const configData = new Map([
         ['yarn.scheduler.capacity.root.prod.capacity', '60'],
         ['yarn.scheduler.capacity.root.dev.capacity', '40'],
@@ -45,7 +45,7 @@ describe('stagedChangesUtils', () => {
       expect(result.get('yarn.scheduler.capacity.root.dev.capacity')).toBe('30');
     });
 
-    it('should apply staged changes to global properties', () => {
+    it('applies staged global property changes', () => {
       const configData = new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]);
 
       const stagedChanges: StagedChange[] = [
@@ -62,7 +62,7 @@ describe('stagedChangesUtils', () => {
       expect(result.get('yarn.scheduler.capacity.legacy-queue-mode.enabled')).toBe('false');
     });
 
-    it('should delete properties when new value is empty', () => {
+    it('removes properties when staged value is empty', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.maximum-capacity', '100']]);
 
       const stagedChanges: StagedChange[] = [
@@ -79,7 +79,7 @@ describe('stagedChangesUtils', () => {
       expect(result.has('yarn.scheduler.capacity.root.prod.maximum-capacity')).toBe(false);
     });
 
-    it('should handle multiple staged changes for the same property (last wins)', () => {
+    it('handles multiple staged changes for same property (last wins)', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.capacity', '60']]);
 
       const stagedChanges: StagedChange[] = [
@@ -102,7 +102,7 @@ describe('stagedChangesUtils', () => {
       expect(result.get('yarn.scheduler.capacity.root.prod.capacity')).toBe('80');
     });
 
-    it('should include properties from staged queue additions', () => {
+    it('includes properties from staged queue additions', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.existing.capacity', '100']]);
 
       const stagedChanges: StagedChange[] = [
@@ -121,7 +121,7 @@ describe('stagedChangesUtils', () => {
       expect(result.get('yarn.scheduler.capacity.root.existing.capacity')).toBe('100');
     });
 
-    it('should remove queue properties when a staged removal is present', () => {
+    it('removes queue properties when staged removal is present', () => {
       const configData = new Map([
         ['yarn.scheduler.capacity.root.remove.capacity', '40%'],
         ['yarn.scheduler.capacity.root.remove.maximum-capacity', '60%'],
@@ -134,7 +134,6 @@ describe('stagedChangesUtils', () => {
           queuePath: 'root.remove',
           property: SPECIAL_VALUES.QUEUE_MARKER,
           oldValue: 'exists',
-          newValue: undefined,
         }),
       ];
 
@@ -147,7 +146,7 @@ describe('stagedChangesUtils', () => {
   });
 
   describe('getEffectivePropertyValue', () => {
-    it('should return staged value when available', () => {
+    it('returns staged value when available', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.capacity', '60']]);
 
       const stagedChanges: StagedChange[] = [
@@ -164,7 +163,7 @@ describe('stagedChangesUtils', () => {
       expect(result).toBe('70');
     });
 
-    it('should return config value when no staged change', () => {
+    it('returns config value when no staged change exists', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.capacity', '60']]);
 
       const result = getEffectivePropertyValue(configData, [], 'root.prod', 'capacity');
@@ -172,7 +171,7 @@ describe('stagedChangesUtils', () => {
       expect(result).toBe('60');
     });
 
-    it('should return empty string when property not found', () => {
+    it('returns empty string when property not found', () => {
       const configData = new Map();
 
       const result = getEffectivePropertyValue(configData, [], 'root.prod', 'capacity');
@@ -180,7 +179,7 @@ describe('stagedChangesUtils', () => {
       expect(result).toBe('');
     });
 
-    it('should handle global properties', () => {
+    it('handles global properties', () => {
       const configData = new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]);
 
       const stagedChanges: StagedChange[] = [

@@ -2,10 +2,10 @@ import { describe, it, expect } from 'vitest';
 import {
   getAffectedQueuesForValidation,
   collectAffectedQueuesValidationErrors,
-} from './affectedQueuesUtils';
+} from './affectedQueues';
 import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
 
-describe('affectedQueuesUtils', () => {
+describe('affectedQueues', () => {
   const createMockSchedulerData = (queues: QueueInfo[]): SchedulerInfo => ({
     type: 'capacityScheduler',
     capacity: 100,
@@ -74,7 +74,7 @@ describe('affectedQueuesUtils', () => {
       const stagedChanges: StagedChange[] = [
         {
           id: 'add-1',
-          type: 'add' as const,
+          type: 'add',
           queuePath: 'root.parent.first',
           property: 'capacity',
           oldValue: undefined,

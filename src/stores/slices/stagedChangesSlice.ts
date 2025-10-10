@@ -15,12 +15,12 @@ import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBu
 import { isValidQueueName } from '~/types';
 import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } from '~/lib/errors';
 import type { StagedChangesSlice, SchedulerStore } from './types';
-import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
+import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
 import {
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,
   validatePropertyChange,
-} from '~/utils/validation/crossQueueValidation';
+} from '~/features/validation/crossQueue';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
 const clearMutationError = (state: MutationErrorState) => {

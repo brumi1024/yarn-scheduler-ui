@@ -12,7 +12,7 @@ import type {
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { DagreLayout } from '../utils/DagreLayout';
-import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
+import type { ValidationIssue } from '~/features/validation/types';
 
 export type QueueCardData = QueueInfo & {
   stagedStatus?: 'new' | 'modified' | 'deleted';
@@ -22,7 +22,7 @@ export type QueueCardData = QueueInfo & {
   stagedState?: string;
   autoCreationEligibility?: string;
   autoCreationStatus?: { status: 'off' | 'legacy' | 'flexible'; isStaged: boolean };
-  validationErrors?: BusinessValidationError[];
+  validationErrors?: ValidationIssue[];
   isAffectedByErrors?: boolean;
   errorSource?: string;
 };
@@ -229,7 +229,7 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
   const stateDisplay = getQueuePropertyValue(queueInfo.queuePath, 'state');
 
   // Collect validation errors for this queue
-  const directErrors: BusinessValidationError[] = [];
+  const directErrors: ValidationIssue[] = [];
   let isAffectedByErrors = false;
   let errorSource: string | undefined;
 

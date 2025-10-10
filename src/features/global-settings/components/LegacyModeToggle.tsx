@@ -11,17 +11,9 @@ import {
 } from '~/components/ui/dialog';
 import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { businessValidation } from '~/utils/validation/businessRules/service';
-import type {
-  BusinessValidationError,
-  QueueValidationContext,
-} from '~/utils/validation/businessRules/types';
-import {
-  findQueueByPath,
-  getParentPath,
-  getSiblingQueues,
-} from '~/utils/validation/businessRules/utils';
-import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { validateQueue } from '~/features/validation/service';
+import type { ValidationIssue } from '~/features/validation/types';
+import { getMergedConfigData } from '~/features/validation/utils/configUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';
@@ -40,7 +32,7 @@ interface LegacyModeToggleProps {
 
 interface ValidationPreview {
   queuePath: string;
-  errors: BusinessValidationError[];
+  errors: ValidationIssue[];
 }
 
 export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
@@ -101,19 +93,6 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
 
     // Validate each queue with simulated legacy mode
     allQueues.forEach((queue) => {
-      const context: QueueValidationContext = {
-        queuePath: queue.queuePath,
-        legacyModeEnabled: simulatedLegacyMode,
-        schedulerData,
-        configData: simulatedMergedData,
-        parentQueue:
-          queue.queuePath !== 'root'
-            ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '')
-            : undefined,
-        siblingQueues: getSiblingQueues(schedulerData, queue.queuePath),
-      };
-
-      // Get current properties for this queue
       const queueProperties: Record<string, string> = {};
       simulatedMergedData.forEach((value, key) => {
         if (key.startsWith(`yarn.scheduler.capacity.${queue.queuePath}.`)) {
@@ -122,12 +101,18 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
         }
       });
 
-      const result = businessValidation.validateQueue(queue.queuePath, queueProperties, context);
+      const result = validateQueue({
+        queuePath: queue.queuePath,
+        properties: queueProperties,
+        configData: simulatedMergedData,
+        stagedChanges: [],
+        schedulerData,
+      });
 
-      if (result.errors.length > 0) {
+      if (result.issues.length > 0) {
         previewResults.push({
           queuePath: queue.queuePath,
-          errors: result.errors,
+          errors: result.issues,
         });
       }
     });
@@ -135,18 +120,6 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     // Compare with current validation state
     const currentResults: ValidationPreview[] = [];
     allQueues.forEach((queue) => {
-      const context: QueueValidationContext = {
-        queuePath: queue.queuePath,
-        legacyModeEnabled: currentEnabled,
-        schedulerData,
-        configData: currentMergedData,
-        parentQueue:
-          queue.queuePath !== 'root'
-            ? findQueueByPath(schedulerData, getParentPath(queue.queuePath) || '')
-            : undefined,
-        siblingQueues: getSiblingQueues(schedulerData, queue.queuePath),
-      };
-
       const queueProperties: Record<string, string> = {};
       currentMergedData.forEach((value, key) => {
         if (key.startsWith(`yarn.scheduler.capacity.${queue.queuePath}.`)) {
@@ -155,12 +128,18 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
         }
       });
 
-      const result = businessValidation.validateQueue(queue.queuePath, queueProperties, context);
+      const result = validateQueue({
+        queuePath: queue.queuePath,
+        properties: queueProperties,
+        configData: currentMergedData,
+        stagedChanges: [],
+        schedulerData,
+      });
 
-      if (result.errors.length > 0) {
+      if (result.issues.length > 0) {
         currentResults.push({
           queuePath: queue.queuePath,
-          errors: result.errors,
+          errors: result.issues,
         });
       }
     });

@@ -16,10 +16,11 @@ import {
   extractBasePropertyFromLabelProperty,
 } from '~/features/node-labels/utils/labelPropertyUtils';
 import { toast } from 'sonner';
-import { useQueueValidation } from '~/hooks/useQueueValidation';
-import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
-import { isBlockingError } from '~/utils/validation/businessRules/ruleCategories';
-import { validatePropertyChange } from '~/utils/validation/crossQueueValidation';
+import { useValidation } from '~/contexts/ValidationContext';
+import { validateQueue } from '~/features/validation/service';
+import type { ValidationIssue } from '~/features/validation/types';
+import { isBlockingError } from '~/features/validation/ruleCategories';
+import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 
 function createFormSchema(
@@ -122,13 +123,7 @@ export function usePropertyEditor({
 
   const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
-  // Use the new validation hook for business rules
-  const { businessErrors, getFieldErrors, getFieldWarnings, validateAll } = useQueueValidation({
-    queuePath,
-    schema: formSchema,
-    properties: allProperties,
-    mode: 'onSubmit',
-  });
+  const { errors: validationState, replaceQueueIssues, clearQueueErrors } = useValidation();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -140,6 +135,48 @@ export function usePropertyEditor({
   const { control, handleSubmit, reset, setValue } = form;
 
   const watchedValues = useWatch({ control });
+
+  const normalizeFieldName = useCallback(
+    (field: string): string => {
+      const property = allProperties.find(
+        (p) => p.formFieldName === field || p.originalName === field || p.name === field,
+      );
+
+      if (property) {
+        return property.originalName || property.name;
+      }
+
+      return field.replace(/__DOT__/g, '.');
+    },
+    [allProperties],
+  );
+
+  const getFieldIssues = useCallback(
+    (field: string): ValidationIssue[] => {
+      const normalized = normalizeFieldName(field);
+      const queueIssues = validationState[queuePath];
+      return queueIssues?.[normalized] ?? [];
+    },
+    [normalizeFieldName, validationState, queuePath],
+  );
+
+  const getFieldErrors = useCallback(
+    (field: string): string[] => {
+      return getFieldIssues(field)
+        .filter((issue) => issue.severity === 'error')
+        .map((issue) => issue.message);
+    },
+    [getFieldIssues],
+  );
+
+  const getFieldWarnings = useCallback(
+    (field: string): string[] => {
+      return getFieldIssues(field)
+        .filter((issue) => issue.severity === 'warning')
+        .map((issue) => issue.message);
+    },
+    [getFieldIssues],
+  );
 
   useEffect(() => {
     const initialValues: Record<string, string> = {};
@@ -163,7 +200,7 @@ export function usePropertyEditor({
   );
 
   const stageChange = useCallback(
-    (propertyName: string, value: string, validationErrors?: BusinessValidationError[]) => {
+    (propertyName: string, value: string, validationErrors?: ValidationIssue[]) => {
       const property = allProperties.find((p) => p.name === propertyName);
       if (!property?.required && !value.trim()) {
         return;
@@ -198,7 +235,6 @@ export function usePropertyEditor({
   const onSubmit = useCallback(
     async (data: Record<string, string>) => {
       try {
-        // Create mapping from escaped field names back to original property names
         const fieldNameMapping: Record<string, string> = {};
         const changedData: Record<string, string> = {};
 
@@ -208,9 +244,7 @@ export function usePropertyEditor({
           fieldNameMapping[escapedName] = originalName;
         });
 
-        // Collect only dirty fields for validation
-        const dirtyFields = form.formState.dirtyFields;
-        Object.entries(dirtyFields).forEach(([escapedFieldName, isDirty]) => {
+        Object.entries(form.formState.dirtyFields).forEach(([escapedFieldName, isDirty]) => {
           if (isDirty && typeof data[escapedFieldName] === 'string') {
             const originalName = fieldNameMapping[escapedFieldName] || escapedFieldName;
             changedData[originalName] = data[escapedFieldName];
@@ -218,17 +252,6 @@ export function usePropertyEditor({
         });
 
         const pendingEntries = Object.entries(changedData);
-
-        // Run business validation on all changed fields
-        const currentValues: Record<string, string> = {};
-        allProperties.forEach((property) => {
-          const originalName = property.originalName || property.name;
-          const { value } = getQueuePropertyValue(queuePath, originalName);
-          currentValues[originalName] = value;
-        });
-
-        // Merge current values with changes for validation
-        const validationData = { ...currentValues, ...changedData };
 
         const previewConfigData = new Map(configData);
         pendingEntries.forEach(([propertyName, value]) => {
@@ -240,31 +263,34 @@ export function usePropertyEditor({
           }
         });
 
-        await validateAll(validationData, {
-          configData: previewConfigData,
+        const queueValidation = validateQueue({
+          queuePath,
+          properties: changedData,
+          configData,
           stagedChanges,
+          schedulerData,
         });
 
-        // Check for blocking errors
-        const blockingErrors = businessErrors.filter(
-          (error) => error.severity === 'error' && isBlockingError(error.rule, error.severity),
+        replaceQueueIssues(queuePath, queueValidation.issues);
+
+        const blockingIssues = queueValidation.issues.filter((issue) =>
+          isBlockingError(issue.rule, issue.severity),
         );
 
-        if (blockingErrors.length > 0) {
-          toast.error(`Cannot stage changes: ${blockingErrors[0].message}`);
-          return { success: false, message: blockingErrors[0].message };
+        const nonBlockingIssues = queueValidation.issues.filter(
+          (issue) => !isBlockingError(issue.rule, issue.severity),
+        );
+
+        if (blockingIssues.length > 0) {
+          toast.error(`Cannot stage changes: ${blockingIssues[0].message}`);
+          return { success: false, message: blockingIssues[0].message };
         }
 
-        // Get non-blocking validation errors to attach to changes
-        const validationWarnings = businessErrors.filter(
-          (error) => !isBlockingError(error.rule, error.severity),
-        );
-
-        // Stage changes with validation metadata including cross-queue errors
         let stagedCount = 0;
         pendingEntries.forEach(([propertyName, value]) => {
-          // Get cross-queue validation errors using shared logic
-          const crossQueueErrors = validatePropertyChange({
+          const fieldIssues = nonBlockingIssues.filter((issue) => issue.field === propertyName);
+
+          const crossQueueIssues = validatePropertyChange({
             propertyName,
             propertyValue: value,
             queuePath,
@@ -274,19 +300,22 @@ export function usePropertyEditor({
             includeBlockingErrors: false,
           });
 
-          // Also include field-specific errors from the main validation
-          const fieldErrors = validationWarnings.filter((e) => e.field === propertyName);
-          const allErrors = [...fieldErrors, ...crossQueueErrors];
+          const allIssues = [...fieldIssues, ...crossQueueIssues];
 
-          // Remove duplicates based on message and field
-          const uniqueErrors = allErrors.filter(
-            (error, index, self) =>
+          const uniqueIssues = allIssues.filter(
+            (issue, index, self) =>
               index ===
-              self.findIndex((e) => e.message === error.message && e.field === error.field),
+              self.findIndex(
+                (candidate) =>
+                  candidate.queuePath === issue.queuePath &&
+                  candidate.field === issue.field &&
+                  candidate.message === issue.message &&
+                  candidate.severity === issue.severity,
+              ),
           );
 
-          stageChange(propertyName, value, uniqueErrors.length > 0 ? uniqueErrors : undefined);
-          stagedCount++;
+          stageChange(propertyName, value, uniqueIssues.length > 0 ? uniqueIssues : undefined);
+          stagedCount += 1;
         });
 
         const result = {
@@ -294,10 +323,9 @@ export function usePropertyEditor({
           message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
         };
 
-        // Show success with warning if there are validation issues
-        if (validationWarnings.length > 0) {
+        if (nonBlockingIssues.length > 0) {
           toast.warning(
-            `${result.message} (with ${validationWarnings.length} validation warning${validationWarnings.length !== 1 ? 's' : ''})`,
+            `${result.message} (with ${nonBlockingIssues.length} validation warning${nonBlockingIssues.length !== 1 ? 's' : ''})`,
           );
         } else {
           toast.success(result.message);
@@ -314,10 +342,8 @@ export function usePropertyEditor({
       stageChange,
       allProperties,
       form.formState.dirtyFields,
-      getQueuePropertyValue,
       queuePath,
-      validateAll,
-      businessErrors,
+      replaceQueueIssues,
       schedulerData,
       configData,
       stagedChanges,
@@ -327,6 +353,7 @@ export function usePropertyEditor({
   const handleReset = useCallback(() => {
     // Clear only the changes for the current queue
     clearQueueChanges(queuePath);
+    clearQueueErrors(queuePath);
 
     // Reset form to original values
     const currentValues: Record<string, string> = {};
@@ -336,7 +363,7 @@ export function usePropertyEditor({
       currentValues[fieldName] = value;
     });
     reset(currentValues);
-  }, [queuePath, getQueuePropertyValue, clearQueueChanges, reset, allProperties]);
+  }, [queuePath, getQueuePropertyValue, clearQueueChanges, clearQueueErrors, reset, allProperties]);
 
   const hasChanges = useMemo(() => {
     if (!Array.isArray(stagedChanges)) {
@@ -362,34 +389,7 @@ export function usePropertyEditor({
   // Get combined errors and validity state
   const combinedErrors = useMemo(() => {
     const zodErrors = form.formState.errors;
-
-    const normalizeFieldName = (field: string): string => {
-      const property = allProperties.find(
-        (p) => p.formFieldName === field || p.originalName === field || p.name === field,
-      );
-
-      if (property) {
-        return property.originalName || property.name;
-      }
-
-      return field.replace(/__DOT__/g, '.');
-    };
-
-    const businessErrorsMap: Record<string, string[]> = {};
-
-    businessErrors.forEach((error) => {
-      if (error.severity !== 'error') {
-        return;
-      }
-
-      const fieldName = normalizeFieldName(error.field);
-
-      if (!businessErrorsMap[fieldName]) {
-        businessErrorsMap[fieldName] = [];
-      }
-
-      businessErrorsMap[fieldName].push(error.message);
-    });
+    const queueIssues = validationState[queuePath] ?? {};
 
     const combined: Record<string, { type: string; message: string }> = {};
 
@@ -407,31 +407,42 @@ export function usePropertyEditor({
       };
     });
 
-    Object.entries(businessErrorsMap).forEach(([field, messages]) => {
+    Object.entries(queueIssues).forEach(([field, issues]) => {
+      const errorMessages = issues
+        .filter((issue) => issue.severity === 'error')
+        .map((issue) => issue.message);
+
+      if (errorMessages.length === 0) {
+        return;
+      }
+
       if (combined[field]) {
         const existingMessage = combined[field].message || '';
         combined[field] = {
           ...combined[field],
           message: existingMessage
-            ? `${existingMessage}. ${messages.join('. ')}`
-            : messages.join('. '),
+            ? `${existingMessage}. ${errorMessages.join('. ')}`
+            : errorMessages.join('. '),
         };
       } else {
         combined[field] = {
           type: 'business',
-          message: messages.join('. '),
+          message: errorMessages.join('. '),
         };
       }
     });
 
     return combined;
-  }, [form.formState.errors, businessErrors, allProperties]);
+  }, [form.formState.errors, validationState, queuePath, normalizeFieldName]);
 
   const isFormValid = useMemo(() => {
     const hasZodErrors = !form.formState.isValid;
-    const hasBusinessErrors = businessErrors.some((e) => e.severity === 'error');
-    return !hasZodErrors && !hasBusinessErrors;
-  }, [form.formState.isValid, businessErrors]);
+    const queueIssues = validationState[queuePath] ?? {};
+    const hasValidationErrors = Object.values(queueIssues).some((issues) =>
+      issues.some((issue) => issue.severity === 'error'),
+    );
+    return !hasZodErrors && !hasValidationErrors;
+  }, [form.formState.isValid, validationState, queuePath]);
 
   return {
     form,
@@ -454,8 +465,6 @@ export function usePropertyEditor({
     labelProperties,
     formState: form.formState,
 
-    // Business validation specific
-    businessErrors,
     getFieldErrors,
     getFieldWarnings,
   };

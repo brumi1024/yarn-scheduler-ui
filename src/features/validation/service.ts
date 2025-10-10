@@ -1,0 +1,165 @@
+import {
+  mergeStagedConfig,
+  applyFieldPreview,
+  buildEffectivePropertyKey,
+} from './utils/configUtils';
+import {
+  runFieldValidation,
+  type ValidationContext as RuleContext,
+} from '~/config/validation-rules';
+import type { ValidationIssue } from './types';
+import type { SchedulerInfo } from '~/types/scheduler';
+import type { StagedChange } from '~/types/staged-change';
+import { SPECIAL_VALUES } from '~/types/constants/special-values';
+
+type Severity = ValidationIssue['severity'];
+
+export interface FieldValidationOptions {
+  queuePath: string;
+  fieldName: string;
+  value: unknown;
+  configData: Map<string, string>;
+  stagedChanges: StagedChange[];
+  schedulerData?: SchedulerInfo | null;
+}
+
+export interface QueueValidationOptions {
+  queuePath: string;
+  properties: Record<string, string>;
+  configData: Map<string, string>;
+  stagedChanges: StagedChange[];
+  schedulerData?: SchedulerInfo | null;
+}
+
+export interface ValidationResult {
+  valid: boolean;
+  issues: ValidationIssue[];
+}
+
+export function validateField(options: FieldValidationOptions): ValidationResult {
+  const { queuePath, fieldName, value, configData, stagedChanges, schedulerData } = options;
+
+  const withStaged = mergeStagedConfig(configData, stagedChanges);
+  const effectiveConfig = applyFieldPreview(withStaged, queuePath, fieldName, value);
+
+  const issues = runFieldValidation(
+    buildRuleContext({
+      queuePath,
+      fieldName,
+      fieldValue: value,
+      config: effectiveConfig,
+      schedulerData,
+      stagedChanges,
+    }),
+  );
+
+  return {
+    valid: issues.every((issue) => issue.severity !== 'error'),
+    issues,
+  };
+}
+
+export function validateQueue(options: QueueValidationOptions): ValidationResult {
+  const { queuePath, properties, configData, stagedChanges, schedulerData } = options;
+
+  const withStaged = mergeStagedConfig(configData, stagedChanges);
+  const effectiveConfig = new Map(withStaged);
+
+  Object.entries(properties).forEach(([field, value]) => {
+    const key = buildEffectivePropertyKey(queuePath, field);
+    if (value === '' || value === null || value === undefined) {
+      effectiveConfig.delete(key);
+    } else {
+      effectiveConfig.set(key, value);
+    }
+  });
+
+  const fieldsToValidate = new Set<string>(Object.keys(properties));
+  if (!fieldsToValidate.has('capacity')) {
+    fieldsToValidate.add('capacity');
+  }
+
+  const issues: ValidationIssue[] = [];
+
+  fieldsToValidate.forEach((field) => {
+    const key = buildEffectivePropertyKey(queuePath, field);
+    const fieldValue = Object.prototype.hasOwnProperty.call(properties, field)
+      ? properties[field]
+      : (effectiveConfig.get(key) ?? '');
+
+    const context = buildRuleContext({
+      queuePath,
+      fieldName: field,
+      fieldValue,
+      config: effectiveConfig,
+      schedulerData,
+      stagedChanges,
+    });
+
+    issues.push(...runFieldValidation(context));
+  });
+
+  return {
+    valid: issues.every((issue) => issue.severity !== 'error'),
+    issues: dedupeIssues(issues),
+  };
+}
+
+function buildRuleContext(params: {
+  queuePath: string;
+  fieldName: string;
+  fieldValue: unknown;
+  config: Map<string, string>;
+  schedulerData?: SchedulerInfo | null;
+  stagedChanges: StagedChange[];
+}): RuleContext {
+  const { queuePath, fieldName, fieldValue, config, schedulerData, stagedChanges } = params;
+  const legacyModeEnabled = config.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
+
+  return {
+    queuePath,
+    fieldName,
+    fieldValue,
+    config,
+    schedulerData,
+    stagedChanges,
+    legacyModeEnabled,
+  };
+}
+
+function dedupeIssues(issues: ValidationIssue[]): ValidationIssue[] {
+  const seen = new Set<string>();
+  const result: ValidationIssue[] = [];
+
+  issues.forEach((issue) => {
+    const key = `${issue.queuePath}|${issue.field}|${issue.rule}|${issue.message}`;
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(issue);
+    }
+  });
+
+  return result;
+}
+
+export function hasBlockingIssues(issues: ValidationIssue[]): boolean {
+  return issues.some((issue) => issue.severity === 'error');
+}
+
+export function splitIssues(issues: ValidationIssue[]): {
+  errors: ValidationIssue[];
+  warnings: ValidationIssue[];
+} {
+  const errors: ValidationIssue[] = [];
+  const warnings: ValidationIssue[] = [];
+
+  issues.forEach((issue) => {
+    if (issue.severity === 'error') {
+      errors.push(issue);
+    } else {
+      warnings.push(issue);
+    }
+  });
+
+  return { errors, warnings };
+}

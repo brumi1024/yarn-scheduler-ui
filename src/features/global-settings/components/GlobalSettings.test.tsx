@@ -1,10 +1,13 @@
 import { render, screen, fireEvent } from '@testing-library/react';
 import { describe, it, expect, beforeEach, vi } from 'vitest';
+import type { ReactNode } from 'react';
 import { GlobalSettings } from './GlobalSettings';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import type { StagedChange } from '~/types/staged-change';
+import { ValidationProvider } from '~/contexts/ValidationContext';
+import { SPECIAL_VALUES } from '~/types';
 
 // Mock the store
 vi.mock('~/stores/schedulerStore');
@@ -73,16 +76,41 @@ const getMockStagedChange = (overrides?: Partial<StagedChange>): StagedChange =>
 };
 
 // Mock store implementation
-const createMockStore = (overrides?: Partial<ReturnType<typeof useSchedulerStore>>) => ({
+const baseSchedulerData = {
+  type: 'capacityScheduler',
+  queueName: 'root',
+  queuePath: 'root',
+  capacity: 100,
+  maxCapacity: 100,
+  usedCapacity: 0,
+  queues: { queue: [] as any[] },
+};
+
+const createStoreState = (overrides?: Partial<Record<string, unknown>>) => ({
+  schedulerData: baseSchedulerData,
+  configData: new Map([[SPECIAL_VALUES.LEGACY_MODE_PROPERTY, 'true']]),
+  stagedChanges: [] as StagedChange[],
+  searchQuery: undefined as string | undefined,
+  getFilteredSettings: vi.fn(() => globalPropertyDefinitions),
   getGlobalPropertyValue: vi.fn().mockReturnValue({ value: 'test-value', isStaged: false }),
   stageGlobalChange: vi.fn(),
-  stagedChanges: [],
   ...overrides,
 });
 
-describe('GlobalSettings', () => {
-  const mockUseSchedulerStore = useSchedulerStore as any;
+const setupStoreMock = (stateOverrides?: Partial<Record<string, unknown>>) => {
+  const storeState = createStoreState(stateOverrides);
+  (useSchedulerStore as unknown as vi.Mock).mockImplementation((selector?: (state: any) => any) =>
+    selector ? selector(storeState) : storeState,
+  );
+  return storeState;
+};
 
+const renderWithValidation = (ui: ReactNode, storeOverrides?: Partial<Record<string, unknown>>) => {
+  const storeState = setupStoreMock(storeOverrides);
+  return { renderResult: render(<ValidationProvider>{ui}</ValidationProvider>), storeState };
+};
+
+describe('GlobalSettings', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     // Reset property definitions
@@ -91,9 +119,8 @@ describe('GlobalSettings', () => {
 
   describe('rendering', () => {
     it('should render a message when no global properties are available', () => {
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
-
-      render(<GlobalSettings />);
+      const stageGlobalChange = vi.fn();
+      renderWithValidation(<GlobalSettings />, { stageGlobalChange });
 
       expect(screen.getByText('No Global Properties Available')).toBeInTheDocument();
       expect(
@@ -110,9 +137,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop3', category: 'general' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       expect(screen.getByText('general Settings')).toBeInTheDocument();
       expect(screen.getByText('security Settings')).toBeInTheDocument();
@@ -125,9 +151,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop3', category: 'security' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       expect(screen.getByTestId('property-input-prop1')).toBeInTheDocument();
       expect(screen.getByTestId('property-input-prop2')).toBeInTheDocument();
@@ -141,15 +166,12 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore({
-        getGlobalPropertyValue: vi
-          .fn()
-          .mockReturnValueOnce({ value: 'value1', isStaged: false })
-          .mockReturnValueOnce({ value: 'value2', isStaged: true }),
-      });
-      mockUseSchedulerStore.mockReturnValue(mockStore);
+      const getGlobalPropertyValue = vi
+        .fn()
+        .mockReturnValueOnce({ value: 'value1', isStaged: false })
+        .mockReturnValueOnce({ value: 'value2', isStaged: true });
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 
       expect(screen.getByTestId('input-prop1')).toHaveValue('value1');
       expect(screen.getByTestId('input-prop2')).toHaveValue('value2');
@@ -161,9 +183,8 @@ describe('GlobalSettings', () => {
     it('should not display alert when there are no staged changes', () => {
       const properties = [getMockPropertyDescriptor()];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       expect(screen.queryByText(/You have \d+ unsaved global setting/)).not.toBeInTheDocument();
     });
@@ -176,9 +197,8 @@ describe('GlobalSettings', () => {
         getMockStagedChange({ property: 'prop1' }),
         getMockStagedChange({ property: 'prop2' }),
       ];
-      mockUseSchedulerStore.mockReturnValue(createMockStore({ stagedChanges }));
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       expect(
         screen.getByText('You have 2 unsaved global settings. Apply changes to make them active.'),
@@ -190,9 +210,8 @@ describe('GlobalSettings', () => {
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
       const stagedChanges = [getMockStagedChange()];
-      mockUseSchedulerStore.mockReturnValue(createMockStore({ stagedChanges }));
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       expect(
         screen.getByText('You have 1 unsaved global setting. Apply changes to make them active.'),
@@ -208,9 +227,7 @@ describe('GlobalSettings', () => {
         getMockStagedChange({ queuePath: 'root.queue1' }),
         getMockStagedChange({ queuePath: 'global' }),
       ];
-      mockUseSchedulerStore.mockReturnValue(createMockStore({ stagedChanges }));
-
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       expect(
         screen.getByText('You have 2 unsaved global settings. Apply changes to make them active.'),
@@ -227,9 +244,7 @@ describe('GlobalSettings', () => {
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
       const stagedChanges = [getMockStagedChange({ property: 'prop1' })];
-      mockUseSchedulerStore.mockReturnValue(createMockStore({ stagedChanges }));
-
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       // Find the general category heading and its badge
       const generalHeading = screen.getByText('general Settings').closest('div');
@@ -246,9 +261,7 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
-
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       const generalHeading = screen.getByText('general Settings').closest('div');
       expect(generalHeading).not.toHaveTextContent('Has Changes');
@@ -260,10 +273,8 @@ describe('GlobalSettings', () => {
       const properties = [getMockPropertyDescriptor({ name: 'test-property' })];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore();
-      mockUseSchedulerStore.mockReturnValue(mockStore);
-
-      render(<GlobalSettings />);
+      const stageGlobalChange = vi.fn();
+      renderWithValidation(<GlobalSettings />, { stageGlobalChange });
 
       const input = screen.getByTestId('input-test-property');
 
@@ -271,7 +282,7 @@ describe('GlobalSettings', () => {
       fireEvent.change(input, { target: { value: 'new-value' } });
 
       // Verify the function was called with expected value
-      expect(mockStore.stageGlobalChange).toHaveBeenCalledWith('test-property', 'new-value', []);
+      expect(stageGlobalChange).toHaveBeenCalledWith('test-property', 'new-value', []);
     });
 
     it('should handle multiple property changes independently', () => {
@@ -281,10 +292,8 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore();
-      mockUseSchedulerStore.mockReturnValue(mockStore);
-
-      render(<GlobalSettings />);
+      const stageGlobalChange = vi.fn();
+      renderWithValidation(<GlobalSettings />, { stageGlobalChange });
 
       const input1 = screen.getByTestId('input-prop1');
       const input2 = screen.getByTestId('input-prop2');
@@ -296,8 +305,8 @@ describe('GlobalSettings', () => {
       fireEvent.change(input2, { target: { value: 'value2' } });
 
       // Verify both properties were updated
-      expect(mockStore.stageGlobalChange).toHaveBeenCalledWith('prop1', 'value1', []);
-      expect(mockStore.stageGlobalChange).toHaveBeenCalledWith('prop2', 'value2', []);
+      expect(stageGlobalChange).toHaveBeenCalledWith('prop1', 'value1', []);
+      expect(stageGlobalChange).toHaveBeenCalledWith('prop2', 'value2', []);
     });
   });
 
@@ -309,9 +318,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ category: 'resource' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       const headings = screen.getAllByTestId('accordion-trigger');
       expect(headings[0]).toHaveTextContent('advanced Settings');
@@ -326,9 +334,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       const propertyInputs = screen.getAllByTestId(/^property-input-prop/);
       expect(propertyInputs[0]).toHaveAttribute('data-testid', 'property-input-prop3');
@@ -345,13 +352,12 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore();
-      mockUseSchedulerStore.mockReturnValue(mockStore);
+      const getGlobalPropertyValue = vi.fn().mockReturnValue({ value: 'test', isStaged: false });
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 
-      expect(mockStore.getGlobalPropertyValue).toHaveBeenCalledWith('prop1');
-      expect(mockStore.getGlobalPropertyValue).toHaveBeenCalledWith('prop2');
+      expect(getGlobalPropertyValue).toHaveBeenCalledWith('prop1');
+      expect(getGlobalPropertyValue).toHaveBeenCalledWith('prop2');
     });
 
     it('should pass staged status to property inputs', () => {
@@ -361,15 +367,12 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore({
-        getGlobalPropertyValue: vi
-          .fn()
-          .mockReturnValueOnce({ value: 'val1', isStaged: true })
-          .mockReturnValueOnce({ value: 'val2', isStaged: false }),
-      });
-      mockUseSchedulerStore.mockReturnValue(mockStore);
+      const getGlobalPropertyValue = vi
+        .fn()
+        .mockReturnValueOnce({ value: 'val1', isStaged: true })
+        .mockReturnValueOnce({ value: 'val2', isStaged: false });
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 
       expect(screen.getByTestId('input-staged-prop')).toHaveAttribute('data-is-staged', 'true');
       expect(screen.getByTestId('input-unstaged-prop')).toHaveAttribute('data-is-staged', 'false');
@@ -384,9 +387,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop3', category: 'scheduling' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       // Verify all category accordions are rendered
       expect(screen.getByText('general Settings')).toBeInTheDocument();
@@ -404,12 +406,9 @@ describe('GlobalSettings', () => {
       const properties = [getMockPropertyDescriptor()];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore({
-        getGlobalPropertyValue: vi.fn().mockReturnValue({ value: '', isStaged: false }),
-      });
-      mockUseSchedulerStore.mockReturnValue(mockStore);
+      const getGlobalPropertyValue = vi.fn().mockReturnValue({ value: '', isStaged: false });
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 
       expect(screen.getByTestId('input-test-property')).toHaveValue('');
     });
@@ -421,10 +420,8 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const mockStore = createMockStore();
-      mockUseSchedulerStore.mockReturnValue(mockStore);
-
-      render(<GlobalSettings />);
+      const stageGlobalChange = vi.fn();
+      renderWithValidation(<GlobalSettings />, { stageGlobalChange });
 
       const input1 = screen.getByTestId('input-property-with-dashes');
       const input2 = screen.getByTestId('input-property.with.dots');
@@ -434,8 +431,8 @@ describe('GlobalSettings', () => {
       fireEvent.change(input2, { target: { value: 'test2' } });
 
       // Verify the property names were handled correctly
-      expect(mockStore.stageGlobalChange).toHaveBeenCalledWith('property-with-dashes', 'test1', []);
-      expect(mockStore.stageGlobalChange).toHaveBeenCalledWith('property.with.dots', 'test2', []);
+      expect(stageGlobalChange).toHaveBeenCalledWith('property-with-dashes', 'test1', []);
+      expect(stageGlobalChange).toHaveBeenCalledWith('property.with.dots', 'test2', []);
     });
 
     it('should render correctly when properties have the same category', () => {
@@ -445,9 +442,8 @@ describe('GlobalSettings', () => {
         getMockPropertyDescriptor({ name: 'prop3', category: 'general' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
-      mockUseSchedulerStore.mockReturnValue(createMockStore());
 
-      render(<GlobalSettings />);
+      renderWithValidation(<GlobalSettings />);
 
       // Should only have one accordion item for the general category
       expect(screen.getAllByTestId('accordion-item')).toHaveLength(1);
