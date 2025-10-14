@@ -408,8 +408,42 @@ function createEdges(
   if (queueInfo.queues?.queue) {
     const children = toArray(queueInfo.queues.queue);
 
-    // Calculate total capacity of all children for proportional allocation
-    const totalChildCapacity = children.reduce((sum, child) => sum + (child.capacity || 0), 0);
+    const rawCapacities = children.map((child) => Math.max(child.capacity || 0, 0));
+    const nonZeroSum = rawCapacities.reduce((sum, cap) => (cap > 0 ? sum + cap : sum), 0);
+    const zeroIndices = rawCapacities
+      .map((cap, index) => (cap <= 0 ? index : null))
+      .filter((index): index is number => index !== null);
+
+    let adjustedCapacities = [...rawCapacities];
+
+    if (children.length > 0 && nonZeroSum === 0) {
+      // If all capacities are zero, distribute equally
+      adjustedCapacities = adjustedCapacities.map(() => 1);
+    } else if (zeroIndices.length > 0) {
+      const candidateTotals = [
+        typeof queueInfo.capacity === 'number' && queueInfo.capacity > nonZeroSum
+          ? queueInfo.capacity
+          : 0,
+        typeof queueInfo.maxCapacity === 'number' && queueInfo.maxCapacity > nonZeroSum
+          ? queueInfo.maxCapacity
+          : 0,
+        nonZeroSum > 0 && nonZeroSum <= 100 ? 100 : 0,
+        nonZeroSum + zeroIndices.length,
+      ];
+
+      const assumedTotal =
+        candidateTotals.find((total) => total > nonZeroSum) ?? nonZeroSum + zeroIndices.length;
+
+      let leftover = Math.max(assumedTotal - nonZeroSum, 0);
+      if (leftover === 0) {
+        leftover = nonZeroSum / zeroIndices.length || 1;
+      }
+
+      const sharePerZero = leftover / zeroIndices.length || 1;
+      adjustedCapacities = adjustedCapacities.map((cap) => (cap > 0 ? cap : sharePerZero));
+    }
+
+    const totalChildCapacity = adjustedCapacities.reduce((sum, cap) => sum + cap, 0);
 
     // Get source position for the parent queue
     const sourcePos = positions.get(queueInfo.queuePath);
@@ -417,17 +451,17 @@ function createEdges(
     if (sourcePos && totalChildCapacity > 0) {
       let cumulativeCapacity = 0;
 
-      children.forEach((child) => {
+      children.forEach((child, index) => {
         const targetPos = positions.get(child.queuePath);
 
         if (targetPos) {
           // Calculate proportional segment for this child on parent's side
-          const childCapacity = child.capacity || 0;
-          const childPercentage = childCapacity / totalChildCapacity;
+          const childAdjustedCapacity = adjustedCapacities[index];
+          const childPercentage = childAdjustedCapacity / totalChildCapacity;
 
           // Calculate segment boundaries (0.0 to 1.0 scale)
           const segmentStart = cumulativeCapacity / totalChildCapacity;
-          const segmentEnd = (cumulativeCapacity + childCapacity) / totalChildCapacity;
+          const segmentEnd = (cumulativeCapacity + childAdjustedCapacity) / totalChildCapacity;
 
           // Ensure minimum segment height for visibility
           const segmentHeight = Math.max(
@@ -467,7 +501,7 @@ function createEdges(
           };
           edges.push(edge);
 
-          cumulativeCapacity += childCapacity;
+          cumulativeCapacity += childAdjustedCapacity;
         }
       });
     } else {

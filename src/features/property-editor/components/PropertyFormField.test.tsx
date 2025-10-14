@@ -151,7 +151,7 @@ describe('PropertyFormField', () => {
     expect(screen.getByText('Capacity *')).toBeInTheDocument();
   });
 
-  it('should display the property description inline', () => {
+  it('should show capacity editor button for capacity field', () => {
     const property = getMockPropertyDescriptor({
       name: 'capacity',
       displayName: 'Capacity',
@@ -165,7 +165,25 @@ describe('PropertyFormField', () => {
       </FormWrapper>,
     );
 
-    expect(screen.getByText('This is the capacity description')).toBeInTheDocument();
+    expect(screen.getByText('Capacity Editor')).toBeInTheDocument();
+    expect(screen.queryByText('This is the capacity description')).not.toBeInTheDocument();
+  });
+
+  it('should display the property description inline for non-capacity fields', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'yarn.scheduler.capacity.some-property',
+      displayName: 'Some Property',
+      description: 'Inline description',
+      type: 'string',
+    });
+
+    render(
+      <FormWrapper>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    expect(screen.getByText('Inline description')).toBeInTheDocument();
   });
 
   it('should show staged badge when field is modified', () => {

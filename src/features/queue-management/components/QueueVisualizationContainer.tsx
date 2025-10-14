@@ -20,6 +20,7 @@ import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
 import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
 import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
+import { CapacityEditorDialog } from './CapacityEditorDialog';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -263,6 +264,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
       <ReactFlowProvider>
         <FlowInner />
         <CompareButton />
+        <CapacityEditorDialog />
       </ReactFlowProvider>
     </div>
   );

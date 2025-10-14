@@ -141,7 +141,12 @@ export const PropertyPanel: React.FC = () => {
 
   const queuePath = selectedQueue?.queuePath;
 
-  const queueIssues = queuePath ? (validationState[queuePath] ?? {}) : {};
+  const queueIssues = useMemo(() => {
+    if (!queuePath) {
+      return {} as Record<string, ValidationIssue[]>;
+    }
+    return validationState[queuePath] ?? {};
+  }, [queuePath, validationState]);
 
   const issueList = useMemo<Array<ValidationIssue & { field: string; key: string }>>(() => {
     if (!queuePath) {

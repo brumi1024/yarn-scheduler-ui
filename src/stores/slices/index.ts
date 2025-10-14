@@ -10,3 +10,4 @@ export * from './queueSelectionSlice';
 export * from './queueDataSlice';
 export * from './placementRulesSlice';
 export * from './searchSlice';
+export * from './capacityEditorSlice';

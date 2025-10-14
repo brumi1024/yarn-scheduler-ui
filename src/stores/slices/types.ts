@@ -12,6 +12,7 @@ import type {
   QueueInfo,
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
+import type { CapacityEditorSlice } from './capacityEditorSlice';
 
 export interface BaseStoreSlice {
   apiClient: YarnApiClient;
@@ -153,4 +154,5 @@ export type SchedulerStore = BaseStoreSlice &
   QueueSelectionSlice &
   QueueDataSlice &
   PlacementRulesSlice &
-  SearchSlice;
+  SearchSlice &
+  CapacityEditorSlice;

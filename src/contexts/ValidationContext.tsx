@@ -232,6 +232,7 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
   return <ValidationContext.Provider value={value}>{children}</ValidationContext.Provider>;
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const useValidation = (): ValidationContextValue => {
   const context = useContext(ValidationContext);
   if (!context) {

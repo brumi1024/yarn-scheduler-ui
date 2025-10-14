@@ -11,12 +11,19 @@ const mockGetQueueByPath = vi.fn();
 const mockGetChildQueues = vi.fn();
 const mockGetQueuePropertyValue = vi.fn();
 const mockStageQueueAddition = vi.fn();
+const mockOpenCapacityEditor = vi.fn();
 
 vi.mock('../../hooks/useQueueActions', () => ({
   useQueueActions: () => ({
     addChildQueue: mockAddChildQueue,
     updateQueueProperty: mockUpdateQueueProperty,
     canAddChildQueue: mockCanAddChildQueue,
+  }),
+}));
+
+vi.mock('../../hooks/useCapacityEditor', () => ({
+  useCapacityEditor: () => ({
+    openCapacityEditor: mockOpenCapacityEditor,
   }),
 }));
 
@@ -52,6 +59,7 @@ describe('AddQueueDialog', () => {
     mockGetChildQueues.mockReturnValue([]);
     mockGetQueuePropertyValue.mockReturnValue({ value: '', isStaged: false });
     mockUpdateQueueProperty.mockReset();
+    mockOpenCapacityEditor.mockReset();
   });
 
   afterAll(() => {
@@ -78,7 +86,7 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const submitButton = screen.getByRole('button', { name: /add queue/i });
+    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
 
     // Initially button should be disabled (no name entered)
     expect(submitButton).toBeDisabled();
@@ -92,6 +100,7 @@ describe('AddQueueDialog', () => {
     });
 
     expect(mockAddChildQueue).not.toHaveBeenCalled();
+    expect(mockOpenCapacityEditor).not.toHaveBeenCalled();
   });
 
   it('should validate queue name with special characters', async () => {
@@ -100,7 +109,7 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const submitButton = screen.getByRole('button', { name: /add queue/i });
+    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
 
     await user.type(nameInput, 'queue@#$%');
 
@@ -112,32 +121,6 @@ describe('AddQueueDialog', () => {
     expect(mockAddChildQueue).not.toHaveBeenCalled();
   });
 
-  it('should validate capacity value', async () => {
-    const user = userEvent.setup();
-    render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
-
-    const nameInput = screen.getByLabelText(/queue name/i);
-    const capacityInput = screen.getByLabelText('Capacity *');
-    const submitButton = screen.getByRole('button', { name: /add queue/i });
-
-    await user.type(nameInput, 'valid-queue');
-
-    // HTML number input won't allow typing values outside min/max range
-    // The browser will enforce max=100, so we can't type 150
-    // Let's test that the form starts with valid defaults
-    await waitFor(() => {
-      expect(submitButton).toBeEnabled();
-    });
-
-    // Clear and enter 0 should still be valid
-    await user.clear(capacityInput);
-    await user.type(capacityInput, '0');
-
-    await waitFor(() => {
-      expect(submitButton).toBeEnabled();
-    });
-  });
-
   it('should stage new queue on valid submission', async () => {
     const user = userEvent.setup();
     const onClose = vi.fn();
@@ -145,22 +128,11 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root.production" onClose={onClose} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const capacityInput = screen.getByLabelText('Capacity *');
-    const maxCapacityInput = screen.getByLabelText('Max Capacity *');
 
     // Fill all required fields
     await user.type(nameInput, 'newqueue');
 
-    // Clear and type capacity (default is 10)
-    await user.clear(capacityInput);
-    await user.type(capacityInput, '25');
-
-    // Clear and type max capacity (default is 100)
-    await user.clear(maxCapacityInput);
-    await user.type(maxCapacityInput, '100');
-
-    // Submit the form
-    const submitButton = screen.getByRole('button', { name: /add queue/i });
+    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
     expect(submitButton).not.toBeDisabled();
 
     await user.click(submitButton);
@@ -170,12 +142,23 @@ describe('AddQueueDialog', () => {
         'root.production',
         'newqueue',
         expect.objectContaining({
-          capacity: '25',
+          capacity: '10',
           'maximum-capacity': '100', // Default value
           state: 'RUNNING', // Default value
         }),
       );
       expect(onClose).toHaveBeenCalled();
+      expect(mockOpenCapacityEditor).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentQueuePath: 'root.production',
+          originQueuePath: 'root.production.newqueue',
+          originQueueName: 'newqueue',
+          capacityValue: '10',
+          maxCapacityValue: '100',
+          markOriginAsNew: true,
+          queueState: 'RUNNING',
+        }),
+      );
     });
   });
 
@@ -193,5 +176,6 @@ describe('AddQueueDialog', () => {
 
     expect(onClose).toHaveBeenCalled();
     expect(mockAddChildQueue).not.toHaveBeenCalled();
+    expect(mockOpenCapacityEditor).not.toHaveBeenCalled();
   });
 });
