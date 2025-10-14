@@ -1,5 +1,5 @@
 import { render, screen, fireEvent } from '@testing-library/react';
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, type Mock } from 'vitest';
 import type { ReactNode } from 'react';
 import { GlobalSettings } from './GlobalSettings';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -99,7 +99,7 @@ const createStoreState = (overrides?: Partial<Record<string, unknown>>) => ({
 
 const setupStoreMock = (stateOverrides?: Partial<Record<string, unknown>>) => {
   const storeState = createStoreState(stateOverrides);
-  (useSchedulerStore as unknown as vi.Mock).mockImplementation((selector?: (state: any) => any) =>
+  (useSchedulerStore as unknown as Mock).mockImplementation((selector?: (state: any) => any) =>
     selector ? selector(storeState) : storeState,
   );
   return storeState;

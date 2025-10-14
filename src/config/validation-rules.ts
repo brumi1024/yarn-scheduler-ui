@@ -2,6 +2,7 @@ import { buildPropertyKey } from '~/utils/propertyUtils';
 import { parseCapacityValue, getCapacityType } from '~/utils/capacityUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import type { StagedChange } from '~/types/staged-change';
+import type { SchedulerInfo } from '~/types';
 import type { ValidationIssue } from '~/features/validation/types';
 import {
   findQueueByPath,

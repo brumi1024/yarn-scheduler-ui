@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
 import { renderHook } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useGlobalPropertyValidation } from './useGlobalPropertyValidation';
@@ -22,7 +22,7 @@ const createStoreState = () => ({
 });
 
 const setupStoreMock = (state: ReturnType<typeof createStoreState>) => {
-  (useSchedulerStore as unknown as vi.Mock).mockImplementation((selector?: (s: any) => any) => {
+  (useSchedulerStore as unknown as Mock).mockImplementation((selector?: (s: any) => any) => {
     if (typeof selector === 'function') {
       return selector(state);
     }

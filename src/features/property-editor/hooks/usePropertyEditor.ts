@@ -121,9 +121,18 @@ export function usePropertyEditor({
     return escapedProperties;
   }, [properties, labelProperties]);
 
+  const knownFieldNames = useMemo(() => {
+    return new Set(allProperties.map((property) => property.originalName || property.name));
+  }, [allProperties]);
+
   const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
-  const { errors: validationState, replaceQueueIssues, clearQueueErrors } = useValidation();
+  const {
+    errors: validationState,
+    validateField: runContextValidation,
+    replaceQueueIssues,
+    clearQueueErrors,
+  } = useValidation();
 
   const form = useForm({
     resolver: zodResolver(formSchema),
@@ -132,7 +141,7 @@ export function usePropertyEditor({
     criteriaMode: 'all', // Show all validation errors
   });
 
-  const { control, handleSubmit, reset, setValue } = form;
+  const { control, handleSubmit, reset, setValue, getValues } = form;
 
   const watchedValues = useWatch({ control });
 
@@ -188,7 +197,11 @@ export function usePropertyEditor({
       const fieldName = property.formFieldName || property.name;
       initialValues[fieldName] = value;
     });
-    reset(initialValues);
+
+    reset(initialValues, {
+      keepDirty: true,
+      keepDirtyValues: true,
+    });
   }, [queuePath, allProperties, getQueuePropertyValue, reset, stagedChanges]);
 
   const getStagedStatus = useCallback(
@@ -228,9 +241,79 @@ export function usePropertyEditor({
     [setValue],
   );
 
-  const handleFieldBlur = useCallback(() => {
-    // Validation now runs on save; blur handler intentionally left blank
-  }, []);
+  const handleFieldBlur = useCallback(
+    (
+      propertyName: string,
+      value: string,
+      options?: {
+        validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+      },
+    ) => {
+      const normalizedName = normalizeFieldName(propertyName);
+      if (!knownFieldNames.has(normalizedName)) {
+        return;
+      }
+      const normalizedValue =
+        typeof value === 'string' ? value : value == null ? '' : String(value);
+
+      const pendingValues: Array<{ queuePath?: string; fieldName: string; value: unknown }> = [];
+
+      const collectOverrides = (dirtyEntry: unknown, fieldKey: string) => {
+        if (!dirtyEntry) {
+          return;
+        }
+
+        if (dirtyEntry === true) {
+          const normalizedField = normalizeFieldName(fieldKey);
+          if (!knownFieldNames.has(normalizedField)) {
+            return;
+          }
+          if (normalizedField === normalizedName) {
+            return;
+          }
+          const currentValue = getValues(fieldKey);
+          const currentValueAsString =
+            typeof currentValue === 'string'
+              ? currentValue
+              : currentValue == null
+                ? ''
+                : String(currentValue);
+          pendingValues.push({
+            queuePath,
+            fieldName: normalizedField,
+            value: currentValueAsString,
+          });
+          return;
+        }
+
+        if (typeof dirtyEntry === 'object') {
+          Object.entries(dirtyEntry as Record<string, unknown>).forEach(
+            ([childKey, childValue]) => {
+              const nextKey = fieldKey ? `${fieldKey}.${childKey}` : childKey;
+              collectOverrides(childValue, nextKey);
+            },
+          );
+        }
+      };
+
+      Object.entries(form.formState.dirtyFields).forEach(([fieldKey, dirtyEntry]) => {
+        collectOverrides(dirtyEntry, fieldKey);
+      });
+
+      options?.validationOverrides?.forEach(({ queuePath: overrideQueuePath, field, value }) => {
+        pendingValues.push({
+          queuePath: overrideQueuePath,
+          fieldName: field,
+          value,
+        });
+      });
+
+      runContextValidation(queuePath, normalizedName, normalizedValue, {
+        pendingValues,
+      });
+    },
+    [queuePath, normalizeFieldName, runContextValidation, form, getValues, knownFieldNames],
+  );
 
   const onSubmit = useCallback(
     async (data: Record<string, string>) => {

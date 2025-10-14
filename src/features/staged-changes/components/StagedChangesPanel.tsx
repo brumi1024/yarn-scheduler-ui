@@ -24,7 +24,7 @@ interface StagedChangesPanelProps {
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
 
-  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError } =
+  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError, apiError } =
     useSchedulerStore();
 
   // Group changes by queue path for organized display
@@ -119,6 +119,13 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Failed to Apply Changes</AlertTitle>
                   <AlertDescription>{applyError}</AlertDescription>
+                </Alert>
+              )}
+              {apiError && (
+                <Alert variant="destructive">
+                  <AlertCircle className="h-4 w-4" />
+                  <AlertTitle>Save Failed</AlertTitle>
+                  <AlertDescription>{apiError}</AlertDescription>
                 </Alert>
               )}
               <div className="flex items-center justify-between">

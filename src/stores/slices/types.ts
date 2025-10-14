@@ -46,6 +46,7 @@ import type { ValidationIssue } from '~/features/validation/types';
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
   applyError: string | null;
+  apiError: string | null;
 
   stageQueueChange: (
     queuePath: string,

@@ -27,7 +27,14 @@ interface PropertyFormFieldProps {
   control: Control<Record<string, string>>;
   stagedStatus?: 'new' | 'modified' | 'deleted';
   dependentValues?: Record<string, string>;
-  onBlur?: (propertyName: string, value: string) => void;
+  onBlur?: (
+    propertyName: string,
+    value: string,
+    options?: {
+      validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+    },
+  ) => void;
+  errors?: string[];
   warnings?: string[];
   queuePath?: string;
   queueName?: string;
@@ -42,6 +49,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   stagedStatus,
   dependentValues = {},
   onBlur,
+  errors = [],
   warnings = [],
   queuePath,
   queueName,
@@ -83,6 +91,26 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   ): React.ReactElement => {
     const fieldName = property.formFieldName || property.name;
     const error = formState.errors?.[fieldName];
+    const hasFormError = Boolean(error);
+    const fieldErrors = errors
+      .map((message) => (typeof message === 'string' ? message.trim() : ''))
+      .filter((message) => message.length > 0);
+    const inlineBusinessError = hasFormError ? undefined : fieldErrors[0];
+    const remainingBusinessErrors = hasFormError
+      ? fieldErrors
+      : inlineBusinessError
+        ? fieldErrors.slice(1)
+        : [];
+    const renderBusinessErrorsList = (messages: string[]) =>
+      messages.length > 0 ? (
+        <div className="mt-1 space-y-1">
+          {messages.map((message, index) => (
+            <div key={`business-error-${fieldName}-${index}`} className="text-xs text-destructive">
+              {message}
+            </div>
+          ))}
+        </div>
+      ) : null;
 
     const commonProps = {
       disabled: !isFieldEnabled,
@@ -95,27 +123,40 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <FieldSwitch
-            id={fieldName}
-            fieldName={fieldName}
-            label={`${property.displayName}${property.required ? ' *' : ''}`}
-            labelSuffix={
-              stagedStatus === 'modified' ? (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
-              ) : null
-            }
-            description={property.description}
-            labelProps={{
-              className: cn(!isFieldEnabled && 'text-muted-foreground'),
-            }}
-            disabled={!isFieldEnabled}
-            checked={field.value === 'true'}
-            onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
-            switchClassName={commonProps.className}
-            message={error ? String(error.message ?? '') : undefined}
-          />
+          <>
+            <FieldSwitch
+              id={fieldName}
+              fieldName={fieldName}
+              label={`${property.displayName}${property.required ? ' *' : ''}`}
+              labelSuffix={
+                stagedStatus === 'modified' ? (
+                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                    Staged
+                  </Badge>
+                ) : null
+              }
+              description={property.description}
+              labelProps={{
+                className: cn(!isFieldEnabled && 'text-muted-foreground'),
+              }}
+              disabled={!isFieldEnabled}
+              checked={field.value === 'true'}
+              onCheckedChange={(checked) => {
+                const nextValue = checked ? 'true' : '';
+                field.onChange(nextValue);
+                onBlur?.(property.name, nextValue);
+              }}
+              switchClassName={commonProps.className}
+              message={
+                error
+                  ? String(error.message ?? '')
+                  : inlineBusinessError
+                    ? inlineBusinessError
+                    : undefined
+              }
+            />
+            {renderBusinessErrorsList(remainingBusinessErrors)}
+          </>
         );
 
       case 'enum': {
@@ -169,7 +210,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                           name={fieldName}
                           value={option.value}
                           checked={isSelected}
-                          onChange={() => field.onChange(option.value)}
+                          onChange={() => {
+                            field.onChange(option.value);
+                            onBlur?.(property.name, option.value);
+                          }}
                           disabled={!isFieldEnabled}
                           className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
@@ -197,7 +241,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
@@ -223,6 +272,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 onValueChange={(value) => {
                   if (value) {
                     field.onChange(value);
+                    onBlur?.(property.name, value);
                   }
                 }}
                 disabled={!isFieldEnabled}
@@ -241,7 +291,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
@@ -299,7 +354,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
@@ -316,7 +376,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           : (currentValues?.['maximum-capacity'] ?? '');
         const shouldShowPopover = Boolean(parentQueuePath && isCapacityField);
 
-        const applyActiveQueueChanges = (changes: { capacity?: string; maxCapacity?: string }) => {
+        const applyActiveQueueChanges = (
+          changes: { capacity?: string; maxCapacity?: string },
+          options?: {
+            validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+          },
+        ) => {
           if (changes.capacity !== undefined) {
             setFormValue?.('capacity', changes.capacity, {
               shouldDirty: true,
@@ -327,6 +392,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             if (property.name === 'capacity') {
               field.onChange(changes.capacity);
             }
+            onBlur?.('capacity', changes.capacity, {
+              validationOverrides: options?.validationOverrides,
+            });
           }
 
           if (changes.maxCapacity !== undefined) {
@@ -339,6 +407,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             if (property.name === 'maximum-capacity') {
               field.onChange(changes.maxCapacity);
             }
+            onBlur?.('maximum-capacity', changes.maxCapacity, {
+              validationOverrides: options?.validationOverrides,
+            });
           }
         };
 
@@ -417,7 +488,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
             {warnings.length > 0 && (
               <div className="mt-1 space-y-1">
                 {warnings.map((warning, index) => {
@@ -457,7 +533,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         control={control}
         name={property.formFieldName || property.name}
         render={({ field, formState }) => (
-          <div className="space-y-1">
+          <div className="space-y-1" data-field-id={property.originalName || property.name}>
             {renderInput(field, formState)}
 
             {/* Status badges and helper text */}

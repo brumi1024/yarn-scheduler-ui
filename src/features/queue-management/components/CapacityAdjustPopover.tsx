@@ -10,6 +10,7 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import type { QueueInfo } from '~/types';
 import { cn } from '~/utils/cn';
+import { SPECIAL_VALUES } from '~/types';
 
 export type CapacityAdjustment = {
   capacity?: string;
@@ -29,7 +30,12 @@ interface CapacityAdjustPopoverProps {
   adjustments?: CapacityAdjustmentMap;
   onAdjustmentsChange?: (next: CapacityAdjustmentMap) => void;
   onApply?: (changes: CapacityAdjustmentMap) => Promise<void> | void;
-  onActiveQueueChange?: (changes: CapacityAdjustment) => void;
+  onActiveQueueChange?: (
+    changes: CapacityAdjustment,
+    options?: {
+      validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+    },
+  ) => void;
   isApplying?: boolean;
 }
 
@@ -109,21 +115,61 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
     return parts[parts.length - 1] || parentQueuePath;
   }, [parentQueuePath]);
 
+  const stagedUpdateOverrides = React.useMemo(() => {
+    const map = new Map<string, CapacityAdjustment>();
+    if (!parentQueuePath) {
+      return map;
+    }
+
+    stagedChanges.forEach((change) => {
+      if (change.type !== 'update') {
+        return;
+      }
+
+      if (!change.queuePath || change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH) {
+        return;
+      }
+
+      const parentPathFromQueue = change.queuePath.split('.').slice(0, -1).join('.');
+      if (parentPathFromQueue !== parentQueuePath) {
+        return;
+      }
+
+      const entry = map.get(change.queuePath) ?? {};
+      if (change.property === 'capacity' && change.newValue !== undefined) {
+        entry.capacity = sanitizeValue(change.newValue);
+      } else if (change.property === 'maximum-capacity' && change.newValue !== undefined) {
+        entry.maxCapacity = sanitizeValue(change.newValue);
+      }
+      map.set(change.queuePath, entry);
+    });
+
+    return map;
+  }, [stagedChanges, parentQueuePath]);
+
   const siblingSummaries = React.useMemo<SiblingSummary[]>(() => {
     return siblingQueues.map((queue) => {
       const capacity = getQueuePropertyValue(queue.queuePath, 'capacity');
       const maxCapacity = getQueuePropertyValue(queue.queuePath, 'maximum-capacity');
 
+      const overrides = stagedUpdateOverrides.get(queue.queuePath);
+
+      const capacityValue = overrides?.capacity ?? sanitizeValue(capacity.value);
+      const maxCapacityValue = overrides?.maxCapacity ?? sanitizeValue(maxCapacity.value);
+
       return {
         queueName: queue.queueName,
         queuePath: queue.queuePath,
-        capacity: sanitizeValue(capacity.value),
-        maxCapacity: sanitizeValue(maxCapacity.value),
-        hasStagedChange: capacity.isStaged || maxCapacity.isStaged,
+        capacity: capacityValue,
+        maxCapacity: maxCapacityValue,
+        hasStagedChange:
+          capacity.isStaged ||
+          maxCapacity.isStaged ||
+          Boolean(overrides?.capacity || overrides?.maxCapacity),
         isStagedNew: false,
       };
     });
-  }, [siblingQueues, getQueuePropertyValue]);
+  }, [siblingQueues, getQueuePropertyValue, stagedUpdateOverrides]);
 
   const stagedSiblingSummaries = React.useMemo<SiblingSummary[]>(() => {
     if (!parentQueuePath) {
@@ -482,14 +528,61 @@ export const CapacityAdjustPopover: React.FC<CapacityAdjustPopoverProps> = ({
       return;
     }
 
+    const validationOverrides = Object.entries(changesToApply).flatMap(([queuePath, change]) => {
+      const overrides: Array<{ queuePath: string; field: string; value: string }> = [];
+
+      if (change.capacity !== undefined) {
+        overrides.push({
+          queuePath,
+          field: 'capacity',
+          value: sanitizeValue(change.capacity),
+        });
+      }
+
+      if (change.maxCapacity !== undefined) {
+        overrides.push({
+          queuePath,
+          field: 'maximum-capacity',
+          value: sanitizeValue(change.maxCapacity),
+        });
+      }
+
+      return overrides;
+    });
+
     try {
       setInternalApplying(true);
       await onApply(changesToApply);
+
+      if (onActiveQueueChange) {
+        const activeRow = draftRows.find(
+          (row) => row.isActiveQueue && row.queuePath && row.queuePath !== 'pending',
+        );
+
+        if (activeRow) {
+          onActiveQueueChange(
+            {
+              capacity: sanitizeValue(activeRow.capacity),
+              maxCapacity: sanitizeValue(activeRow.maxCapacity),
+            },
+            { validationOverrides },
+          );
+        }
+      }
+
       setOpen(false);
     } finally {
       setInternalApplying(false);
     }
-  }, [activeQueueChange, hasNewChanges, onAdjustmentsChange, onApply, siblingDiff]);
+  }, [
+    activeQueueChange,
+    draftRows,
+    hasNewChanges,
+    onActiveQueueChange,
+    onAdjustmentsChange,
+    onApply,
+    siblingDiff,
+  ]);
 
   if (!parentQueuePath) {
     return null;

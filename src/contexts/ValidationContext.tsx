@@ -6,6 +6,7 @@ import {
   useState,
   type PropsWithChildren,
 } from 'react';
+import type { JSX } from 'react';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { mergeStagedConfig, applyFieldPreview } from '~/features/validation/utils/configUtils';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -19,9 +20,20 @@ type FieldIssues = ValidationIssue[];
 type QueueIssues = Record<string, FieldIssues>;
 type ValidationState = Record<string, QueueIssues>;
 
+interface PendingFieldValue {
+  queuePath?: string;
+  fieldName: string;
+  value: unknown;
+}
+
 interface ValidationContextValue {
   errors: ValidationState;
-  validateField: (queuePath: string, fieldName: string, fieldValue: unknown) => ValidationIssue[];
+  validateField: (
+    queuePath: string,
+    fieldName: string,
+    fieldValue: unknown,
+    options?: { pendingValues?: PendingFieldValue[] },
+  ) => ValidationIssue[];
   replaceQueueIssues: (queuePath: string, issues: ValidationIssue[]) => void;
   clearFieldErrors: (queuePath: string, fieldName: string) => void;
   clearQueueErrors: (queuePath: string) => void;
@@ -113,8 +125,30 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
   }, []);
 
   const validateField = useCallback(
-    (queuePath: string, fieldName: string, fieldValue: unknown) => {
-      const effectiveConfig = applyFieldPreview(baseMergedConfig, queuePath, fieldName, fieldValue);
+    (
+      queuePath: string,
+      fieldName: string,
+      fieldValue: unknown,
+      options?: { pendingValues?: PendingFieldValue[] },
+    ) => {
+      let effectiveConfig = applyFieldPreview(baseMergedConfig, queuePath, fieldName, fieldValue);
+
+      if (options?.pendingValues?.length) {
+        options.pendingValues.forEach(
+          ({ queuePath: overrideQueuePath, fieldName: overrideField, value }) => {
+            const targetQueuePath = overrideQueuePath ?? queuePath;
+            if (targetQueuePath === queuePath && overrideField === fieldName) {
+              return;
+            }
+            effectiveConfig = applyFieldPreview(
+              effectiveConfig,
+              targetQueuePath,
+              overrideField,
+              value,
+            );
+          },
+        );
+      }
 
       const legacyValue = effectiveConfig.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY);
 
