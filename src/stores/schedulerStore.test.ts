@@ -336,6 +336,8 @@ describe('schedulerStore', () => {
       expect(state.configData).toEqual(new Map());
       expect(state.nodeLabels).toEqual([]);
       expect(state.stagedChanges).toEqual([]);
+      expect(state.applyError).toBeNull();
+      expect(state.apiError).toBeNull();
       expect(state.selectedNodeLabel).toBeNull();
       expect(state.configVersion).toBe(0);
       expect(state.isLoading).toBe(false);
@@ -836,6 +838,7 @@ describe('schedulerStore', () => {
       expect(store.getState().error).toBe('HTTP 400: Invalid configuration');
       expect(store.getState().errorContext).toBe('mutation');
       expect(store.getState().applyError).toBe('HTTP 400: Invalid configuration');
+      expect(store.getState().apiError).toBe('HTTP 400: Invalid configuration');
     });
 
     it('should clear mutation error when staged changes are modified after a failure', async () => {
@@ -852,10 +855,12 @@ describe('schedulerStore', () => {
       await expect(store.getState().applyChanges()).rejects.toBeDefined();
 
       expect(store.getState().applyError).toBe('HTTP 400: Invalid configuration');
+      expect(store.getState().apiError).toBe('HTTP 400: Invalid configuration');
 
       store.getState().stageQueueChange('root.default', 'capacity', '61');
 
       expect(store.getState().applyError).toBeNull();
+      expect(store.getState().apiError).toBeNull();
       expect(store.getState().error).toBeNull();
       expect(store.getState().errorContext).toBeNull();
     });

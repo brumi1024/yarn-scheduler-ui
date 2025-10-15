@@ -1,6 +1,7 @@
 import { Links, Meta, Outlet, Scripts, ScrollRestoration } from 'react-router';
 import { Toaster } from '~/components/ui/sonner';
 import { ThemeProvider } from '~/components/providers/theme-provider';
+import { ValidationProvider } from '~/contexts/ValidationContext';
 
 import './app.css';
 
@@ -29,5 +30,9 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
-  return <Outlet />;
+  return (
+    <ValidationProvider>
+      <Outlet />
+    </ValidationProvider>
+  );
 }

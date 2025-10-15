@@ -39,7 +39,6 @@ interface PropertyEditorTabProps {
   onHasChangesChange?: (hasChanges: boolean) => void;
   onIsSubmittingChange?: (isSubmitting: boolean) => void;
   onFormDirtyChange?: (isDirty: boolean) => void;
-  onErrorsChange?: (errors: Record<string, unknown>) => void;
 }
 
 // Category display configuration with icons and enhanced styling
@@ -107,7 +106,7 @@ const baseCategoryOrder: PropertyCategory[] = [
 ];
 
 export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEditorTabProps>(
-  ({ queue, onHasChangesChange, onIsSubmittingChange, onFormDirtyChange, onErrorsChange }, ref) => {
+  ({ queue, onHasChangesChange, onIsSubmittingChange, onFormDirtyChange }, ref) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedAccordions, setExpandedAccordions] = useState<string[]>(['general']);
 
@@ -124,6 +123,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       getStagedStatus,
       formState,
       handleFieldBlur,
+      getFieldErrors,
       getFieldWarnings,
     } = usePropertyEditor({
       queuePath: queue.queuePath,
@@ -198,11 +198,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     React.useEffect(() => {
       onFormDirtyChange?.(formState.isDirty);
     }, [formState.isDirty, onFormDirtyChange]);
-
-    // Notify parent about error changes
-    React.useEffect(() => {
-      onErrorsChange?.(errors);
-    }, [errors, onErrorsChange]);
 
     // Handle form submission (staging)
     const onSubmit = React.useCallback(async () => {
@@ -378,6 +373,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                                     control={control}
                                     stagedStatus={getStagedStatus(prop.originalName || prop.name)}
                                     onBlur={handleFieldBlur}
+                                    errors={getFieldErrors(prop.formFieldName || prop.name)}
                                     warnings={getFieldWarnings(prop.formFieldName || prop.name)}
                                     queuePath={queue.queuePath}
                                     queueName={queue.queueName}
@@ -421,6 +417,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                             control={control}
                             stagedStatus={getStagedStatus(prop.originalName || prop.name)}
                             onBlur={handleFieldBlur}
+                            errors={getFieldErrors(prop.formFieldName || prop.name)}
                             warnings={getFieldWarnings(prop.formFieldName || prop.name)}
                             queuePath={queue.queuePath}
                             queueName={queue.queueName}

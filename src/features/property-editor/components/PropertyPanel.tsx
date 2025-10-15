@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   Save,
   RotateCcw,
@@ -7,8 +7,7 @@ import {
   Settings,
   Edit,
   AlertCircle,
-  ChevronDown,
-  ChevronUp,
+  AlertTriangle,
 } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
@@ -21,6 +20,9 @@ import { PropertyEditorTab } from './PropertyEditorTab';
 import { UnsavedChangesDialog } from './dialogs/UnsavedChangesDialog';
 import type { PropertyEditorTabHandle } from './PropertyEditorTab';
 import { toast } from 'sonner';
+import { useValidation } from '~/contexts/ValidationContext';
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
+import type { ValidationIssue } from '~/features/validation/types';
 
 export const PropertyPanel: React.FC = () => {
   const {
@@ -37,12 +39,13 @@ export const PropertyPanel: React.FC = () => {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
-  const [validationErrors, setValidationErrors] = useState<Record<string, unknown>>({});
-  const [showErrorDetails, setShowErrorDetails] = useState(false);
+  const [isSummaryOpen, setSummaryOpen] = useState(false);
 
   const propertyEditorRef = useRef<PropertyEditorTabHandle>(null);
+  const { errors: validationState } = useValidation();
 
   const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
+  const isPanelVisible = Boolean(selectedQueue && isPropertyPanelOpen);
 
   // Reset tab to overview when panel opens
   useEffect(() => {
@@ -66,12 +69,8 @@ export const PropertyPanel: React.FC = () => {
     if (propertyEditorRef.current) {
       // Check if form is valid before submitting
       if (!propertyEditorRef.current.isValid()) {
-        // Get the validation errors and update state
-        const errors = propertyEditorRef.current.getErrors();
-        setValidationErrors(errors);
-        setShowErrorDetails(true); // Automatically expand to show details
-
         toast.error('Please fix validation errors before staging changes');
+        setSummaryOpen(true);
         return;
       }
 
@@ -89,6 +88,7 @@ export const PropertyPanel: React.FC = () => {
     if (propertyEditorRef.current) {
       propertyEditorRef.current.reset();
     }
+    setSummaryOpen(false);
   };
 
   const handleHasChangesChange = (newHasChanges: boolean) => {
@@ -103,14 +103,11 @@ export const PropertyPanel: React.FC = () => {
     setIsSubmitting(newIsSubmitting);
   };
 
-  const handleErrorsChange = (errors: Record<string, unknown>) => {
-    setValidationErrors(errors);
-  };
-
   const handleSaveAndClose = async () => {
     // Check if form is valid
     if (propertyEditorRef.current && !propertyEditorRef.current.isValid()) {
       toast.error('Please fix validation errors before saving');
+      setSummaryOpen(true);
       return; // Don't close the dialog or panel
     }
 
@@ -132,12 +129,70 @@ export const PropertyPanel: React.FC = () => {
     if (!isPropertyPanelOpen || !selectedQueuePath) {
       setHasChanges(false);
       setIsFormDirty(false);
-      setValidationErrors({});
-      setShowErrorDetails(false);
+      setSummaryOpen(false);
     }
   }, [isPropertyPanelOpen, selectedQueuePath]);
 
-  if (!selectedQueue || !isPropertyPanelOpen) {
+  useEffect(() => {
+    if (!isPropertyPanelOpen) {
+      setSummaryOpen(false);
+    }
+  }, [isPropertyPanelOpen]);
+
+  const queuePath = selectedQueue?.queuePath;
+
+  const queueIssues = useMemo(() => {
+    if (!queuePath) {
+      return {} as Record<string, ValidationIssue[]>;
+    }
+    return validationState[queuePath] ?? {};
+  }, [queuePath, validationState]);
+
+  const issueList = useMemo<Array<ValidationIssue & { field: string; key: string }>>(() => {
+    if (!queuePath) {
+      return [];
+    }
+    return Object.entries(queueIssues).flatMap(([field, issues]) =>
+      issues.map((issue, index) => ({
+        ...issue,
+        field,
+        key: `${field}-${issue.rule}-${index}`,
+      })),
+    );
+  }, [queueIssues, queuePath]);
+
+  const errorIssues = useMemo(
+    () => issueList.filter((issue) => issue.severity === 'error'),
+    [issueList],
+  );
+
+  const warningIssues = useMemo(
+    () => issueList.filter((issue) => issue.severity === 'warning'),
+    [issueList],
+  );
+
+  const summaryLabel = useMemo(() => {
+    const parts: string[] = [];
+    if (errorIssues.length) {
+      parts.push(`${errorIssues.length} error${errorIssues.length === 1 ? '' : 's'}`);
+    }
+    if (warningIssues.length) {
+      parts.push(`${warningIssues.length} warning${warningIssues.length === 1 ? '' : 's'}`);
+    }
+    return parts.length > 0 ? parts.join(', ') : 'Validation issues';
+  }, [errorIssues.length, warningIssues.length]);
+
+  const handleIssueSelect = useCallback((field: string) => {
+    const selector = `[data-field-id="${field.replace(/"/g, '\\"')}"]`;
+    const element = document.querySelector(selector) as HTMLElement | null;
+    if (element) {
+      element.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      element.focus?.();
+    }
+    setSummaryOpen(false);
+  }, []);
+
+  if (!isPanelVisible || !selectedQueue) {
     return null;
   }
 
@@ -161,21 +216,76 @@ export const PropertyPanel: React.FC = () => {
                 <div className="flex items-center gap-2 pb-2">
                   <span className="text-xs text-muted-foreground">{selectedQueue.queuePath}</span>
                   <div className="flex-1" />
-                  {Object.keys(validationErrors).length > 0 && (
-                    <Badge
-                      variant="destructive"
-                      className="text-xs cursor-pointer"
-                      onClick={() => setShowErrorDetails(!showErrorDetails)}
-                    >
-                      <AlertCircle className="h-3 w-3 mr-1" />
-                      {Object.keys(validationErrors).length} Error
-                      {Object.keys(validationErrors).length > 1 ? 's' : ''}
-                      {showErrorDetails ? (
-                        <ChevronUp className="h-3 w-3 ml-1" />
-                      ) : (
-                        <ChevronDown className="h-3 w-3 ml-1" />
-                      )}
-                    </Badge>
+                  {issueList.length > 0 && (
+                    <Popover open={isSummaryOpen} onOpenChange={setSummaryOpen}>
+                      <PopoverTrigger asChild>
+                        <Button
+                          size="sm"
+                          variant={errorIssues.length ? 'destructive' : 'secondary'}
+                          className="h-6 px-2 gap-1"
+                        >
+                          {errorIssues.length > 0 ? (
+                            <AlertCircle className="h-3.5 w-3.5" />
+                          ) : (
+                            <AlertTriangle className="h-3.5 w-3.5" />
+                          )}
+                          <span className="text-xs font-medium">{summaryLabel}</span>
+                        </Button>
+                      </PopoverTrigger>
+                      <PopoverContent align="end" className="w-80">
+                        <div className="space-y-3">
+                          <div className="text-sm font-semibold">Validation issues</div>
+                          {errorIssues.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-semibold text-destructive uppercase">
+                                Errors
+                              </div>
+                              <div className="space-y-1">
+                                {errorIssues.map((issue) => (
+                                  <button
+                                    key={issue.key}
+                                    className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
+                                    onClick={() => handleIssueSelect(issue.field)}
+                                  >
+                                    <span className="mt-1 h-2 w-2 rounded-full bg-destructive flex-shrink-0" />
+                                    <span>
+                                      <span className="font-medium">{issue.field}</span>
+                                      <span className="block text-muted-foreground">
+                                        {issue.message}
+                                      </span>
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                          {warningIssues.length > 0 && (
+                            <div className="space-y-1">
+                              <div className="text-xs font-semibold text-amber-600 uppercase">
+                                Warnings
+                              </div>
+                              <div className="space-y-1">
+                                {warningIssues.map((issue) => (
+                                  <button
+                                    key={issue.key}
+                                    className="w-full text-left text-xs px-2 py-1 rounded-md hover:bg-muted flex items-start gap-2"
+                                    onClick={() => handleIssueSelect(issue.field)}
+                                  >
+                                    <span className="mt-1 h-2 w-2 rounded-full bg-amber-500 flex-shrink-0" />
+                                    <span>
+                                      <span className="font-medium">{issue.field}</span>
+                                      <span className="block text-muted-foreground">
+                                        {issue.message}
+                                      </span>
+                                    </span>
+                                  </button>
+                                ))}
+                              </div>
+                            </div>
+                          )}
+                        </div>
+                      </PopoverContent>
+                    </Popover>
                   )}
                   {isFormDirty && (
                     <Badge variant="outline" className="text-xs">
@@ -190,21 +300,7 @@ export const PropertyPanel: React.FC = () => {
                     </Badge>
                   )}
                 </div>
-
-                {/* Expandable error details */}
-                {showErrorDetails && Object.keys(validationErrors).length > 0 && (
-                  <div className="pb-2 px-2 space-y-1">
-                    <div className="text-xs font-medium text-destructive">Validation Errors:</div>
-                    {Object.entries(validationErrors).map(([field, error]) => (
-                      <div key={field} className="text-xs text-muted-foreground pl-2">
-                        • <span className="font-medium">{field}:</span>{' '}
-                        {typeof error === 'object' && error && 'message' in error
-                          ? (error as { message: string }).message
-                          : String(error)}
-                      </div>
-                    ))}
-                  </div>
-                )}
+                {/* Validation summary handled via popover */}
               </div>
             </SheetHeader>
 
@@ -237,7 +333,6 @@ export const PropertyPanel: React.FC = () => {
                   onHasChangesChange={handleHasChangesChange}
                   onIsSubmittingChange={handleIsSubmittingChange}
                   onFormDirtyChange={handleFormDirtyChange}
-                  onErrorsChange={handleErrorsChange}
                 />
               </TabsContent>
             </Tabs>

@@ -4,11 +4,11 @@ import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
-import { getMergedConfigData } from '~/utils/validation/stagedChangesUtils';
+import { getMergedConfigData } from '~/features/validation/utils/configUtils';
 
 // Mock the utils module
 vi.mock('~/utils/placementRulesUtils');
-vi.mock('~/utils/validation/stagedChangesUtils');
+vi.mock('~/features/validation/utils/configUtils');
 
 // Create mock API client
 const createMockApiClient = () => ({

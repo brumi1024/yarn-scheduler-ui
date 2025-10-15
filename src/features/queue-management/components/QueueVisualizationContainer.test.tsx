@@ -116,6 +116,30 @@ vi.mock('~/stores/schedulerStore', () => ({
         canUseLabel: true,
       })),
       hasQueueProperty: vi.fn(() => false),
+      getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
+      capacityEditor: {
+        isOpen: false,
+        origin: null,
+        parentQueuePath: null,
+        originQueuePath: null,
+        originQueueName: null,
+        originQueueState: null,
+        originInitialCapacity: null,
+        originInitialMaxCapacity: null,
+        originIsNew: false,
+        selectedNodeLabel: null,
+        labelOptions: [{ value: '__DEFAULT_PARTITION__', label: 'Default partition' }],
+        drafts: {},
+        draftOrder: [],
+        isSaving: false,
+        saveError: null,
+        validationIssues: [],
+      },
+      closeCapacityEditor: vi.fn(),
+      updateCapacityDraft: vi.fn(),
+      setCapacityEditorLabel: vi.fn(),
+      resetCapacityDrafts: vi.fn(),
+      saveCapacityDrafts: vi.fn(() => Promise.resolve(true)),
     };
 
     // If selector is provided, call it with state
@@ -135,6 +159,7 @@ vi.mock('../hooks/useQueueTreeData', () => ({
     isLoading: true,
     loadError: null,
     applyError: null,
+    apiError: null,
   })),
 }));
 
@@ -176,6 +201,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: 'Failed to fetch queue data',
       applyError: null,
+      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -200,6 +226,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: 'HTTP 400: Invalid configuration',
+      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -209,6 +236,31 @@ describe('QueueVisualizationContainer', () => {
     expect(screen.queryByText('Error Loading Queue Data')).not.toBeInTheDocument();
   });
 
+  it('should surface api error without hiding the queue hierarchy', () => {
+    const mockNodes: Node<QueueCardData>[] = [
+      {
+        id: 'root',
+        type: 'queueCard',
+        position: { x: 0, y: 0 },
+        data: getMockQueueCardData({ queueName: 'root', queuePath: 'root' }),
+      },
+    ];
+
+    vi.mocked(useQueueTreeData).mockReturnValue({
+      nodes: mockNodes,
+      edges: [],
+      isLoading: false,
+      loadError: null,
+      applyError: null,
+      apiError: 'YARN rejected the configuration',
+    });
+
+    renderWithProviders(<QueueVisualizationContainer />);
+
+    expect(screen.getByText('Save Failed')).toBeInTheDocument();
+    expect(screen.getByText('YARN rejected the configuration')).toBeInTheDocument();
+  });
+
   it('should show empty state when no queue data exists', () => {
     vi.mocked(useQueueTreeData).mockReturnValue({
       nodes: [],
@@ -216,6 +268,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
+      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -269,6 +322,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
+      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -320,6 +374,30 @@ describe('QueueVisualizationContainer', () => {
           canUseLabel: true,
         })),
         hasQueueProperty: vi.fn(() => false),
+        getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
+        capacityEditor: {
+          isOpen: false,
+          origin: null,
+          parentQueuePath: null,
+          originQueuePath: null,
+          originQueueName: null,
+          originQueueState: null,
+          originInitialCapacity: null,
+          originInitialMaxCapacity: null,
+          originIsNew: false,
+          selectedNodeLabel: null,
+          labelOptions: [{ value: '__DEFAULT_PARTITION__', label: 'Default partition' }],
+          drafts: {},
+          draftOrder: [],
+          isSaving: false,
+          saveError: null,
+          validationIssues: [],
+        },
+        closeCapacityEditor: vi.fn(),
+        updateCapacityDraft: vi.fn(),
+        setCapacityEditorLabel: vi.fn(),
+        resetCapacityDrafts: vi.fn(),
+        saveCapacityDrafts: vi.fn(() => Promise.resolve(true)),
       };
 
       if (typeof selector === 'function') {
@@ -349,6 +427,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
+      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -393,6 +472,7 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
+      apiError: null,
     });
 
     // Test with dark theme

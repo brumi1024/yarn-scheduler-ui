@@ -1,4 +1,4 @@
-import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
+import type { ValidationIssue } from '~/features/validation/types';
 
 export type StagedChangeType = 'add' | 'update' | 'remove';
 
@@ -12,5 +12,5 @@ export type StagedChange = {
   timestamp: number;
   label?: string; // Used for node label changes
   // Validation errors associated with this change
-  validationErrors?: BusinessValidationError[];
+  validationErrors?: ValidationIssue[];
 };

@@ -15,11 +15,8 @@ import {
   FieldMessage,
 } from '~/components/ui/field';
 import { Info, AlertTriangle } from 'lucide-react';
-import {
-  CapacityAdjustPopover,
-  type CapacityAdjustmentMap,
-} from '~/features/queue-management/components/CapacityAdjustPopover';
-import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
+import { Button } from '~/components/ui/button';
+import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 
 interface PropertyFormFieldProps {
@@ -27,7 +24,14 @@ interface PropertyFormFieldProps {
   control: Control<Record<string, string>>;
   stagedStatus?: 'new' | 'modified' | 'deleted';
   dependentValues?: Record<string, string>;
-  onBlur?: (propertyName: string, value: string) => void;
+  onBlur?: (
+    propertyName: string,
+    value: string,
+    options?: {
+      validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+    },
+  ) => void;
+  errors?: string[];
   warnings?: string[];
   queuePath?: string;
   queueName?: string;
@@ -42,29 +46,14 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   stagedStatus,
   dependentValues = {},
   onBlur,
+  errors = [],
   warnings = [],
   queuePath,
   queueName,
   parentQueuePath,
   currentValues,
-  setFormValue,
 }) => {
-  const { updateQueueProperty } = useQueueActions();
-
-  const handleApplyAdjustments = React.useCallback(
-    async (changes: CapacityAdjustmentMap) => {
-      Object.entries(changes).forEach(([path, change]) => {
-        if (change.capacity !== undefined) {
-          updateQueueProperty(path, 'capacity', change.capacity);
-        }
-
-        if (change.maxCapacity !== undefined) {
-          updateQueueProperty(path, 'maximum-capacity', change.maxCapacity);
-        }
-      });
-    },
-    [updateQueueProperty],
-  );
+  const { openCapacityEditor } = useCapacityEditor();
 
   // Check if field should be enabled based on dependencies
   const isFieldEnabled = React.useMemo(() => {
@@ -83,6 +72,26 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   ): React.ReactElement => {
     const fieldName = property.formFieldName || property.name;
     const error = formState.errors?.[fieldName];
+    const hasFormError = Boolean(error);
+    const fieldErrors = errors
+      .map((message) => (typeof message === 'string' ? message.trim() : ''))
+      .filter((message) => message.length > 0);
+    const inlineBusinessError = hasFormError ? undefined : fieldErrors[0];
+    const remainingBusinessErrors = hasFormError
+      ? fieldErrors
+      : inlineBusinessError
+        ? fieldErrors.slice(1)
+        : [];
+    const renderBusinessErrorsList = (messages: string[]) =>
+      messages.length > 0 ? (
+        <div className="mt-1 space-y-1">
+          {messages.map((message, index) => (
+            <div key={`business-error-${fieldName}-${index}`} className="text-xs text-destructive">
+              {message}
+            </div>
+          ))}
+        </div>
+      ) : null;
 
     const commonProps = {
       disabled: !isFieldEnabled,
@@ -95,27 +104,40 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
     switch (property.type) {
       case 'boolean':
         return (
-          <FieldSwitch
-            id={fieldName}
-            fieldName={fieldName}
-            label={`${property.displayName}${property.required ? ' *' : ''}`}
-            labelSuffix={
-              stagedStatus === 'modified' ? (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
-              ) : null
-            }
-            description={property.description}
-            labelProps={{
-              className: cn(!isFieldEnabled && 'text-muted-foreground'),
-            }}
-            disabled={!isFieldEnabled}
-            checked={field.value === 'true'}
-            onCheckedChange={(checked) => field.onChange(checked ? 'true' : '')}
-            switchClassName={commonProps.className}
-            message={error ? String(error.message ?? '') : undefined}
-          />
+          <>
+            <FieldSwitch
+              id={fieldName}
+              fieldName={fieldName}
+              label={`${property.displayName}${property.required ? ' *' : ''}`}
+              labelSuffix={
+                stagedStatus === 'modified' ? (
+                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                    Staged
+                  </Badge>
+                ) : null
+              }
+              description={property.description}
+              labelProps={{
+                className: cn(!isFieldEnabled && 'text-muted-foreground'),
+              }}
+              disabled={!isFieldEnabled}
+              checked={field.value === 'true'}
+              onCheckedChange={(checked) => {
+                const nextValue = checked ? 'true' : '';
+                field.onChange(nextValue);
+                onBlur?.(property.name, nextValue);
+              }}
+              switchClassName={commonProps.className}
+              message={
+                error
+                  ? String(error.message ?? '')
+                  : inlineBusinessError
+                    ? inlineBusinessError
+                    : undefined
+              }
+            />
+            {renderBusinessErrorsList(remainingBusinessErrors)}
+          </>
         );
 
       case 'enum': {
@@ -169,7 +191,10 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                           name={fieldName}
                           value={option.value}
                           checked={isSelected}
-                          onChange={() => field.onChange(option.value)}
+                          onChange={() => {
+                            field.onChange(option.value);
+                            onBlur?.(property.name, option.value);
+                          }}
                           disabled={!isFieldEnabled}
                           className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
@@ -197,7 +222,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
@@ -223,6 +253,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 onValueChange={(value) => {
                   if (value) {
                     field.onChange(value);
+                    onBlur?.(property.name, value);
                   }
                 }}
                 disabled={!isFieldEnabled}
@@ -241,7 +272,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
@@ -299,12 +335,17 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
           </Field>
         );
 
       default: {
-        // string and capacity types
+        // string, capacity, and ACL fields
         const fieldValue = typeof field.value === 'string' ? field.value : '';
         const isCapacityField = property.name === 'capacity';
         const isMaxCapacityField = property.name === 'maximum-capacity';
@@ -314,33 +355,108 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         const maxCapacityFieldValue = isMaxCapacityField
           ? fieldValue
           : (currentValues?.['maximum-capacity'] ?? '');
-        const shouldShowPopover = Boolean(parentQueuePath && isCapacityField);
 
-        const applyActiveQueueChanges = (changes: { capacity?: string; maxCapacity?: string }) => {
-          if (changes.capacity !== undefined) {
-            setFormValue?.('capacity', changes.capacity, {
-              shouldDirty: true,
-              shouldTouch: true,
-              shouldValidate: true,
-            });
-
-            if (property.name === 'capacity') {
-              field.onChange(changes.capacity);
-            }
+        const handleOpenCapacityEditor = () => {
+          if (!parentQueuePath || !queuePath) {
+            return;
           }
 
-          if (changes.maxCapacity !== undefined) {
-            setFormValue?.('maximum-capacity', changes.maxCapacity, {
-              shouldDirty: true,
-              shouldTouch: true,
-              shouldValidate: true,
-            });
+          const safeQueueName =
+            queueName ?? queuePath?.split('.').pop() ?? parentQueuePath.split('.').pop() ?? 'Queue';
 
-            if (property.name === 'maximum-capacity') {
-              field.onChange(changes.maxCapacity);
-            }
-          }
+          openCapacityEditor({
+            origin: 'property-editor',
+            parentQueuePath,
+            originQueuePath: queuePath,
+            originQueueName: safeQueueName,
+            capacityValue: capacityFieldValue,
+            maxCapacityValue: maxCapacityFieldValue,
+          });
         };
+
+        if (isCapacityField || isMaxCapacityField) {
+          const displayValue =
+            (isCapacityField ? capacityFieldValue : maxCapacityFieldValue) || 'Not set';
+
+          return (
+            <Field>
+              <FieldLabel
+                className={cn(
+                  'flex items-center gap-2 justify-between',
+                  !isFieldEnabled && 'text-muted-foreground',
+                )}
+              >
+                <div className="flex items-center gap-1 min-w-0">
+                  <span className="truncate">
+                    {property.displayName}
+                    {property.required ? ' *' : ''}
+                  </span>
+                  {stagedStatus === 'modified' && (
+                    <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+                      Staged
+                    </Badge>
+                  )}
+                </div>
+
+                {isCapacityField ? (
+                  <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    className="text-xs"
+                    onClick={handleOpenCapacityEditor}
+                    disabled={!parentQueuePath || !isFieldEnabled}
+                  >
+                    Capacity Editor
+                  </Button>
+                ) : (
+                  <span className="text-xs text-muted-foreground">Managed in Capacity Editor</span>
+                )}
+              </FieldLabel>
+              <div className="mt-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm font-mono text-foreground">
+                {displayValue}
+              </div>
+              {property.description && !(isCapacityField || isMaxCapacityField) && (
+                <FieldDescription className="text-xs text-muted-foreground">
+                  {property.description}
+                </FieldDescription>
+              )}
+              {(error || inlineBusinessError) && (
+                <FieldMessage>
+                  {error ? String(error.message ?? '') : inlineBusinessError}
+                </FieldMessage>
+              )}
+              {renderBusinessErrorsList(remainingBusinessErrors)}
+              {warnings.length > 0 && (
+                <div className="mt-1 space-y-1">
+                  {warnings.map((warning, index) => {
+                    const isLegacyMode = warning.includes('legacy mode requirement');
+                    return (
+                      <div key={index} className="flex items-start gap-1.5">
+                        <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
+                        <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
+                        {isLegacyMode && (
+                          <Tooltip>
+                            <TooltipTrigger asChild>
+                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help mt-0.5 flex-shrink-0" />
+                            </TooltipTrigger>
+                            <TooltipContent className="max-w-xs">
+                              <p className="text-xs">
+                                This validation is enforced because legacy queue mode is enabled.
+                                You can disable legacy mode in Global Settings for more flexible
+                                capacity configuration.
+                              </p>
+                            </TooltipContent>
+                          </Tooltip>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+            </Field>
+          );
+        }
 
         return (
           <Field>
@@ -361,19 +477,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </Badge>
                 )}
               </div>
-
-              {shouldShowPopover && (
-                <CapacityAdjustPopover
-                  parentQueuePath={parentQueuePath}
-                  activeQueuePath={queuePath}
-                  activeQueueName={queueName}
-                  capacityValue={capacityFieldValue}
-                  maxCapacityValue={maxCapacityFieldValue}
-                  triggerVariant="default"
-                  onActiveQueueChange={applyActiveQueueChanges}
-                  onApply={handleApplyAdjustments}
-                />
-              )}
             </FieldLabel>
             <FieldControl>
               {property.name.includes('acl') ? (
@@ -417,7 +520,12 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {error && <FieldMessage>{String(error.message ?? '')}</FieldMessage>}
+            {(error || inlineBusinessError) && (
+              <FieldMessage>
+                {error ? String(error.message ?? '') : inlineBusinessError}
+              </FieldMessage>
+            )}
+            {renderBusinessErrorsList(remainingBusinessErrors)}
             {warnings.length > 0 && (
               <div className="mt-1 space-y-1">
                 {warnings.map((warning, index) => {
@@ -457,7 +565,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         control={control}
         name={property.formFieldName || property.name}
         render={({ field, formState }) => (
-          <div className="space-y-1">
+          <div className="space-y-1" data-field-id={property.originalName || property.name}>
             {renderInput(field, formState)}
 
             {/* Status badges and helper text */}

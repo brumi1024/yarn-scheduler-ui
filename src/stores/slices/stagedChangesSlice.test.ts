@@ -1,15 +1,17 @@
 import { describe, it, expect, vi } from 'vitest';
 import { createStagedChangesSlice } from './stagedChangesSlice';
 import type { StagedChange } from '~/types';
-import { businessValidation } from '~/utils/validation/businessRules/service';
-import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
+import { validateAllStagedChanges } from '~/features/validation/crossQueue';
 
 // Mock dependencies
-vi.mock('~/utils/validation/businessRules/service');
-vi.mock('~/utils/validation/affectedQueuesUtils');
-vi.mock('~/utils/validation/stagedChangesUtils', () => ({
+vi.mock('~/features/validation/crossQueue');
+vi.mock('~/features/validation/utils/configUtils', () => ({
   getMergedConfigData: vi.fn((configData) => configData),
 }));
+
+beforeEach(() => {
+  vi.resetAllMocks();
+});
 
 describe('stagedChangesSlice - validation refresh', () => {
   it('should refresh validation errors for all staged changes', () => {
@@ -44,29 +46,22 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    // Mock affected queues to include parent
-    vi.mocked(getAffectedQueuesForValidation).mockReturnValue([
-      'root.parent.child1',
-      'root.parent',
-    ]);
-
-    // Mock validation to return capacity sum error for parent
-    vi.mocked(businessValidation.validateQueue).mockImplementation((queuePath) => {
-      if (queuePath === 'root.parent') {
-        return {
-          valid: false,
-          errors: [
+    vi.mocked(validateAllStagedChanges).mockReturnValue(
+      new Map([
+        [
+          '1',
+          [
             {
+              queuePath: 'root.parent',
               field: 'capacity',
               message: 'Child queue capacities must sum to 100%',
               severity: 'error',
               rule: 'child-capacity-sum',
             },
           ],
-        };
-      }
-      return { valid: true, errors: [] };
-    });
+        ],
+      ]),
+    );
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
 
@@ -121,14 +116,7 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    // Mock affected queues
-    vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.parent.child1']);
-
-    // Mock validation to return no errors (issue resolved)
-    vi.mocked(businessValidation.validateQueue).mockReturnValue({
-      valid: true,
-      errors: [],
-    });
+    vi.mocked(validateAllStagedChanges).mockReturnValue(new Map([['1', undefined]]));
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
 
@@ -171,19 +159,13 @@ describe('stagedChangesSlice - validation refresh', () => {
     const mockGet = vi.fn(() => state);
     const mockSet = vi.fn((fn) => fn(state as any));
 
-    // Mock affected queues
-    vi.mocked(getAffectedQueuesForValidation).mockReturnValue([
-      'root.parent.child1',
-      'root.parent',
-    ]);
-
-    // Mock validation to return resource constraint warning
-    vi.mocked(businessValidation.validateQueue).mockImplementation((queuePath) => {
-      if (queuePath === 'root.parent.child1') {
-        return {
-          valid: false,
-          errors: [
+    vi.mocked(validateAllStagedChanges).mockReturnValue(
+      new Map([
+        [
+          '1',
+          [
             {
+              queuePath: 'root.parent.child1',
               field: 'capacity',
               message:
                 'Child queue memory allocation (3000) cannot exceed parent queue memory allocation (2048)',
@@ -191,10 +173,9 @@ describe('stagedChangesSlice - validation refresh', () => {
               rule: 'parent-child-capacity-constraint',
             },
           ],
-        };
-      }
-      return { valid: true, errors: [] };
-    });
+        ],
+      ]),
+    );
 
     const slice = createStagedChangesSlice(mockSet as any, mockGet as any, {} as any);
 

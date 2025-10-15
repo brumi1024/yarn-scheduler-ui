@@ -15,6 +15,7 @@ import {
   createQueueDataSlice,
   createPlacementRulesSlice,
   createSearchSlice,
+  createCapacityEditorSlice,
   type SchedulerStore,
 } from './slices';
 
@@ -34,6 +35,7 @@ const createStoreImplementation = (apiClient: YarnApiClient) =>
     ...createQueueDataSlice(set, get, api),
     ...createPlacementRulesSlice(set, get, api),
     ...createSearchSlice(set, get, api),
+    ...createCapacityEditorSlice(set, get, api),
   }));
 
 /**

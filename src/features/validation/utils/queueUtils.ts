@@ -2,28 +2,25 @@ import type { QueueInfo, SchedulerInfo } from '~/types';
 import { QUEUE_STATES, QUEUE_TYPES } from '~/types/constants/queue';
 
 export function findQueueByPath(
-  schedulerData: SchedulerInfo | undefined,
+  schedulerData: SchedulerInfo | undefined | null,
   queuePath: string,
 ): QueueInfo | undefined {
   if (!schedulerData?.queues?.queue || !queuePath) {
     return undefined;
   }
 
-  // Handle root queue
   if (queuePath === 'root' && schedulerData.queueName === 'root') {
     return schedulerData as unknown as QueueInfo;
   }
 
   const pathParts = queuePath.split('.');
-
-  // Start from the scheduler root
   let currentQueue: QueueInfo | undefined = schedulerData as unknown as QueueInfo;
 
   if (!currentQueue || pathParts[0] !== currentQueue.queueName) {
     return undefined;
   }
 
-  for (let i = 1; i < pathParts.length; i++) {
+  for (let i = 1; i < pathParts.length; i += 1) {
     if (!currentQueue?.queues?.queue) {
       return undefined;
     }
@@ -44,7 +41,7 @@ export function getParentPath(queuePath: string): string | undefined {
 }
 
 export function getSiblingQueues(
-  schedulerData: SchedulerInfo | undefined,
+  schedulerData: SchedulerInfo | undefined | null,
   queuePath: string,
 ): QueueInfo[] {
   const parentPath = getParentPath(queuePath);

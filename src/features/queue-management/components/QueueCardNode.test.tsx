@@ -140,6 +140,41 @@ describe('QueueCardNode', () => {
     expect(screen.getByText('Maximum capacity: 5w')).toBeInTheDocument();
   });
 
+  it('should display absolute capacity resources as individual badges', () => {
+    const nodeData = {
+      ...defaultNodeData,
+      capacityConfig: '[memory=12128,vcores=5]',
+      maxCapacityConfig: '[memory=16384,vcores=10,yarn.io/gpu=1]',
+    };
+
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
+
+    expect(screen.getByText('memory: 12128')).toBeInTheDocument();
+    expect(screen.getByText('vcores: 5')).toBeInTheDocument();
+    expect(screen.getByText('memory: 16384')).toBeInTheDocument();
+    expect(screen.getByText('vcores: 10')).toBeInTheDocument();
+    expect(screen.getByText('yarn.io/gpu: 1')).toBeInTheDocument();
+    expect(screen.getByText('maximum capacity')).toBeInTheDocument();
+    expect(screen.queryByText('Maximum capacity:')).not.toBeInTheDocument();
+  });
+
+  it('should render mixed resource vector values without losing suffixes', () => {
+    const nodeData = {
+      ...defaultNodeData,
+      capacityConfig: '[vcores=15%,memory=12w,yarn.io/fpga=2]',
+      maxCapacityConfig: '[vcores=20%,memory=15w,yarn.io/fpga=4]',
+    };
+
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
+
+    expect(screen.getByText('vcores: 15%')).toBeInTheDocument();
+    expect(screen.getByText('memory: 12w')).toBeInTheDocument();
+    expect(screen.getByText('yarn.io/fpga: 2')).toBeInTheDocument();
+    expect(screen.getByText('vcores: 20%')).toBeInTheDocument();
+    expect(screen.getByText('memory: 15w')).toBeInTheDocument();
+    expect(screen.getByText('yarn.io/fpga: 4')).toBeInTheDocument();
+  });
+
   it('should display queue status badges', () => {
     const { container } = renderWithProviders(
       <QueueCardNode {...createNodeProps(defaultNodeData)} />,
@@ -301,8 +336,8 @@ describe('QueueCardNode', () => {
 
     const card = screen.getByText('default').closest('.relative');
     expect(card).toHaveClass('ring-queue-new');
-    expect(card).toHaveClass('cursor-not-allowed');
     expect(card).toHaveClass('opacity-75');
+    expect(card).toHaveClass('cursor-default');
 
     const tooltipTrigger = container.querySelector('[data-slot="tooltip-trigger"]');
     expect(tooltipTrigger).toBeInTheDocument();

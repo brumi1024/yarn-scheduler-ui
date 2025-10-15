@@ -1,4 +1,3 @@
-import { useCallback, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -12,13 +11,7 @@ import {
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
 import { Input } from '~/components/ui/input';
-import {
-  Field,
-  FieldControl,
-  FieldDescription,
-  FieldLabel,
-  FieldMessage,
-} from '~/components/ui/field';
+import { Field, FieldControl, FieldLabel, FieldMessage } from '~/components/ui/field';
 import {
   Select,
   SelectContent,
@@ -26,9 +19,9 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { Plus } from 'lucide-react';
+import { Plus, SlidersHorizontal } from 'lucide-react';
 import { useQueueActions } from '../../hooks/useQueueActions';
-import { CapacityAdjustPopover, type CapacityAdjustmentMap } from '../CapacityAdjustPopover';
+import { useCapacityEditor } from '../../hooks/useCapacityEditor';
 
 const addQueueSchema = z.object({
   queueName: z
@@ -56,18 +49,18 @@ interface AddQueueDialogProps {
 }
 
 export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialogProps) {
-  const { addChildQueue, updateQueueProperty } = useQueueActions();
+  const { addChildQueue } = useQueueActions();
   const parentQueueName = parentQueuePath.split('.').pop() || parentQueuePath;
 
-  const [siblingAdjustments, setSiblingAdjustments] = useState<CapacityAdjustmentMap>({});
+  const { openCapacityEditor } = useCapacityEditor();
 
   const {
     register,
     handleSubmit,
     watch,
     reset,
-    formState: { errors, isValid },
     setValue,
+    formState: { errors, isValid },
   } = useForm<AddQueueFormData>({
     resolver: zodResolver(addQueueSchema),
     defaultValues: {
@@ -81,34 +74,8 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
 
   const handleClose = () => {
     reset();
-    setSiblingAdjustments({});
     onClose();
   };
-
-  const queueNameValue = watch('queueName');
-  const capacityValue = watch('capacity');
-  const maxCapacityValue = watch('maxCapacity');
-
-  const handleActiveQueueChange = useCallback(
-    (changes: { capacity?: string; maxCapacity?: string }) => {
-      if (changes.capacity !== undefined) {
-        setValue('capacity', changes.capacity, {
-          shouldDirty: true,
-          shouldTouch: true,
-          shouldValidate: true,
-        });
-      }
-
-      if (changes.maxCapacity !== undefined) {
-        setValue('maxCapacity', changes.maxCapacity, {
-          shouldDirty: true,
-          shouldTouch: true,
-          shouldValidate: true,
-        });
-      }
-    },
-    [setValue],
-  );
 
   const onSubmit = (data: AddQueueFormData) => {
     try {
@@ -119,14 +86,20 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
         state: data.state,
       });
 
-      Object.entries(siblingAdjustments).forEach(([queuePath, change]) => {
-        if (change.capacity !== undefined) {
-          updateQueueProperty(queuePath, 'capacity', change.capacity);
-        }
+      const newQueuePath =
+        parentQueuePath === 'root'
+          ? `root.${data.queueName}`
+          : `${parentQueuePath}.${data.queueName}`;
 
-        if (change.maxCapacity !== undefined) {
-          updateQueueProperty(queuePath, 'maximum-capacity', change.maxCapacity);
-        }
+      openCapacityEditor({
+        origin: 'add-queue',
+        parentQueuePath,
+        originQueuePath: newQueuePath,
+        originQueueName: data.queueName,
+        capacityValue: data.capacity,
+        maxCapacityValue: data.maxCapacity,
+        markOriginAsNew: true,
+        queueState: data.state,
       });
 
       handleClose();
@@ -167,62 +140,9 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
             {errors.queueName && <FieldMessage>{errors.queueName.message}</FieldMessage>}
           </Field>
 
-          {/* Capacity */}
-          <Field>
-            <FieldLabel htmlFor="capacity">
-              Capacity <span className="text-red-500">*</span>
-            </FieldLabel>
-            <FieldControl>
-              <Input
-                {...register('capacity')}
-                id="capacity"
-                type="text"
-                placeholder="e.g., 50, 10w, [memory=1024,vcores=1]"
-                aria-invalid={Boolean(errors.capacity)}
-              />
-            </FieldControl>
-            {errors.capacity ? (
-              <FieldMessage>{errors.capacity.message}</FieldMessage>
-            ) : (
-              <FieldDescription>
-                Percentage (50), weight (10w), or absolute ([memory=1024,vcores=1])
-              </FieldDescription>
-            )}
-          </Field>
-
-          {/* Max Capacity */}
-          <Field>
-            <FieldLabel htmlFor="maxCapacity">
-              Max Capacity <span className="text-red-500">*</span>
-            </FieldLabel>
-            <FieldControl>
-              <Input
-                {...register('maxCapacity')}
-                id="maxCapacity"
-                type="text"
-                placeholder="e.g., 100, 20w, [memory=2048,vcores=2]"
-                aria-invalid={Boolean(errors.maxCapacity)}
-              />
-            </FieldControl>
-            {errors.maxCapacity ? (
-              <FieldMessage>{errors.maxCapacity.message}</FieldMessage>
-            ) : (
-              <FieldDescription>
-                Maximum capacity this queue can grow to (percentage or absolute format)
-              </FieldDescription>
-            )}
-          </Field>
-          <div className="flex justify-end">
-            <CapacityAdjustPopover
-              parentQueuePath={parentQueuePath}
-              activeQueueName={queueNameValue}
-              capacityValue={capacityValue}
-              maxCapacityValue={maxCapacityValue}
-              adjustments={siblingAdjustments}
-              onAdjustmentsChange={setSiblingAdjustments}
-              onActiveQueueChange={handleActiveQueueChange}
-            />
-          </div>
+          {/* Hidden capacity defaults until Capacity Editor handles them */}
+          <input type="hidden" {...register('capacity')} />
+          <input type="hidden" {...register('maxCapacity')} />
 
           {/* State */}
           <Field>
@@ -248,8 +168,8 @@ export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialo
               Cancel
             </Button>
             <Button type="submit" disabled={!isValid}>
-              <Plus className="mr-2 h-4 w-4" />
-              Add Queue
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Adjust capacities
             </Button>
           </DialogFooter>
         </form>

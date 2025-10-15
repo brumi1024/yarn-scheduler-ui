@@ -15,17 +15,23 @@ import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBu
 import { isValidQueueName } from '~/types';
 import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } from '~/lib/errors';
 import type { StagedChangesSlice, SchedulerStore } from './types';
-import { getAffectedQueuesForValidation } from '~/utils/validation/affectedQueuesUtils';
+import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
 import {
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,
   validatePropertyChange,
-} from '~/utils/validation/crossQueueValidation';
+} from '~/features/validation/crossQueue';
 
-type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
+type MutationErrorState = Pick<
+  SchedulerStore,
+  'applyError' | 'apiError' | 'error' | 'errorContext'
+>;
 const clearMutationError = (state: MutationErrorState) => {
   if (state.applyError) {
     state.applyError = null;
+  }
+  if (state.apiError) {
+    state.apiError = null;
   }
   if (state.errorContext === 'mutation') {
     state.error = null;
@@ -41,6 +47,7 @@ export const createStagedChangesSlice: StateCreator<
 > = (set, get) => ({
   stagedChanges: [],
   applyError: null,
+  apiError: null,
 
   stageQueueChange: (queuePath, property, value, validationErrors) => {
     if (!queuePath || !queuePath.startsWith(SPECIAL_VALUES.ROOT_QUEUE_NAME)) {
@@ -344,6 +351,7 @@ export const createStagedChangesSlice: StateCreator<
         state.errorContext = null;
       }
       state.applyError = null;
+      state.apiError = null;
     });
 
     const mutationRequest = buildMutationRequest(changes);
@@ -469,6 +477,7 @@ export const createStagedChangesSlice: StateCreator<
           state.errorContext = null;
         }
         state.applyError = null;
+        state.apiError = null;
       });
 
       // Refresh scheduler data to get updated queue information
@@ -480,6 +489,7 @@ export const createStagedChangesSlice: StateCreator<
         state.error = errorMessage;
         state.errorContext = 'mutation';
         state.applyError = errorMessage;
+        state.apiError = errorMessage;
         state.isLoading = false;
       });
 

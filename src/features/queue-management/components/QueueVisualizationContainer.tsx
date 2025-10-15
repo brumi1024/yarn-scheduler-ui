@@ -20,6 +20,7 @@ import { useTheme } from '~/components/providers/use-theme';
 import { Button } from '~/components/ui/button';
 import { CompareButton } from '~/features/queue-comparison/components/CompareButton';
 import { NodeLabelSelector } from '~/components/search/NodeLabelSelector';
+import { CapacityEditorDialog } from './CapacityEditorDialog';
 
 export interface QueueVisualizationContainerProps {
   className?: string;
@@ -37,7 +38,7 @@ const FlowInner: React.FC = () => {
   const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
   const { theme } = useTheme();
 
-  const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
+  const { nodes, edges, isLoading, loadError, applyError, apiError } = useQueueTreeData();
 
   // Calculate validation summary
   const validationSummary = useMemo(() => {
@@ -121,27 +122,40 @@ const FlowInner: React.FC = () => {
     );
   }
 
+  const hasAlert = Boolean(applyError || apiError);
+
   return (
     <div className="relative h-full w-full flex flex-col">
-      {applyError && (
+      {hasAlert && (
         <div className="absolute top-4 left-1/2 z-10 flex w-full max-w-xl -translate-x-1/2 justify-center px-4">
-          <Alert variant="destructive" className="w-full">
-            <AlertCircle className="h-4 w-4" />
-            <AlertTitle>Failed to Apply Changes</AlertTitle>
-            <AlertDescription>{applyError}</AlertDescription>
-          </Alert>
+          <div className="space-y-2 w-full">
+            {applyError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Failed to Apply Changes</AlertTitle>
+                <AlertDescription>{applyError}</AlertDescription>
+              </Alert>
+            )}
+            {apiError && (
+              <Alert variant="destructive">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Save Failed</AlertTitle>
+                <AlertDescription>{apiError}</AlertDescription>
+              </Alert>
+            )}
+          </div>
         </div>
       )}
       {/* Header with controls */}
       <div
-        className={`absolute right-4 z-10 flex items-center gap-4 ${applyError ? 'top-24' : 'top-4'}`}
+        className={`absolute right-4 z-10 flex items-center gap-4 ${hasAlert ? 'top-24' : 'top-4'}`}
       >
         <NodeLabelSelector />
       </div>
 
       {/* Label filter information */}
       {selectedNodeLabelFilter && (
-        <div className={`absolute left-4 z-10 ${applyError ? 'top-24' : 'top-4'}`}>
+        <div className={`absolute left-4 z-10 ${hasAlert ? 'top-24' : 'top-4'}`}>
           <Alert className="py-2 px-4">
             <Tag className="h-4 w-4" />
             <AlertDescription>
@@ -157,7 +171,7 @@ const FlowInner: React.FC = () => {
       {/* Validation summary banner */}
       {validationSummary.errorCount > 0 && (
         <div
-          className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${applyError ? 'top-32' : 'top-16'}`}
+          className={`absolute left-1/2 transform -translate-x-1/2 z-10 ${hasAlert ? 'top-32' : 'top-16'}`}
         >
           <Alert className="flex items-center gap-3 py-2 px-4 shadow-lg border-destructive">
             <AlertCircle className="h-4 w-4 text-destructive" />
@@ -250,6 +264,7 @@ export const QueueVisualizationContainer: React.FC<QueueVisualizationContainerPr
       <ReactFlowProvider>
         <FlowInner />
         <CompareButton />
+        <CapacityEditorDialog />
       </ReactFlowProvider>
     </div>
   );

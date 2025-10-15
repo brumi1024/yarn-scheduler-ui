@@ -35,12 +35,18 @@ let mockReset = vi.fn();
 let mockIsValid = vi.fn();
 let mockGetErrors = vi.fn();
 
+const mockUseValidation = vi.fn(() => ({ errors: {} }));
+
+vi.mock('~/contexts/ValidationContext', () => ({
+  useValidation: () => mockUseValidation(),
+}));
+
 // Mock PropertyEditorTab with ref handling
 vi.mock('./PropertyEditorTab', async () => {
   const React = await import('react');
 
   const PropertyEditorTab = React.forwardRef(
-    ({ onFormDirtyChange, onHasChangesChange, onErrorsChange }: any, ref: any) => {
+    ({ onFormDirtyChange, onHasChangesChange }: any, ref: any) => {
       React.useImperativeHandle(ref, () => ({
         submit: () => mockSubmit(),
         reset: () => mockReset(),
@@ -53,7 +59,6 @@ vi.mock('./PropertyEditorTab', async () => {
           <button onClick={() => onFormDirtyChange?.(true)}>Make Dirty</button>
           <button onClick={() => onFormDirtyChange?.(false)}>Make Clean</button>
           <button onClick={() => onHasChangesChange?.(true)}>Add Changes</button>
-          <button onClick={() => onErrorsChange?.({ capacity: 'Invalid value' })}>Add Error</button>
         </div>
       );
     },
@@ -92,6 +97,7 @@ describe('PropertyPanel', () => {
     mockIsValid = vi.fn().mockReturnValue(true);
     mockGetErrors = vi.fn().mockReturnValue({});
     mockSubmit.mockResolvedValue(undefined);
+    mockUseValidation.mockReturnValue({ errors: {} });
 
     (useSchedulerStore as any).mockReturnValue({
       selectedQueuePath: null,
@@ -266,22 +272,33 @@ describe('PropertyPanel', () => {
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
+    mockUseValidation.mockReturnValue({
+      errors: {
+        'root.default': {
+          capacity: [
+            {
+              field: 'capacity',
+              message: 'Invalid value',
+              severity: 'error',
+              rule: 'test-rule',
+            },
+          ],
+        },
+      },
+    });
+
     render(<PropertyPanel />);
 
     await user.click(screen.getByRole('tab', { name: /settings/i }));
-    await user.click(screen.getByText('Add Error'));
 
-    const errorBadge = screen.getByText('1 Error');
-    expect(errorBadge).toBeInTheDocument();
+    const summaryButton = screen.getByRole('button', { name: /1 error/i });
+    expect(summaryButton).toBeInTheDocument();
 
-    // Click to expand error details
-    await user.click(errorBadge);
-    expect(screen.getByText('Validation Errors:')).toBeInTheDocument();
-    // The error text is combined with the bullet point, so we need to look for the full text
-    const errorText = screen.getByText((_, element) => {
-      return element?.textContent === '• capacity: Invalid value';
-    });
-    expect(errorText).toBeInTheDocument();
+    await user.click(summaryButton);
+
+    expect(screen.getByText('Validation issues')).toBeInTheDocument();
+    expect(screen.getByText('capacity')).toBeInTheDocument();
+    expect(screen.getByText('Invalid value')).toBeInTheDocument();
   });
 
   it('should handle submit with validation errors', async () => {

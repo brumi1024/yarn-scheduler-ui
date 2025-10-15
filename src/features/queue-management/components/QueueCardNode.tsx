@@ -18,7 +18,16 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { Plus, Trash2, Edit, Play, Pause, AlertCircle, AlertTriangle } from 'lucide-react';
+import {
+  Plus,
+  Trash2,
+  Edit,
+  Play,
+  Pause,
+  AlertCircle,
+  AlertTriangle,
+  SlidersHorizontal,
+} from 'lucide-react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -28,22 +37,95 @@ import { DeleteQueueDialog } from './dialogs/DeleteQueueDialog';
 import { QueueCapacityProgress } from './QueueCapacityProgress';
 import { QueueStatusBadges } from './QueueStatusBadges';
 import { QueueResourceStats } from './QueueResourceStats';
-import { QUEUE_STATES } from '~/types';
+import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 import { Badge } from '~/components/ui/badge';
+import { parseCapacityValue as parseCapacityValueUtil } from '~/utils/capacityUtils';
+import { useCapacityEditor } from '../hooks/useCapacityEditor';
 
-// Simple capacity parsing for display purposes
-const parseCapacityValue = (input: string) => {
-  const trimmed = input.trim();
+type CapacityDisplay =
+  | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }
+  | { type: 'percentage'; formatted: string; raw: string }
+  | { type: 'weight'; formatted: string; raw: string }
+  | { type: 'unknown'; raw?: string };
 
-  if (trimmed.endsWith('w')) {
-    return { mode: 'weight' as const, value: trimmed };
+type ResourceVectorEntry = {
+  resource: string;
+  value: string;
+};
+
+const parseResourceVector = (value: string): ResourceVectorEntry[] => {
+  const trimmed = value.trim();
+  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
+    return [];
   }
+
+  const inner = trimmed.slice(1, -1).trim();
+  if (!inner) {
+    return [];
+  }
+
+  return inner
+    .split(',')
+    .map((pair) => {
+      const [resource, val] = pair.split('=');
+      const resourceName = resource?.trim();
+      const resourceValue = val?.trim();
+
+      if (!resourceName || !resourceValue) {
+        return null;
+      }
+
+      return {
+        resource: resourceName,
+        value: resourceValue,
+      };
+    })
+    .filter((entry): entry is ResourceVectorEntry => entry !== null);
+};
+
+const getCapacityDisplay = (input?: string): CapacityDisplay => {
+  if (!input) {
+    return { type: 'unknown', raw: input };
+  }
+
+  const trimmed = input.trim();
+  if (!trimmed) {
+    return { type: 'unknown', raw: trimmed };
+  }
+
+  const parsed = parseCapacityValueUtil(trimmed);
 
   if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
-    return { mode: 'absolute' as const, value: trimmed };
+    return {
+      type: 'vector',
+      entries: parseResourceVector(trimmed),
+      raw: trimmed,
+    };
   }
 
-  return { mode: 'percentage' as const, value: trimmed };
+  if (!parsed) {
+    return { type: 'unknown', raw: trimmed };
+  }
+
+  switch (parsed.type) {
+    case 'percentage': {
+      const formatted = trimmed.endsWith('%') ? trimmed : `${parsed.value}%`;
+      return { type: 'percentage', formatted, raw: trimmed };
+    }
+    case 'weight': {
+      const formatted = trimmed.endsWith('w') ? trimmed : `${parsed.value}w`;
+      return { type: 'weight', formatted, raw: trimmed };
+    }
+    case 'absolute': {
+      return {
+        type: 'vector',
+        entries: parseResourceVector(trimmed),
+        raw: trimmed,
+      };
+    }
+    default:
+      return { type: 'unknown', raw: trimmed };
+  }
 };
 
 export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
@@ -61,9 +143,11 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     toggleComparisonQueue,
     selectedNodeLabelFilter,
     getQueueLabelCapacity,
+    clearQueueChanges,
   } = useSchedulerStore();
 
   const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
+  const { openCapacityEditor } = useCapacityEditor();
 
   const {
     queuePath,
@@ -93,15 +177,6 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const isRoot = queuePath === 'root';
   const shouldGrayOut = !isRoot && !isAccessible && selectedNodeLabelFilter !== '';
 
-  const formatCapacityDisplay = (configValue: string): string => {
-    const parsed = parseCapacityValue(configValue);
-    // Only add % for percentage mode, weight already has 'w', absolute has brackets
-    if (parsed.mode === 'percentage') {
-      return `${configValue}%`;
-    }
-    return configValue;
-  };
-
   // Use label-specific capacity if a label is selected, otherwise use default
   const displayCapacity = labelCapacityInfo?.isLabelSpecific
     ? labelCapacityInfo.capacity
@@ -110,7 +185,13 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     ? labelCapacityInfo.maxCapacity
     : maxCapacityConfig;
 
-  const capacityMode = parseCapacityValue(displayCapacity).mode;
+  const parsedCapacityMode = parseCapacityValueUtil(displayCapacity);
+  const capacityMode: 'percentage' | 'weight' | 'absolute' =
+    parsedCapacityMode?.type ?? 'percentage';
+  const parsedCapacityDisplay = getCapacityDisplay(displayCapacity);
+  const parsedMaxCapacityDisplay = getCapacityDisplay(displayMaxCapacity);
+  const showVectorCapacity =
+    parsedCapacityDisplay.type === 'vector' || parsedMaxCapacityDisplay.type === 'vector';
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
@@ -128,6 +209,37 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     setPropertyPanelOpen(true);
   };
 
+  const handleOpenCapacityEditor = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    if (!queuePath || queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+      return;
+    }
+
+    const parentPath = queuePath.split('.').slice(0, -1).join('.');
+    if (!parentPath) {
+      return;
+    }
+
+    openCapacityEditor({
+      origin: 'context-menu',
+      parentQueuePath: parentPath,
+      originQueuePath: queuePath,
+      originQueueName: queueName,
+      capacityValue: capacityConfig,
+      maxCapacityValue: maxCapacityConfig,
+      queueState: state,
+      markOriginAsNew: stagedStatus === 'new',
+    });
+  };
+
+  const handleRemoveStagedQueue = (event: React.MouseEvent) => {
+    event.stopPropagation();
+    event.preventDefault();
+    if (queuePath) {
+      clearQueueChanges(queuePath);
+    }
+  };
+
   const handleComparisonToggle = () => {
     toggleComparisonQueue(queuePath);
   };
@@ -135,6 +247,26 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const handleToggleState = () => {
     const newState = isRunning ? QUEUE_STATES.STOPPED : QUEUE_STATES.RUNNING;
     updateQueueProperty(queuePath, 'state', newState);
+  };
+
+  const renderResourceEntries = (entries: ResourceVectorEntry[]) => {
+    if (!entries.length) {
+      return <span className="text-xs text-muted-foreground">N/A</span>;
+    }
+
+    return (
+      <div className="flex flex-wrap gap-1">
+        {entries.map(({ resource, value }, index) => (
+          <Badge
+            key={`${resource}-${value}-${index}`}
+            variant="outline"
+            className="px-1.5 py-0.5 text-[11px] leading-tight font-medium whitespace-normal break-all"
+          >
+            {resource}: {value}
+          </Badge>
+        ))}
+      </div>
+    );
   };
 
   const cardContent = (
@@ -146,7 +278,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         // Shadow for depth - stronger in light mode
         'shadow-lg hover:shadow-xl dark:shadow-md dark:hover:shadow-lg',
         // Cursor styling - not clickable for new queues
-        stagedStatus === 'new' ? 'cursor-not-allowed opacity-75' : 'cursor-pointer',
+        stagedStatus === 'new' ? 'opacity-75 cursor-default' : 'cursor-pointer',
         // Border styling based on status
         stagedStatus === 'new' && 'ring-2 ring-queue-new',
         stagedStatus === 'deleted' && 'ring-2 ring-queue-deleted',
@@ -255,13 +387,63 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
       <CardContent>
         {/* Capacity info */}
         <div className="mb-3">
-          <div className="flex items-baseline gap-1">
-            <span className="text-2xl font-bold">{formatCapacityDisplay(displayCapacity)}</span>
-            <span className="text-sm text-muted-foreground">capacity</span>
-          </div>
-          <div className="text-xs text-muted-foreground">
-            Maximum capacity: {formatCapacityDisplay(displayMaxCapacity)}
-          </div>
+          {showVectorCapacity ? (
+            <div className="flex flex-col gap-1.5">
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  capacity
+                </span>
+                <div className="flex-1 min-w-[120px]">
+                  {parsedCapacityDisplay.type === 'vector' ? (
+                    renderResourceEntries(parsedCapacityDisplay.entries)
+                  ) : (
+                    <span className="text-sm font-medium">
+                      {parsedCapacityDisplay.type === 'percentage' ||
+                      parsedCapacityDisplay.type === 'weight'
+                        ? parsedCapacityDisplay.formatted
+                        : 'N/A'}
+                    </span>
+                  )}
+                </div>
+              </div>
+              <div className="flex flex-wrap items-center gap-2">
+                <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                  maximum capacity
+                </span>
+                <div className="flex-1 min-w-[120px]">
+                  {parsedMaxCapacityDisplay.type === 'vector' ? (
+                    renderResourceEntries(parsedMaxCapacityDisplay.entries)
+                  ) : (
+                    <span className="text-sm font-medium text-muted-foreground">
+                      {parsedMaxCapacityDisplay.type === 'percentage' ||
+                      parsedMaxCapacityDisplay.type === 'weight'
+                        ? parsedMaxCapacityDisplay.formatted
+                        : 'N/A'}
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className="flex items-baseline gap-1">
+                <span className="text-2xl font-bold">
+                  {parsedCapacityDisplay.type === 'percentage' ||
+                  parsedCapacityDisplay.type === 'weight'
+                    ? parsedCapacityDisplay.formatted
+                    : 'N/A'}
+                </span>
+                <span className="text-sm text-muted-foreground">capacity</span>
+              </div>
+              <div className="text-xs text-muted-foreground">
+                Maximum capacity:{' '}
+                {parsedMaxCapacityDisplay.type === 'percentage' ||
+                parsedMaxCapacityDisplay.type === 'weight'
+                  ? parsedMaxCapacityDisplay.formatted
+                  : 'N/A'}
+              </div>
+            </>
+          )}
         </div>
 
         {/* Show why queue is inaccessible */}
@@ -308,20 +490,20 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           }
         }}
       >
-        <ContextMenuTrigger asChild>
-          {stagedStatus === 'new' ? (
-            <TooltipProvider>
-              <Tooltip>
+        {stagedStatus === 'new' ? (
+          <TooltipProvider>
+            <Tooltip>
+              <ContextMenuTrigger asChild>
                 <TooltipTrigger asChild>{cardContent}</TooltipTrigger>
-                <TooltipContent>
-                  <p>This queue must be applied before it can be edited</p>
-                </TooltipContent>
-              </Tooltip>
-            </TooltipProvider>
-          ) : (
-            cardContent
-          )}
-        </ContextMenuTrigger>
+              </ContextMenuTrigger>
+              <TooltipContent>
+                <p>This queue must be applied before it can be edited</p>
+              </TooltipContent>
+            </Tooltip>
+          </TooltipProvider>
+        ) : (
+          <ContextMenuTrigger asChild>{cardContent}</ContextMenuTrigger>
+        )}
 
         <ContextMenuContent className="w-48">
           <ContextMenuItem
@@ -334,6 +516,23 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
             <Edit className="mr-2 h-4 w-4" />
             Edit Properties
           </ContextMenuItem>
+
+          {queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME && (
+            <ContextMenuItem onClick={(e) => handleOpenCapacityEditor(e)}>
+              <SlidersHorizontal className="mr-2 h-4 w-4" />
+              Capacity Editor
+            </ContextMenuItem>
+          )}
+
+          {stagedStatus === 'new' && queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME && (
+            <ContextMenuItem
+              onClick={handleRemoveStagedQueue}
+              className="text-red-600 focus:text-red-600"
+            >
+              <Trash2 className="mr-2 h-4 w-4" />
+              Remove Staged Queue
+            </ContextMenuItem>
+          )}
 
           <ContextMenuItem
             onClick={(e) => {
@@ -354,7 +553,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
             )}
           </ContextMenuItem>
 
-          {canAdd && (
+          {canAdd && stagedStatus !== 'new' && (
             <ContextMenuItem
               onClick={(e) => {
                 e.stopPropagation();
@@ -366,7 +565,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
             </ContextMenuItem>
           )}
 
-          {canDelete && (
+          {canDelete && stagedStatus !== 'new' && (
             <>
               <ContextMenuSeparator />
               <ContextMenuItem

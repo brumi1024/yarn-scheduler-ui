@@ -12,6 +12,7 @@ import type {
   QueueInfo,
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
+import type { CapacityEditorSlice } from './capacityEditorSlice';
 
 export interface BaseStoreSlice {
   apiClient: YarnApiClient;
@@ -41,36 +42,37 @@ export interface NodeLabelsSlice {
   assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;
 }
 
-import type { BusinessValidationError } from '~/utils/validation/businessRules/types';
+import type { ValidationIssue } from '~/features/validation/types';
 
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
   applyError: string | null;
+  apiError: string | null;
 
   stageQueueChange: (
     queuePath: string,
     property: string,
     value: string,
-    validationErrors?: BusinessValidationError[],
+    validationErrors?: ValidationIssue[],
   ) => void;
   stageGlobalChange: (
     property: string,
     value: string | Record<string, unknown> | unknown[],
-    validationErrors?: BusinessValidationError[],
+    validationErrors?: ValidationIssue[],
   ) => void;
   stageQueueAddition: (
     parentPath: string,
     queueName: string,
     config: Record<string, string>,
-    validationErrors?: BusinessValidationError[],
+    validationErrors?: ValidationIssue[],
   ) => void;
-  stageQueueRemoval: (queuePath: string, validationErrors?: BusinessValidationError[]) => void;
+  stageQueueRemoval: (queuePath: string, validationErrors?: ValidationIssue[]) => void;
   stageLabelQueueChange: (
     queuePath: string,
     label: string,
     property: string,
     value: string,
-    validationErrors?: BusinessValidationError[],
+    validationErrors?: ValidationIssue[],
   ) => void;
   applyChanges: () => Promise<void>;
   revertChange: (changeId: string) => void;
@@ -152,4 +154,5 @@ export type SchedulerStore = BaseStoreSlice &
   QueueSelectionSlice &
   QueueDataSlice &
   PlacementRulesSlice &
-  SearchSlice;
+  SearchSlice &
+  CapacityEditorSlice;

@@ -9,10 +9,18 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import { Field, FieldControl, FieldDescription, FieldLabel } from '~/components/ui/field';
+import {
+  Field,
+  FieldControl,
+  FieldDescription,
+  FieldLabel,
+  FieldMessage,
+} from '~/components/ui/field';
 import { cn } from '~/utils/cn';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import { HighlightedText } from '~/components/search/HighlightedText';
+import { useValidation } from '~/contexts/ValidationContext';
+import { SPECIAL_VALUES } from '~/types';
 
 interface PropertyInputProps {
   property: PropertyDescriptor;
@@ -31,6 +39,18 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
 }) => {
   // Extract validation rules for min/max
   const rangeValidation = property.validationRules?.find((rule) => rule.type === 'range');
+  const { errors } = useValidation();
+
+  const queueIssues = errors[SPECIAL_VALUES.GLOBAL_QUEUE_PATH] ?? {};
+  const fieldIssues = queueIssues[property.name] ?? [];
+  const errorMessages = fieldIssues
+    .filter((issue) => issue.severity === 'error')
+    .map((issue) => issue.message);
+  const warningMessages = fieldIssues
+    .filter((issue) => issue.severity === 'warning')
+    .map((issue) => issue.message);
+  const errorMessage = errorMessages.join(' ');
+  const warningMessage = warningMessages.join(' ');
 
   const renderInput = () => {
     const labelNode = searchQuery ? (
@@ -51,16 +71,38 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
       </Badge>
     );
 
+    const propertyDescription = descriptionNode ? (
+      <FieldDescription className="text-sm text-muted-foreground">
+        {descriptionNode}
+      </FieldDescription>
+    ) : null;
+
+    const warningDescription = warningMessage ? (
+      <FieldDescription className="text-sm text-amber-600">{warningMessage}</FieldDescription>
+    ) : null;
+
+    const errorMessageNode = errorMessage ? <FieldMessage>{errorMessage}</FieldMessage> : null;
+
     switch (property.type) {
       case 'boolean':
         return (
           <FieldSwitch
             id={property.name}
             label={labelNode}
-            description={descriptionNode}
+            description={
+              descriptionNode || warningMessage ? (
+                <div className="space-y-1">
+                  {descriptionNode ? <div>{descriptionNode}</div> : null}
+                  {warningMessage ? (
+                    <span className="block text-amber-600">{warningMessage}</span>
+                  ) : null}
+                </div>
+              ) : null
+            }
             addon={stagedBadge}
             checked={value === 'true'}
             onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+            message={errorMessage || undefined}
           />
         );
 
@@ -119,11 +161,9 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                   );
                 })}
               </div>
-              {descriptionNode && (
-                <FieldDescription className="text-sm text-muted-foreground">
-                  {descriptionNode}
-                </FieldDescription>
-              )}
+              {propertyDescription}
+              {warningDescription}
+              {errorMessageNode}
             </Field>
           );
         }
@@ -153,11 +193,9 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 ))}
               </SelectContent>
             </Select>
-            {descriptionNode && (
-              <FieldDescription className="text-sm text-muted-foreground">
-                {descriptionNode}
-              </FieldDescription>
-            )}
+            {propertyDescription}
+            {warningDescription}
+            {errorMessageNode}
           </Field>
         );
       }
@@ -179,11 +217,9 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 max={rangeValidation?.max}
               />
             </FieldControl>
-            {descriptionNode && (
-              <FieldDescription className="text-sm text-muted-foreground">
-                {descriptionNode}
-              </FieldDescription>
-            )}
+            {propertyDescription}
+            {warningDescription}
+            {errorMessageNode}
           </Field>
         );
 
@@ -203,11 +239,9 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 onChange={(e) => onChange(e.target.value)}
               />
             </FieldControl>
-            {descriptionNode && (
-              <FieldDescription className="text-sm text-muted-foreground">
-                {descriptionNode}
-              </FieldDescription>
-            )}
+            {propertyDescription}
+            {warningDescription}
+            {errorMessageNode}
           </Field>
         );
     }

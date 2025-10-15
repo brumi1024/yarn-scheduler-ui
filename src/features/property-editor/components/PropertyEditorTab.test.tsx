@@ -114,6 +114,7 @@ describe('PropertyEditorTab', () => {
     getStagedStatus: vi.fn(),
     formState: { isDirty: false },
     handleFieldBlur: vi.fn(),
+    getFieldErrors: vi.fn(() => []),
     getFieldWarnings: vi.fn(() => []),
   };
 
