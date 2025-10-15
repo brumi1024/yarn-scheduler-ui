@@ -93,10 +93,12 @@ export interface QueueSelectionSlice {
   selectedQueuePath: string | null;
   comparisonQueues: string[];
   isPropertyPanelOpen: boolean;
+  propertyPanelInitialTab: 'overview' | 'info' | 'settings';
 
   selectQueue: (queuePath: string | null) => void;
   toggleComparisonQueue: (queuePath: string) => void;
   setPropertyPanelOpen: (isOpen: boolean) => void;
+  setPropertyPanelInitialTab: (tab: 'overview' | 'info' | 'settings') => void;
   clearComparisonQueues: () => void;
   canCompareQueues: () => boolean;
   getComparisonData: () => Map<string, Record<string, string>>;

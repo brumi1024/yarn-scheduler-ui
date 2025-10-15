@@ -8,6 +8,8 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { Node, Edge } from '@xyflow/react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 
+type ViMock = ReturnType<typeof vi.fn>;
+
 // Mock d3 modules to prevent errors in test environment
 vi.mock('d3-drag', () => ({
   drag: vi.fn(() => ({
@@ -83,73 +85,77 @@ const getMockQueueCardData = (overrides?: Partial<QueueCardData>): QueueCardData
   };
 };
 
-// Mock the useQueueTreeData hook
+function createSchedulerStoreState() {
+  return {
+    selectQueue: vi.fn(),
+    selectedQueuePath: null as string | null,
+    comparisonQueues: [] as string[],
+    toggleComparisonQueue: vi.fn(),
+    stagedChanges: [] as unknown[],
+    setPropertyPanelOpen: vi.fn(),
+    isPropertyPanelOpen: false,
+    propertyPanelInitialTab: 'overview' as const,
+    setPropertyPanelInitialTab: vi.fn(),
+    updateQueueProperty: vi.fn(),
+    getQueueByPath: vi.fn(() => ({ queuePath: 'root', queueName: 'root' })),
+    stageQueueAddition: vi.fn(),
+    stageQueueRemoval: vi.fn(),
+    stageQueueChange: vi.fn(),
+    canCompareQueues: vi.fn(() => false),
+    clearComparisonQueues: vi.fn(),
+    getComparisonData: vi.fn(() => new Map()),
+    searchQuery: '',
+    nodeLabels: [],
+    selectedNodeLabelFilter: '',
+    selectNodeLabelFilter: vi.fn(),
+    getQueueAccessibility: vi.fn(() => true),
+    getQueueLabelCapacity: vi.fn(() => ({
+      capacity: '0',
+      maxCapacity: '100',
+      absoluteCapacity: '0',
+      isLabelSpecific: false,
+      label: 'DEFAULT',
+      hasAccess: true,
+      canUseLabel: true,
+    })),
+    hasQueueProperty: vi.fn(() => false),
+    getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
+    capacityEditor: {
+      isOpen: false,
+      origin: null,
+      parentQueuePath: null,
+      originQueuePath: null,
+      originQueueName: null,
+      originQueueState: null,
+      originInitialCapacity: null,
+      originInitialMaxCapacity: null,
+      originIsNew: false,
+      selectedNodeLabel: null,
+      labelOptions: [{ value: '__DEFAULT_PARTITION__', label: 'Default partition' }],
+      drafts: {},
+      draftOrder: [],
+      isSaving: false,
+      saveError: null,
+      validationIssues: [],
+    },
+    closeCapacityEditor: vi.fn(),
+    updateCapacityDraft: vi.fn(),
+    setCapacityEditorLabel: vi.fn(),
+    resetCapacityDrafts: vi.fn(),
+    saveCapacityDrafts: vi.fn(() => Promise.resolve(true)),
+  };
+}
+
+function defaultSchedulerStoreImpl(
+  selector?: (state: ReturnType<typeof createSchedulerStoreState>) => unknown,
+) {
+  const state = createSchedulerStoreState();
+  return typeof selector === 'function' ? selector(state) : state;
+}
+
+// Mock the scheduler store
 vi.mock('~/stores/schedulerStore', () => ({
-  useSchedulerStore: vi.fn((selector) => {
-    const state = {
-      selectQueue: vi.fn(),
-      selectedQueuePath: null,
-      comparisonQueues: [],
-      toggleComparisonQueue: vi.fn(),
-      stagedChanges: [],
-      setPropertyPanelOpen: vi.fn(),
-      updateQueueProperty: vi.fn(),
-      getQueueByPath: vi.fn(() => ({ queuePath: 'root', queueName: 'root' })),
-      stageQueueAddition: vi.fn(),
-      stageQueueRemoval: vi.fn(),
-      stageQueueChange: vi.fn(),
-      canCompareQueues: vi.fn(() => false),
-      clearComparisonQueues: vi.fn(),
-      getComparisonData: vi.fn(() => new Map()),
-      searchQuery: '',
-      nodeLabels: [],
-      selectedNodeLabelFilter: '',
-      selectNodeLabelFilter: vi.fn(),
-      getQueueAccessibility: vi.fn(() => true),
-      getQueueLabelCapacity: vi.fn(() => ({
-        capacity: '0',
-        maxCapacity: '100',
-        absoluteCapacity: '0',
-        isLabelSpecific: false,
-        label: 'DEFAULT',
-        hasAccess: true,
-        canUseLabel: true,
-      })),
-      hasQueueProperty: vi.fn(() => false),
-      getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
-      capacityEditor: {
-        isOpen: false,
-        origin: null,
-        parentQueuePath: null,
-        originQueuePath: null,
-        originQueueName: null,
-        originQueueState: null,
-        originInitialCapacity: null,
-        originInitialMaxCapacity: null,
-        originIsNew: false,
-        selectedNodeLabel: null,
-        labelOptions: [{ value: '__DEFAULT_PARTITION__', label: 'Default partition' }],
-        drafts: {},
-        draftOrder: [],
-        isSaving: false,
-        saveError: null,
-        validationIssues: [],
-      },
-      closeCapacityEditor: vi.fn(),
-      updateCapacityDraft: vi.fn(),
-      setCapacityEditorLabel: vi.fn(),
-      resetCapacityDrafts: vi.fn(),
-      saveCapacityDrafts: vi.fn(() => Promise.resolve(true)),
-    };
-
-    // If selector is provided, call it with state
-    if (typeof selector === 'function') {
-      return selector(state);
-    }
-
-    // Otherwise return the whole state
-    return state;
-  }),
+  useSchedulerStore: vi.fn(defaultSchedulerStoreImpl),
 }));
 
 vi.mock('../hooks/useQueueTreeData', () => ({
@@ -183,9 +189,12 @@ const renderWithProviders = (component: React.ReactElement) => {
   );
 };
 
+const useSchedulerStoreMock = useSchedulerStore as unknown as ViMock;
+
 describe('QueueVisualizationContainer', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useSchedulerStoreMock.mockImplementation(defaultSchedulerStoreImpl);
   });
 
   it('should show loading state while fetching queue data', () => {
@@ -347,10 +356,13 @@ describe('QueueVisualizationContainer', () => {
       const state = {
         selectQueue: mockSelectQueue,
         selectedQueuePath: null,
+        isPropertyPanelOpen: false,
         comparisonQueues: [],
         toggleComparisonQueue: vi.fn(),
         stagedChanges: [],
         setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: vi.fn(),
         updateQueueProperty: vi.fn(),
         getQueueByPath: vi.fn(() => ({ queuePath: 'root', queueName: 'root' })),
         stageQueueAddition: vi.fn(),

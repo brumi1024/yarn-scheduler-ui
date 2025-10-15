@@ -1,20 +1,10 @@
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCallback, useEffect, useMemo } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import type {
-  PropertyDescriptor,
-  LabelPropertyDescriptor,
-  ValidationRule,
-} from '~/types/property-descriptor';
+import type { PropertyDescriptor, ValidationRule } from '~/types/property-descriptor';
 import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
-import {
-  generateLabelPropertyDescriptors,
-  isLabelProperty,
-  extractLabelFromPropertyName,
-  extractBasePropertyFromLabelProperty,
-} from '~/features/node-labels/utils/labelPropertyUtils';
 import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
 import { validateQueue } from '~/features/validation/service';
@@ -25,7 +15,7 @@ import { buildPropertyKey } from '~/utils/propertyUtils';
 
 function createFormSchema(
   properties: Array<
-    (PropertyDescriptor | LabelPropertyDescriptor) & {
+    PropertyDescriptor & {
       formFieldName?: string;
       originalName?: string;
     }
@@ -90,36 +80,28 @@ export function usePropertyEditor({
   queuePath,
   properties = queuePropertyDefinitions,
 }: UsePropertyEditorOptions) {
-  const {
-    getQueuePropertyValue,
-    stageQueueChange,
-    stageLabelQueueChange,
-    clearQueueChanges,
-    nodeLabels,
-    schedulerData,
-    configData,
-  } = useSchedulerStore();
+  const { getQueuePropertyValue, stageQueueChange, clearQueueChanges, schedulerData, configData } =
+    useSchedulerStore();
 
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
+  const cleanResetRef = useRef(false);
+  const previousQueuePathRef = useRef<string | null>(null);
 
-  // Generate dynamic label properties based on available node labels
-  const labelProperties = useMemo(() => {
-    return generateLabelPropertyDescriptors(nodeLabels);
-  }, [nodeLabels]);
+  useEffect(() => {
+    if (previousQueuePathRef.current !== queuePath) {
+      cleanResetRef.current = true;
+      previousQueuePathRef.current = queuePath;
+    }
+  }, [queuePath]);
 
-  // Combine base properties with label properties
   const allProperties = useMemo(() => {
-    const combined = [...properties, ...labelProperties];
-
-    // Fix: Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
-    const escapedProperties = combined.map((property) => ({
+    // Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
+    return properties.map((property) => ({
       ...property,
-      formFieldName: property.name.replace(/\./g, '__DOT__'), // Escape dots for React Hook Form
-      originalName: property.name, // Keep original name for staging
+      formFieldName: property.formFieldName ?? property.name.replace(/\./g, '__DOT__'),
+      originalName: property.originalName ?? property.name,
     }));
-
-    return escapedProperties;
-  }, [properties, labelProperties]);
+  }, [properties]);
 
   const knownFieldNames = useMemo(() => {
     return new Set(allProperties.map((property) => property.originalName || property.name));
@@ -198,10 +180,14 @@ export function usePropertyEditor({
       initialValues[fieldName] = value;
     });
 
+    const shouldForceClean = cleanResetRef.current;
     reset(initialValues, {
-      keepDirty: true,
-      keepDirtyValues: true,
+      keepDirty: !shouldForceClean,
+      keepDirtyValues: !shouldForceClean,
     });
+    if (shouldForceClean) {
+      cleanResetRef.current = false;
+    }
   }, [queuePath, allProperties, getQueuePropertyValue, reset, stagedChanges]);
 
   const getStagedStatus = useCallback(
@@ -220,18 +206,9 @@ export function usePropertyEditor({
       }
 
       // Handle label properties differently than regular properties
-      if (isLabelProperty(propertyName)) {
-        const labelName = extractLabelFromPropertyName(propertyName);
-        const baseProperty = extractBasePropertyFromLabelProperty(propertyName);
-
-        if (labelName && baseProperty) {
-          stageLabelQueueChange(queuePath, labelName, baseProperty, value, validationErrors);
-        }
-      } else {
-        stageQueueChange(queuePath, propertyName, value, validationErrors);
-      }
+      stageQueueChange(queuePath, propertyName, value, validationErrors);
     },
-    [queuePath, stageQueueChange, stageLabelQueueChange, allProperties],
+    [queuePath, stageQueueChange, allProperties],
   );
 
   const handleFieldChange = useCallback(
@@ -406,6 +383,15 @@ export function usePropertyEditor({
           message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
         };
 
+        if (stagedCount > 0) {
+          const latestValues = form.getValues();
+          reset(latestValues, {
+            keepDirty: false,
+            keepDirtyValues: false,
+          });
+          cleanResetRef.current = true;
+        }
+
         if (nonBlockingIssues.length > 0) {
           toast.warning(
             `${result.message} (with ${nonBlockingIssues.length} validation warning${nonBlockingIssues.length !== 1 ? 's' : ''})`,
@@ -430,6 +416,8 @@ export function usePropertyEditor({
       schedulerData,
       configData,
       stagedChanges,
+      reset,
+      form,
     ],
   );
 
@@ -445,6 +433,7 @@ export function usePropertyEditor({
       const fieldName = property.formFieldName || property.name;
       currentValues[fieldName] = value;
     });
+    cleanResetRef.current = true;
     reset(currentValues);
   }, [queuePath, getQueuePropertyValue, clearQueueChanges, clearQueueErrors, reset, allProperties]);
 
@@ -545,7 +534,6 @@ export function usePropertyEditor({
     getStagedStatus,
 
     properties: allProperties,
-    labelProperties,
     formState: form.formState,
 
     getFieldErrors,

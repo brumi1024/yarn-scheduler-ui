@@ -93,9 +93,8 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    },
    ```
 
-2. **Consider label-aware properties.** If the property needs a node-label variant (`accessible-node-labels.<label>.…`), update the templates in `src/features/node-labels/utils/labelPropertyUtils.ts` so descriptors are generated for each label at runtime.
-3. **Business validation (optional).** Queue properties participate in additional checks described in the next section. Register new rules whenever the field interacts with other properties or queues.
-4. **Tests.** Extend `propertyDefinitions.test.ts` or add dedicated tests under `src/features/property-editor` / `src/stores` if the new property affects rendering or staged changes.
+2. **Business validation (optional).** Queue properties participate in additional checks described in the next section. Register new rules whenever the field interacts with other properties or queues.
+3. **Tests.** Extend `propertyDefinitions.test.ts` or add dedicated tests under `src/features/property-editor` / `src/stores` if the new property affects rendering or staged changes.
 
 ## Adding validation rules
 

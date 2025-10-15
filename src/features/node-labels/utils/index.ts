@@ -1,3 +1,2 @@
-// Export all node-label utilities
-export * from './labelPropertyUtils';
+// Export node-label utilities that remain in use
 export * from './labelValidation';

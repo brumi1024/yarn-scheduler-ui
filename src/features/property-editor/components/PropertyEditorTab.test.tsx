@@ -1,13 +1,11 @@
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import { PropertyEditorTab } from './PropertyEditorTab';
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
-import { useSchedulerStore } from '~/stores/schedulerStore';
-import type { QueueInfo, NodeLabel } from '~/types';
+import type { QueueInfo } from '~/types';
 
 // Mock the hooks
 vi.mock('~/features/property-editor/hooks/usePropertyEditor');
-vi.mock('~/stores/schedulerStore');
 
 // Mock toast
 vi.mock('sonner', () => ({
@@ -48,17 +46,6 @@ describe('PropertyEditorTab', () => {
     },
   };
 
-  const mockNodeLabels: NodeLabel[] = [
-    {
-      name: 'gpu',
-      exclusivity: true,
-    },
-    {
-      name: 'ssd',
-      exclusivity: false,
-    },
-  ];
-
   const mockPropertyEditor = {
     form: {
       control: {},
@@ -78,38 +65,24 @@ describe('PropertyEditorTab', () => {
     hasChanges: false,
     watchedValues: {},
     propertiesByCategory: {
-      general: [],
+      general: [
+        {
+          name: 'capacity',
+          displayName: 'Capacity',
+          type: 'string' as const,
+          defaultValue: '50',
+          description: 'Queue capacity allocation',
+          category: 'general' as const,
+          formFieldName: 'capacity',
+          required: true,
+          validationRules: [],
+        },
+      ],
       resource: [],
       limits: [],
       scheduling: [],
       security: [],
       advanced: [],
-      nodeLabels: [
-        {
-          name: 'accessible-node-labels.gpu.capacity',
-          displayName: 'GPU Label Capacity',
-          type: 'number' as const,
-          defaultValue: '0',
-          description: 'Capacity for GPU label',
-          category: 'nodeLabels' as const,
-          label: 'gpu',
-          formFieldName: 'accessible-node-labels.gpu.capacity',
-          required: false,
-          validationRules: [],
-        },
-        {
-          name: 'accessible-node-labels.ssd.capacity',
-          displayName: 'SSD Label Capacity',
-          type: 'number' as const,
-          defaultValue: '0',
-          description: 'Capacity for SSD label',
-          category: 'nodeLabels' as const,
-          label: 'ssd',
-          formFieldName: 'accessible-node-labels.ssd.capacity',
-          required: false,
-          validationRules: [],
-        },
-      ],
     },
     getStagedStatus: vi.fn(),
     formState: { isDirty: false },
@@ -123,106 +96,26 @@ describe('PropertyEditorTab', () => {
     vi.mocked(usePropertyEditor).mockReturnValue(mockPropertyEditor as any);
   });
 
-  it('should show node label properties when queue has inherited access', () => {
-    // Mock the store to indicate the queue has inherited access to labels
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      nodeLabels: mockNodeLabels,
-      getQueueAccessibility: vi.fn((_, label) => {
-        // Simulate inherited access - queue has access to gpu label but not ssd
-        return label === 'gpu';
-      }),
-      hasQueueProperty: vi.fn(() => false), // No explicit config
-    } as any);
-
-    // Queue has no explicit accessible-node-labels configured
-    vi.mocked(usePropertyEditor).mockReturnValue({
-      ...mockPropertyEditor,
-      watchedValues: {
-        // undefined means no explicit configuration (will inherit from parent)
-      },
-    } as any);
-
+  it('renders configured property categories without node label capacity section', () => {
     render(<PropertyEditorTab queue={mockQueue} />);
 
-    // Should show node labels accordion since queue has inherited access
-    expect(screen.getByText('Node Labels')).toBeInTheDocument();
-    expect(
-      screen.getByText('Per-label capacity configuration for accessible labels'),
-    ).toBeInTheDocument();
-
-    // Should show inherited badge
-    expect(screen.getByText('Inherited')).toBeInTheDocument();
-
-    // Click to open the Node Labels accordion
-    const nodeLabelsTrigger = screen.getByRole('button', { name: /Node Labels/i });
-    fireEvent.click(nodeLabelsTrigger);
-
-    // Should only show GPU label properties (inherited access)
-    expect(screen.getByText('Label: gpu')).toBeInTheDocument();
-    expect(screen.getByText('GPU Label Capacity')).toBeInTheDocument();
-
-    // Should NOT show SSD label properties (no access)
-    expect(screen.queryByText('Label: ssd')).not.toBeInTheDocument();
-    expect(screen.queryByText('SSD Label Capacity')).not.toBeInTheDocument();
-  });
-
-  it('should show all label properties when queue has explicit * access', () => {
-    // Mock the store
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      nodeLabels: mockNodeLabels,
-      getQueueAccessibility: vi.fn(() => true), // All labels accessible
-      hasQueueProperty: vi.fn(() => true), // Explicit config exists
-    } as any);
-
-    // Queue has * (all labels) access
-    vi.mocked(usePropertyEditor).mockReturnValue({
-      ...mockPropertyEditor,
-      watchedValues: {
-        'accessible-node-labels': '*',
-      },
-    } as any);
-
-    render(<PropertyEditorTab queue={mockQueue} />);
-
-    // Should show node labels accordion
-    expect(screen.getByText('Node Labels')).toBeInTheDocument();
-
-    // Should NOT show inherited badge since access is explicit
-    expect(screen.queryByText('Inherited')).not.toBeInTheDocument();
-
-    // Click to open the Node Labels accordion
-    const nodeLabelsTrigger = screen.getByRole('button', { name: /Node Labels/i });
-    fireEvent.click(nodeLabelsTrigger);
-
-    // Should show all label properties
-    expect(screen.getByText('Label: gpu')).toBeInTheDocument();
-    expect(screen.getByText('GPU Label Capacity')).toBeInTheDocument();
-    expect(screen.getByText('Label: ssd')).toBeInTheDocument();
-    expect(screen.getByText('SSD Label Capacity')).toBeInTheDocument();
-  });
-
-  it('should not show node labels section when queue has no access to any labels', () => {
-    // Mock the store - queue has no access to any labels
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      nodeLabels: mockNodeLabels,
-      getQueueAccessibility: vi.fn(() => false), // No label access
-      hasQueueProperty: vi.fn(() => true), // Explicit empty config exists
-    } as any);
-
-    // Queue has empty accessible-node-labels (DEFAULT only)
-    vi.mocked(usePropertyEditor).mockReturnValue({
-      ...mockPropertyEditor,
-      watchedValues: {
-        'accessible-node-labels': '',
-      },
-    } as any);
-
-    render(<PropertyEditorTab queue={mockQueue} />);
-
-    // Should not show node labels section at all
+    expect(screen.getByText('General Configuration')).toBeInTheDocument();
+    expect(screen.getByText('Capacity')).toBeInTheDocument();
     expect(screen.queryByText('Node Labels')).not.toBeInTheDocument();
-    expect(
-      screen.queryByText('Per-label capacity configuration for accessible labels'),
-    ).not.toBeInTheDocument();
+  });
+
+  it('displays error badge when category has errors', () => {
+    vi.mocked(usePropertyEditor).mockReturnValue({
+      ...mockPropertyEditor,
+      errors: {
+        capacity: { message: 'Invalid capacity', type: 'validation' },
+      },
+    } as any);
+
+    render(<PropertyEditorTab queue={mockQueue} />);
+
+    expect(screen.getByText('General Configuration')).toBeInTheDocument();
+    const generalTrigger = screen.getByRole('button', { name: /General Configuration/i });
+    expect(within(generalTrigger).getByText('1')).toBeInTheDocument();
   });
 });

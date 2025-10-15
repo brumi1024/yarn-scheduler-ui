@@ -103,6 +103,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: null,
       isPropertyPanelOpen: false,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -118,6 +120,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: false,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -132,6 +136,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -148,6 +154,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -165,6 +173,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -176,12 +186,34 @@ describe('PropertyPanel', () => {
     expect(screen.getByTestId('queue-overview')).toBeInTheDocument();
   });
 
+  it('should respect initial tab selection from store', () => {
+    const localSetInitialTab = vi.fn();
+    (useSchedulerStore as any).mockReturnValue({
+      selectedQueuePath: 'root.default',
+      isPropertyPanelOpen: true,
+      setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'settings',
+      setPropertyPanelInitialTab: localSetInitialTab,
+      getQueueByPath: mockGetQueueByPath,
+      selectQueue: mockSelectQueue,
+    });
+    mockGetQueueByPath.mockReturnValue(mockQueue);
+
+    render(<PropertyPanel />);
+
+    const settingsTab = screen.getByRole('tab', { name: /settings/i });
+    expect(settingsTab).toHaveAttribute('data-state', 'active');
+    expect(localSetInitialTab).not.toHaveBeenCalled();
+  });
+
   it('should switch between tabs', async () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockReturnValue({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -204,6 +236,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -228,6 +262,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -248,6 +284,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -267,6 +305,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -310,6 +350,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -333,6 +375,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -355,6 +399,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -377,6 +423,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -398,6 +446,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -410,6 +460,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: false,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -426,6 +478,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
@@ -453,6 +507,8 @@ describe('PropertyPanel', () => {
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
       setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'overview',
+      setPropertyPanelInitialTab: vi.fn(),
       getQueueByPath: mockGetQueueByPath,
       selectQueue: mockSelectQueue,
     });
