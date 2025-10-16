@@ -277,49 +277,7 @@ In `PropertyPanel.tsx`, create a new component to summarize errors.
 
 This is a critical UX improvement to distinguish between front-end and back-end validation.
 
-1.  **API Error State**: Add a new piece of state to the `stagedChangesSlice` in Redux.
-
-    ```typescript
-    // src/stores/slices/stagedChangesSlice.ts
-    interface StagedChangesState {
-      // ... other state
-      apiError: string | null;
-    }
-
-    const initialState: StagedChangesState = {
-      // ...
-      apiError: null,
-    };
-    ```
-
-2.  **Update on API Failure**: In the async thunk that handles saving changes, add a `rejected` case that updates this new state.
-    ```typescript
-    // In the createAsyncThunk for saving changes...
-    .addCase(saveChanges.rejected, (state, action) => {
-      state.apiError = action.error.message; // Store the error message from YARN
-    })
-    .addCase(saveChanges.fulfilled, (state) => {
-      state.apiError = null; // Clear the error on success
-    });
-    ```
-3.  **Display Persistent Alert**: In `StagedChangesPanel.tsx`, use a selector to read the `apiError` state. If it's not null, render a persistent `Alert` component.
-
-    ```tsx
-    // src/features/staged-changes/components/StagedChangesPanel.tsx
-    const apiError = useAppSelector((state) => state.stagedChanges.apiError);
-
-    return (
-      <div>
-        {apiError && (
-          <Alert variant="destructive" className="mb-4">
-            <AlertTitle>Save Failed</AlertTitle>
-            <AlertDescription>{apiError}</AlertDescription>
-          </Alert>
-        )}
-        {/* ... rest of the panel ... */}
-      </div>
-    );
-    ```
+We now surface server-side failures through the existing `applyError` field in `stagedChangesSlice`. Any component that needs to show a save failure should read `applyError` and render an alert similar to the staged changes panel banner. This keeps the messaging consistent and guarantees that users see a single, clear error for any failed mutation.
 
 4.  **Clearing the Error**: The error should also be cleared if the user modifies any value in the staged changes, indicating they are attempting to fix the issue.
 

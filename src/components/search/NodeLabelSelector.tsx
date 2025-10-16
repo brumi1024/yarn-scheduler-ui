@@ -37,7 +37,6 @@ export const NodeLabelSelector: React.FC = () => {
           {nodeLabels.map((label) => (
             <SelectItem key={label.name} value={label.name}>
               <div className="flex items-center gap-2">
-                <Tag className="h-3 w-3" />
                 <span>{label.name}</span>
                 {label.exclusivity && (
                   <Badge variant="secondary" className="text-xs">

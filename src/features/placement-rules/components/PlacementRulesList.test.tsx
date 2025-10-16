@@ -94,6 +94,7 @@ describe('PlacementRulesList', () => {
     isLegacyMode: false,
     legacyRules: null,
     configData: new Map(),
+    applyError: null,
   };
 
   beforeEach(() => {
@@ -192,6 +193,18 @@ describe('PlacementRulesList', () => {
         'Rules are evaluated from top to bottom. The first matching rule determines the queue assignment. Drag rules to reorder them.',
       ),
     ).toBeInTheDocument();
+  });
+
+  it('should display apply error alert when present', () => {
+    vi.mocked(useSchedulerStore).mockReturnValue({
+      ...mockStoreFunctions,
+      applyError: 'HTTP 400: Invalid configuration',
+    });
+
+    render(<PlacementRulesList />);
+
+    expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
+    expect(screen.getByText('HTTP 400: Invalid configuration')).toBeInTheDocument();
   });
 
   it('should call loadPlacementRules on mount when configData is available', () => {

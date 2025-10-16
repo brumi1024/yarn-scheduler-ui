@@ -345,7 +345,7 @@ export const PropertyPanel: React.FC = () => {
 
             {/* Fixed Apply/Reset buttons - show on Settings tab */}
             {tabValue === 'settings' && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t flex gap-2 justify-end">
+              <div className="sticky bottom-0 left-0 right-0 mt-auto p-4 bg-background border-t flex gap-2 justify-end">
                 <Button
                   variant="outline"
                   onClick={handleReset}

@@ -27,6 +27,8 @@ describe('NodeLabels', () => {
   const defaultStoreState = {
     isLoading: false,
     error: null,
+    errorContext: null,
+    applyError: null,
     nodeLabels: [],
     selectedNodeLabel: null,
     refreshSchedulerData: mockRefreshSchedulerData,
@@ -158,19 +160,34 @@ describe('NodeLabels', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         error: errorMessage,
+        errorContext: 'nodeLabels',
       });
 
       render(<NodeLabels />);
 
       expect(screen.getByText(errorMessage)).toBeInTheDocument();
-      const alert = screen.getByRole('alert');
-      expect(alert).toHaveClass('mb-4');
+      expect(screen.getByText('Node Label Operation Failed')).toBeInTheDocument();
+      const alerts = screen.getAllByRole('alert');
+      expect(alerts[0]).toHaveClass('mb-4');
     });
 
     it('should not display error alert when no error', () => {
       render(<NodeLabels />);
 
       expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+    });
+
+    it('should display apply error alert when applyError exists', () => {
+      const applyErrorMessage = 'HTTP 400: Invalid configuration';
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...defaultStoreState,
+        applyError: applyErrorMessage,
+      });
+
+      render(<NodeLabels />);
+
+      expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
+      expect(screen.getByText(applyErrorMessage)).toBeInTheDocument();
     });
   });
 
@@ -298,6 +315,7 @@ describe('NodeLabels', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         error: 'New error occurred',
+        errorContext: 'nodeLabels',
       });
 
       rerender(<NodeLabels />);

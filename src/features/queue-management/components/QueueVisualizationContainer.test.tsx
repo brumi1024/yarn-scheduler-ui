@@ -165,7 +165,6 @@ vi.mock('../hooks/useQueueTreeData', () => ({
     isLoading: true,
     loadError: null,
     applyError: null,
-    apiError: null,
   })),
 }));
 
@@ -210,7 +209,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: 'Failed to fetch queue data',
       applyError: null,
-      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -235,7 +233,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: 'HTTP 400: Invalid configuration',
-      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -245,31 +242,6 @@ describe('QueueVisualizationContainer', () => {
     expect(screen.queryByText('Error Loading Queue Data')).not.toBeInTheDocument();
   });
 
-  it('should surface api error without hiding the queue hierarchy', () => {
-    const mockNodes: Node<QueueCardData>[] = [
-      {
-        id: 'root',
-        type: 'queueCard',
-        position: { x: 0, y: 0 },
-        data: getMockQueueCardData({ queueName: 'root', queuePath: 'root' }),
-      },
-    ];
-
-    vi.mocked(useQueueTreeData).mockReturnValue({
-      nodes: mockNodes,
-      edges: [],
-      isLoading: false,
-      loadError: null,
-      applyError: null,
-      apiError: 'YARN rejected the configuration',
-    });
-
-    renderWithProviders(<QueueVisualizationContainer />);
-
-    expect(screen.getByText('Save Failed')).toBeInTheDocument();
-    expect(screen.getByText('YARN rejected the configuration')).toBeInTheDocument();
-  });
-
   it('should show empty state when no queue data exists', () => {
     vi.mocked(useQueueTreeData).mockReturnValue({
       nodes: [],
@@ -277,7 +249,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
-      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -331,7 +302,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
-      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -439,7 +409,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
-      apiError: null,
     });
 
     renderWithProviders(<QueueVisualizationContainer />);
@@ -484,7 +453,6 @@ describe('QueueVisualizationContainer', () => {
       isLoading: false,
       loadError: null,
       applyError: null,
-      apiError: null,
     });
 
     // Test with dark theme

@@ -2,15 +2,23 @@ import React from 'react';
 import { RefreshCw, Tag } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Button } from '~/components/ui/button';
-import { Alert, AlertDescription } from '~/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
 import { Skeleton } from '~/components/ui/skeleton';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { NodesPanel } from './NodesPanel';
+import { AlertCircle } from 'lucide-react';
 
 export const NodeLabels: React.FC = () => {
-  const { isLoading, error, nodeLabels, selectedNodeLabel, refreshSchedulerData } =
-    useSchedulerStore();
+  const {
+    isLoading,
+    error,
+    errorContext,
+    applyError,
+    nodeLabels,
+    selectedNodeLabel,
+    refreshSchedulerData,
+  } = useSchedulerStore();
 
   const handleRefresh = async () => {
     try {
@@ -60,8 +68,18 @@ export const NodeLabels: React.FC = () => {
       </div>
 
       {/* Error Display */}
-      {error && (
+      {applyError && (
         <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to Apply Changes</AlertTitle>
+          <AlertDescription>{applyError}</AlertDescription>
+        </Alert>
+      )}
+
+      {error && errorContext === 'nodeLabels' && (
+        <Alert variant="destructive" className="mb-4">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Node Label Operation Failed</AlertTitle>
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}

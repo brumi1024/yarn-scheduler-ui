@@ -1,24 +1,26 @@
 # Extending Scheduler Properties
 
-This guide explains how to make new Capacity Scheduler properties editable in the UI and how to add validation for them. Follow the relevant section depending on whether you are working with global scheduler settings or queue-level configuration.
+This guide explains how to make new Capacity Scheduler properties editable in the UI and how to plug them into the rewritten validation system (see `docs/validation_overhaul.md` for the architecture overview). Follow the relevant section depending on whether you are working with global scheduler settings or queue-level configuration.
 
 ## Key modules
 
 - `src/config/properties/global-properties.ts`: property descriptors that drive the Global Settings page.
-- `src/config/properties/queue-properties.ts`: queue-level property descriptors used by the property editor and queue creation flows.
-- `src/config/schemas/validation.ts`: reusable Zod validators for common formats (capacity strings, percentages, ACLs, etc.).
-- `src/utils/validation/businessRules`: business-rule validators that enforce cross-field or cross-queue constraints.
-- `src/utils/validation/businessRules/ruleCategories.ts`: maps validation rule IDs to severity/behavior so the UI knows if an error blocks staging.
+- `src/config/properties/queue-properties.ts`: queue-level descriptors used by the property editor, queue dialogs, and staged changes.
+- `src/config/schemas/validation.ts`: shared Zod helpers for common formats (capacity values, ACLs, percentages, etc.).
+- `src/config/validation-rules.ts`: declarative business-validation rules evaluated for both global and queue properties.
+- `src/contexts/ValidationContext.tsx`: React provider that keeps validation issues in sync with staged edits.
+- `src/features/validation/service.ts`: utility entry points (`validateField`, `validateQueue`) used by hooks and slices.
+- `src/features/validation/ruleCategories.ts`: maps rule IDs to blocking/non-blocking behavior.
 - `src/config/__tests__/propertyDefinitions.test.ts`: regression tests that assert descriptor consistency.
 
 ## Adding a global property
 
 1. **Define the descriptor** in `src/config/properties/global-properties.ts`.
-   - Global descriptors must use the fully qualified key (for example, `yarn.scheduler.capacity.maximum-applications`).
-   - Set `displayName`, `description`, `type`, `category`, `defaultValue`, and `required`.
-   - Add `validationRules` for basic checks (`range`, `pattern`, or `custom`). Import helpers from `src/config/schemas/validation.ts` when possible.
-   - Provide `enumValues` when `type` is `enum`. Each option must supply `{ value, label, description? }` so the UI has user-facing copy while keeping the serialized value. Use `enumDisplay` to opt into alternative layouts (`choiceCard`, `toggle`, or `select`).
-   - Use `displayFormat` for human-friendly suffixes on numeric inputs.
+   - Use the fully qualified key (for example, `yarn.scheduler.capacity.maximum-applications`).
+   - Populate `displayName`, `description`, `type`, `category`, `defaultValue`, and `required`.
+   - Use `validationRules` for field-level checks (`range`, `pattern`, or `custom`). Import helpers from `src/config/schemas/validation.ts` when possible so rules stay consistent.
+   - Supply `enumValues` when `type` is `enum`. Each option should provide `{ value, label, description? }`. Use `enumDisplay` when you need `choiceCard`, `toggle`, or `select`.
+   - Use `displayFormat` to add user-friendly suffixes to numeric inputs.
 
    ```ts
    {
@@ -35,44 +37,17 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    },
    ```
 
-   For enum properties:
-
-   ```ts
-   {
-     name: 'yarn.scheduler.capacity.resource-calculator',
-     displayName: 'Resource Calculator',
-     description: 'Select the class that evaluates multi-resource usage.',
-     type: 'enum',
-     category: 'resource',
-     defaultValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
-     required: false,
-     enumDisplay: 'choiceCard',
-     enumValues: [
-       {
-         value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
-         label: 'Default (Memory Only)',
-         description: 'Legacy calculator that considers memory usage exclusively.',
-       },
-       {
-         value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
-         label: 'Dominant Resource',
-         description: 'Balances allocations across memory, CPU, and custom resources.',
-       },
-     ],
-   },
-   ```
-
-2. **Adjust the UI if needed.** The global settings screen renders inputs based on `PropertyDescriptor.type`. For custom widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
-3. **Update tests.** If the new property should be covered by `propertyDefinitions.test.ts`, add expectations there.
-4. **Verify** by running the app or unit tests (`npm run test`) and confirming the new field appears under the correct category with the expected validation message.
+2. **Adjust the UI if needed.** The global settings form renders inputs based on `PropertyDescriptor.type`. For bespoke widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
+3. **Update tests.** Extend `src/config/__tests__/propertyDefinitions.test.ts` if you need coverage for descriptor metadata.
+4. **Verify** by running the app or unit tests (`npm run test`) and confirming the new field renders with the expected validation feedback.
 
 ## Adding a queue-level property
 
 1. **Add a descriptor** in `src/config/properties/queue-properties.ts`.
-   - Queue descriptors omit the scheduler prefix; use the short key (`capacity`, `ordering-policy`, etc.).
-   - Populate the same core fields as for global descriptors. Use `enableWhen` to express dependencies on other fields, and `dependsOn` to record soft dependencies for search.
-   - For enum properties, use the `{ value, label, description? }` shape for `enumValues` and choose a `enumDisplay` variant when the default toggle group is not appropriate.
-   - If the property should be required for new queues, set `required: true` so the property editor enforces it.
+   - Queue descriptors use the short key (`capacity`, `maximum-capacity`, etc.).
+   - Populate the same core fields as global descriptors. Use `enableWhen` for hard dependencies and `dependsOn` for soft discovery links.
+   - For enum properties, keep the `{ value, label, description? }` shape and select an `enumDisplay` variant if the default toggle group is not ideal.
+   - Set `required: true` if the field must be provided when adding new queues.
 
    ```ts
    {
@@ -84,39 +59,69 @@ This guide explains how to make new Capacity Scheduler properties editable in th
      defaultValue: '',
      required: false,
      validationRules: [
-       { type: 'custom', message: 'Must be zero or greater', validator: (value) => {
-         if (!value.trim()) return true;
-         const parsed = Number(value);
-         return !Number.isNaN(parsed) && parsed >= 0;
-       } },
+       {
+         type: 'custom',
+         message: 'Must be zero or greater',
+         validator: (value) => {
+           if (!value.trim()) return true;
+           const parsed = Number(value);
+           return !Number.isNaN(parsed) && parsed >= 0;
+         },
+       },
      ],
    },
    ```
 
-2. **Business validation (optional).** Queue properties participate in additional checks described in the next section. Register new rules whenever the field interacts with other properties or queues.
-3. **Tests.** Extend `propertyDefinitions.test.ts` or add dedicated tests under `src/features/property-editor` / `src/stores` if the new property affects rendering or staged changes.
+2. **Wire dependent UI.** Components such as `PropertyFormField` and `PropertyEditorTab` already read descriptors; only extend them if you need new interaction patterns.
+3. **Tests.** Update `propertyDefinitions.test.ts` or add targeted tests under `src/features/property-editor` / `src/stores` when the new field affects staged-change flows or reducers.
 
-## Adding validation rules
+## Working with validation
 
-There are two layers of validation:
+The validation pipeline has two layers that run automatically once descriptors and rules are defined.
 
-1. **Form-level validation** (per-field checks)
-   - Implement via the `validationRules` array on the descriptor. The property editor converts these into Zod schema rules (`range`, `pattern`, `custom`).
-   - Reuse helpers from `src/config/schemas/validation.ts` when possible, or create a new schema in that file so it can be shared between global and queue properties.
+### Form-level checks
 
-2. **Business-rule validation** (cross-field / cross-queue logic)
-   - Create or update a validator in `src/utils/validation/businessRules` (for example, add a new function in an existing file or a new module).
-   - Register the validator in `BusinessValidationService.registerValidators()` inside `src/utils/validation/businessRules/service.ts` by calling `this.addValidator('<property-name>', [validatorFn])`.
-   - Assign a `rule` identifier in the returned `BusinessValidationError`. Add that identifier to `CROSS_QUEUE_RULES`, `QUEUE_SPECIFIC_RULES`, or `WARNING_ONLY_RULES` in `ruleCategories.ts` to control whether the error blocks staging.
-   - Write unit tests alongside the validator (see existing `*.test.ts` files in the same directory) to cover success, warning, and error scenarios.
-   - For global properties, the same service is invoked with `queuePath === 'global'`, so reuse the existing pipeline to emit either blocking errors or warnings.
+- The `validationRules` array on a descriptor is compiled into Zod validators inside `src/features/property-editor/hooks/usePropertyEditor.ts`.
+- Reuse the helpers in `src/config/schemas/validation.ts` whenever possible. Create new helpers there if the same rule will be reused by multiple properties.
+- For global properties, `useGlobalPropertyValidation` invokes the same pipeline using the `global` queue path, so no extra wiring is required.
 
-After adding validation, run `npm run test` (or targeted `vitest` suites) to ensure new rules behave as expected.
+### Declarative business rules
+
+Cross-field and cross-queue logic lives in `src/config/validation-rules.ts`. To add or modify a rule:
+
+1. **Declare the rule** in the `QUEUE_VALIDATION_RULES` array (the name is historical; the same engine runs for global settings).
+   ```ts
+   {
+     id: 'EXAMPLE_RULE',
+     description: 'Describe the constraint',
+     level: 'error',             // or 'warning'
+     triggers: ['capacity'],     // fields that should cause this rule to re-run
+     evaluate: (context) => {
+       // context includes queuePath, fieldName, fieldValue, merged config, stagedChanges, etc.
+       if (/* invalid */) {
+         return [
+           {
+             queuePath: context.queuePath,
+             field: 'capacity',
+             message: 'Explain the problem.',
+             severity: 'error',
+             rule: 'example-rule',
+           },
+         ];
+       }
+       return [];
+     },
+   }
+   ```
+2. **Share utilities** by adding helpers in `src/features/validation/utils` when the logic is complex.
+3. **Categorize severity (optional).** If the rule’s outcome should be treated as non-blocking despite returning `severity: 'error'`, update `src/features/validation/ruleCategories.ts` so `isBlockingError` reflects the desired behavior.
+4. **Surface to the UI.** The `ValidationContext` automatically merges new rule output. Field-level components read `ValidationIssue[]` through `useValidation`, so no extra wiring is required beyond returning the correct `rule` ID and `severity`.
+5. **Test it.** Add unit tests near the rule implementation (for example, under `src/config/__tests__` or a new `*.test.ts` beside the helper) and run `npm run test`.
 
 ## Sanity checklist
 
 - [ ] Descriptor added to the appropriate file with accurate metadata.
-- [ ] UI renders the expected input type (extend components if necessary).
-- [ ] Form-level validation rules cover basic formatting/limits.
-- [ ] Business-rule validators registered (when required) and categorized.
+- [ ] UI renders the expected input type (extend components only if necessary).
+- [ ] Form-level `validationRules` cover formatting and basic range checks.
+- [ ] Declarative rule added to `src/config/validation-rules.ts` (and helper utilities or categories updated when needed).
 - [ ] Tests updated or added, and `npm run test` completes successfully.

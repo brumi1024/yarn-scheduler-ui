@@ -95,7 +95,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -109,7 +108,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -137,7 +135,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -157,7 +154,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -186,7 +182,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -208,7 +203,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -231,7 +225,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: null,
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -285,7 +278,6 @@ describe('StagedChangesPanel', () => {
         clearAllChanges: mockClearAllChanges,
         applyChanges: mockApplyChanges,
         applyError: 'HTTP 400: Invalid configuration',
-        apiError: null,
       };
       return selector ? selector(state) : state;
     });
@@ -294,25 +286,6 @@ describe('StagedChangesPanel', () => {
 
     expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
     expect(screen.getByText('HTTP 400: Invalid configuration')).toBeInTheDocument();
-  });
-
-  it('should display API error alert when present', () => {
-    (useSchedulerStore as any).mockImplementation((selector: any) => {
-      const state = {
-        stagedChanges: mockStagedChanges,
-        revertChange: mockRevertChange,
-        clearAllChanges: mockClearAllChanges,
-        applyChanges: mockApplyChanges,
-        applyError: null,
-        apiError: 'YARN rejected the configuration',
-      };
-      return selector ? selector(state) : state;
-    });
-
-    render(<StagedChangesPanel open={true} onClose={vi.fn()} />);
-
-    expect(screen.getByText('Save Failed')).toBeInTheDocument();
-    expect(screen.getByText('YARN rejected the configuration')).toBeInTheDocument();
   });
 
   it('should disable actions while applying changes', async () => {
