@@ -410,7 +410,6 @@ export function usePropertyEditor({
     [
       stageChange,
       allProperties,
-      form.formState.dirtyFields,
       queuePath,
       replaceQueueIssues,
       schedulerData,
