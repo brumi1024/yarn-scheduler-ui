@@ -36,13 +36,14 @@ vi.mock('~/components/ui/accordion', () => ({
 }));
 
 vi.mock('./PropertyInput', () => ({
-  PropertyInput: vi.fn(({ property, value, isStaged, onChange }: any) => (
+  PropertyInput: vi.fn(({ property, value, isStaged, onChange, disabled }: any) => (
     <div data-testid={`property-input-${property.name}`}>
       <input
         data-testid={`input-${property.name}`}
         value={value || ''}
         onChange={(e) => onChange(e.target.value)}
         data-is-staged={isStaged}
+        disabled={disabled}
       />
     </div>
   )),
@@ -93,6 +94,7 @@ const createStoreState = (overrides?: Partial<Record<string, unknown>>) => ({
   searchQuery: undefined as string | undefined,
   getFilteredSettings: vi.fn(() => globalPropertyDefinitions),
   getGlobalPropertyValue: vi.fn().mockReturnValue({ value: 'test-value', isStaged: false }),
+  getQueuePropertyValue: vi.fn().mockReturnValue({ value: '', isStaged: false }),
   stageGlobalChange: vi.fn(),
   applyError: null,
   ...overrides,
@@ -167,10 +169,15 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const getGlobalPropertyValue = vi
-        .fn()
-        .mockReturnValueOnce({ value: 'value1', isStaged: false })
-        .mockReturnValueOnce({ value: 'value2', isStaged: true });
+      const getGlobalPropertyValue = vi.fn((name: string) => {
+        if (name === 'prop1') {
+          return { value: 'value1', isStaged: false };
+        }
+        if (name === 'prop2') {
+          return { value: 'value2', isStaged: true };
+        }
+        return { value: '', isStaged: false };
+      });
 
       renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 
@@ -378,10 +385,15 @@ describe('GlobalSettings', () => {
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
-      const getGlobalPropertyValue = vi
-        .fn()
-        .mockReturnValueOnce({ value: 'val1', isStaged: true })
-        .mockReturnValueOnce({ value: 'val2', isStaged: false });
+      const getGlobalPropertyValue = vi.fn((name: string) => {
+        if (name === 'staged-prop') {
+          return { value: 'val1', isStaged: true };
+        }
+        if (name === 'unstaged-prop') {
+          return { value: 'val2', isStaged: false };
+        }
+        return { value: '', isStaged: false };
+      });
 
       renderWithValidation(<GlobalSettings />, { getGlobalPropertyValue });
 

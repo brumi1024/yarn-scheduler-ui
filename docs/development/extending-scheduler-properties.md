@@ -20,22 +20,24 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    - Populate `displayName`, `description`, `type`, `category`, `defaultValue`, and `required`.
    - Use `validationRules` for field-level checks (`range`, `pattern`, or `custom`). Import helpers from `src/config/schemas/validation.ts` when possible so rules stay consistent.
    - Supply `enumValues` when `type` is `enum`. Each option should provide `{ value, label, description? }`. Use `enumDisplay` when you need `choiceCard`, `toggle`, or `select`.
-   - Use `displayFormat` to add user-friendly suffixes to numeric inputs.
 
-   ```ts
-   {
-     name: 'yarn.scheduler.capacity.sample-property',
-     displayName: 'Sample Property',
-     description: 'What this property controls.',
-     type: 'number',
-     category: 'general',
-     defaultValue: '0',
-     required: false,
-     validationRules: [
-       { type: 'range', message: 'Must be between 0 and 10', min: 0, max: 10 },
-     ],
-   },
-   ```
+- Use `displayFormat` to add user-friendly suffixes to numeric inputs.
+- Add conditional logic with `showWhen` / `enableWhen` when the property should only appear or be interactive under specific scheduler states. Each condition receives the merged configuration context (global + queue values, staged changes, scheduler metadata).
+
+```ts
+{
+  name: 'yarn.scheduler.capacity.sample-property',
+  displayName: 'Sample Property',
+  description: 'What this property controls.',
+  type: 'number',
+  category: 'general',
+  defaultValue: '0',
+  required: false,
+  validationRules: [
+    { type: 'range', message: 'Must be between 0 and 10', min: 0, max: 10 },
+  ],
+},
+```
 
 2. **Adjust the UI if needed.** The global settings form renders inputs based on `PropertyDescriptor.type`. For bespoke widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
 3. **Update tests.** Extend `src/config/__tests__/propertyDefinitions.test.ts` if you need coverage for descriptor metadata.
@@ -45,32 +47,33 @@ This guide explains how to make new Capacity Scheduler properties editable in th
 
 1. **Add a descriptor** in `src/config/properties/queue-properties.ts`.
    - Queue descriptors use the short key (`capacity`, `maximum-capacity`, etc.).
-   - Populate the same core fields as global descriptors. Use `enableWhen` for hard dependencies and `dependsOn` for soft discovery links.
-   - For enum properties, keep the `{ value, label, description? }` shape and select an `enumDisplay` variant if the default toggle group is not ideal.
-   - Set `required: true` if the field must be provided when adding new queues.
 
-   ```ts
-   {
-     name: 'example-threshold',
-     displayName: 'Example Threshold',
-     description: 'Upper bound applied per queue.',
-     type: 'number',
-     category: 'limits',
-     defaultValue: '',
-     required: false,
-     validationRules: [
-       {
-         type: 'custom',
-         message: 'Must be zero or greater',
-         validator: (value) => {
-           if (!value.trim()) return true;
-           const parsed = Number(value);
-           return !Number.isNaN(parsed) && parsed >= 0;
-         },
-       },
-     ],
-   },
-   ```
+- Populate the same core fields as global descriptors. Add `showWhen` when the field should be hidden until prerequisites are met and `enableWhen` to keep the field visible but read-only. Both take arrays of predicates that receive the current queue/global context.
+- For enum properties, keep the `{ value, label, description? }` shape and select an `enumDisplay` variant if the default toggle group is not ideal.
+- Set `required: true` if the field must be provided when adding new queues.
+
+```ts
+{
+  name: 'example-threshold',
+  displayName: 'Example Threshold',
+  description: 'Upper bound applied per queue.',
+  type: 'number',
+  category: 'limits',
+  defaultValue: '',
+  required: false,
+  validationRules: [
+    {
+      type: 'custom',
+      message: 'Must be zero or greater',
+      validator: (value) => {
+        if (!value.trim()) return true;
+        const parsed = Number(value);
+        return !Number.isNaN(parsed) && parsed >= 0;
+      },
+    },
+  ],
+},
+```
 
 2. **Wire dependent UI.** Components such as `PropertyFormField` and `PropertyEditorTab` already read descriptors; only extend them if you need new interaction patterns.
 3. **Tests.** Update `propertyDefinitions.test.ts` or add targeted tests under `src/features/property-editor` / `src/stores` when the new field affects staged-change flows or reducers.

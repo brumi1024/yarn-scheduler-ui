@@ -89,6 +89,19 @@ describe('PropertyEditorTab', () => {
     handleFieldBlur: vi.fn(),
     getFieldErrors: vi.fn(() => []),
     getFieldWarnings: vi.fn(() => []),
+    properties: [
+      {
+        name: 'capacity',
+        displayName: 'Capacity',
+        type: 'string' as const,
+        defaultValue: '50',
+        description: 'Queue capacity allocation',
+        category: 'general' as const,
+        formFieldName: 'capacity',
+        required: true,
+        validationRules: [],
+      },
+    ],
   };
 
   beforeEach(() => {

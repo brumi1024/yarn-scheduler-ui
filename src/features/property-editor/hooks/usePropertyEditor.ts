@@ -94,7 +94,9 @@ export function usePropertyEditor({
     }
   }, [queuePath]);
 
-  const allProperties = useMemo(() => {
+  const allProperties = useMemo<
+    Array<PropertyDescriptor & { formFieldName: string; originalName: string }>
+  >(() => {
     // Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
     return properties.map((property) => ({
       ...property,

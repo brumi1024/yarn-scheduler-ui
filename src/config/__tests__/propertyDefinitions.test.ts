@@ -91,14 +91,96 @@ describe('propertyDefinitions', () => {
       const fairWeightProperty = queuePropertyDefinitions.find(
         (p) => p.name === 'ordering-policy.fair.enable-size-based-weight',
       );
-      expect(fairWeightProperty?.enableWhen).toBeDefined();
-      expect(fairWeightProperty?.enableWhen?.['ordering-policy']).toBeDefined();
+      expect(Array.isArray(fairWeightProperty?.enableWhen)).toBe(true);
+      const fairCondition = fairWeightProperty?.enableWhen?.[0];
+      expect(fairCondition).toBeInstanceOf(Function);
+      if (fairCondition && fairWeightProperty) {
+        const baseValues: Record<string, string> = { 'ordering-policy': 'fair' };
+        const result = fairCondition({
+          scope: 'queue',
+          property: fairWeightProperty,
+          propertyValue: '',
+          values: baseValues,
+          globalValues: {},
+          queuePath: 'root.a',
+          queueInfo: null,
+          schedulerInfo: null,
+          stagedChanges: [],
+          configData: new Map(),
+          getValue: (name: string) => baseValues[name],
+          getGlobalValue: () => undefined,
+          getQueueValue: () => undefined,
+          getConfigValue: () => undefined,
+        });
+        expect(result).toBe(true);
+
+        const negative = fairCondition({
+          scope: 'queue',
+          property: fairWeightProperty,
+          propertyValue: '',
+          values: { 'ordering-policy': 'fifo' },
+          globalValues: {},
+          queuePath: 'root.a',
+          queueInfo: null,
+          schedulerInfo: null,
+          stagedChanges: [],
+          configData: new Map(),
+          getValue: (name: string) => (name === 'ordering-policy' ? 'fifo' : undefined),
+          getGlobalValue: () => undefined,
+          getQueueValue: () => undefined,
+          getConfigValue: () => undefined,
+        });
+        expect(negative).toBe(false);
+      }
 
       const leafQueueTemplate = queuePropertyDefinitions.find(
         (p) => p.name === 'leaf-queue-template.capacity',
       );
-      expect(leafQueueTemplate?.enableWhen).toBeDefined();
-      expect(leafQueueTemplate?.enableWhen?.['auto-create-child-queue.enabled']).toBeDefined();
+      expect(Array.isArray(leafQueueTemplate?.enableWhen)).toBe(true);
+      const leafCondition = leafQueueTemplate?.enableWhen?.[0];
+      expect(leafCondition).toBeInstanceOf(Function);
+      if (leafCondition && leafQueueTemplate) {
+        const positiveValues: Record<string, string> = {
+          'auto-create-child-queue.enabled': 'true',
+        };
+        expect(
+          leafCondition({
+            scope: 'queue',
+            property: leafQueueTemplate,
+            propertyValue: '',
+            values: positiveValues,
+            globalValues: {},
+            queuePath: 'root.a',
+            queueInfo: null,
+            schedulerInfo: null,
+            stagedChanges: [],
+            configData: new Map(),
+            getValue: (name: string) => positiveValues[name],
+            getGlobalValue: () => undefined,
+            getQueueValue: () => undefined,
+            getConfigValue: () => undefined,
+          }),
+        ).toBe(true);
+
+        expect(
+          leafCondition({
+            scope: 'queue',
+            property: leafQueueTemplate,
+            propertyValue: '',
+            values: { 'auto-create-child-queue.enabled': 'false' },
+            globalValues: {},
+            queuePath: 'root.a',
+            queueInfo: null,
+            schedulerInfo: null,
+            stagedChanges: [],
+            configData: new Map(),
+            getValue: () => 'false',
+            getGlobalValue: () => undefined,
+            getQueueValue: () => undefined,
+            getConfigValue: () => undefined,
+          }),
+        ).toBe(false);
+      }
     });
 
     it('has accessible node labels properties', () => {

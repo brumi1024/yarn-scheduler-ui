@@ -188,9 +188,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
-    enableWhen: {
-      'ordering-policy': (value: string) => value === 'fair',
-    },
+    enableWhen: [({ getValue }) => getValue('ordering-policy') === 'fair'],
   },
   {
     name: 'default-application-priority',
@@ -360,9 +358,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
-    enableWhen: {
-      'auto-create-child-queue.enabled': (value: string) => value === 'true',
-    },
+    enableWhen: [({ getValue }) => getValue('auto-create-child-queue.enabled') === 'true'],
     validationRules: [
       {
         type: 'custom',
@@ -389,9 +385,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
-    enableWhen: {
-      'auto-queue-creation-v2.enabled': (value: string) => value === 'true',
-    },
+    enableWhen: [({ getValue }) => getValue('auto-queue-creation-v2.enabled') === 'true'],
     validationRules: [
       {
         type: 'custom',

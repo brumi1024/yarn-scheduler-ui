@@ -23,7 +23,7 @@ interface PropertyFormFieldProps {
   property: PropertyDescriptor;
   control: Control<Record<string, string>>;
   stagedStatus?: 'new' | 'modified' | 'deleted';
-  dependentValues?: Record<string, string>;
+  isEnabled?: boolean;
   onBlur?: (
     propertyName: string,
     value: string,
@@ -44,7 +44,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   property,
   control,
   stagedStatus,
-  dependentValues = {},
+  isEnabled = true,
   onBlur,
   errors = [],
   warnings = [],
@@ -54,16 +54,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   currentValues,
 }) => {
   const { openCapacityEditor } = useCapacityEditor();
-
-  // Check if field should be enabled based on dependencies
-  const isFieldEnabled = React.useMemo(() => {
-    if (!property.enableWhen) return true;
-
-    return Object.entries(property.enableWhen).every(([dependentField, condition]) => {
-      const dependentValue = dependentValues[dependentField];
-      return condition(dependentValue || '');
-    });
-  }, [property.enableWhen, dependentValues]);
 
   // Render different input types based on property type
   const renderInput = (
@@ -94,7 +84,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       ) : null;
 
     const commonProps = {
-      disabled: !isFieldEnabled,
+      disabled: !isEnabled,
       className: cn(
         stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
         error && 'ring-2 ring-destructive ring-offset-1',
@@ -118,9 +108,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               }
               description={property.description}
               labelProps={{
-                className: cn(!isFieldEnabled && 'text-muted-foreground'),
+                className: cn(!isEnabled && 'text-muted-foreground'),
               }}
-              disabled={!isFieldEnabled}
+              disabled={!isEnabled}
               checked={field.value === 'true'}
               onCheckedChange={(checked) => {
                 const nextValue = checked ? 'true' : '';
@@ -157,7 +147,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         const renderChoiceCards = () => (
           <Field>
             <FieldLabel
-              className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
+              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
                 {property.displayName}
@@ -182,7 +172,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                         isSelected
                           ? 'border-primary ring-2 ring-primary'
                           : 'border-border hover:border-primary/60',
-                        !isFieldEnabled && 'cursor-not-allowed opacity-60',
+                        !isEnabled && 'cursor-not-allowed opacity-60',
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -195,7 +185,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                             field.onChange(option.value);
                             onBlur?.(property.name, option.value);
                           }}
-                          disabled={!isFieldEnabled}
+                          disabled={!isEnabled}
                           className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
                         <div className="flex-1 space-y-1">
@@ -234,7 +224,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         const renderToggleGroup = () => (
           <Field>
             <FieldLabel
-              className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
+              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
                 {property.displayName}
@@ -256,7 +246,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     onBlur?.(property.name, value);
                   }
                 }}
-                disabled={!isFieldEnabled}
+                disabled={!isEnabled}
                 className="justify-start flex-wrap"
                 variant="outline"
               >
@@ -291,7 +281,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
         return (
           <Field>
             <FieldLabel
-              className={cn('flex items-center gap-1', !isFieldEnabled && 'text-muted-foreground')}
+              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
             >
               <span className="truncate">
                 {property.displayName}
@@ -316,7 +306,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   step={property.displayFormat?.decimals ? 0.01 : 1}
                   min={property.validationRules?.find((r) => r.type === 'range')?.min}
                   max={property.validationRules?.find((r) => r.type === 'range')?.max}
-                  disabled={!isFieldEnabled}
+                  disabled={!isEnabled}
                   aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
@@ -383,7 +373,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               <FieldLabel
                 className={cn(
                   'flex items-center gap-2 justify-between',
-                  !isFieldEnabled && 'text-muted-foreground',
+                  !isEnabled && 'text-muted-foreground',
                 )}
               >
                 <div className="flex items-center gap-1 min-w-0">
@@ -405,7 +395,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     variant="outline"
                     className="text-xs"
                     onClick={handleOpenCapacityEditor}
-                    disabled={!parentQueuePath || !isFieldEnabled}
+                    disabled={!parentQueuePath || !isEnabled}
                   >
                     Capacity Editor
                   </Button>
@@ -463,7 +453,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             <FieldLabel
               className={cn(
                 'flex items-center gap-2 justify-between',
-                !isFieldEnabled && 'text-muted-foreground',
+                !isEnabled && 'text-muted-foreground',
               )}
             >
               <div className="flex items-center gap-1 min-w-0">
@@ -493,7 +483,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     'flex w-full rounded-md border border-input bg-background px-3 py-2 text-sm ring-offset-background placeholder:text-muted-foreground focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 disabled:cursor-not-allowed disabled:opacity-50',
                     commonProps.className,
                   )}
-                  disabled={!isFieldEnabled}
+                  disabled={!isEnabled}
                   aria-invalid={Boolean(error)}
                 />
               ) : (
@@ -506,7 +496,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     onBlur?.(property.name, e.target.value);
                   }}
                   placeholder={property.defaultValue || undefined}
-                  disabled={!isFieldEnabled}
+                  disabled={!isEnabled}
                   aria-invalid={Boolean(error)}
                   className={cn(
                     stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
@@ -569,7 +559,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             {renderInput(field, formState)}
 
             {/* Status badges and helper text */}
-            {(property.deprecated || property.deprecationMessage || !isFieldEnabled) && (
+            {(property.deprecated || property.deprecationMessage || !isEnabled) && (
               <div className="flex items-center flex-wrap gap-1 mt-2">
                 {property.deprecated && (
                   <Badge
@@ -582,7 +572,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.deprecated && property.deprecationMessage && (
                   <span className="text-xs text-orange-500">{property.deprecationMessage}</span>
                 )}
-                {!isFieldEnabled && (
+                {!isEnabled && (
                   <span className="text-xs text-muted-foreground">
                     This field is disabled based on current configuration
                   </span>
