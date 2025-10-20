@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
-import { Alert, AlertDescription } from '~/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Plus, InfoIcon, HelpCircle, AlertCircle } from 'lucide-react';
 import { PlacementRuleForm } from './PlacementRuleForm';
 import { PlacementRulesTable } from './PlacementRulesTable';
@@ -25,6 +25,7 @@ export function PlacementRulesList() {
     configData,
     stagedChanges,
     formatWarning,
+    applyError,
   } = useSchedulerStore();
 
   const [showAddForm, setShowAddForm] = useState(false);
@@ -52,13 +53,31 @@ export function PlacementRulesList() {
   };
 
   if (showAddForm && !isLegacyMode) {
-    return <PlacementRuleForm onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />;
+    return (
+      <div className="space-y-4">
+        {applyError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to Apply Changes</AlertTitle>
+            <AlertDescription>{applyError}</AlertDescription>
+          </Alert>
+        )}
+        <PlacementRuleForm onSubmit={handleAdd} onCancel={() => setShowAddForm(false)} />
+      </div>
+    );
   }
 
   // Show legacy mode UI
   if (isLegacyMode) {
     return (
       <div className="space-y-4">
+        {applyError && (
+          <Alert variant="destructive">
+            <AlertCircle className="h-4 w-4" />
+            <AlertTitle>Failed to Apply Changes</AlertTitle>
+            <AlertDescription>{applyError}</AlertDescription>
+          </Alert>
+        )}
         <Card className="border-warning">
           <CardContent className="pt-6">
             <div className="flex flex-col items-center space-y-4">
@@ -99,6 +118,13 @@ export function PlacementRulesList() {
 
   return (
     <div className="space-y-4">
+      {applyError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to Apply Changes</AlertTitle>
+          <AlertDescription>{applyError}</AlertDescription>
+        </Alert>
+      )}
       {!isLegacyMode && formatWarning && (
         <Alert className="border-warning/70">
           <AlertCircle className="h-4 w-4 text-warning" />

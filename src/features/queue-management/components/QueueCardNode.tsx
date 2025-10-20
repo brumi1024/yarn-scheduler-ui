@@ -140,6 +140,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     selectedQueuePath,
     selectQueue,
     setPropertyPanelOpen,
+    isPropertyPanelOpen,
+    setPropertyPanelInitialTab,
     toggleComparisonQueue,
     selectedNodeLabelFilter,
     getQueueLabelCapacity,
@@ -196,7 +198,10 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
 
-  const handleClick = (event: React.MouseEvent) => {
+  const openPropertyPanel = (
+    event: React.MouseEvent,
+    initialTab: 'overview' | 'info' | 'settings' = 'overview',
+  ) => {
     event.stopPropagation();
 
     // Don't allow clicking on newly added queues that haven't been applied yet
@@ -204,6 +209,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
       return;
     }
 
+    setPropertyPanelInitialTab(initialTab);
     // Set selected queue and open property panel
     selectQueue(queuePath);
     setPropertyPanelOpen(true);
@@ -295,7 +301,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         // Gray out inaccessible queues when filtered by label
         shouldGrayOut && 'opacity-50 grayscale',
       )}
-      onClick={handleClick}
+      onClick={(event) => openPropertyPanel(event, 'overview')}
     >
       <CardHeader>
         <div className="flex items-start justify-between">
@@ -485,7 +491,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
       <ContextMenu
         onOpenChange={(open) => {
           // Deselect queue when context menu closes
-          if (!open && isSelectedQueue) {
+          if (!open && isSelectedQueue && !isPropertyPanelOpen) {
             selectQueue(null);
           }
         }}
@@ -509,7 +515,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           <ContextMenuItem
             onClick={(e) => {
               e.stopPropagation();
-              handleClick(e);
+              openPropertyPanel(e, 'settings');
             }}
             disabled={stagedStatus === 'new'}
           >

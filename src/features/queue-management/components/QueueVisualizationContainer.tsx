@@ -38,7 +38,7 @@ const FlowInner: React.FC = () => {
   const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
   const { theme } = useTheme();
 
-  const { nodes, edges, isLoading, loadError, applyError, apiError } = useQueueTreeData();
+  const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
 
   // Calculate validation summary
   const validationSummary = useMemo(() => {
@@ -122,7 +122,7 @@ const FlowInner: React.FC = () => {
     );
   }
 
-  const hasAlert = Boolean(applyError || apiError);
+  const hasAlert = Boolean(applyError);
 
   return (
     <div className="relative h-full w-full flex flex-col">
@@ -134,13 +134,6 @@ const FlowInner: React.FC = () => {
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Failed to Apply Changes</AlertTitle>
                 <AlertDescription>{applyError}</AlertDescription>
-              </Alert>
-            )}
-            {apiError && (
-              <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Save Failed</AlertTitle>
-                <AlertDescription>{apiError}</AlertDescription>
               </Alert>
             )}
           </div>

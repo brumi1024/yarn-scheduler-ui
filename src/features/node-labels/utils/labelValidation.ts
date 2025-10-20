@@ -7,8 +7,6 @@
  * - Must be unique in cluster
  */
 
-import { SPECIAL_VALUES } from '~/types';
-
 export type ValidationResult = {
   valid: boolean;
   error?: string;
@@ -102,67 +100,6 @@ export function validateLabelRemoval(
         error: `Cannot remove label "${labelName}": ${queuesWithLabel.length} queue(s) are configured to use this label. Update queue configurations first.`,
       };
     }
-  }
-
-  return { valid: true };
-}
-
-/**
- * Validates label capacity assignments for a set of sibling queues
- * @param siblingQueues Array of queue paths that are siblings under the same parent
- * @param labelName The label to validate capacities for
- * @param capacities Map of queuePath -> capacity percentage for the label
- * @returns Validation result with error if capacities don't sum to 100%
- */
-export function validateLabelCapacities(
-  siblingQueues: string[],
-  labelName: string,
-  capacities: Map<string, number>,
-): ValidationResult {
-  const totalCapacity = siblingQueues.reduce((sum, queuePath) => {
-    return sum + (capacities.get(queuePath) || 0);
-  }, 0);
-
-  // Allow small floating point tolerance
-  const tolerance = 0.001;
-  if (Math.abs(totalCapacity - 100) > tolerance) {
-    return {
-      valid: false,
-      error: `Label "${labelName}" capacities must sum to 100% across sibling queues (current: ${totalCapacity.toFixed(1)}%)`,
-    };
-  }
-
-  return { valid: true };
-}
-
-/**
- * Validates that a queue can access a specific label based on parent queue configuration
- * @param queuePath The queue path to validate
- * @param labelName The label the queue wants to access
- * @param parentAccessibleLabels Labels that the parent queue can access
- * @returns Validation result with error if queue cannot access the label
- */
-export function validateQueueLabelAccess(
-  queuePath: string,
-  labelName: string,
-  parentAccessibleLabels: string[],
-): ValidationResult {
-  // Root queue can access any label (represented as "*")
-  if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
-    return { valid: true };
-  }
-
-  // If parent has access to "*", child can access any label
-  if (parentAccessibleLabels.includes(SPECIAL_VALUES.ALL_USERS_ACL)) {
-    return { valid: true };
-  }
-
-  // Child can only access labels that parent can access
-  if (!parentAccessibleLabels.includes(labelName)) {
-    return {
-      valid: false,
-      error: `Queue "${queuePath}" cannot access label "${labelName}": parent queue does not have access to this label`,
-    };
   }
 
   return { valid: true };

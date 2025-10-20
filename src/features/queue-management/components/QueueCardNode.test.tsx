@@ -34,6 +34,7 @@ vi.mock('@xyflow/react', () => ({
 
 const mockSelectQueue = vi.fn();
 const mockSetPropertyPanelOpen = vi.fn();
+const mockSetPropertyPanelInitialTab = vi.fn();
 const mockToggleComparisonQueue = vi.fn();
 
 const renderWithProviders = (ui: React.ReactElement) => {
@@ -91,6 +92,9 @@ describe('QueueCardNode', () => {
         selectedQueuePath: null,
         selectQueue: mockSelectQueue,
         setPropertyPanelOpen: mockSetPropertyPanelOpen,
+        isPropertyPanelOpen: false,
+        propertyPanelInitialTab: 'overview' as const,
+        setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
         toggleComparisonQueue: mockToggleComparisonQueue,
         getQueueByPath: vi.fn().mockReturnValue({ queueName: 'default' }),
         getChildQueues: vi.fn().mockReturnValue([]),
@@ -324,6 +328,28 @@ describe('QueueCardNode', () => {
     expect(await screen.findByText('Edit Properties')).toBeInTheDocument();
     expect(screen.getByText('Stop Queue')).toBeInTheDocument();
     expect(screen.getByText('Add Child Queue')).toBeInTheDocument();
+  });
+
+  it('should open property panel on settings tab from context menu', async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
+
+    mockSelectQueue.mockClear();
+    mockSetPropertyPanelOpen.mockClear();
+    mockSetPropertyPanelInitialTab.mockClear();
+
+    const trigger = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+    if (!trigger) throw new Error('Context menu trigger not found');
+
+    await user.pointer({ keys: '[MouseRight]', target: trigger });
+
+    const editItem = await screen.findByText('Edit Properties');
+    await user.click(editItem);
+
+    expect(mockSetPropertyPanelInitialTab).toHaveBeenCalledWith('settings');
+    expect(mockSelectQueue).toHaveBeenCalledWith('root.default');
+    expect(mockSetPropertyPanelOpen).toHaveBeenCalledWith(true);
+    expect(mockSelectQueue).not.toHaveBeenCalledWith(null);
   });
 
   it('should show new queue status with tooltip', () => {

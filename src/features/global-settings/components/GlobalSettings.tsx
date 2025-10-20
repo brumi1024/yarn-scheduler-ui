@@ -2,7 +2,7 @@ import React from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { SPECIAL_VALUES } from '~/types';
-import { Alert, AlertDescription } from '~/components/ui/alert';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Card, CardContent } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
 import {
@@ -11,6 +11,7 @@ import {
   AccordionItem,
   AccordionTrigger,
 } from '~/components/ui/accordion';
+import { AlertCircle } from 'lucide-react';
 import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
@@ -22,6 +23,7 @@ export const GlobalSettings: React.FC = () => {
     stagedChanges,
     searchQuery,
     getFilteredSettings,
+    applyError,
   } = useSchedulerStore();
   const { validateGlobalProperty } = useGlobalPropertyValidation();
 
@@ -56,6 +58,14 @@ export const GlobalSettings: React.FC = () => {
 
   return (
     <div className="space-y-6">
+      {applyError && (
+        <Alert variant="destructive">
+          <AlertCircle className="h-4 w-4" />
+          <AlertTitle>Failed to Apply Changes</AlertTitle>
+          <AlertDescription>{applyError}</AlertDescription>
+        </Alert>
+      )}
+
       {globalStagedChanges.length > 0 && (
         <Alert>
           <AlertDescription>

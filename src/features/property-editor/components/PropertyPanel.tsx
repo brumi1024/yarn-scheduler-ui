@@ -10,7 +10,13 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '~/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
@@ -31,6 +37,7 @@ export const PropertyPanel: React.FC = () => {
     setPropertyPanelOpen,
     getQueueByPath,
     selectQueue,
+    propertyPanelInitialTab,
   } = useSchedulerStore();
 
   const [tabValue, setTabValue] = useState('overview');
@@ -47,12 +54,11 @@ export const PropertyPanel: React.FC = () => {
   const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
   const isPanelVisible = Boolean(selectedQueue && isPropertyPanelOpen);
 
-  // Reset tab to overview when panel opens
   useEffect(() => {
     if (isPropertyPanelOpen) {
-      setTabValue('overview');
+      setTabValue(propertyPanelInitialTab);
     }
-  }, [isPropertyPanelOpen]);
+  }, [isPropertyPanelOpen, propertyPanelInitialTab]);
 
   const handleClose = (force = false) => {
     if (!force && isFormDirty && tabValue === 'settings') {
@@ -206,7 +212,7 @@ export const PropertyPanel: React.FC = () => {
         >
           <div className="flex flex-col h-full relative overflow-hidden">
             <SheetHeader>
-              <div className="flex items-center justify-between">
+              <div className="space-y-1">
                 <SheetTitle className="text-base font-semibold">
                   Queue: {selectedQueue.queueName}
                 </SheetTitle>
@@ -339,7 +345,7 @@ export const PropertyPanel: React.FC = () => {
 
             {/* Fixed Apply/Reset buttons - show on Settings tab */}
             {tabValue === 'settings' && (
-              <div className="absolute bottom-0 left-0 right-0 p-4 bg-background border-t flex gap-2 justify-end">
+              <div className="sticky bottom-0 left-0 right-0 mt-auto p-4 bg-background border-t flex gap-2 justify-end">
                 <Button
                   variant="outline"
                   onClick={handleReset}

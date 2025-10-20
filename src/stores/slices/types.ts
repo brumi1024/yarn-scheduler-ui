@@ -47,7 +47,6 @@ import type { ValidationIssue } from '~/features/validation/types';
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
   applyError: string | null;
-  apiError: string | null;
 
   stageQueueChange: (
     queuePath: string,
@@ -93,10 +92,12 @@ export interface QueueSelectionSlice {
   selectedQueuePath: string | null;
   comparisonQueues: string[];
   isPropertyPanelOpen: boolean;
+  propertyPanelInitialTab: 'overview' | 'info' | 'settings';
 
   selectQueue: (queuePath: string | null) => void;
   toggleComparisonQueue: (queuePath: string) => void;
   setPropertyPanelOpen: (isOpen: boolean) => void;
+  setPropertyPanelInitialTab: (tab: 'overview' | 'info' | 'settings') => void;
   clearComparisonQueues: () => void;
   canCompareQueues: () => boolean;
   getComparisonData: () => Map<string, Record<string, string>>;

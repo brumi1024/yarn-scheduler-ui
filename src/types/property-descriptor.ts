@@ -6,8 +6,7 @@ export type PropertyCategory =
   | 'scheduling'
   | 'limits'
   | 'security'
-  | 'advanced'
-  | 'nodeLabels';
+  | 'advanced';
 
 export type ComparisonOperator = '<' | '<=' | '>' | '>=' | '==' | '!=';
 
@@ -53,9 +52,4 @@ export type PropertyDescriptor = {
   deprecationMessage?: string;
   formFieldName?: string; // Escaped name for React Hook Form
   originalName?: string; // Original name before escaping
-};
-
-export type LabelPropertyDescriptor = PropertyDescriptor & {
-  label: string;
-  basePropertyName: string; // e.g., 'capacity' for 'accessible-node-labels.gpu.capacity'
 };

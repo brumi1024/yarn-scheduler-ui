@@ -33,7 +33,6 @@ export type UseQueueTreeDataResult = {
   isLoading: boolean;
   loadError: string | null;
   applyError: string | null;
-  apiError: string | null;
 };
 
 const layoutEngine = new DagreLayout({
@@ -622,7 +621,6 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
     state.errorContext === 'load' ? state.error : null,
   );
   const applyError = useSchedulerStore((state) => state.applyError);
-  const apiError = useSchedulerStore((state) => state.apiError);
   const searchQuery = useSchedulerStore((state) => state.searchQuery);
   const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
   const selectedNodeLabelFilter = useSchedulerStore((state) => state.selectedNodeLabelFilter);
@@ -676,6 +674,5 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
     isLoading,
     loadError,
     applyError,
-    apiError,
   };
 }

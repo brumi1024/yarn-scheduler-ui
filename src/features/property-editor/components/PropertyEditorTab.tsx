@@ -1,14 +1,5 @@
 import React, { useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import {
-  Settings,
-  HardDrive,
-  Gauge,
-  Calendar,
-  Shield,
-  Sliders,
-  Tag,
-  GitBranch,
-} from 'lucide-react';
+import { Settings, HardDrive, Gauge, Calendar, Shield, Sliders } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import {
   Accordion,
@@ -19,13 +10,9 @@ import {
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
 import { PropertyFormField } from './PropertyFormField';
 import type { QueueInfo } from '~/types';
-import type { PropertyCategory, LabelPropertyDescriptor } from '~/types';
-import { groupLabelPropertiesByLabel } from '~/features/node-labels/utils/labelPropertyUtils';
-import { SPECIAL_VALUES } from '~/types';
+import type { PropertyCategory } from '~/types';
 import { toast } from 'sonner';
 import { Form } from '~/components/ui/form';
-import { useSchedulerStore } from '~/stores/schedulerStore';
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 
 export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
@@ -87,12 +74,6 @@ const categoryConfig: Record<
     defaultExpanded: false,
     icon: <Sliders className="h-4 w-4 text-primary" />,
   },
-  nodeLabels: {
-    label: 'Node Labels',
-    description: 'Capacity allocation per node label partition',
-    defaultExpanded: false,
-    icon: <Tag className="h-4 w-4 text-primary" />,
-  },
 };
 
 // Base category order for consistent display
@@ -129,51 +110,9 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       queuePath: queue.queuePath,
     });
 
-    // Get node labels and accessibility checker from store
-    const { nodeLabels, getQueueAccessibility, hasQueueProperty } = useSchedulerStore();
-
     // Check if form is still initializing
     const isFormInitializing =
       !control || !propertiesByCategory || Object.keys(propertiesByCategory).length === 0;
-
-    // Determine which labels this queue has access to (including inherited access)
-    const getAccessibleLabels = React.useCallback(() => {
-      const accessibleLabels: string[] = [];
-
-      // Check if queue has explicit access to all labels (*)
-      const accessibleLabelsValue = watchedValues?.['accessible-node-labels'];
-      const accessibleLabelsString =
-        typeof accessibleLabelsValue === 'string' ? accessibleLabelsValue : '';
-
-      if (accessibleLabelsString.trim() === SPECIAL_VALUES.ALL_USERS_ACL) {
-        return [SPECIAL_VALUES.ALL_USERS_ACL];
-      }
-
-      // Check access for each configured node label using the store method that handles inheritance
-      nodeLabels.forEach((nodeLabel) => {
-        if (getQueueAccessibility(queue.queuePath, nodeLabel.name)) {
-          accessibleLabels.push(nodeLabel.name);
-        }
-      });
-
-      return accessibleLabels;
-    }, [watchedValues, queue.queuePath, nodeLabels, getQueueAccessibility]);
-
-    // Check if node label access is inherited (no explicit accessible-node-labels property)
-    const isNodeLabelAccessInherited = React.useMemo(() => {
-      // Root queue never inherits
-      if (queue.queuePath === 'root') return false;
-
-      // Check if property exists in config (not just empty string default)
-      const hasExplicitConfig = hasQueueProperty(queue.queuePath, 'accessible-node-labels');
-
-      // If no explicit config but has accessible labels, it's inherited
-      const accessibleLabels = getAccessibleLabels();
-      return !hasExplicitConfig && accessibleLabels.length > 0;
-    }, [queue.queuePath, hasQueueProperty, getAccessibleLabels]);
-
-    const accessibleLabels = getAccessibleLabels();
-    const hasAccessibleLabels = accessibleLabels.length > 0;
 
     const parentQueuePath = React.useMemo(() => {
       const parts = queue.queuePath.split('.');
@@ -231,11 +170,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       [onSubmit, onReset, isValid, errors],
     );
 
-    // Only show nodeLabels category if queue has accessible labels
-    const categoryOrder: PropertyCategory[] = React.useMemo(
-      () => (hasAccessibleLabels ? [...baseCategoryOrder, 'nodeLabels'] : baseCategoryOrder),
-      [hasAccessibleLabels],
-    );
+    const categoryOrder = React.useMemo<PropertyCategory[]>(() => [...baseCategoryOrder], []);
 
     // Find categories with errors
     const categoriesWithErrors = React.useMemo(() => {
@@ -297,101 +232,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                   categoryProps.some((prop) => prop.name === fieldName),
                 ).length;
 
-                // Special handling for nodeLabels category
-                if (category === 'nodeLabels') {
-                  const labelPropsTyped = categoryProps as LabelPropertyDescriptor[];
-                  const labelGroups = groupLabelPropertiesByLabel(labelPropsTyped);
-
-                  // Filter to only show properties for accessible labels
-                  const filteredLabelGroups = Object.entries(labelGroups).filter(([labelName]) => {
-                    if (accessibleLabels.includes(SPECIAL_VALUES.ALL_USERS_ACL)) return true; // All labels accessible
-                    return accessibleLabels.includes(labelName);
-                  });
-
-                  if (filteredLabelGroups.length === 0) return null;
-
-                  return (
-                    <AccordionItem
-                      key={category}
-                      value={category}
-                      className="border rounded-lg mb-2"
-                    >
-                      <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                        <div className="flex items-center gap-3 flex-1">
-                          {config.icon}
-                          <div className="text-left flex-1">
-                            <div className="flex items-center gap-2">
-                              <span className="text-sm font-medium">{config.label}</span>
-                              {isNodeLabelAccessInherited && (
-                                <Tooltip>
-                                  <TooltipTrigger asChild>
-                                    <Badge
-                                      variant="secondary"
-                                      className="text-xs px-1.5 py-0 flex items-center gap-1"
-                                    >
-                                      <GitBranch className="h-3 w-3" />
-                                      Inherited
-                                    </Badge>
-                                  </TooltipTrigger>
-                                  <TooltipContent>
-                                    <p>
-                                      This queue inherits node label access from its parent queue.
-                                    </p>
-                                    <p className="text-xs text-muted-foreground mt-1">
-                                      To override, configure accessible-node-labels for this queue.
-                                    </p>
-                                  </TooltipContent>
-                                </Tooltip>
-                              )}
-                            </div>
-                            <div className="text-xs text-muted-foreground">
-                              Per-label capacity configuration for accessible labels
-                            </div>
-                          </div>
-                          {hasErrors && (
-                            <Badge variant="destructive" className="text-xs px-1.5 py-0">
-                              {errorCount}
-                            </Badge>
-                          )}
-                        </div>
-                      </AccordionTrigger>
-                      <AccordionContent className="px-4 pb-4">
-                        <div className="space-y-4">
-                          {filteredLabelGroups.map(([labelName, labelProps]) => (
-                            <div key={labelName} className="space-y-3">
-                              <div className="flex items-center gap-2">
-                                <Tag className="h-3 w-3" />
-                                <span className="text-sm font-medium">
-                                  {labelName === '' ? 'Default Partition' : `Label: ${labelName}`}
-                                </span>
-                              </div>
-                              <div className="pl-5 space-y-3">
-                                {labelProps.map((prop) => (
-                                  <PropertyFormField
-                                    key={prop.name}
-                                    property={prop}
-                                    control={control}
-                                    stagedStatus={getStagedStatus(prop.originalName || prop.name)}
-                                    onBlur={handleFieldBlur}
-                                    errors={getFieldErrors(prop.formFieldName || prop.name)}
-                                    warnings={getFieldWarnings(prop.formFieldName || prop.name)}
-                                    queuePath={queue.queuePath}
-                                    queueName={queue.queueName}
-                                    parentQueuePath={parentQueuePath}
-                                    currentValues={watchedValues}
-                                    setFormValue={form.setValue}
-                                  />
-                                ))}
-                              </div>
-                            </div>
-                          ))}
-                        </div>
-                      </AccordionContent>
-                    </AccordionItem>
-                  );
-                }
-
-                // Regular category handling
                 return (
                   <AccordionItem key={category} value={category} className="border rounded-lg mb-2">
                     <AccordionTrigger className="px-4 py-3 hover:no-underline">

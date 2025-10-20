@@ -91,12 +91,12 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
             label={labelNode}
             description={
               descriptionNode || warningMessage ? (
-                <div className="space-y-1">
-                  {descriptionNode ? <div>{descriptionNode}</div> : null}
+                <>
+                  {descriptionNode ? <span className="block">{descriptionNode}</span> : null}
                   {warningMessage ? (
-                    <span className="block text-amber-600">{warningMessage}</span>
+                    <span className="block text-amber-600 mt-1">{warningMessage}</span>
                   ) : null}
-                </div>
+                </>
               ) : null
             }
             addon={stagedBadge}

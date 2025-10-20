@@ -94,6 +94,7 @@ const createStoreState = (overrides?: Partial<Record<string, unknown>>) => ({
   getFilteredSettings: vi.fn(() => globalPropertyDefinitions),
   getGlobalPropertyValue: vi.fn().mockReturnValue({ value: 'test-value', isStaged: false }),
   stageGlobalChange: vi.fn(),
+  applyError: null,
   ...overrides,
 });
 
@@ -176,6 +177,16 @@ describe('GlobalSettings', () => {
       expect(screen.getByTestId('input-prop1')).toHaveValue('value1');
       expect(screen.getByTestId('input-prop2')).toHaveValue('value2');
       expect(screen.getByTestId('input-prop2')).toHaveAttribute('data-is-staged', 'true');
+    });
+
+    it('should display apply error alert when present', () => {
+      const properties = [getMockPropertyDescriptor()];
+      (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
+
+      renderWithValidation(<GlobalSettings />, { applyError: 'HTTP 400: Invalid configuration' });
+
+      expect(screen.getByText('Failed to Apply Changes')).toBeInTheDocument();
+      expect(screen.getByText('HTTP 400: Invalid configuration')).toBeInTheDocument();
     });
   });
 
