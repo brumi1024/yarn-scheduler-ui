@@ -1,6 +1,53 @@
 import { capacityValueSchema, integerSchema, aclFormatSchema } from '../schemas/validation';
 import { SPECIAL_VALUES } from '~/types';
-import type { PropertyDescriptor, PropertyCategory, PropertyType } from '~/types';
+import type {
+  PropertyDescriptor,
+  PropertyCategory,
+  PropertyType,
+  PropertyCondition,
+  PropertyEvaluationContext,
+} from '~/types';
+import { getCapacityType } from '~/utils/capacityUtils';
+
+const LEGACY_QUEUE_MODE_PROPERTY = 'yarn.scheduler.capacity.legacy-queue-mode.enabled';
+
+type CapacityCategory = 'percentage' | 'weight' | 'absolute' | null;
+
+const getQueueCapacityType = (context: PropertyEvaluationContext): CapacityCategory => {
+  const rawCapacity = context.getValue?.('capacity');
+
+  if (rawCapacity && rawCapacity.trim()) {
+    return getCapacityType(rawCapacity);
+  }
+
+  if (context.queueInfo) {
+    const capacityNumber = context.queueInfo.capacity;
+    if (typeof capacityNumber === 'number' && !Number.isNaN(capacityNumber)) {
+      return getCapacityType(String(capacityNumber));
+    }
+  }
+
+  return null;
+};
+
+const isLegacyQueueModeEnabled: PropertyCondition = ({ getGlobalValue }) => {
+  const rawValue = getGlobalValue?.(LEGACY_QUEUE_MODE_PROPERTY);
+  if (rawValue == null || rawValue === '') {
+    return true;
+  }
+  return rawValue === 'true';
+};
+
+const shouldShowLegacyAutoCreation: PropertyCondition = (context) => {
+  return isLegacyQueueModeEnabled(context) && getQueueCapacityType(context) !== 'weight';
+};
+
+const shouldShowFlexibleAutoCreation: PropertyCondition = (context) => {
+  if (!isLegacyQueueModeEnabled(context)) {
+    return true;
+  }
+  return getQueueCapacityType(context) === 'weight';
+};
 
 // Specify only the short config name (without the yarn.scheduler.capacity.<queue-path> prefix)
 export const queuePropertyDefinitions: PropertyDescriptor[] = [
@@ -342,12 +389,13 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
 
   {
     name: 'auto-create-child-queue.enabled',
-    displayName: 'Auto-Create Child Queues (Legacy)',
-    description: 'Enable automatic leaf queue creation (legacy mode)',
+    displayName: 'Legacy Queue Auto-Creation',
+    description: 'Enable leaf queue auto-creation (legacy mode)',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    showWhen: [shouldShowLegacyAutoCreation],
   },
   {
     name: 'leaf-queue-template.capacity',
@@ -358,6 +406,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    showWhen: [shouldShowLegacyAutoCreation],
     enableWhen: [({ getValue }) => getValue('auto-create-child-queue.enabled') === 'true'],
     validationRules: [
       {
@@ -370,12 +419,13 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
 
   {
     name: 'auto-queue-creation-v2.enabled',
-    displayName: 'Auto-Queue Creation v2',
-    description: 'Enable flexible auto-creation (parent and leaf queues)',
+    displayName: 'Flexible Queue Auto-Creation',
+    description: 'Enable flexible queue auto-creation (parent and leaf queues)',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    showWhen: [shouldShowFlexibleAutoCreation],
   },
   {
     name: 'auto-queue-creation-v2.max-queues',
@@ -385,6 +435,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    showWhen: [shouldShowFlexibleAutoCreation],
     enableWhen: [({ getValue }) => getValue('auto-queue-creation-v2.enabled') === 'true'],
     validationRules: [
       {

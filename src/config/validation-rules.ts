@@ -186,6 +186,10 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
 }
 
 function evaluateMaxCapacityRelationship(context: ValidationContext): ValidationIssue[] {
+  if (!context.legacyModeEnabled) {
+    return [];
+  }
+
   const queuePath = context.queuePath;
   const capacityKey = buildPropertyKey(queuePath, 'capacity');
   const maxCapacityKey = buildPropertyKey(queuePath, 'maximum-capacity');
@@ -210,23 +214,54 @@ function evaluateMaxCapacityRelationship(context: ValidationContext): Validation
     return [];
   }
 
-  if (parsedCapacity.type !== parsedMaxCapacity.type) {
+  if (parsedCapacity.type === 'absolute') {
+    if (parsedMaxCapacity.type !== 'absolute') {
+      return [
+        {
+          queuePath,
+          field: 'maximum-capacity',
+          message:
+            'Maximum capacity must use an absolute resource vector when capacity is absolute',
+          severity: 'error',
+          rule: 'max-capacity-format-match',
+        },
+      ];
+    }
+
+    const capacityResources = parsedCapacity.resources ?? {};
+    const maxCapacityResources = parsedMaxCapacity.resources ?? {};
+    const resourceIssues: ValidationIssue[] = [];
+
+    Object.entries(capacityResources).forEach(([resource, value]) => {
+      const maxValue = maxCapacityResources[resource];
+      if (maxValue === undefined || maxValue < value) {
+        resourceIssues.push({
+          queuePath,
+          field: 'maximum-capacity',
+          message: `Maximum capacity ${resource} allocation (${maxValue ?? 'unset'}) must be greater than or equal to capacity allocation (${value})`,
+          severity: 'error',
+          rule: 'max-capacity-minimum',
+        });
+      }
+    });
+
+    return resourceIssues;
+  }
+
+  if (parsedMaxCapacity.type !== 'percentage') {
     return [
       {
         queuePath,
         field: 'maximum-capacity',
-        message: 'Maximum capacity must use the same format as capacity',
+        message:
+          'Maximum capacity must be expressed as a percentage when capacity uses percentage or weight',
         severity: 'error',
         rule: 'max-capacity-format-match',
       },
     ];
   }
 
-  if (parsedCapacity.type === 'absolute' || parsedMaxCapacity.type === 'absolute') {
-    return [];
-  }
-
-  if (parsedMaxCapacity.value < parsedCapacity.value) {
+  if (parsedCapacity.type === 'percentage' && parsedMaxCapacity.value < parsedCapacity.value) {
     return [
       {
         queuePath,
@@ -306,5 +341,3 @@ function evaluateParentChildCapacityConstraints(context: ValidationContext): Val
 
   return issues;
 }
-
-// --- Helper utilities ------------------------------------------------------

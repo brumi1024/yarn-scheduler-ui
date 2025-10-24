@@ -321,7 +321,7 @@ export const PropertyPanel: React.FC = () => {
             </SheetHeader>
 
             {isAutoCreatedQueue && (
-              <Alert variant="warning" className="mt-3">
+              <Alert className="mt-3 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950 dark:text-amber-100">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Auto-created queue</AlertTitle>
                 <AlertDescription>
