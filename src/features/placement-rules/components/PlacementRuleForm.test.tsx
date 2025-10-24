@@ -67,9 +67,9 @@ describe('PlacementRuleForm', () => {
 
   it('should render form with existing rule values for edit', () => {
     const existingRule: PlacementRule = {
-      type: 'group',
-      matches: 'production',
-      policy: 'specified',
+      type: 'user',
+      matches: '*',
+      policy: 'setDefaultQueue',
       value: 'root.production',
       create: true,
       fallbackResult: 'placeDefault',
@@ -87,17 +87,17 @@ describe('PlacementRuleForm', () => {
     expect(screen.getByText('Edit Placement Rule')).toBeInTheDocument();
     expect(screen.getByRole('combobox', { name: /rule type/i })).toBeInTheDocument();
     // Use getAllByText since Select renders value in multiple places
-    expect(screen.getAllByText('Group')[0]).toBeInTheDocument();
-    expect(screen.getByRole('textbox', { name: /match pattern/i })).toHaveValue('production');
+    expect(screen.getAllByText('User')[0]).toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: /match pattern/i })).toHaveValue('*');
     expect(screen.getByRole('combobox', { name: /placement policy/i })).toBeInTheDocument();
-    expect(screen.getAllByText('Specified Queue')[0]).toBeInTheDocument();
-    expect(screen.getByRole('combobox', { name: 'Queue Value' })).toBeInTheDocument();
+    expect(screen.getAllByText('Set as Default Queue')[0]).toBeInTheDocument();
+    expect(screen.getByRole('combobox', { name: 'Default Queue' })).toBeInTheDocument();
     // The form is correctly initialized with the value 'root.production'
     // The combobox will display it if it's in the available queues
   });
 
   describe('dynamic field visibility', () => {
-    it('should show value field when policy is specified', async () => {
+    it('should not show value field when policy is specified', async () => {
       const user = userEvent.setup();
       render(<PlacementRuleForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
@@ -105,7 +105,18 @@ describe('PlacementRuleForm', () => {
       await user.click(policySelect);
       await user.click(screen.getByRole('option', { name: /specified queue/i }));
 
-      expect(screen.getByRole('combobox', { name: 'Queue Value' })).toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: 'Queue Value' })).not.toBeInTheDocument();
+    });
+
+    it('should show value field when policy is setDefaultQueue', async () => {
+      const user = userEvent.setup();
+      render(<PlacementRuleForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      const policySelect = screen.getByRole('combobox', { name: /placement policy/i });
+      await user.click(policySelect);
+      await user.click(screen.getByRole('option', { name: /set as default queue/i }));
+
+      expect(screen.getByRole('combobox', { name: 'Default Queue' })).toBeInTheDocument();
     });
 
     it('should show parent queue field for primaryGroupUser policy', async () => {
@@ -161,7 +172,7 @@ describe('PlacementRuleForm', () => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
-    it('should require value when policy is specified', async () => {
+    it('should allow specified policy without providing queue value', async () => {
       const user = userEvent.setup();
       render(<PlacementRuleForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
@@ -171,10 +182,17 @@ describe('PlacementRuleForm', () => {
 
       await user.click(screen.getByRole('button', { name: /add rule/i }));
 
-      expect(
-        await screen.findByText('Queue value is required when policy is "specified"'),
-      ).toBeInTheDocument();
-      expect(mockOnSubmit).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'user',
+            matches: '*',
+            policy: 'specified',
+            create: false,
+          }),
+          undefined,
+        );
+      });
     });
 
     it('should require value when policy is setDefaultQueue', async () => {
@@ -193,7 +211,7 @@ describe('PlacementRuleForm', () => {
       expect(mockOnSubmit).not.toHaveBeenCalled();
     });
 
-    it('should require parent queue for primaryGroupUser policy', async () => {
+    it('should allow primaryGroupUser policy without parent queue', async () => {
       const user = userEvent.setup();
       render(<PlacementRuleForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
 
@@ -203,10 +221,17 @@ describe('PlacementRuleForm', () => {
 
       await user.click(screen.getByRole('button', { name: /add rule/i }));
 
-      expect(
-        await screen.findByText('Parent queue is required for this policy'),
-      ).toBeInTheDocument();
-      expect(mockOnSubmit).not.toHaveBeenCalled();
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'user',
+            matches: '*',
+            policy: 'primaryGroupUser',
+            create: false,
+          }),
+          undefined,
+        );
+      });
     });
 
     it('should require custom placement for custom policy', async () => {
@@ -234,7 +259,7 @@ describe('PlacementRuleForm', () => {
       const customRule: PlacementRule = {
         type: 'user',
         matches: 'alice',
-        policy: 'specified',
+        policy: 'setDefaultQueue',
         value: 'root.users',
         create: false,
       };
@@ -245,21 +270,20 @@ describe('PlacementRuleForm', () => {
 
       // The form should be pre-filled with the custom rule values
       expect(screen.getByRole('textbox', { name: /match pattern/i })).toHaveValue('alice');
-      expect(screen.getByRole('combobox', { name: 'Queue Value' })).toBeInTheDocument();
+      expect(screen.getByRole('combobox', { name: 'Default Queue' })).toBeInTheDocument();
 
       // Submit the form without changes
       await user.click(screen.getByRole('button', { name: /update rule/i }));
 
       await waitFor(() => {
         expect(mockOnSubmit).toHaveBeenCalledWith(
-          {
+          expect.objectContaining({
             type: 'user',
             matches: 'alice',
-            policy: 'specified',
+            policy: 'setDefaultQueue',
             value: 'root.users',
             create: false,
-            fallbackResult: 'skip',
-          },
+          }),
           undefined,
         );
       });
@@ -326,7 +350,7 @@ describe('PlacementRuleForm', () => {
       expect(screen.getByRole('textbox', { name: /custom placement pattern/i })).toHaveValue(
         'root.%primary_group.%user',
       );
-      expect(screen.getByRole('combobox', { name: /parent queue/i })).toBeInTheDocument();
+      expect(screen.queryByRole('combobox', { name: /parent queue/i })).not.toBeInTheDocument();
 
       // Submit the form
       await user.click(screen.getByRole('button', { name: /update rule/i }));
@@ -337,11 +361,52 @@ describe('PlacementRuleForm', () => {
             type: 'user',
             matches: '*',
             policy: 'custom',
-            parentQueue: 'root.users',
             customPlacement: 'root.%primary_group.%user',
             create: true,
             fallbackResult: 'skip',
           },
+          undefined,
+        );
+      });
+    });
+
+    it('should omit parent queue when policy does not support it', async () => {
+      const user = userEvent.setup();
+
+      const ruleWithParent: PlacementRule = {
+        type: 'user',
+        matches: '*',
+        policy: 'user',
+        parentQueue: 'root.users',
+        create: false,
+      };
+
+      render(
+        <PlacementRuleForm rule={ruleWithParent} onSubmit={mockOnSubmit} onCancel={mockOnCancel} />,
+      );
+
+      // Switch to custom policy which should ignore parent queue
+      const policySelect = screen.getByRole('combobox', { name: /placement policy/i });
+      await user.click(policySelect);
+      await user.click(screen.getByRole('option', { name: /custom placement/i }));
+
+      const customPlacementInput = screen.getByRole('textbox', {
+        name: /custom placement pattern/i,
+      });
+      await user.clear(customPlacementInput);
+      await user.type(customPlacementInput, 'root.%primary_group.%user');
+
+      await user.click(screen.getByRole('button', { name: /update rule/i }));
+
+      await waitFor(() => {
+        expect(mockOnSubmit).toHaveBeenCalledWith(
+          expect.objectContaining({
+            type: 'user',
+            matches: '*',
+            policy: 'custom',
+            customPlacement: 'root.%primary_group.%user',
+            create: false,
+          }),
           undefined,
         );
       });
@@ -375,7 +440,14 @@ describe('PlacementRuleForm', () => {
       await user.click(typeSelect);
       await user.click(screen.getByRole('option', { name: /group/i }));
 
-      expect(screen.getByText(/use \* to match all groups/i)).toBeInTheDocument();
+      expect(
+        screen.getByText(/specify explicit group names; \* wildcard is not supported/i),
+      ).toBeInTheDocument();
+      expect(screen.getByRole('textbox', { name: /match pattern/i })).toHaveValue('');
+      expect(screen.getByRole('textbox', { name: /match pattern/i })).toHaveAttribute(
+        'placeholder',
+        'Enter group names (wildcard not supported)',
+      );
     });
 
     it('should show appropriate description for application type', async () => {
@@ -387,6 +459,27 @@ describe('PlacementRuleForm', () => {
       await user.click(screen.getByRole('option', { name: /application/i }));
 
       expect(screen.getByText(/use \* to match all apps/i)).toBeInTheDocument();
+    });
+  });
+
+  describe('group rule validation', () => {
+    it('should prevent using wildcard for group rules', async () => {
+      const user = userEvent.setup();
+      render(<PlacementRuleForm onSubmit={mockOnSubmit} onCancel={mockOnCancel} />);
+
+      const typeSelect = screen.getByRole('combobox', { name: /rule type/i });
+      await user.click(typeSelect);
+      await user.click(screen.getByRole('option', { name: /group/i }));
+
+      const matchInput = screen.getByRole('textbox', { name: /match pattern/i });
+      await user.type(matchInput, '*');
+
+      await user.click(screen.getByRole('button', { name: /add rule/i }));
+
+      expect(
+        await screen.findByText('Wildcard "*" is not supported for group rules'),
+      ).toBeInTheDocument();
+      expect(mockOnSubmit).not.toHaveBeenCalled();
     });
   });
 
