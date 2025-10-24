@@ -45,6 +45,8 @@ describe('QueueCardNode - Node Label Filtering', () => {
     capacityConfig: '50',
     maxCapacityConfig: '100',
     resourcesUsed: { memory: 1024, vCores: 4 },
+    creationMethod: 'static',
+    isAutoCreatedQueue: false,
   };
 
   const nodeProps: NodeProps = {

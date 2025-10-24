@@ -206,6 +206,37 @@ describe('PropertyPanel', () => {
     expect(localSetInitialTab).not.toHaveBeenCalled();
   });
 
+  it('should disable settings tab and show warning for auto-created queues', () => {
+    (useSchedulerStore as any).mockReturnValue({
+      selectedQueuePath: 'root.auto',
+      isPropertyPanelOpen: true,
+      setPropertyPanelOpen: mockSetPropertyPanelOpen,
+      propertyPanelInitialTab: 'settings',
+      setPropertyPanelInitialTab: vi.fn(),
+      getQueueByPath: mockGetQueueByPath,
+      selectQueue: mockSelectQueue,
+    });
+    mockGetQueueByPath.mockReturnValue(
+      getMockQueueInfo({
+        queuePath: 'root.auto',
+        queueName: 'auto',
+        creationMethod: 'dynamicFlexible',
+      }),
+    );
+
+    render(<PropertyPanel />);
+
+    const overviewTab = screen.getByRole('tab', { name: /overview/i });
+    const settingsTab = screen.getByRole('tab', { name: /settings/i });
+
+    expect(settingsTab).toBeDisabled();
+    expect(overviewTab).toHaveAttribute('data-state', 'active');
+    expect(
+      screen.getByText(/This queue was created automatically by the scheduler/i),
+    ).toBeInTheDocument();
+    expect(screen.queryByTestId('property-editor')).not.toBeInTheDocument();
+  });
+
   it('should switch between tabs', async () => {
     const user = userEvent.setup();
     (useSchedulerStore as any).mockReturnValue({

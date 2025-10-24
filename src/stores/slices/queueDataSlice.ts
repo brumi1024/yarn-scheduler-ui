@@ -88,6 +88,7 @@ export const createQueueDataSlice: StateCreator<
           memory: 0,
           vCores: 0,
         },
+        creationMethod: 'static',
       };
       return rootQueueInfo;
     }

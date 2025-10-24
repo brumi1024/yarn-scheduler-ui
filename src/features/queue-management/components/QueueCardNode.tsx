@@ -168,6 +168,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     validationErrors,
     isAffectedByErrors,
     errorSource,
+    creationMethod,
+    isAutoCreatedQueue,
   } = queueData;
 
   const isSelectedForComparison = comparisonQueues.includes(queuePath);
@@ -209,7 +211,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
       return;
     }
 
-    setPropertyPanelInitialTab(initialTab);
+    const tabToOpen = isAutoCreatedQueue && initialTab === 'settings' ? 'overview' : initialTab;
+    setPropertyPanelInitialTab(tabToOpen);
     // Set selected queue and open property panel
     selectQueue(queuePath);
     setPropertyPanelOpen(true);
@@ -281,6 +284,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         'relative w-[400px] h-[300px] transition-all duration-200 flex flex-col',
         // Enhanced background and border for better contrast
         'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
+        isAutoCreatedQueue &&
+          'border-amber-400 dark:border-amber-500 border-2 border-dashed bg-amber-50/70 dark:bg-amber-900/30',
         // Shadow for depth - stronger in light mode
         'shadow-lg hover:shadow-xl dark:shadow-md dark:hover:shadow-lg',
         // Cursor styling - not clickable for new queues
@@ -316,6 +321,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
                 stagedState={stagedState}
                 stagedStatus={stagedStatus}
                 autoCreationStatus={autoCreationStatus}
+                creationMethod={creationMethod}
                 labelInfo={
                   labelCapacityInfo
                     ? {
@@ -517,7 +523,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
               e.stopPropagation();
               openPropertyPanel(e, 'settings');
             }}
-            disabled={stagedStatus === 'new'}
+            disabled={stagedStatus === 'new' || isAutoCreatedQueue}
           >
             <Edit className="mr-2 h-4 w-4" />
             Edit Properties

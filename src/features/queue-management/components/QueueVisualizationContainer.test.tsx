@@ -81,6 +81,8 @@ const getMockQueueCardData = (overrides?: Partial<QueueCardData>): QueueCardData
       isStaged: false,
     },
     autoCreationEligibility: 'off',
+    creationMethod: 'static',
+    isAutoCreatedQueue: false,
     ...overrides,
   };
 };

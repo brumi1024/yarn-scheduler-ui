@@ -16,6 +16,7 @@ export const getMockQueueInfo = (overrides?: Partial<QueueInfo>): QueueInfo => {
     numActiveApplications: 2,
     state: 'RUNNING',
     queues: undefined,
+    creationMethod: 'static',
     ...overrides,
   };
 };
