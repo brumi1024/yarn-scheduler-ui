@@ -1,6 +1,14 @@
 import { z } from 'zod';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
+const PARENT_QUEUE_POLICIES = new Set([
+  'user',
+  'primaryGroup',
+  'primaryGroupUser',
+  'secondaryGroup',
+  'secondaryGroupUser',
+]);
+
 // Form-specific schema with enhanced validations
 export const placementRuleFormSchema = z
   .object({
@@ -25,19 +33,6 @@ export const placementRuleFormSchema = z
     create: z.boolean().default(false),
     fallbackResult: z.enum(['skip', 'placeDefault', 'reject']).optional(),
   })
-  .refine(
-    (data) => {
-      // Validate value is provided when policy is 'specified'
-      if (data.policy === 'specified' && !data.value) {
-        return false;
-      }
-      return true;
-    },
-    {
-      message: 'Queue value is required when policy is "specified"',
-      path: ['value'],
-    },
-  )
   .refine(
     (data) => {
       // Validate custom placement is provided when policy is 'custom'
@@ -66,18 +61,15 @@ export const placementRuleFormSchema = z
   )
   .refine(
     (data) => {
-      // Validate parent queue for policies that require it
-      const requiresParent = ['primaryGroupUser', 'secondaryGroupUser', 'custom'].includes(
-        data.policy,
-      );
-      if (requiresParent && !data.parentQueue) {
+      // Disallow wildcard matching for group rules
+      if (data.type === 'group' && data.matches.trim() === '*') {
         return false;
       }
       return true;
     },
     {
-      message: 'Parent queue is required for this policy',
-      path: ['parentQueue'],
+      message: 'Wildcard "*" is not supported for group rules',
+      path: ['matches'],
     },
   );
 
@@ -92,7 +84,7 @@ export function formDataToPlacementRule(formData: PlacementRuleFormData): Placem
   };
 
   // Only include optional fields if they have values
-  if (formData.parentQueue) {
+  if (formData.parentQueue && PARENT_QUEUE_POLICIES.has(formData.policy)) {
     rule.parentQueue = formData.parentQueue;
   }
   if (formData.value) {

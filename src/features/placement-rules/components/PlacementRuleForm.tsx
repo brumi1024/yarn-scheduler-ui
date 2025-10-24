@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { useForm, type SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { Form, FormField } from '~/components/ui/form';
@@ -30,6 +31,20 @@ import { CustomPlacementHelpDialog } from './CustomPlacementHelpDialog';
 import { getPolicyDescription, POLICY_DISPLAY_NAMES } from '../constants/policy-descriptions';
 import { getAllParentQueues, getAllQueues } from '../utils/queue-utils';
 import type { PlacementRule } from '~/types/features/placement-rules';
+
+const PARENT_QUEUE_POLICIES = [
+  'user',
+  'primaryGroup',
+  'primaryGroupUser',
+  'secondaryGroup',
+  'secondaryGroupUser',
+] as const;
+
+const MATCH_PLACEHOLDERS: Record<PlacementRule['type'], string> = {
+  user: '* for all, or specify usernames',
+  group: 'Enter group names (wildcard not supported)',
+  application: '* for all apps, or patterns like spark-*',
+};
 
 interface PlacementRuleFormProps {
   rule?: PlacementRule;
@@ -66,12 +81,21 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
 
   const selectedPolicy = form.watch('policy');
   const selectedType = form.watch('type');
-  const requiresParentQueue = ['primaryGroupUser', 'secondaryGroupUser', 'custom'].includes(
-    selectedPolicy,
-  );
-  const requiresValue = selectedPolicy === 'specified' || selectedPolicy === 'setDefaultQueue';
+  const showParentQueue = selectedPolicy
+    ? PARENT_QUEUE_POLICIES.includes(selectedPolicy as (typeof PARENT_QUEUE_POLICIES)[number])
+    : false;
+  const requiresValue = selectedPolicy === 'setDefaultQueue';
   const requiresCustomPlacement = selectedPolicy === 'custom';
   const showCreateOption = !['reject', 'defaultQueue', 'setDefaultQueue'].includes(selectedPolicy);
+
+  useEffect(() => {
+    const currentValue = form.getValues('matches');
+    if (selectedType === 'group' && currentValue.trim() === '*') {
+      form.setValue('matches', '');
+    } else if (selectedType === 'user' && currentValue.trim() === '') {
+      form.setValue('matches', '*');
+    }
+  }, [selectedType, form]);
 
   const handleSubmit: SubmitHandler<PlacementRuleFormData> = (data) => {
     const placementRule = formDataToPlacementRule(data);
@@ -128,14 +152,14 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                     <FieldControl>
                       <Input
                         {...field}
-                        placeholder="* for all, or specific pattern"
+                        placeholder={MATCH_PLACEHOLDERS[selectedType]}
                         aria-invalid={Boolean(fieldState.error)}
                       />
                     </FieldControl>
                     <FieldDescription>
                       {selectedType === 'user' && 'Use * to match all users, or specify usernames'}
                       {selectedType === 'group' &&
-                        'Use * to match all groups, or specify group names'}
+                        'Specify explicit group names; * wildcard is not supported'}
                       {selectedType === 'application' &&
                         'Use * to match all apps, or patterns like spark-*'}
                     </FieldDescription>
@@ -217,7 +241,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
               />
             )}
 
-            {requiresParentQueue && (
+            {showParentQueue && (
               <FormField
                 control={form.control as any} // eslint-disable-line @typescript-eslint/no-explicit-any
                 name="parentQueue"
@@ -236,7 +260,7 @@ export function PlacementRuleForm({ rule, ruleIndex, onSubmit, onCancel }: Place
                       />
                     </FieldControl>
                     <FieldDescription>
-                      The parent queue under which user/group queues will be created
+                      Optional parent queue under which matching queues will be created
                     </FieldDescription>
                     {fieldState.error && (
                       <FieldMessage>{String(fieldState.error.message ?? '')}</FieldMessage>
