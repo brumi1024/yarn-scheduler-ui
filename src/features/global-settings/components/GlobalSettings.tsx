@@ -14,21 +14,114 @@ import {
 import { AlertCircle } from 'lucide-react';
 import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
+import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
 
 export const GlobalSettings: React.FC = () => {
   const {
     getGlobalPropertyValue,
+    getQueuePropertyValue,
     stageGlobalChange,
     stagedChanges,
     searchQuery,
     getFilteredSettings,
     applyError,
+    configData,
+    schedulerData,
   } = useSchedulerStore();
   const { validateGlobalProperty } = useGlobalPropertyValidation();
 
   // Use filtered settings if search is active
-  const activePropertyDefinitions = searchQuery ? getFilteredSettings() : globalPropertyDefinitions;
+  const requestedPropertyDefinitions = searchQuery
+    ? getFilteredSettings()
+    : globalPropertyDefinitions;
+
+  const globalValues = React.useMemo(() => {
+    const values: Record<string, string> = {};
+    globalPropertyDefinitions.forEach((property) => {
+      const { value } = getGlobalPropertyValue(property.name);
+      values[property.name] = value;
+    });
+    return values;
+  }, [getGlobalPropertyValue]);
+
+  const conditionBase = React.useMemo(() => {
+    const queueValueCache = new Map<string, string | undefined>();
+
+    const getGlobalValue = (name: string) => {
+      if (name in globalValues) {
+        return globalValues[name];
+      }
+      return getGlobalPropertyValue(name).value;
+    };
+
+    const getValue = (name: string) => getGlobalValue(name);
+
+    const getQueueValue = (queuePath: string, property: string) => {
+      if (!queuePath) return undefined;
+      const cacheKey = `${queuePath}::${property}`;
+      if (!queueValueCache.has(cacheKey)) {
+        const { value } = getQueuePropertyValue(queuePath, property);
+        queueValueCache.set(cacheKey, value);
+      }
+      return queueValueCache.get(cacheKey);
+    };
+
+    return {
+      scope: 'global' as const,
+      values: globalValues,
+      globalValues,
+      queuePath: undefined,
+      queueInfo: undefined,
+      schedulerInfo: schedulerData,
+      stagedChanges,
+      configData,
+      getValue,
+      getGlobalValue,
+      getQueueValue,
+      getConfigValue: (key: string) => configData.get(key),
+    };
+  }, [
+    globalValues,
+    getGlobalPropertyValue,
+    getQueuePropertyValue,
+    schedulerData,
+    stagedChanges,
+    configData,
+  ]);
+
+  const propertyStates = React.useMemo(() => {
+    const states = new Map<
+      string,
+      {
+        visible: boolean;
+        enabled: boolean;
+      }
+    >();
+
+    requestedPropertyDefinitions.forEach((property) => {
+      const propertyValue = conditionBase.getValue(property.name) ?? '';
+      const options = {
+        ...conditionBase,
+        property,
+        propertyValue,
+      };
+      const visible = shouldShowProperty(property, options);
+      const enabled = visible ? isPropertyEnabled(property, options) : false;
+      states.set(property.name, { visible, enabled });
+    });
+
+    return states;
+  }, [requestedPropertyDefinitions, conditionBase]);
+
+  const activePropertyDefinitions = React.useMemo(
+    () =>
+      requestedPropertyDefinitions.filter((property) => {
+        const state = propertyStates.get(property.name);
+        return state ? state.visible : true;
+      }),
+    [requestedPropertyDefinitions, propertyStates],
+  );
 
   const getGlobalPropertyCategories = () => {
     const categories: string[] = [];
@@ -99,6 +192,8 @@ export const GlobalSettings: React.FC = () => {
                   <div className="space-y-6">
                     {categoryProperties.map((property, index) => {
                       const { value, isStaged } = getGlobalPropertyValue(property.name);
+                      const propertyState = propertyStates.get(property.name);
+                      const isEnabled = propertyState?.enabled ?? true;
 
                       return (
                         <div key={property.name}>
@@ -108,6 +203,7 @@ export const GlobalSettings: React.FC = () => {
                               value={value}
                               isStaged={isStaged}
                               onChange={(newValue) => handlePropertyChange(property.name, newValue)}
+                              disabled={!isEnabled}
                             />
                           ) : (
                             <PropertyInput
@@ -116,6 +212,7 @@ export const GlobalSettings: React.FC = () => {
                               isStaged={isStaged}
                               onChange={(newValue) => handlePropertyChange(property.name, newValue)}
                               searchQuery={searchQuery}
+                              disabled={!isEnabled}
                             />
                           )}
                           {index < categoryProperties.length - 1 && <hr className="mt-6" />}

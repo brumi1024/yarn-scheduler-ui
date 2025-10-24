@@ -13,6 +13,9 @@ import type { QueueInfo } from '~/types';
 import type { PropertyCategory } from '~/types';
 import { toast } from 'sonner';
 import { Form } from '~/components/ui/form';
+import { useSchedulerStore } from '~/stores/schedulerStore';
+import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
+import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 
 export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
@@ -91,6 +94,12 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedAccordions, setExpandedAccordions] = useState<string[]>(['general']);
 
+    const getGlobalPropertyValue = useSchedulerStore((state) => state.getGlobalPropertyValue);
+    const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
+    const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
+    const configData = useSchedulerStore((state) => state.configData);
+    const schedulerInfo = useSchedulerStore((state) => state.schedulerData);
+
     const {
       form,
       control,
@@ -106,6 +115,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       handleFieldBlur,
       getFieldErrors,
       getFieldWarnings,
+      properties,
     } = usePropertyEditor({
       queuePath: queue.queuePath,
     });
@@ -172,6 +182,150 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
 
     const categoryOrder = React.useMemo<PropertyCategory[]>(() => [...baseCategoryOrder], []);
 
+    const queueValues = React.useMemo(() => {
+      const values: Record<string, string> = {};
+      const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;
+
+      properties.forEach((property) => {
+        const fieldName = property.formFieldName || property.name;
+        const rawValue = watchedRecord[fieldName];
+        let normalized = '';
+        if (typeof rawValue === 'string') {
+          normalized = rawValue;
+        } else if (rawValue != null) {
+          normalized = String(rawValue);
+        } else if (property.defaultValue) {
+          normalized = property.defaultValue;
+        }
+        values[property.originalName || property.name] = normalized;
+      });
+
+      return values;
+    }, [properties, watchedValues]);
+
+    const globalValues = React.useMemo(() => {
+      const values: Record<string, string> = {};
+      globalPropertyDefinitions.forEach((property) => {
+        const { value } = getGlobalPropertyValue(property.name);
+        values[property.name] = value;
+      });
+      return values;
+    }, [getGlobalPropertyValue]);
+
+    const conditionBase = React.useMemo(() => {
+      const queueValueCache = new Map<string, string | undefined>();
+      const globalValueCache = new Map<string, string | undefined>();
+
+      const getQueueValue = (targetQueuePath: string, name: string) => {
+        if (!targetQueuePath) return undefined;
+
+        if (targetQueuePath === queue.queuePath) {
+          return queueValues[name];
+        }
+
+        const cacheKey = `${targetQueuePath}::${name}`;
+        if (!queueValueCache.has(cacheKey)) {
+          const { value } = getQueuePropertyValue(targetQueuePath, name);
+          queueValueCache.set(cacheKey, value);
+        }
+        return queueValueCache.get(cacheKey);
+      };
+
+      const getValue = (name: string) => {
+        if (name in queueValues) {
+          return queueValues[name];
+        }
+        return getQueueValue(queue.queuePath, name);
+      };
+
+      const getGlobalValue = (name: string) => {
+        if (name in globalValues) {
+          return globalValues[name];
+        }
+        if (!globalValueCache.has(name)) {
+          const { value } = getGlobalPropertyValue(name);
+          globalValueCache.set(name, value);
+        }
+        return globalValueCache.get(name);
+      };
+
+      return {
+        scope: 'queue' as const,
+        values: queueValues,
+        globalValues,
+        queuePath: queue.queuePath,
+        queueInfo: queue,
+        schedulerInfo,
+        stagedChanges,
+        configData,
+        getValue,
+        getGlobalValue,
+        getQueueValue,
+        getConfigValue: (key: string) => configData.get(key),
+      };
+    }, [
+      queue,
+      queueValues,
+      globalValues,
+      getQueuePropertyValue,
+      getGlobalPropertyValue,
+      schedulerInfo,
+      stagedChanges,
+      configData,
+    ]);
+
+    const propertyStates = React.useMemo(() => {
+      const states = new Map<
+        string,
+        {
+          visible: boolean;
+          enabled: boolean;
+        }
+      >();
+
+      properties.forEach((property) => {
+        const propertyName = property.originalName || property.name;
+        const propertyValue = conditionBase.getValue(propertyName) ?? '';
+        const options = {
+          ...conditionBase,
+          property,
+          propertyValue,
+        };
+        const visible = shouldShowProperty(property, options);
+        const enabled = visible ? isPropertyEnabled(property, options) : false;
+
+        states.set(propertyName, { visible, enabled });
+      });
+
+      return states;
+    }, [properties, conditionBase]);
+
+    const visiblePropertiesByCategory = React.useMemo(() => {
+      const result: Partial<Record<PropertyCategory, typeof properties>> = {};
+
+      Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
+        const typedCategory = categoryKey as PropertyCategory;
+        const filtered = props.filter((property) => {
+          const propertyName = property.originalName || property.name;
+          return propertyStates.get(propertyName)?.visible ?? true;
+        }) as typeof properties;
+
+        if (filtered.length > 0) {
+          result[typedCategory] = filtered;
+        }
+      });
+
+      return result;
+    }, [propertiesByCategory, propertyStates]);
+
+    const availableCategories = React.useMemo(
+      () =>
+        categoryOrder.filter(
+          (category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0,
+        ),
+      [categoryOrder, visiblePropertiesByCategory],
+    );
+
     // Find categories with errors
     const categoriesWithErrors = React.useMemo(() => {
       const errorCategories: Set<PropertyCategory> = new Set();
@@ -180,18 +334,21 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
         return errorCategories;
       }
 
-      // Map error fields to their categories
       Object.keys(errors).forEach((fieldName) => {
-        categoryOrder.forEach((category) => {
-          const categoryProps = propertiesByCategory[category];
-          if (categoryProps?.some((prop) => prop.name === fieldName)) {
+        availableCategories.forEach((category) => {
+          const categoryProps = visiblePropertiesByCategory[category] ?? [];
+          if (
+            categoryProps.some(
+              (prop) => (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
+            )
+          ) {
             errorCategories.add(category);
           }
         });
       });
 
       return errorCategories;
-    }, [errors, propertiesByCategory, categoryOrder]);
+    }, [errors, availableCategories, visiblePropertiesByCategory]);
 
     // Auto-expand categories with errors
     React.useEffect(() => {
@@ -222,14 +379,15 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
               onValueChange={setExpandedAccordions}
               className="p-4 pb-20"
             >
-              {categoryOrder.map((category) => {
-                const categoryProps = propertiesByCategory[category];
-                if (!categoryProps || categoryProps.length === 0) return null;
-
+              {availableCategories.map((category) => {
+                const categoryProps = visiblePropertiesByCategory[category] ?? [];
                 const config = categoryConfig[category];
                 const hasErrors = categoriesWithErrors.has(category);
                 const errorCount = Object.keys(errors).filter((fieldName) =>
-                  categoryProps.some((prop) => prop.name === fieldName),
+                  categoryProps.some(
+                    (prop) =>
+                      (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
+                  ),
                 ).length;
 
                 return (
@@ -250,22 +408,30 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                     </AccordionTrigger>
                     <AccordionContent className="px-4 pb-4">
                       <div className="space-y-3">
-                        {categoryProps.map((prop) => (
-                          <PropertyFormField
-                            key={prop.name}
-                            property={prop}
-                            control={control}
-                            stagedStatus={getStagedStatus(prop.originalName || prop.name)}
-                            onBlur={handleFieldBlur}
-                            errors={getFieldErrors(prop.formFieldName || prop.name)}
-                            warnings={getFieldWarnings(prop.formFieldName || prop.name)}
-                            queuePath={queue.queuePath}
-                            queueName={queue.queueName}
-                            parentQueuePath={parentQueuePath}
-                            currentValues={watchedValues}
-                            setFormValue={form.setValue}
-                          />
-                        ))}
+                        {categoryProps.map((prop) => {
+                          const propertyKey = prop.originalName || prop.name;
+                          const propertyState = propertyStates.get(propertyKey);
+                          if (propertyState && !propertyState.visible) {
+                            return null;
+                          }
+                          return (
+                            <PropertyFormField
+                              key={prop.name}
+                              property={prop}
+                              control={control}
+                              stagedStatus={getStagedStatus(prop.originalName || prop.name)}
+                              isEnabled={propertyState?.enabled ?? true}
+                              onBlur={handleFieldBlur}
+                              errors={getFieldErrors(prop.formFieldName || prop.name)}
+                              warnings={getFieldWarnings(prop.formFieldName || prop.name)}
+                              queuePath={queue.queuePath}
+                              queueName={queue.queueName}
+                              parentQueuePath={parentQueuePath}
+                              currentValues={watchedValues}
+                              setFormValue={form.setValue}
+                            />
+                          );
+                        })}
                       </div>
                     </AccordionContent>
                   </AccordionItem>

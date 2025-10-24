@@ -10,13 +10,7 @@ import {
   AlertTriangle,
 } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetDescription,
-} from '~/components/ui/sheet';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '~/components/ui/sheet';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '~/components/ui/tabs';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
@@ -29,6 +23,8 @@ import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
 import type { ValidationIssue } from '~/features/validation/types';
+import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
+import { cn } from '~/utils/cn';
 
 export const PropertyPanel: React.FC = () => {
   const {
@@ -53,12 +49,26 @@ export const PropertyPanel: React.FC = () => {
 
   const selectedQueue = selectedQueuePath ? getQueueByPath(selectedQueuePath) : null;
   const isPanelVisible = Boolean(selectedQueue && isPropertyPanelOpen);
+  const isAutoCreatedQueue =
+    selectedQueue?.creationMethod === 'dynamicLegacy' ||
+    selectedQueue?.creationMethod === 'dynamicFlexible';
+  const isSettingsDisabled = Boolean(isAutoCreatedQueue);
 
   useEffect(() => {
     if (isPropertyPanelOpen) {
-      setTabValue(propertyPanelInitialTab);
+      const initialTab =
+        isSettingsDisabled && propertyPanelInitialTab === 'settings'
+          ? 'overview'
+          : propertyPanelInitialTab;
+      setTabValue(initialTab);
     }
-  }, [isPropertyPanelOpen, propertyPanelInitialTab]);
+  }, [isPropertyPanelOpen, propertyPanelInitialTab, isSettingsDisabled]);
+
+  useEffect(() => {
+    if (isSettingsDisabled && tabValue === 'settings') {
+      setTabValue('overview');
+    }
+  }, [isSettingsDisabled, tabValue]);
 
   const handleClose = (force = false) => {
     if (!force && isFormDirty && tabValue === 'settings') {
@@ -310,6 +320,17 @@ export const PropertyPanel: React.FC = () => {
               </div>
             </SheetHeader>
 
+            {isAutoCreatedQueue && (
+              <Alert className="mt-3 border-amber-200 bg-amber-50 text-amber-900 dark:border-amber-900/60 dark:bg-amber-950 dark:text-amber-100">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Auto-created queue</AlertTitle>
+                <AlertDescription>
+                  This queue was created automatically by the scheduler and its settings are managed
+                  externally. The Settings tab is disabled while it remains auto-managed.
+                </AlertDescription>
+              </Alert>
+            )}
+
             <Tabs value={tabValue} onValueChange={setTabValue} className="flex-1 overflow-hidden">
               <TabsList className="grid w-full grid-cols-3">
                 <TabsTrigger value="overview">
@@ -320,7 +341,13 @@ export const PropertyPanel: React.FC = () => {
                   <Info className="h-4 w-4 mr-2" />
                   Info
                 </TabsTrigger>
-                <TabsTrigger value="settings">
+                <TabsTrigger
+                  value="settings"
+                  disabled={isSettingsDisabled}
+                  className={cn(
+                    isSettingsDisabled && 'cursor-not-allowed opacity-60 hover:opacity-60',
+                  )}
+                >
                   <Settings className="h-4 w-4 mr-2" />
                   Settings
                 </TabsTrigger>

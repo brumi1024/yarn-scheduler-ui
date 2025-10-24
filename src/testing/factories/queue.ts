@@ -34,6 +34,7 @@ export const queueFactory = {
         memory: 0,
         vCores: 0,
       },
+      creationMethod: 'static',
     };
 
     return { ...defaults, ...overrides };

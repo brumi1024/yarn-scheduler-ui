@@ -82,6 +82,8 @@ describe('QueueCardNode', () => {
     maxCapacityConfig: '100',
     stagedState: undefined,
     autoCreationStatus: undefined,
+    creationMethod: 'static',
+    isAutoCreatedQueue: false,
   };
 
   beforeEach(() => {
@@ -350,6 +352,32 @@ describe('QueueCardNode', () => {
     expect(mockSelectQueue).toHaveBeenCalledWith('root.default');
     expect(mockSetPropertyPanelOpen).toHaveBeenCalledWith(true);
     expect(mockSelectQueue).not.toHaveBeenCalledWith(null);
+  });
+
+  it('should highlight auto-created queues and disable settings editing', async () => {
+    const user = userEvent.setup();
+    const autoCreatedNode = {
+      ...defaultNodeData,
+      creationMethod: 'dynamicLegacy' as const,
+      isAutoCreatedQueue: true,
+    };
+
+    renderWithProviders(<QueueCardNode {...createNodeProps(autoCreatedNode)} />);
+
+    const card = screen.getByText('default').closest('.relative');
+    expect(card).toHaveClass('border-dashed');
+    expect(card).toHaveClass('border-amber-400');
+
+    const autoBadge = screen.getByText(/Legacy auto-created/i);
+    expect(autoBadge).toBeInTheDocument();
+
+    const trigger = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+    if (!trigger) throw new Error('Context menu trigger not found');
+
+    await user.pointer({ keys: '[MouseRight]', target: trigger });
+
+    const editItem = await screen.findByText('Edit Properties');
+    expect(editItem).toHaveAttribute('data-disabled');
   });
 
   it('should show new queue status with tooltip', () => {

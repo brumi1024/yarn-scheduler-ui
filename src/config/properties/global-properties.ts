@@ -7,7 +7,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     name: 'yarn.scheduler.capacity.legacy-queue-mode.enabled',
     displayName: 'Enable Legacy Queue Mode',
     description:
-      'Determines if legacy capacity calculation rules are enforced. Default is true. Disabling allows for more flexible capacity configurations but changes behavior significantly.',
+      'Determines if legacy queue mode is enforced. Default is true. Disabling allows for more flexible capacity configurations with mixing the various capacity modes.',
     type: 'boolean' as PropertyType,
     category: 'general' as PropertyCategory,
     defaultValue: 'true',
@@ -16,7 +16,8 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.maximum-applications',
     displayName: 'Maximum Applications (Global)',
-    description: 'Maximum number of applications that can be pending and running.',
+    description:
+      'Maximum number of applications that can be pending and running. Set it to -1 for unlimited applications.',
     type: 'number' as PropertyType,
     category: 'general' as PropertyCategory,
     defaultValue: '10000',
@@ -24,9 +25,9 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between 1 and 100000',
-        min: 1,
-        max: 100000,
+        message: 'Must be above -1',
+        min: -1,
+        max: 2147483647,
       },
     ],
   },
@@ -122,19 +123,10 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
 
   // Queue Mapping Settings
   {
-    name: 'yarn.scheduler.capacity.queue-mappings',
-    displayName: 'Queue Mappings',
-    description:
-      'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
-    type: 'string' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: '',
-    required: false,
-  },
-  {
     name: 'yarn.scheduler.capacity.queue-mappings-override.enable',
     displayName: 'Enable Queue Mappings Override',
-    description: 'If a queue mapping is present, will it override the value specified by the user?',
+    description:
+      'Sets whether a user-specified target queue is overridden by a matching placement rule or not. Setting it to true will override the target queue with a matching placement rule.',
     type: 'boolean' as PropertyType,
     category: 'scheduling' as PropertyCategory,
     defaultValue: 'false',
@@ -143,7 +135,8 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.mapping-rule-format',
     displayName: 'Mapping Rule Format',
-    description: 'Format for queue mapping rules',
+    description:
+      'Format for queue mapping rules. For using the Placement Rule editor on this UI, the JSON format is required.',
     type: 'enum' as PropertyType,
     category: 'scheduling' as PropertyCategory,
     defaultValue: 'legacy',
@@ -160,6 +153,20 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
         description: 'Structured JSON mapping rules for complex placement policies.',
       },
     ],
+    enumDisplay: 'choiceCard',
+  },
+  {
+    name: 'yarn.scheduler.capacity.queue-mappings',
+    displayName: 'Legacy Queue Mappings',
+    description:
+      'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
+    type: 'string' as PropertyType,
+    category: 'scheduling' as PropertyCategory,
+    defaultValue: '',
+    required: false,
+    showWhen: [
+      ({ getValue }) => getValue('yarn.scheduler.capacity.mapping-rule-format') === 'legacy',
+    ],
   },
   {
     name: 'yarn.scheduler.capacity.mapping-rule-json',
@@ -169,6 +176,9 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
+    showWhen: [
+      ({ getValue }) => getValue('yarn.scheduler.capacity.mapping-rule-format') === 'json',
+    ],
   },
   {
     name: 'yarn.scheduler.capacity.workflow-priority-mappings-override.enable',

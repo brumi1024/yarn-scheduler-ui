@@ -25,6 +25,7 @@ export type QueueCardData = QueueInfo & {
   validationErrors?: ValidationIssue[];
   isAffectedByErrors?: boolean;
   errorSource?: string;
+  isAutoCreatedQueue: boolean;
 };
 
 export type UseQueueTreeDataResult = {
@@ -159,6 +160,7 @@ function createRootQueueInfo(schedulerInfo: SchedulerInfo, partitionName: string
     state: 'RUNNING' as QueueStateValue,
     queues: { queue: childQueues },
     autoCreationEligibility: capacitySchedulerInfo.autoCreationEligibility,
+    creationMethod: 'static',
   };
 }
 
@@ -278,6 +280,9 @@ function transformToCardData(queueInfo: QueueInfo, stagedChanges: StagedChange[]
       queueInfo.autoCreationEligibility,
       stagedChanges,
     ),
+    isAutoCreatedQueue:
+      queueInfo.creationMethod === 'dynamicLegacy' ||
+      queueInfo.creationMethod === 'dynamicFlexible',
 
     validationErrors: directErrors.length > 0 ? directErrors : undefined,
     isAffectedByErrors,
@@ -359,6 +364,7 @@ function createNodes(
         queueName,
         queuePath,
         state: (stateDisplay.value || 'RUNNING') as QueueStateValue,
+        creationMethod: 'static',
 
         stagedStatus: 'new' as const,
         isLeaf: true,
@@ -366,6 +372,7 @@ function createNodes(
         maxCapacityConfig: maxCapacityDisplay.value || '100',
         stagedState: stateDisplay.value,
         validationErrors: queueErrors.length > 0 ? queueErrors : undefined,
+        isAutoCreatedQueue: false,
       };
 
       if (position) {

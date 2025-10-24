@@ -1,3 +1,7 @@
+import type { QueueInfo } from './queue';
+import type { SchedulerInfo } from './scheduler';
+import type { StagedChange } from './staged-change';
+
 export type PropertyType = 'string' | 'number' | 'boolean' | 'enum' | 'list';
 
 export type PropertyCategory =
@@ -34,6 +38,27 @@ export type PropertyEnumOption = {
   description?: string;
 };
 
+export type PropertyEvaluationScope = 'global' | 'queue';
+
+export type PropertyEvaluationContext = {
+  scope: PropertyEvaluationScope;
+  property: PropertyDescriptor;
+  propertyValue: string;
+  values: Record<string, string>;
+  globalValues: Record<string, string>;
+  queuePath?: string;
+  queueInfo?: QueueInfo | null;
+  schedulerInfo?: SchedulerInfo | null;
+  stagedChanges: StagedChange[];
+  configData: Map<string, string>;
+  getValue: (name: string) => string | undefined;
+  getGlobalValue: (name: string) => string | undefined;
+  getQueueValue: (queuePath: string, name: string) => string | undefined;
+  getConfigValue: (key: string) => string | undefined;
+};
+
+export type PropertyCondition = (context: PropertyEvaluationContext) => boolean;
+
 export type PropertyDescriptor = {
   name: string;
   displayName: string;
@@ -45,8 +70,8 @@ export type PropertyDescriptor = {
   validationRules?: ValidationRule[];
   enumValues?: PropertyEnumOption[];
   enumDisplay?: 'toggle' | 'choiceCard' | 'select';
-  dependsOn?: string[];
-  enableWhen?: Record<string, (value: string) => boolean>;
+  showWhen?: PropertyCondition[];
+  enableWhen?: PropertyCondition[];
   displayFormat?: DisplayFormat;
   deprecated?: boolean;
   deprecationMessage?: string;

@@ -207,18 +207,11 @@ describe('PropertyFormField', () => {
       name: 'accessible-node-labels',
       displayName: 'Accessible Node Labels',
       type: 'string',
-      enableWhen: {
-        'node-labels-enabled': (value) => value === 'true',
-      },
     });
 
     render(
       <FormWrapper>
-        <PropertyFormField
-          property={property}
-          control={undefined as any}
-          dependentValues={{ 'node-labels-enabled': 'false' }}
-        />
+        <PropertyFormField property={property} control={undefined as any} isEnabled={false} />
       </FormWrapper>,
     );
 

@@ -17,7 +17,7 @@ import {
 } from 'lucide-react';
 import { cn } from '~/utils/cn';
 import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
-import { QUEUE_STATES } from '~/types';
+import { QUEUE_STATES, type QueueCreationMethod } from '~/types';
 
 interface QueueStatusBadgesProps {
   capacityMode: 'percentage' | 'weight' | 'absolute';
@@ -32,6 +32,7 @@ interface QueueStatusBadgesProps {
     isLabelSpecific: boolean;
     label: string;
   };
+  creationMethod?: QueueCreationMethod;
 }
 
 export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
@@ -41,6 +42,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
   stagedStatus,
   autoCreationStatus,
   labelInfo,
+  creationMethod,
 }) => {
   const getCapacityModeBadgeClass = () => {
     switch (capacityMode) {
@@ -161,6 +163,35 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
               ? 'Flexible auto-queue creation'
               : 'Legacy auto-queue creation'}
             {autoCreationStatus.isStaged && ' (staged)'}
+          </TooltipContent>
+        </Tooltip>
+      )}
+
+      {/* Queue Creation Method */}
+      {creationMethod && creationMethod !== 'static' && (
+        <Tooltip>
+          <TooltipTrigger asChild>
+            <Badge
+              variant="outline"
+              className={cn(
+                'px-2 py-1 flex items-center gap-1 border-amber-400 text-amber-600 dark:text-amber-400',
+              )}
+            >
+              {creationMethod === 'dynamicFlexible' ? (
+                <Sparkles className="w-4 h-4" />
+              ) : (
+                <RefreshCw className="w-4 h-4" />
+              )}
+              <span className="text-xs font-medium">
+                {creationMethod === 'dynamicFlexible'
+                  ? 'Flexible auto-created'
+                  : 'Legacy auto-created'}
+              </span>
+            </Badge>
+          </TooltipTrigger>
+          <TooltipContent className="max-w-xs">
+            This queue was created automatically by the scheduler and may be removed when its
+            applications finish.
           </TooltipContent>
         </Tooltip>
       )}

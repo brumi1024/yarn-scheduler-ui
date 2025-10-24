@@ -122,16 +122,49 @@ describe('PropertyDescriptor interface', () => {
       category: 'limits',
       defaultValue: '1',
       required: false,
-      dependsOn: ['minimum-user-limit-percent'],
-      enableWhen: {
-        'minimum-user-limit-percent': (value) => value !== '100',
-      },
+      enableWhen: [({ getValue }) => getValue('minimum-user-limit-percent') !== '100'],
     };
 
-    expect(dependentProperty.dependsOn).toContain('minimum-user-limit-percent');
-    expect(dependentProperty.enableWhen).toBeDefined();
-    expect(dependentProperty.enableWhen?.['minimum-user-limit-percent']('50')).toBe(true);
-    expect(dependentProperty.enableWhen?.['minimum-user-limit-percent']('100')).toBe(false);
+    expect(Array.isArray(dependentProperty.enableWhen)).toBe(true);
+    const condition = dependentProperty.enableWhen?.[0];
+    expect(condition).toBeInstanceOf(Function);
+    if (condition) {
+      const positive = condition({
+        scope: 'queue',
+        property: dependentProperty,
+        propertyValue: '1',
+        values: { 'minimum-user-limit-percent': '50' },
+        globalValues: {},
+        queuePath: 'root.a',
+        queueInfo: null,
+        schedulerInfo: null,
+        stagedChanges: [],
+        configData: new Map(),
+        getValue: (name: string) => (name === 'minimum-user-limit-percent' ? '50' : undefined),
+        getGlobalValue: () => undefined,
+        getQueueValue: () => undefined,
+        getConfigValue: () => undefined,
+      });
+      expect(positive).toBe(true);
+
+      const negative = condition({
+        scope: 'queue',
+        property: dependentProperty,
+        propertyValue: '1',
+        values: { 'minimum-user-limit-percent': '100' },
+        globalValues: {},
+        queuePath: 'root.a',
+        queueInfo: null,
+        schedulerInfo: null,
+        stagedChanges: [],
+        configData: new Map(),
+        getValue: (name: string) => (name === 'minimum-user-limit-percent' ? '100' : undefined),
+        getGlobalValue: () => undefined,
+        getQueueValue: () => undefined,
+        getConfigValue: () => undefined,
+      });
+      expect(negative).toBe(false);
+    }
   });
 
   it('should handle property with display formatting', () => {

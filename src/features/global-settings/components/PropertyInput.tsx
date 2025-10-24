@@ -28,6 +28,7 @@ interface PropertyInputProps {
   isStaged: boolean;
   onChange: (value: string) => void;
   searchQuery?: string;
+  disabled?: boolean;
 }
 
 export const PropertyInput: React.FC<PropertyInputProps> = ({
@@ -36,6 +37,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
   isStaged,
   onChange,
   searchQuery,
+  disabled = false,
 }) => {
   // Extract validation rules for min/max
   const rangeValidation = property.validationRules?.find((rule) => rule.type === 'range');
@@ -51,6 +53,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
     .map((issue) => issue.message);
   const errorMessage = errorMessages.join(' ');
   const warningMessage = warningMessages.join(' ');
+  const isDisabled = disabled;
 
   const renderInput = () => {
     const labelNode = searchQuery ? (
@@ -89,6 +92,10 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
           <FieldSwitch
             id={property.name}
             label={labelNode}
+            disabled={isDisabled}
+            labelProps={{
+              className: cn(isDisabled && 'text-muted-foreground'),
+            }}
             description={
               descriptionNode || warningMessage ? (
                 <>
@@ -101,7 +108,10 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
             }
             addon={stagedBadge}
             checked={value === 'true'}
-            onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+            onCheckedChange={(checked) => {
+              if (isDisabled) return;
+              onChange(checked ? 'true' : 'false');
+            }}
             message={errorMessage || undefined}
           />
         );
@@ -115,7 +125,12 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
           return (
             <Field className="space-y-2">
               <div className="flex items-center justify-between">
-                <FieldLabel htmlFor={property.name}>{labelNode}</FieldLabel>
+                <FieldLabel
+                  htmlFor={property.name}
+                  className={cn(isDisabled && 'text-muted-foreground')}
+                >
+                  {labelNode}
+                </FieldLabel>
                 {stagedBadge}
               </div>
               <div className="grid gap-3 sm:grid-cols-2">
@@ -130,6 +145,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                         isSelected
                           ? 'border-primary ring-2 ring-primary'
                           : 'border-border hover:border-primary/60',
+                        isDisabled && 'cursor-not-allowed opacity-60',
                       )}
                     >
                       <div className="flex items-start gap-3">
@@ -138,7 +154,11 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                           name={property.name}
                           value={option.value}
                           checked={isSelected}
-                          onChange={() => onChange(option.value)}
+                          onChange={() => {
+                            if (isDisabled) return;
+                            onChange(option.value);
+                          }}
+                          disabled={isDisabled}
                           className="mt-0.5 h-4 w-4 rounded-full border border-input text-primary focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
                         />
                         <div className="flex-1 space-y-1">
@@ -171,18 +191,29 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <Field className="space-y-2">
             <div className="flex items-center justify-between">
-              <FieldLabel htmlFor={property.name}>{labelNode}</FieldLabel>
+              <FieldLabel
+                htmlFor={property.name}
+                className={cn(isDisabled && 'text-muted-foreground')}
+              >
+                {labelNode}
+              </FieldLabel>
               {stagedBadge}
             </div>
-            <Select value={value || property.defaultValue || ''} onValueChange={onChange}>
+            <Select
+              value={value || property.defaultValue || ''}
+              onValueChange={(nextValue) => {
+                if (isDisabled) return;
+                onChange(nextValue);
+              }}
+            >
               <FieldControl>
-                <SelectTrigger id={property.name}>
+                <SelectTrigger id={property.name} disabled={isDisabled}>
                   <SelectValue />
                 </SelectTrigger>
               </FieldControl>
               <SelectContent>
                 {property.enumValues?.map((option) => (
-                  <SelectItem key={option.value} value={option.value}>
+                  <SelectItem key={option.value} value={option.value} disabled={isDisabled}>
                     <div className="flex flex-col gap-1 text-left">
                       <span>{option.label}</span>
                       {option.description && (
@@ -204,7 +235,12 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <Field className="space-y-2">
             <div className="flex items-center justify-between">
-              <FieldLabel htmlFor={property.name}>{labelNode}</FieldLabel>
+              <FieldLabel
+                htmlFor={property.name}
+                className={cn(isDisabled && 'text-muted-foreground')}
+              >
+                {labelNode}
+              </FieldLabel>
               {stagedBadge}
             </div>
             <FieldControl>
@@ -215,6 +251,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 onChange={(e) => onChange(e.target.value)}
                 min={rangeValidation?.min}
                 max={rangeValidation?.max}
+                disabled={isDisabled}
               />
             </FieldControl>
             {propertyDescription}
@@ -228,7 +265,12 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
         return (
           <Field className="space-y-2">
             <div className="flex items-center justify-between">
-              <FieldLabel htmlFor={property.name}>{labelNode}</FieldLabel>
+              <FieldLabel
+                htmlFor={property.name}
+                className={cn(isDisabled && 'text-muted-foreground')}
+              >
+                {labelNode}
+              </FieldLabel>
               {stagedBadge}
             </div>
             <FieldControl>
@@ -237,6 +279,7 @@ export const PropertyInput: React.FC<PropertyInputProps> = ({
                 type="text"
                 value={value || property.defaultValue || ''}
                 onChange={(e) => onChange(e.target.value)}
+                disabled={isDisabled}
               />
             </FieldControl>
             {propertyDescription}

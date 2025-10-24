@@ -28,6 +28,7 @@ interface LegacyModeToggleProps {
     displayName: string;
     description: string;
   };
+  disabled?: boolean;
 }
 
 interface ValidationPreview {
@@ -40,6 +41,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   isStaged,
   onChange,
   property,
+  disabled = false,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const { schedulerData, configData, stagedChanges } = useSchedulerStore();
@@ -188,6 +190,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     <FieldSwitch
       id={property.name}
       label={property.displayName}
+      disabled={disabled}
       labelSuffix={
         <LegacyModeDocumentation>
           <Button
@@ -211,7 +214,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
 
           <Dialog open={showPreview} onOpenChange={setShowPreview}>
             <DialogTrigger asChild>
-              <Button variant="ghost" size="sm" className="h-8 px-2" disabled={!schedulerData}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-8 px-2"
+                disabled={!schedulerData || disabled}
+              >
                 {showPreview ? (
                   <ChevronUp className="h-4 w-4" />
                 ) : (
@@ -321,7 +329,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
         </>
       }
       checked={currentEnabled}
-      onCheckedChange={(checked) => onChange(checked ? 'true' : 'false')}
+      onCheckedChange={(checked) => {
+        if (disabled) {
+          return;
+        }
+        onChange(checked ? 'true' : 'false');
+      }}
     />
   );
 };

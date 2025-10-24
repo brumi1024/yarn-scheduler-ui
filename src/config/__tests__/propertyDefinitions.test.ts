@@ -14,9 +14,50 @@ import {
   integerSchema,
   aclFormatSchema,
 } from '../schemas/validation';
+import { shouldShowProperty } from '~/utils/propertyConditions';
 
 describe('propertyDefinitions', () => {
   describe('queuePropertyDefinitions', () => {
+    const LEGACY_MODE_PROPERTY = 'yarn.scheduler.capacity.legacy-queue-mode.enabled';
+
+    const createConditionOptions = ({
+      property,
+      capacity = '50',
+      legacyMode = 'true',
+      values: overrideValues = {},
+    }: {
+      property: (typeof queuePropertyDefinitions)[number];
+      capacity?: string;
+      legacyMode?: string;
+      values?: Record<string, string>;
+    }) => {
+      const values: Record<string, string> = {
+        capacity,
+        ...overrideValues,
+      };
+      const globalValues: Record<string, string> = {
+        [LEGACY_MODE_PROPERTY]: legacyMode,
+      };
+
+      return {
+        scope: 'queue' as const,
+        property,
+        propertyValue: values[property.name] ?? '',
+        values,
+        globalValues,
+        queuePath: 'root.test',
+        queueInfo: null,
+        schedulerInfo: null,
+        stagedChanges: [],
+        configData: new Map(),
+        getValue: (name: string) => values[name],
+        getGlobalValue: (name: string) => globalValues[name],
+        getQueueValue: (queuePath: string, name: string) =>
+          queuePath === 'root.test' ? values[name] : undefined,
+        getConfigValue: () => undefined,
+      };
+    };
+
     it('includes essential YARN queue properties', () => {
       const propertyNames = queuePropertyDefinitions.map((p) => p.name);
 
@@ -91,14 +132,228 @@ describe('propertyDefinitions', () => {
       const fairWeightProperty = queuePropertyDefinitions.find(
         (p) => p.name === 'ordering-policy.fair.enable-size-based-weight',
       );
-      expect(fairWeightProperty?.enableWhen).toBeDefined();
-      expect(fairWeightProperty?.enableWhen?.['ordering-policy']).toBeDefined();
+      expect(Array.isArray(fairWeightProperty?.enableWhen)).toBe(true);
+      const fairCondition = fairWeightProperty?.enableWhen?.[0];
+      expect(fairCondition).toBeInstanceOf(Function);
+      if (fairCondition && fairWeightProperty) {
+        const baseValues: Record<string, string> = { 'ordering-policy': 'fair' };
+        const result = fairCondition({
+          scope: 'queue',
+          property: fairWeightProperty,
+          propertyValue: '',
+          values: baseValues,
+          globalValues: {},
+          queuePath: 'root.a',
+          queueInfo: null,
+          schedulerInfo: null,
+          stagedChanges: [],
+          configData: new Map(),
+          getValue: (name: string) => baseValues[name],
+          getGlobalValue: () => undefined,
+          getQueueValue: () => undefined,
+          getConfigValue: () => undefined,
+        });
+        expect(result).toBe(true);
+
+        const negative = fairCondition({
+          scope: 'queue',
+          property: fairWeightProperty,
+          propertyValue: '',
+          values: { 'ordering-policy': 'fifo' },
+          globalValues: {},
+          queuePath: 'root.a',
+          queueInfo: null,
+          schedulerInfo: null,
+          stagedChanges: [],
+          configData: new Map(),
+          getValue: (name: string) => (name === 'ordering-policy' ? 'fifo' : undefined),
+          getGlobalValue: () => undefined,
+          getQueueValue: () => undefined,
+          getConfigValue: () => undefined,
+        });
+        expect(negative).toBe(false);
+      }
 
       const leafQueueTemplate = queuePropertyDefinitions.find(
         (p) => p.name === 'leaf-queue-template.capacity',
       );
-      expect(leafQueueTemplate?.enableWhen).toBeDefined();
-      expect(leafQueueTemplate?.enableWhen?.['auto-create-child-queue.enabled']).toBeDefined();
+      expect(Array.isArray(leafQueueTemplate?.enableWhen)).toBe(true);
+      const leafCondition = leafQueueTemplate?.enableWhen?.[0];
+      expect(leafCondition).toBeInstanceOf(Function);
+      if (leafCondition && leafQueueTemplate) {
+        const positiveValues: Record<string, string> = {
+          'auto-create-child-queue.enabled': 'true',
+        };
+        expect(
+          leafCondition({
+            scope: 'queue',
+            property: leafQueueTemplate,
+            propertyValue: '',
+            values: positiveValues,
+            globalValues: {},
+            queuePath: 'root.a',
+            queueInfo: null,
+            schedulerInfo: null,
+            stagedChanges: [],
+            configData: new Map(),
+            getValue: (name: string) => positiveValues[name],
+            getGlobalValue: () => undefined,
+            getQueueValue: () => undefined,
+            getConfigValue: () => undefined,
+          }),
+        ).toBe(true);
+
+        expect(
+          leafCondition({
+            scope: 'queue',
+            property: leafQueueTemplate,
+            propertyValue: '',
+            values: { 'auto-create-child-queue.enabled': 'false' },
+            globalValues: {},
+            queuePath: 'root.a',
+            queueInfo: null,
+            schedulerInfo: null,
+            stagedChanges: [],
+            configData: new Map(),
+            getValue: () => 'false',
+            getGlobalValue: () => undefined,
+            getQueueValue: () => undefined,
+            getConfigValue: () => undefined,
+          }),
+        ).toBe(false);
+      }
+    });
+
+    it('shows correct auto-creation properties based on capacity and legacy mode', () => {
+      const legacyAutoCreate = queuePropertyDefinitions.find(
+        (p) => p.name === 'auto-create-child-queue.enabled',
+      );
+      const flexibleAutoCreate = queuePropertyDefinitions.find(
+        (p) => p.name === 'auto-queue-creation-v2.enabled',
+      );
+      const legacyTemplateCapacity = queuePropertyDefinitions.find(
+        (p) => p.name === 'leaf-queue-template.capacity',
+      );
+      const flexibleMaxQueues = queuePropertyDefinitions.find(
+        (p) => p.name === 'auto-queue-creation-v2.max-queues',
+      );
+
+      expect(legacyAutoCreate).toBeDefined();
+      expect(flexibleAutoCreate).toBeDefined();
+      expect(legacyTemplateCapacity).toBeDefined();
+      expect(flexibleMaxQueues).toBeDefined();
+      if (
+        !legacyAutoCreate ||
+        !flexibleAutoCreate ||
+        !legacyTemplateCapacity ||
+        !flexibleMaxQueues
+      ) {
+        return;
+      }
+
+      // Legacy mode with weight capacity -> show only flexible auto-creation
+      const legacyWeightOptions = createConditionOptions({
+        property: flexibleAutoCreate,
+        capacity: '2w',
+        legacyMode: 'true',
+      });
+      expect(shouldShowProperty(flexibleAutoCreate, legacyWeightOptions)).toBe(true);
+      expect(
+        shouldShowProperty(
+          legacyAutoCreate,
+          createConditionOptions({
+            property: legacyAutoCreate,
+            capacity: '2w',
+            legacyMode: 'true',
+          }),
+        ),
+      ).toBe(false);
+
+      // Legacy mode with percentage capacity -> show only legacy auto-creation
+      const legacyPercentOptions = createConditionOptions({
+        property: legacyAutoCreate,
+        capacity: '50',
+        legacyMode: 'true',
+      });
+      expect(shouldShowProperty(legacyAutoCreate, legacyPercentOptions)).toBe(true);
+      expect(
+        shouldShowProperty(
+          flexibleAutoCreate,
+          createConditionOptions({
+            property: flexibleAutoCreate,
+            capacity: '50',
+            legacyMode: 'true',
+          }),
+        ),
+      ).toBe(false);
+
+      // Legacy template capacity follows legacy visibility rules
+      expect(
+        shouldShowProperty(
+          legacyTemplateCapacity,
+          createConditionOptions({
+            property: legacyTemplateCapacity,
+            capacity: '2w',
+            legacyMode: 'true',
+          }),
+        ),
+      ).toBe(false);
+      expect(
+        shouldShowProperty(
+          legacyTemplateCapacity,
+          createConditionOptions({
+            property: legacyTemplateCapacity,
+            capacity: '50',
+            legacyMode: 'true',
+          }),
+        ),
+      ).toBe(true);
+
+      // Flexible max-queues aligns with flexible toggle visibility
+      expect(
+        shouldShowProperty(
+          flexibleMaxQueues,
+          createConditionOptions({
+            property: flexibleMaxQueues,
+            capacity: '2w',
+            legacyMode: 'true',
+            values: { 'auto-queue-creation-v2.enabled': 'true' },
+          }),
+        ),
+      ).toBe(true);
+      expect(
+        shouldShowProperty(
+          flexibleMaxQueues,
+          createConditionOptions({
+            property: flexibleMaxQueues,
+            capacity: '50',
+            legacyMode: 'true',
+            values: { 'auto-queue-creation-v2.enabled': 'true' },
+          }),
+        ),
+      ).toBe(false);
+
+      // Non-legacy mode always shows flexible auto-creation and hides legacy
+      expect(
+        shouldShowProperty(
+          flexibleAutoCreate,
+          createConditionOptions({
+            property: flexibleAutoCreate,
+            capacity: '50',
+            legacyMode: 'false',
+          }),
+        ),
+      ).toBe(true);
+      expect(
+        shouldShowProperty(
+          legacyAutoCreate,
+          createConditionOptions({
+            property: legacyAutoCreate,
+            capacity: '50',
+            legacyMode: 'false',
+          }),
+        ),
+      ).toBe(false);
     });
 
     it('has accessible node labels properties', () => {

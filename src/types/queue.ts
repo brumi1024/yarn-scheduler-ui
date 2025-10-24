@@ -5,6 +5,8 @@ export type QueueType = QueueTypeValue;
 
 export type QueueState = QueueStateValue;
 
+export type QueueCreationMethod = 'static' | 'dynamicLegacy' | 'dynamicFlexible';
+
 export type QueueMetrics = {
   usedCapacity: number;
   absoluteUsedCapacity: number;
@@ -30,6 +32,7 @@ export type QueueInfo = {
   queuePath: string;
   state: QueueState;
   autoCreationEligibility?: string;
+  creationMethod?: QueueCreationMethod;
   queues?: {
     queue: QueueInfo[];
   };
