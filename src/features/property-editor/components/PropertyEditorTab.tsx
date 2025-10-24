@@ -210,7 +210,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
         values[property.name] = value;
       });
       return values;
-    }, [getGlobalPropertyValue, stagedChanges, configData]);
+    }, [getGlobalPropertyValue]);
 
     const conditionBase = React.useMemo(() => {
       const queueValueCache = new Map<string, string | undefined>();
@@ -264,7 +264,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
         getConfigValue: (key: string) => configData.get(key),
       };
     }, [
-      queue.queuePath,
       queue,
       queueValues,
       globalValues,
@@ -317,7 +316,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       });
 
       return result;
-    }, [propertiesByCategory, propertyStates, properties]);
+    }, [propertiesByCategory, propertyStates]);
 
     const availableCategories = React.useMemo(
       () =>

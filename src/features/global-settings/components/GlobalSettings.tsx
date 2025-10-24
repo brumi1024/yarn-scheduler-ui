@@ -43,7 +43,7 @@ export const GlobalSettings: React.FC = () => {
       values[property.name] = value;
     });
     return values;
-  }, [getGlobalPropertyValue, stagedChanges, configData]);
+  }, [getGlobalPropertyValue]);
 
   const conditionBase = React.useMemo(() => {
     const queueValueCache = new Map<string, string | undefined>();
