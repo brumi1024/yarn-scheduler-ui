@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { render, screen } from '~/testing/setup/setup';
+import { render, screen, within } from '~/testing/setup/setup';
 import { QueueCardNode } from './QueueCardNode';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -146,7 +146,8 @@ describe('QueueCardNode', () => {
     expect(screen.getByText('Maximum capacity: 5w')).toBeInTheDocument();
   });
 
-  it('should display absolute capacity resources as individual badges', () => {
+  it('should prioritize inline capacity resources and show overflow details', async () => {
+    const user = userEvent.setup();
     const nodeData = {
       ...defaultNodeData,
       capacityConfig: '[memory=12128,vcores=5]',
@@ -159,12 +160,58 @@ describe('QueueCardNode', () => {
     expect(screen.getByText('vcores: 5')).toBeInTheDocument();
     expect(screen.getByText('memory: 16384')).toBeInTheDocument();
     expect(screen.getByText('vcores: 10')).toBeInTheDocument();
-    expect(screen.getByText('yarn.io/gpu: 1')).toBeInTheDocument();
-    expect(screen.getByText('maximum capacity')).toBeInTheDocument();
+    expect(screen.queryByText('yarn.io/gpu: 1')).not.toBeInTheDocument();
+
+    const summaryTrigger = screen.getByRole('button', { name: /show 1 additional resource/i });
+    await user.click(summaryTrigger);
+    expect(await screen.findByText('yarn.io/gpu')).toBeInTheDocument();
+
+    expect(screen.getByText('max capacity')).toBeInTheDocument();
     expect(screen.queryByText('Maximum capacity:')).not.toBeInTheDocument();
   });
 
-  it('should render mixed resource vector values without losing suffixes', () => {
+  it('should reflect multiple overflow resources and keep badge count in sync', async () => {
+    const user = userEvent.setup();
+    const nodeData = {
+      ...defaultNodeData,
+      capacityConfig: '[memory=100,vcores=10,yarn.io/gpu=1,yarn.io/fpga=2]',
+      maxCapacityConfig: '[memory=150,vcores=15,yarn.io/gpu=2,yarn.io/fpga=3,yarn.io/nic=4]',
+    };
+
+    renderWithProviders(<QueueCardNode {...createNodeProps(nodeData)} />);
+
+    const summaryTrigger = screen.getByRole('button', { name: /show 3 additional resources/i });
+    expect(summaryTrigger).toBeInTheDocument();
+
+    await user.click(summaryTrigger);
+    const popoverHeading = await screen.findByText('Resource capacity details');
+    const popover = popoverHeading.closest('[data-slot="popover-content"]');
+    if (!popover) {
+      throw new Error('Popover should be rendered');
+    }
+
+    if (!(popover instanceof HTMLElement)) {
+      throw new Error('Popover should be an HTMLElement');
+    }
+
+    const popoverScope = within(popover);
+    const gpuRow = popoverScope.getByText('yarn.io/gpu');
+    const fpgaRow = popoverScope.getByText('yarn.io/fpga');
+    const nicRow = popoverScope.getByText('yarn.io/nic');
+
+    const getValues = (resourceNode: Element) => {
+      const capacityCell = resourceNode.nextElementSibling as HTMLElement | null;
+      const maxCell = capacityCell?.nextElementSibling as HTMLElement | null;
+      return [capacityCell?.textContent ?? '', maxCell?.textContent ?? ''];
+    };
+
+    expect(getValues(gpuRow)).toEqual(['1', '2']);
+    expect(getValues(fpgaRow)).toEqual(['2', '3']);
+    expect(getValues(nicRow)).toEqual(['—', '4']);
+  });
+
+  it('should render mixed resource vector values without losing suffixes', async () => {
+    const user = userEvent.setup();
     const nodeData = {
       ...defaultNodeData,
       capacityConfig: '[vcores=15%,memory=12w,yarn.io/fpga=2]',
@@ -175,10 +222,23 @@ describe('QueueCardNode', () => {
 
     expect(screen.getByText('vcores: 15%')).toBeInTheDocument();
     expect(screen.getByText('memory: 12w')).toBeInTheDocument();
-    expect(screen.getByText('yarn.io/fpga: 2')).toBeInTheDocument();
     expect(screen.getByText('vcores: 20%')).toBeInTheDocument();
     expect(screen.getByText('memory: 15w')).toBeInTheDocument();
-    expect(screen.getByText('yarn.io/fpga: 4')).toBeInTheDocument();
+
+    const summaryTrigger = screen.getByRole('button', { name: /show 1 additional resource/i });
+    await user.click(summaryTrigger);
+    const popoverHeading = await screen.findByText('Resource capacity details');
+    const popover = popoverHeading.closest('[data-slot="popover-content"]');
+    if (!popover) {
+      throw new Error('Popover should be rendered');
+    }
+    if (!(popover instanceof HTMLElement)) {
+      throw new Error('Popover should be an HTMLElement');
+    }
+    const popoverScope = within(popover);
+    expect(popoverScope.getByText('yarn.io/fpga')).toBeInTheDocument();
+    expect(popoverScope.getByText('2')).toBeInTheDocument();
+    expect(popoverScope.getByText('4')).toBeInTheDocument();
   });
 
   it('should display queue status badges', () => {
