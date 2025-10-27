@@ -232,18 +232,32 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const parsedCapacityMode = parseCapacityValueUtil(displayCapacity);
   const capacityMode: 'percentage' | 'weight' | 'absolute' =
     parsedCapacityMode?.type ?? 'percentage';
-  const parsedCapacityDisplay = getCapacityDisplay(displayCapacity);
-  const parsedMaxCapacityDisplay = getCapacityDisplay(displayMaxCapacity);
+  const parsedCapacityDisplay = useMemo(
+    () => getCapacityDisplay(displayCapacity),
+    [displayCapacity],
+  );
+  const parsedMaxCapacityDisplay = useMemo(
+    () => getCapacityDisplay(displayMaxCapacity),
+    [displayMaxCapacity],
+  );
   const showVectorCapacity =
     parsedCapacityDisplay.type === 'vector' || parsedMaxCapacityDisplay.type === 'vector';
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
 
-  const capacityEntries =
-    parsedCapacityDisplay.type === 'vector' ? parsedCapacityDisplay.entries : [];
-  const maxCapacityEntries =
-    parsedMaxCapacityDisplay.type === 'vector' ? parsedMaxCapacityDisplay.entries : [];
+  const capacityEntries = useMemo<ResourceVectorEntry[]>(() => {
+    if (parsedCapacityDisplay.type === 'vector') {
+      return parsedCapacityDisplay.entries;
+    }
+    return [];
+  }, [parsedCapacityDisplay]);
+  const maxCapacityEntries = useMemo<ResourceVectorEntry[]>(() => {
+    if (parsedMaxCapacityDisplay.type === 'vector') {
+      return parsedMaxCapacityDisplay.entries;
+    }
+    return [];
+  }, [parsedMaxCapacityDisplay]);
   const capacityEntryMap = useMemo(() => createEntryMap(capacityEntries), [capacityEntries]);
   const maxCapacityEntryMap = useMemo(
     () => createEntryMap(maxCapacityEntries),

@@ -475,7 +475,7 @@ function createEdges(
 
           // Ensure minimum segment height for visibility
           const segmentHeight = Math.max(
-            (segmentEnd - segmentStart) * (parentHeight - 40),
+            (segmentEnd - segmentStart) * parentHeight,
             MIN_SEGMENT_HEIGHT,
           );
           const adjustedSegmentEnd = segmentStart + segmentHeight / parentHeight;
