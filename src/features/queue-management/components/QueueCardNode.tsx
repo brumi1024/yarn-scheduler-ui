@@ -41,6 +41,7 @@ import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 import { Badge } from '~/components/ui/badge';
 import { parseCapacityValue as parseCapacityValueUtil } from '~/utils/capacityUtils';
 import { useCapacityEditor } from '../hooks/useCapacityEditor';
+import { QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '../constants';
 
 type CapacityDisplay =
   | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }
@@ -281,7 +282,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const cardContent = (
     <Card
       className={cn(
-        'relative w-[400px] h-[300px] transition-all duration-200 flex flex-col',
+        'relative transition-all duration-200 flex flex-col',
         // Enhanced background and border for better contrast
         'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
         isAutoCreatedQueue &&
@@ -307,6 +308,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         shouldGrayOut && 'opacity-50 grayscale',
       )}
       onClick={(event) => openPropertyPanel(event, 'overview')}
+      style={{ width: QUEUE_CARD_WIDTH, height: QUEUE_CARD_HEIGHT }}
     >
       <CardHeader>
         <div className="flex items-start justify-between">

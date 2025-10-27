@@ -1,4 +1,5 @@
 import { type EdgeProps } from '@xyflow/react';
+import { QUEUE_CARD_CORNER_RADIUS, QUEUE_CARD_HEIGHT } from '../constants';
 
 /**
  * Custom Sankey-like edge component that creates flowing connections between queue nodes.
@@ -54,11 +55,23 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
   const createSankeyPath = () => {
     const controlPointDistance = Math.abs(targetX - sourceX) * 0.5;
 
-    const CARD_HEIGHT = 300; // Updated to match actual card height
-    const sourceStartY = data?.sourceStartY ?? sourceY - CARD_HEIGHT / 2;
-    const sourceEndY = data?.sourceEndY ?? sourceY + CARD_HEIGHT / 2;
-    const targetStartY = data?.targetStartY ?? targetY - CARD_HEIGHT / 2;
-    const targetEndY = data?.targetEndY ?? targetY + CARD_HEIGHT / 2;
+    const fallbackHeight = QUEUE_CARD_HEIGHT;
+    const rawSourceStartY = data?.sourceStartY ?? sourceY - fallbackHeight / 2;
+    const rawSourceEndY = data?.sourceEndY ?? sourceY + fallbackHeight / 2;
+    const rawTargetStartY = data?.targetStartY ?? targetY - fallbackHeight / 2;
+    const rawTargetEndY = data?.targetEndY ?? targetY + fallbackHeight / 2;
+
+    const sourceTopBound = data?.sourceTop ?? sourceY - fallbackHeight / 2;
+    const sourceBottomBound = data?.sourceBottom ?? sourceY + fallbackHeight / 2;
+    const targetTopBound = data?.targetTop ?? targetY - fallbackHeight / 2;
+    const targetBottomBound = data?.targetBottom ?? targetY + fallbackHeight / 2;
+
+    const cornerRadius = data?.cornerRadius ?? QUEUE_CARD_CORNER_RADIUS;
+
+    const sourceStartY = Math.max(sourceTopBound, rawSourceStartY - cornerRadius);
+    const sourceEndY = Math.min(sourceBottomBound, rawSourceEndY + cornerRadius);
+    const targetStartY = Math.max(targetTopBound, rawTargetStartY - cornerRadius);
+    const targetEndY = Math.min(targetBottomBound, rawTargetEndY + cornerRadius);
 
     return [
       // Start at source (proportional segment start)

@@ -12,6 +12,7 @@ import type {
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { DagreLayout } from '../utils/DagreLayout';
+import { QUEUE_CARD_CORNER_RADIUS, QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '../constants';
 import type { ValidationIssue } from '~/features/validation/types';
 
 export type QueueCardData = QueueInfo & {
@@ -37,8 +38,8 @@ export type UseQueueTreeDataResult = {
 };
 
 const layoutEngine = new DagreLayout({
-  nodeWidth: 400,
-  nodeHeight: 300,
+  nodeWidth: QUEUE_CARD_WIDTH,
+  nodeHeight: QUEUE_CARD_HEIGHT,
   horizontalSpacing: 120,
   verticalSpacing: 80,
   orientation: 'horizontal',
@@ -392,8 +393,8 @@ function createNodes(
           type: 'queueCard',
           position: { x: depth * 520, y: 0 },
           data: nodeData,
-          width: 400,
-          height: 300,
+          width: QUEUE_CARD_WIDTH,
+          height: QUEUE_CARD_HEIGHT,
         });
       }
     }
@@ -408,8 +409,8 @@ function createEdges(
   stagedChanges?: StagedChange[],
 ): Edge[] {
   const edges: Edge[] = [];
-  const CARD_HEIGHT = 260; // Updated to match actual card height
   const MIN_SEGMENT_HEIGHT = 4; // Minimum visible height for very small capacity percentages
+  const DEFAULT_CARD_HEIGHT = QUEUE_CARD_HEIGHT;
 
   if (queueInfo.queues?.queue) {
     const children = toArray(queueInfo.queues.queue);
@@ -469,22 +470,25 @@ function createEdges(
           const segmentStart = cumulativeCapacity / totalChildCapacity;
           const segmentEnd = (cumulativeCapacity + childAdjustedCapacity) / totalChildCapacity;
 
+          const parentHeight = sourcePos.height ?? DEFAULT_CARD_HEIGHT;
+          const childHeight = targetPos.height ?? DEFAULT_CARD_HEIGHT;
+
           // Ensure minimum segment height for visibility
           const segmentHeight = Math.max(
-            (segmentEnd - segmentStart) * CARD_HEIGHT,
+            (segmentEnd - segmentStart) * parentHeight,
             MIN_SEGMENT_HEIGHT,
           );
-          const adjustedSegmentEnd = segmentStart + segmentHeight / CARD_HEIGHT;
+          const adjustedSegmentEnd = segmentStart + segmentHeight / parentHeight;
 
           // Parent side: proportional segment based on capacity
-          const parentCenterY = sourcePos.y + sourcePos.height / 2;
-          const sourceStartY = parentCenterY - CARD_HEIGHT / 2 + segmentStart * CARD_HEIGHT;
-          const sourceEndY = parentCenterY - CARD_HEIGHT / 2 + adjustedSegmentEnd * CARD_HEIGHT;
+          const parentTop = sourcePos.y;
+          const sourceStartY = parentTop + segmentStart * parentHeight;
+          const sourceEndY = parentTop + adjustedSegmentEnd * parentHeight;
 
           // Target side: full height (child receives the full connector)
-          const targetCenterY = targetPos.y + targetPos.height / 2;
-          const targetStartY = targetCenterY - CARD_HEIGHT / 2;
-          const targetEndY = targetCenterY + CARD_HEIGHT / 2;
+          const targetTop = targetPos.y;
+          const targetStartY = targetTop;
+          const targetEndY = targetTop + childHeight;
 
           const edge: Edge = {
             id: `${queueInfo.queuePath}-${child.queuePath}`,
@@ -499,6 +503,11 @@ function createEdges(
               sourceEndY,
               targetStartY,
               targetEndY,
+              sourceTop: parentTop,
+              sourceBottom: parentTop + parentHeight,
+              targetTop,
+              targetBottom: targetTop + childHeight,
+              cornerRadius: QUEUE_CARD_CORNER_RADIUS,
               // Additional metadata for debugging/visualization
               childPercentage,
               segmentStart,
@@ -516,6 +525,9 @@ function createEdges(
         const targetPos = positions.get(child.queuePath);
 
         if (sourcePos && targetPos) {
+          const parentHeight = sourcePos.height ?? DEFAULT_CARD_HEIGHT;
+          const childHeight = targetPos.height ?? DEFAULT_CARD_HEIGHT;
+
           const edge: Edge = {
             id: `${queueInfo.queuePath}-${child.queuePath}`,
             source: queueInfo.queuePath,
@@ -525,10 +537,15 @@ function createEdges(
               capacity: child.capacity,
               targetState: child.state,
               // Fallback to full height
-              sourceStartY: sourcePos.y + sourcePos.height / 2 - CARD_HEIGHT / 2,
-              sourceEndY: sourcePos.y + sourcePos.height / 2 + CARD_HEIGHT / 2,
-              targetStartY: targetPos.y + targetPos.height / 2 - CARD_HEIGHT / 2,
-              targetEndY: targetPos.y + targetPos.height / 2 + CARD_HEIGHT / 2,
+              sourceStartY: sourcePos.y,
+              sourceEndY: sourcePos.y + parentHeight,
+              targetStartY: targetPos.y,
+              targetEndY: targetPos.y + childHeight,
+              sourceTop: sourcePos.y,
+              sourceBottom: sourcePos.y + parentHeight,
+              targetTop: targetPos.y,
+              targetBottom: targetPos.y + childHeight,
+              cornerRadius: QUEUE_CARD_CORNER_RADIUS,
             },
           };
           edges.push(edge);
