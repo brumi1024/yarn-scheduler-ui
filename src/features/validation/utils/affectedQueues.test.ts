@@ -48,6 +48,21 @@ describe('affectedQueues', () => {
       expect(affected).toEqual(['root.a']);
     });
 
+    it('should not traverse templates when queue path targets template scope', () => {
+      const mockData = createMockSchedulerData([
+        createMockQueue('root.default', 'default'),
+        createMockQueue('root.analytics', 'analytics'),
+      ]);
+
+      const affected = getAffectedQueuesForValidation(
+        'capacity',
+        'root.default.auto-queue-creation-v2.template',
+        mockData,
+      );
+
+      expect(affected).toEqual(['root.default.auto-queue-creation-v2.template']);
+    });
+
     it('should include parent queue for capacity changes', () => {
       const mockData = createMockSchedulerData([
         createMockQueue('root.parent', 'parent', [createMockQueue('root.parent.child', 'child')]),

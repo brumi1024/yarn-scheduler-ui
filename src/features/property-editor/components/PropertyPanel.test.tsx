@@ -3,6 +3,7 @@ import { render, screen } from '~/testing/setup/setup';
 import { PropertyPanel } from './PropertyPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
+import type { SchedulerStore } from '~/stores/schedulerStore';
 import { getMockQueueInfo } from '~/testing/factories';
 import { toast } from 'sonner';
 
@@ -84,13 +85,16 @@ const mockQueue = getMockQueueInfo({
   queueName: 'default',
 });
 
-const mockGetQueueByPath = vi.fn();
-const mockSetPropertyPanelOpen = vi.fn();
-const mockSelectQueue = vi.fn();
-const mockGetQueuePropertyValue = vi.fn(() => ({ value: 'false', isStaged: false }));
-const mockSetPropertyPanelInitialTab = vi.fn();
+const mockGetQueueByPath = vi.fn<SchedulerStore['getQueueByPath']>();
+const mockSetPropertyPanelOpen = vi.fn<SchedulerStore['setPropertyPanelOpen']>();
+const mockSelectQueue = vi.fn<SchedulerStore['selectQueue']>();
+const mockGetQueuePropertyValue = vi.fn<SchedulerStore['getQueuePropertyValue']>(() => ({
+  value: 'false',
+  isStaged: false,
+}));
+const mockSetPropertyPanelInitialTab = vi.fn<SchedulerStore['setPropertyPanelInitialTab']>();
 
-function getBaseStoreState() {
+function getBaseStoreState(): Partial<SchedulerStore> {
   return {
     selectedQueuePath: null,
     comparisonQueues: [],
@@ -101,7 +105,7 @@ function getBaseStoreState() {
     getQueueByPath: mockGetQueueByPath,
     selectQueue: mockSelectQueue,
     getQueuePropertyValue: mockGetQueuePropertyValue,
-    stagedChanges: [] as any[],
+    stagedChanges: [],
     configData: new Map<string, string>(),
     schedulerData: null,
     shouldOpenTemplateConfig: false,
@@ -114,9 +118,9 @@ function getBaseStoreState() {
   };
 }
 
-let storeState = getBaseStoreState();
+let storeState: Partial<SchedulerStore> = getBaseStoreState();
 
-const setStoreState = (overrides?: Partial<typeof storeState>) => {
+const setStoreState = (overrides?: Partial<SchedulerStore>) => {
   storeState = {
     ...getBaseStoreState(),
     ...overrides,

@@ -1,5 +1,5 @@
 import React from 'react';
-import type { Control, ControllerRenderProps, FormState } from 'react-hook-form';
+import type { Control, ControllerRenderProps, FormState, UseFormSetValue } from 'react-hook-form';
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
 import { FieldSwitch } from '~/components/ui/field-switch';
@@ -37,6 +37,7 @@ interface PropertyFormFieldProps {
   queueName?: string;
   parentQueuePath?: string;
   currentValues?: Partial<Record<string, string>>;
+  setFormValue?: UseFormSetValue<Record<string, string>>;
 }
 
 interface PropertyLabelProps {
@@ -135,7 +136,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   queueName,
   parentQueuePath,
   currentValues,
+  setFormValue: _setFormValue,
 }) => {
+  void _setFormValue;
   const { openCapacityEditor } = useCapacityEditor();
 
   // Render different input types based on property type

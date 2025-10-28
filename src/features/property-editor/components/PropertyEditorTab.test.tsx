@@ -1,4 +1,5 @@
 import { render, screen, within } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { PropertyEditorTab } from './PropertyEditorTab';
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
@@ -24,6 +25,64 @@ vi.mock('./PropertyFormField', () => ({
   ),
 }));
 
+const createMockPropertyEditor = () => ({
+  form: {
+    control: {},
+    handleSubmit: vi.fn(),
+    register: vi.fn(),
+    setValue: vi.fn(),
+    getValues: vi.fn(),
+    watch: vi.fn(),
+    reset: vi.fn(),
+    formState: { errors: {}, isDirty: false },
+  },
+  control: {},
+  handleSubmit: vi.fn(),
+  handleReset: vi.fn(),
+  errors: {},
+  isValid: true,
+  hasChanges: false,
+  watchedValues: {},
+  propertiesByCategory: {
+    general: [
+      {
+        name: 'capacity',
+        displayName: 'Capacity',
+        type: 'string' as const,
+        defaultValue: '50',
+        description: 'Queue capacity allocation',
+        category: 'general' as const,
+        formFieldName: 'capacity',
+        required: true,
+        validationRules: [],
+      },
+    ],
+    resource: [],
+    limits: [],
+    scheduling: [],
+    security: [],
+    advanced: [],
+  },
+  getStagedStatus: vi.fn(),
+  formState: { isDirty: false },
+  handleFieldBlur: vi.fn(),
+  getFieldErrors: vi.fn(() => []),
+  getFieldWarnings: vi.fn(() => []),
+  properties: [
+    {
+      name: 'capacity',
+      displayName: 'Capacity',
+      type: 'string' as const,
+      defaultValue: '50',
+      description: 'Queue capacity allocation',
+      category: 'general' as const,
+      formFieldName: 'capacity',
+      required: true,
+      validationRules: [],
+    },
+  ],
+});
+
 describe('PropertyEditorTab', () => {
   const mockQueue: QueueInfo = {
     queueType: 'leaf',
@@ -46,66 +105,11 @@ describe('PropertyEditorTab', () => {
     },
   };
 
-  const mockPropertyEditor = {
-    form: {
-      control: {},
-      handleSubmit: vi.fn(),
-      register: vi.fn(),
-      setValue: vi.fn(),
-      getValues: vi.fn(),
-      watch: vi.fn(),
-      reset: vi.fn(),
-      formState: { errors: {}, isDirty: false },
-    },
-    control: {},
-    handleSubmit: vi.fn(),
-    handleReset: vi.fn(),
-    errors: {},
-    isValid: true,
-    hasChanges: false,
-    watchedValues: {},
-    propertiesByCategory: {
-      general: [
-        {
-          name: 'capacity',
-          displayName: 'Capacity',
-          type: 'string' as const,
-          defaultValue: '50',
-          description: 'Queue capacity allocation',
-          category: 'general' as const,
-          formFieldName: 'capacity',
-          required: true,
-          validationRules: [],
-        },
-      ],
-      resource: [],
-      limits: [],
-      scheduling: [],
-      security: [],
-      advanced: [],
-    },
-    getStagedStatus: vi.fn(),
-    formState: { isDirty: false },
-    handleFieldBlur: vi.fn(),
-    getFieldErrors: vi.fn(() => []),
-    getFieldWarnings: vi.fn(() => []),
-    properties: [
-      {
-        name: 'capacity',
-        displayName: 'Capacity',
-        type: 'string' as const,
-        defaultValue: '50',
-        description: 'Queue capacity allocation',
-        category: 'general' as const,
-        formFieldName: 'capacity',
-        required: true,
-        validationRules: [],
-      },
-    ],
-  };
+  let mockPropertyEditor: ReturnType<typeof createMockPropertyEditor>;
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockPropertyEditor = createMockPropertyEditor();
     vi.mocked(usePropertyEditor).mockReturnValue(mockPropertyEditor as any);
   });
 
@@ -130,5 +134,46 @@ describe('PropertyEditorTab', () => {
     expect(screen.getByText('General Configuration')).toBeInTheDocument();
     const generalTrigger = screen.getByRole('button', { name: /General Configuration/i });
     expect(within(generalTrigger).getByText('1')).toBeInTheDocument();
+  });
+
+  it('renders template configuration button when controls allow management', async () => {
+    const templateProperty = {
+      name: 'auto-queue-creation-v2.enabled',
+      displayName: 'Flexible Auto-Creation',
+      type: 'string' as const,
+      defaultValue: 'false',
+      description: 'Flexible mode toggle',
+      category: 'general' as const,
+      formFieldName: 'auto-queue-creation-v2__DOT__enabled',
+      required: false,
+      validationRules: [],
+    };
+
+    mockPropertyEditor.propertiesByCategory.general = [
+      ...mockPropertyEditor.propertiesByCategory.general,
+      templateProperty,
+    ];
+    mockPropertyEditor.properties = [...mockPropertyEditor.properties, templateProperty];
+
+    const onOpenTemplateConfig = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <PropertyEditorTab
+        queue={mockQueue}
+        templateConfigControls={{
+          canManageTemplates: true,
+          legacyAvailable: false,
+          flexibleAvailable: true,
+          onOpenTemplateConfig,
+        }}
+      />,
+    );
+
+    const button = screen.getByRole('button', { name: /Manage template properties/i });
+    expect(button).toBeInTheDocument();
+
+    await user.click(button);
+    expect(onOpenTemplateConfig).toHaveBeenCalled();
   });
 });

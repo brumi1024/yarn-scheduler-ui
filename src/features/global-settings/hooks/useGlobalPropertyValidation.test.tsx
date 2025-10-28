@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach, type Mock } from 'vitest';
-import { renderHook } from '@testing-library/react';
+import { renderHook, act } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { useGlobalPropertyValidation } from './useGlobalPropertyValidation';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -48,7 +48,10 @@ describe('useGlobalPropertyValidation', () => {
     });
 
     // Test a valid property change
-    const errors = result.current.validateGlobalProperty(MAXIMUM_APPLICATIONS_PROPERTY, '10000');
+    let errors: ReturnType<typeof result.current.validateGlobalProperty> = [];
+    act(() => {
+      errors = result.current.validateGlobalProperty(MAXIMUM_APPLICATIONS_PROPERTY, '10000');
+    });
     expect(errors).toHaveLength(0);
   });
 
@@ -61,7 +64,10 @@ describe('useGlobalPropertyValidation', () => {
     });
 
     // Test an invalid property change (if there are any validation rules for global properties)
-    const errors = result.current.validateGlobalProperty('nonexistent-property', 'invalid');
+    let errors: ReturnType<typeof result.current.validateGlobalProperty> = [];
+    act(() => {
+      errors = result.current.validateGlobalProperty('nonexistent-property', 'invalid');
+    });
     // For now, we expect no errors since business validation might not have rules for all global properties
     expect(Array.isArray(errors)).toBe(true);
   });
