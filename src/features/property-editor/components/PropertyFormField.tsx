@@ -113,7 +113,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               disabled={!isEnabled}
               checked={field.value === 'true'}
               onCheckedChange={(checked) => {
-                const nextValue = checked ? 'true' : '';
+                const nextValue = checked ? 'true' : 'false';
                 field.onChange(nextValue);
                 onBlur?.(property.name, nextValue);
               }}
