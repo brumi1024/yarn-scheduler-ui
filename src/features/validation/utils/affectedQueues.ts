@@ -52,6 +52,10 @@ function getParentQueuePath(queuePath: string): string | null {
   return parts.slice(0, -1).join('.');
 }
 
+function isTemplateQueuePath(queuePath: string): boolean {
+  return queuePath.includes('leaf-queue-template') || queuePath.includes('auto-queue-creation-v2.');
+}
+
 export function getAffectedQueuesForValidation(
   propertyName: string,
   queuePath: string,
@@ -59,6 +63,10 @@ export function getAffectedQueuesForValidation(
   stagedChanges: StagedChange[] = [],
 ): string[] {
   const affectedQueues: string[] = [queuePath];
+
+  if (isTemplateQueuePath(queuePath)) {
+    return affectedQueues;
+  }
 
   if (!schedulerData) {
     return affectedQueues;

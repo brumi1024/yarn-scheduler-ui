@@ -67,6 +67,7 @@ export type PropertyDescriptor = {
   category: PropertyCategory;
   defaultValue: string;
   required: boolean;
+  templateSupport?: boolean;
   validationRules?: ValidationRule[];
   enumValues?: PropertyEnumOption[];
   enumDisplay?: 'toggle' | 'choiceCard' | 'select';

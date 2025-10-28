@@ -87,6 +87,41 @@ const mockQueue = getMockQueueInfo({
 const mockGetQueueByPath = vi.fn();
 const mockSetPropertyPanelOpen = vi.fn();
 const mockSelectQueue = vi.fn();
+const mockGetQueuePropertyValue = vi.fn(() => ({ value: 'false', isStaged: false }));
+const mockSetPropertyPanelInitialTab = vi.fn();
+
+function getBaseStoreState() {
+  return {
+    selectedQueuePath: null,
+    comparisonQueues: [],
+    isPropertyPanelOpen: false,
+    setPropertyPanelOpen: mockSetPropertyPanelOpen,
+    propertyPanelInitialTab: 'overview',
+    setPropertyPanelInitialTab: mockSetPropertyPanelInitialTab,
+    getQueueByPath: mockGetQueueByPath,
+    selectQueue: mockSelectQueue,
+    getQueuePropertyValue: mockGetQueuePropertyValue,
+    stagedChanges: [] as any[],
+    configData: new Map<string, string>(),
+    schedulerData: null,
+    shouldOpenTemplateConfig: false,
+    requestTemplateConfigOpen: () => {
+      storeState = { ...storeState, shouldOpenTemplateConfig: true };
+    },
+    clearTemplateConfigRequest: () => {
+      storeState = { ...storeState, shouldOpenTemplateConfig: false };
+    },
+  };
+}
+
+let storeState = getBaseStoreState();
+
+const setStoreState = (overrides?: Partial<typeof storeState>) => {
+  storeState = {
+    ...getBaseStoreState(),
+    ...overrides,
+  };
+};
 
 describe('PropertyPanel', () => {
   beforeEach(() => {
@@ -98,15 +133,16 @@ describe('PropertyPanel', () => {
     mockGetErrors = vi.fn().mockReturnValue({});
     mockSubmit.mockResolvedValue(undefined);
     mockUseValidation.mockReturnValue({ errors: {} });
-
-    (useSchedulerStore as any).mockReturnValue({
-      selectedQueuePath: null,
-      isPropertyPanelOpen: false,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
+    mockGetQueuePropertyValue.mockReset();
+    mockGetQueuePropertyValue.mockReturnValue({ value: 'false', isStaged: false });
+    mockGetQueueByPath.mockReset();
+    mockSetPropertyPanelInitialTab.mockReset();
+    setStoreState();
+    (useSchedulerStore as any).mockImplementation((selector?: any) => {
+      if (typeof selector === 'function') {
+        return selector(storeState);
+      }
+      return storeState;
     });
   });
 
@@ -116,14 +152,9 @@ describe('PropertyPanel', () => {
   });
 
   it('should not render when panel is closed', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: false,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -132,14 +163,9 @@ describe('PropertyPanel', () => {
   });
 
   it('should render with selected queue information', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -150,14 +176,9 @@ describe('PropertyPanel', () => {
   });
 
   it('should display all three tabs', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -169,14 +190,9 @@ describe('PropertyPanel', () => {
   });
 
   it('should start with overview tab active', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -188,14 +204,11 @@ describe('PropertyPanel', () => {
 
   it('should respect initial tab selection from store', () => {
     const localSetInitialTab = vi.fn();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
       propertyPanelInitialTab: 'settings',
       setPropertyPanelInitialTab: localSetInitialTab,
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -207,14 +220,10 @@ describe('PropertyPanel', () => {
   });
 
   it('should disable settings tab and show warning for auto-created queues', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.auto',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
       propertyPanelInitialTab: 'settings',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(
       getMockQueueInfo({
@@ -239,14 +248,9 @@ describe('PropertyPanel', () => {
 
   it('should switch between tabs', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -263,14 +267,9 @@ describe('PropertyPanel', () => {
 
   it('should show apply and reset buttons only on settings tab', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -289,14 +288,9 @@ describe('PropertyPanel', () => {
 
   it('should show unsaved badge when form is dirty', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -311,14 +305,9 @@ describe('PropertyPanel', () => {
 
   it('should show staged badge when has changes', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -332,14 +321,9 @@ describe('PropertyPanel', () => {
 
   it('should show validation errors', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -376,15 +360,9 @@ describe('PropertyPanel', () => {
     const user = userEvent.setup();
     mockIsValid.mockReturnValue(false);
     mockGetErrors.mockReturnValue({ capacity: 'Invalid value' });
-
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -402,14 +380,9 @@ describe('PropertyPanel', () => {
 
   it('should submit changes successfully', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -426,14 +399,9 @@ describe('PropertyPanel', () => {
 
   it('should reset form changes', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -450,14 +418,9 @@ describe('PropertyPanel', () => {
 
   it('should show unsaved changes dialog when closing with dirty form', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -473,28 +436,18 @@ describe('PropertyPanel', () => {
   });
 
   it('should deselect queue when panel closes', () => {
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
     const { rerender } = render(<PropertyPanel />);
 
     // Simulate panel closing
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: false,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
 
     rerender(<PropertyPanel />);
@@ -505,14 +458,9 @@ describe('PropertyPanel', () => {
 
   it('should show info toast when staging with already staged changes', async () => {
     const user = userEvent.setup();
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 
@@ -534,14 +482,9 @@ describe('PropertyPanel', () => {
     const user = userEvent.setup();
     mockSubmit.mockImplementation(() => new Promise((resolve) => setTimeout(resolve, 100)));
 
-    (useSchedulerStore as any).mockReturnValue({
+    setStoreState({
       selectedQueuePath: 'root.default',
       isPropertyPanelOpen: true,
-      setPropertyPanelOpen: mockSetPropertyPanelOpen,
-      propertyPanelInitialTab: 'overview',
-      setPropertyPanelInitialTab: vi.fn(),
-      getQueueByPath: mockGetQueueByPath,
-      selectQueue: mockSelectQueue,
     });
     mockGetQueueByPath.mockReturnValue(mockQueue);
 

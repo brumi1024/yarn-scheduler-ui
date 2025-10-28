@@ -60,6 +60,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'general' as PropertyCategory,
     defaultValue: '',
     required: true,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -78,6 +79,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'general' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -121,6 +123,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'limits' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'range',
@@ -138,6 +141,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'limits' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -159,6 +163,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'limits' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -175,6 +180,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'limits' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'range',
@@ -213,6 +219,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     enumValues: [
       {
         value: 'fifo',
@@ -235,6 +242,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     enableWhen: [({ getValue }) => getValue('ordering-policy') === 'fair'],
   },
   {
@@ -245,6 +253,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -267,6 +276,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'security' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -284,6 +294,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'security' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -301,6 +312,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'resource' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -317,6 +329,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'resource' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -334,6 +347,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -355,6 +369,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',
@@ -376,6 +391,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
   },
   {
     name: 'intra-queue-preemption.disable_preemption',
@@ -385,6 +401,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
   },
 
   {
@@ -397,26 +414,6 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     required: false,
     showWhen: [shouldShowLegacyAutoCreation],
   },
-  {
-    name: 'leaf-queue-template.capacity',
-    displayName: 'Leaf Queue Template Capacity',
-    description:
-      'Template capacity for auto-created leaf queues (required when auto-creation enabled)',
-    type: 'string' as PropertyType,
-    category: 'advanced' as PropertyCategory,
-    defaultValue: '',
-    required: false,
-    showWhen: [shouldShowLegacyAutoCreation],
-    enableWhen: [({ getValue }) => getValue('auto-create-child-queue.enabled') === 'true'],
-    validationRules: [
-      {
-        type: 'custom',
-        message: 'Required when auto-creation is enabled',
-        validator: (value: string) => capacityValueSchema.safeParse(value).success,
-      },
-    ],
-  },
-
   {
     name: 'auto-queue-creation-v2.enabled',
     displayName: 'Flexible Queue Auto-Creation',
@@ -456,6 +453,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     category: 'general' as PropertyCategory,
     defaultValue: '',
     required: false,
+    templateSupport: true,
     validationRules: [
       {
         type: 'custom',

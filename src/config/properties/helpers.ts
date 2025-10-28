@@ -5,6 +5,16 @@ export function getPropertiesByCategory(category: PropertyCategory): PropertyDes
   return queuePropertyDefinitions.filter((prop) => prop.category === category);
 }
 
+export function getTemplatePropertyDefinitions(): PropertyDescriptor[] {
+  return queuePropertyDefinitions.filter((prop) => prop.templateSupport);
+}
+
+export function getTemplatePropertiesByCategory(category: PropertyCategory): PropertyDescriptor[] {
+  return queuePropertyDefinitions.filter(
+    (prop) => prop.category === category && prop.templateSupport,
+  );
+}
+
 export function getPropertyCategories(): PropertyCategory[] {
   return ['general', 'resource', 'scheduling', 'limits', 'security', 'advanced'];
 }

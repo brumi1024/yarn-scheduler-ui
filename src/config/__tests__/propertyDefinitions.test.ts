@@ -174,54 +174,9 @@ describe('propertyDefinitions', () => {
         expect(negative).toBe(false);
       }
 
-      const leafQueueTemplate = queuePropertyDefinitions.find(
-        (p) => p.name === 'leaf-queue-template.capacity',
-      );
-      expect(Array.isArray(leafQueueTemplate?.enableWhen)).toBe(true);
-      const leafCondition = leafQueueTemplate?.enableWhen?.[0];
-      expect(leafCondition).toBeInstanceOf(Function);
-      if (leafCondition && leafQueueTemplate) {
-        const positiveValues: Record<string, string> = {
-          'auto-create-child-queue.enabled': 'true',
-        };
-        expect(
-          leafCondition({
-            scope: 'queue',
-            property: leafQueueTemplate,
-            propertyValue: '',
-            values: positiveValues,
-            globalValues: {},
-            queuePath: 'root.a',
-            queueInfo: null,
-            schedulerInfo: null,
-            stagedChanges: [],
-            configData: new Map(),
-            getValue: (name: string) => positiveValues[name],
-            getGlobalValue: () => undefined,
-            getQueueValue: () => undefined,
-            getConfigValue: () => undefined,
-          }),
-        ).toBe(true);
-
-        expect(
-          leafCondition({
-            scope: 'queue',
-            property: leafQueueTemplate,
-            propertyValue: '',
-            values: { 'auto-create-child-queue.enabled': 'false' },
-            globalValues: {},
-            queuePath: 'root.a',
-            queueInfo: null,
-            schedulerInfo: null,
-            stagedChanges: [],
-            configData: new Map(),
-            getValue: () => 'false',
-            getGlobalValue: () => undefined,
-            getQueueValue: () => undefined,
-            getConfigValue: () => undefined,
-          }),
-        ).toBe(false);
-      }
+      const templateSupported = queuePropertyDefinitions.filter((p) => p.templateSupport);
+      expect(templateSupported.length).toBeGreaterThan(0);
+      expect(templateSupported.some((p) => p.name === 'capacity')).toBe(true);
     });
 
     it('shows correct auto-creation properties based on capacity and legacy mode', () => {
@@ -231,23 +186,14 @@ describe('propertyDefinitions', () => {
       const flexibleAutoCreate = queuePropertyDefinitions.find(
         (p) => p.name === 'auto-queue-creation-v2.enabled',
       );
-      const legacyTemplateCapacity = queuePropertyDefinitions.find(
-        (p) => p.name === 'leaf-queue-template.capacity',
-      );
       const flexibleMaxQueues = queuePropertyDefinitions.find(
         (p) => p.name === 'auto-queue-creation-v2.max-queues',
       );
 
       expect(legacyAutoCreate).toBeDefined();
       expect(flexibleAutoCreate).toBeDefined();
-      expect(legacyTemplateCapacity).toBeDefined();
       expect(flexibleMaxQueues).toBeDefined();
-      if (
-        !legacyAutoCreate ||
-        !flexibleAutoCreate ||
-        !legacyTemplateCapacity ||
-        !flexibleMaxQueues
-      ) {
+      if (!legacyAutoCreate || !flexibleAutoCreate || !flexibleMaxQueues) {
         return;
       }
 
@@ -286,28 +232,6 @@ describe('propertyDefinitions', () => {
           }),
         ),
       ).toBe(false);
-
-      // Legacy template capacity follows legacy visibility rules
-      expect(
-        shouldShowProperty(
-          legacyTemplateCapacity,
-          createConditionOptions({
-            property: legacyTemplateCapacity,
-            capacity: '2w',
-            legacyMode: 'true',
-          }),
-        ),
-      ).toBe(false);
-      expect(
-        shouldShowProperty(
-          legacyTemplateCapacity,
-          createConditionOptions({
-            property: legacyTemplateCapacity,
-            capacity: '50',
-            legacyMode: 'true',
-          }),
-        ),
-      ).toBe(true);
 
       // Flexible max-queues aligns with flexible toggle visibility
       expect(

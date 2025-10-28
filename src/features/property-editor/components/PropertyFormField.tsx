@@ -84,7 +84,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       ) : null;
 
     const commonProps = {
-      disabled: !isEnabled,
       className: cn(
         stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
         error && 'ring-2 ring-destructive ring-offset-1',
@@ -93,8 +92,24 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
 
     switch (property.type) {
       case 'boolean':
-        return (
-          <>
+        return (() => {
+          const isLegacyAutoCreationToggle = property.name === 'auto-create-child-queue.enabled';
+          const isLockedLegacyToggle = isLegacyAutoCreationToggle && field.value === 'true';
+          const switchDisabled = !isEnabled || isLockedLegacyToggle;
+
+          const descriptionContent = isLockedLegacyToggle ? (
+            <>
+              {property.description ? <span>{property.description}</span> : null}
+              <span className="block text-muted-foreground">
+                Legacy auto-created queues cannot be disabled. Remove and recreate the queue to turn
+                off auto-creation.
+              </span>
+            </>
+          ) : (
+            (property.description ?? null)
+          );
+
+          const switchControl = (
             <FieldSwitch
               id={fieldName}
               fieldName={fieldName}
@@ -106,18 +121,21 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </Badge>
                 ) : null
               }
-              description={property.description}
+              description={descriptionContent}
               labelProps={{
                 className: cn(!isEnabled && 'text-muted-foreground'),
               }}
-              disabled={!isEnabled}
+              disabled={switchDisabled}
               checked={field.value === 'true'}
               onCheckedChange={(checked) => {
                 const nextValue = checked ? 'true' : 'false';
                 field.onChange(nextValue);
                 onBlur?.(property.name, nextValue);
               }}
-              switchClassName={commonProps.className}
+              switchClassName={cn(
+                commonProps.className,
+                isLockedLegacyToggle && 'disabled:opacity-100 disabled:bg-input',
+              )}
               message={
                 error
                   ? String(error.message ?? '')
@@ -126,9 +144,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     : undefined
               }
             />
-            {renderBusinessErrorsList(remainingBusinessErrors)}
-          </>
-        );
+          );
+
+          return (
+            <>
+              {switchControl}
+              {renderBusinessErrorsList(remainingBusinessErrors)}
+            </>
+          );
+        })();
 
       case 'enum': {
         const enumOptions = property.enumValues ?? [];

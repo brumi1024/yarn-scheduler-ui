@@ -204,6 +204,21 @@ describe('PropertyDescriptor interface', () => {
     expect(deprecatedProperty.deprecated).toBe(true);
     expect(deprecatedProperty.deprecationMessage).toBe('Use max-parallel-apps instead');
   });
+
+  it('should mark template-supported properties when configured', () => {
+    const templateProperty: PropertyDescriptor = {
+      name: 'capacity',
+      displayName: 'Capacity',
+      description: 'Queue capacity setting',
+      type: 'number',
+      category: 'general',
+      defaultValue: '0',
+      required: true,
+      templateSupport: true,
+    };
+
+    expect(templateProperty.templateSupport).toBe(true);
+  });
 });
 
 describe('ValidationRule interface', () => {

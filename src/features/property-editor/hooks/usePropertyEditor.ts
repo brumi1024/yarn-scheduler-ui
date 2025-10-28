@@ -12,6 +12,7 @@ import type { ValidationIssue } from '~/features/validation/types';
 import { isBlockingError } from '~/features/validation/ruleCategories';
 import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
+import { CONFIG_PREFIXES } from '~/types';
 
 function createFormSchema(
   properties: Array<
@@ -213,6 +214,91 @@ export function usePropertyEditor({
     [queuePath, stageQueueChange, allProperties],
   );
 
+  const collectTemplateProperties = useCallback(
+    (templateQueuePath: string): string[] => {
+      const properties = new Set<string>();
+      const prefix = `${CONFIG_PREFIXES.BASE}.${templateQueuePath}.`;
+
+      for (const key of configData.keys()) {
+        if (key.startsWith(prefix)) {
+          const propertyName = key.slice(prefix.length);
+          if (propertyName) {
+            properties.add(propertyName);
+          }
+        }
+      }
+
+      stagedChanges.forEach((change) => {
+        if (change.queuePath === templateQueuePath && change.property) {
+          properties.add(change.property);
+        }
+      });
+
+      return Array.from(properties);
+    },
+    [configData, stagedChanges],
+  );
+
+  const collectTemplateQueuePaths = useCallback(
+    (suffix: string): string[] => {
+      const result = new Set<string>();
+      const defaultPath = `${queuePath}.${suffix}`;
+      result.add(defaultPath);
+      const configPrefix = `${CONFIG_PREFIXES.BASE}.`;
+      const basePrefix = `${queuePath}.`;
+      const suffixToken = `.${suffix}`;
+
+      for (const key of configData.keys()) {
+        if (!key.startsWith(configPrefix)) {
+          continue;
+        }
+        const remainder = key.slice(configPrefix.length);
+        if (!remainder.startsWith(basePrefix)) {
+          continue;
+        }
+        const index = remainder.indexOf(suffixToken);
+        if (index === -1) {
+          continue;
+        }
+        const templateQueuePath = remainder.slice(0, index + suffix.length);
+        result.add(templateQueuePath);
+      }
+
+      stagedChanges.forEach((change) => {
+        const changePath = change.queuePath;
+        if (!changePath) {
+          return;
+        }
+        if (
+          changePath === `${queuePath}.${suffix}` ||
+          (changePath.startsWith(basePrefix) && changePath.includes(suffixToken))
+        ) {
+          result.add(changePath);
+        }
+      });
+
+      return Array.from(result);
+    },
+    [configData, stagedChanges, queuePath],
+  );
+
+  const stageTemplatePropertyRemovals = useCallback(
+    (templateQueuePaths: string[]): number => {
+      let removals = 0;
+
+      templateQueuePaths.forEach((templatePath) => {
+        const properties = collectTemplateProperties(templatePath);
+        properties.forEach((property) => {
+          stageQueueChange(templatePath, property, '');
+          removals += 1;
+        });
+      });
+
+      return removals;
+    },
+    [collectTemplateProperties, stageQueueChange],
+  );
+
   const handleFieldChange = useCallback(
     (propertyName: string) => (value: string) => {
       setValue(propertyName, value);
@@ -349,6 +435,8 @@ export function usePropertyEditor({
         }
 
         let stagedCount = 0;
+        let flexibleTemplatesDisabled = false;
+
         pendingEntries.forEach(([propertyName, value]) => {
           const fieldIssues = nonBlockingIssues.filter((issue) => issue.field === propertyName);
 
@@ -378,7 +466,22 @@ export function usePropertyEditor({
 
           stageChange(propertyName, value, uniqueIssues.length > 0 ? uniqueIssues : undefined);
           stagedCount += 1;
+
+          if (propertyName === 'auto-queue-creation-v2.enabled' && value !== 'true') {
+            flexibleTemplatesDisabled = true;
+          }
         });
+
+        if (flexibleTemplatesDisabled) {
+          const flexiblePaths = new Set<string>([
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.template'),
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.parent-template'),
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.leaf-template'),
+          ]);
+          if (flexiblePaths.size > 0) {
+            stagedCount += stageTemplatePropertyRemovals(Array.from(flexiblePaths));
+          }
+        }
 
         const result = {
           success: true,
@@ -419,6 +522,8 @@ export function usePropertyEditor({
       stagedChanges,
       reset,
       form,
+      collectTemplateQueuePaths,
+      stageTemplatePropertyRemovals,
     ],
   );
 
