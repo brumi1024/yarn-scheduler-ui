@@ -372,11 +372,11 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             <Field>
               <FieldLabel
                 className={cn(
-                  'flex items-center gap-2 justify-between',
+                  'flex flex-wrap items-center gap-2',
                   !isEnabled && 'text-muted-foreground',
                 )}
               >
-                <div className="flex items-center gap-1 min-w-0">
+                <div className="flex min-w-0 flex-1 items-center gap-1">
                   <span className="truncate">
                     {property.displayName}
                     {property.required ? ' *' : ''}
@@ -388,22 +388,26 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   )}
                 </div>
 
-                {isCapacityField ? (
-                  <Button
-                    type="button"
-                    size="sm"
-                    variant="outline"
-                    className="text-xs"
-                    onClick={handleOpenCapacityEditor}
-                    disabled={!parentQueuePath || !isEnabled}
-                  >
-                    Capacity Editor
-                  </Button>
-                ) : (
-                  <span className="text-xs text-muted-foreground">Managed in Capacity Editor</span>
-                )}
+                <div className="ml-auto flex-shrink-0">
+                  {isCapacityField ? (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="text-xs"
+                      onClick={handleOpenCapacityEditor}
+                      disabled={!parentQueuePath || !isEnabled}
+                    >
+                      Capacity Editor
+                    </Button>
+                  ) : (
+                    <span className="text-xs text-muted-foreground">
+                      Managed in Capacity Editor
+                    </span>
+                  )}
+                </div>
               </FieldLabel>
-              <div className="mt-2 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm font-mono text-foreground">
+              <div className="mt-2 w-full break-all rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm font-mono text-foreground">
                 {displayValue}
               </div>
               {property.description && !(isCapacityField || isMaxCapacityField) && (

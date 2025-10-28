@@ -44,6 +44,8 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
   labelInfo,
   creationMethod,
 }) => {
+  const baseIconBadgeClasses = 'h-7 px-2 py-1 gap-1.5 [&>svg]:h-[16px] [&>svg]:w-[16px]';
+
   const getCapacityModeBadgeClass = () => {
     switch (capacityMode) {
       case 'weight':
@@ -98,7 +100,14 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
       {/* Capacity Mode */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant="secondary" className={cn('px-2 py-1', getCapacityModeBadgeClass())}>
+          <Badge
+            variant="secondary"
+            className={cn(
+              baseIconBadgeClasses,
+              'min-w-[28px] justify-center',
+              getCapacityModeBadgeClass(),
+            )}
+          >
             {getCapacityModeIcon()}
           </Badge>
         </TooltipTrigger>
@@ -114,7 +123,10 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
       {/* Queue State */}
       <Tooltip>
         <TooltipTrigger asChild>
-          <Badge variant={getStateVariant()} className="px-2 py-1">
+          <Badge
+            variant={getStateVariant()}
+            className={cn(baseIconBadgeClasses, 'min-w-[28px] justify-center')}
+          >
             {getStateIcon(state)}
           </Badge>
         </TooltipTrigger>
@@ -127,9 +139,12 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
           <TooltipTrigger asChild>
             <Badge
               variant="outline"
-              className="px-2 py-1 text-queue-modified border-queue-modified/30 flex items-center gap-0.5"
+              className={cn(
+                baseIconBadgeClasses,
+                'flex items-center gap-1 text-queue-modified border-queue-modified/30',
+              )}
             >
-              <ArrowRight className="w-3.5 h-3.5" />
+              <ArrowRight className="w-4 h-4" />
               {getStateIcon(stagedState)}
             </Badge>
           </TooltipTrigger>
@@ -144,7 +159,8 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(
-                'px-2 py-1 flex items-center gap-0.5',
+                baseIconBadgeClasses,
+                'flex items-center gap-1',
                 autoCreationStatus.status === 'flexible'
                   ? 'text-queue-running border-queue-running/30'
                   : 'text-queue-modified border-queue-modified/30',
@@ -155,7 +171,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
               ) : (
                 <RefreshCw className="w-4 h-4" />
               )}
-              {autoCreationStatus.isStaged && <ArrowRight className="w-3.5 h-3.5" />}
+              {autoCreationStatus.isStaged && <ArrowRight className="w-4 h-4" />}
             </Badge>
           </TooltipTrigger>
           <TooltipContent>
@@ -174,7 +190,8 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(
-                'px-2 py-1 flex items-center gap-1 border-amber-400 text-amber-600 dark:text-amber-400',
+                baseIconBadgeClasses,
+                'flex items-center gap-1 text-sm border-amber-400 text-amber-600 dark:text-amber-400',
               )}
             >
               {creationMethod === 'dynamicFlexible' ? (
@@ -203,7 +220,8 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
             <Badge
               variant="outline"
               className={cn(
-                'px-2 py-1',
+                baseIconBadgeClasses,
+                'min-w-[28px] justify-center',
                 stagedStatus === 'new'
                   ? 'text-queue-new border-queue-new/30'
                   : stagedStatus === 'modified'
@@ -229,7 +247,10 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
       {labelInfo?.isLabelSpecific && (
         <Tooltip>
           <TooltipTrigger asChild>
-            <Badge variant="outline" className="px-2 py-1 flex items-center gap-0.5">
+            <Badge
+              variant="outline"
+              className={cn(baseIconBadgeClasses, 'flex items-center gap-1 text-sm')}
+            >
               <Tag className="w-4 h-4" />
               <span className="text-xs">{labelInfo.label}</span>
             </Badge>

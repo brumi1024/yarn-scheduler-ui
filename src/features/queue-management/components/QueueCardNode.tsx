@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 
 import {
@@ -18,6 +18,7 @@ import {
   ContextMenuTrigger,
 } from '~/components/ui/context-menu';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
+import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
 import {
   Plus,
   Trash2,
@@ -41,6 +42,7 @@ import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 import { Badge } from '~/components/ui/badge';
 import { parseCapacityValue as parseCapacityValueUtil } from '~/utils/capacityUtils';
 import { useCapacityEditor } from '../hooks/useCapacityEditor';
+import { QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '../constants';
 
 type CapacityDisplay =
   | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }
@@ -51,6 +53,44 @@ type CapacityDisplay =
 type ResourceVectorEntry = {
   resource: string;
   value: string;
+};
+
+const PRIORITY_RESOURCES = ['memory', 'vcores'];
+const INLINE_RESOURCE_LIMIT = 2;
+const normalizeResourceKey = (resource: string) => resource.toLowerCase();
+const createEntryMap = (entries: ResourceVectorEntry[]) => {
+  const map = new Map<string, ResourceVectorEntry>();
+  entries.forEach((entry) => {
+    map.set(normalizeResourceKey(entry.resource), entry);
+  });
+  return map;
+};
+const getResourceOrder = (
+  capacityEntries: ResourceVectorEntry[],
+  maxEntries: ResourceVectorEntry[],
+) => {
+  const ordered: string[] = [];
+  const seen = new Set<string>();
+  const register = (entry?: ResourceVectorEntry) => {
+    if (!entry) {
+      return;
+    }
+    const key = normalizeResourceKey(entry.resource);
+    if (seen.has(key)) {
+      return;
+    }
+    seen.add(key);
+    ordered.push(entry.resource);
+  };
+  PRIORITY_RESOURCES.forEach((priority) => {
+    const match =
+      capacityEntries.find((entry) => normalizeResourceKey(entry.resource) === priority) ??
+      maxEntries.find((entry) => normalizeResourceKey(entry.resource) === priority);
+    register(match);
+  });
+  capacityEntries.forEach((entry) => register(entry));
+  maxEntries.forEach((entry) => register(entry));
+  return ordered;
 };
 
 const parseResourceVector = (value: string): ResourceVectorEntry[] => {
@@ -192,13 +232,129 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const parsedCapacityMode = parseCapacityValueUtil(displayCapacity);
   const capacityMode: 'percentage' | 'weight' | 'absolute' =
     parsedCapacityMode?.type ?? 'percentage';
-  const parsedCapacityDisplay = getCapacityDisplay(displayCapacity);
-  const parsedMaxCapacityDisplay = getCapacityDisplay(displayMaxCapacity);
+  const parsedCapacityDisplay = useMemo(
+    () => getCapacityDisplay(displayCapacity),
+    [displayCapacity],
+  );
+  const parsedMaxCapacityDisplay = useMemo(
+    () => getCapacityDisplay(displayMaxCapacity),
+    [displayMaxCapacity],
+  );
   const showVectorCapacity =
     parsedCapacityDisplay.type === 'vector' || parsedMaxCapacityDisplay.type === 'vector';
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
+
+  const capacityEntries = useMemo<ResourceVectorEntry[]>(() => {
+    if (parsedCapacityDisplay.type === 'vector') {
+      return parsedCapacityDisplay.entries;
+    }
+    return [];
+  }, [parsedCapacityDisplay]);
+  const maxCapacityEntries = useMemo<ResourceVectorEntry[]>(() => {
+    if (parsedMaxCapacityDisplay.type === 'vector') {
+      return parsedMaxCapacityDisplay.entries;
+    }
+    return [];
+  }, [parsedMaxCapacityDisplay]);
+  const capacityEntryMap = useMemo(() => createEntryMap(capacityEntries), [capacityEntries]);
+  const maxCapacityEntryMap = useMemo(
+    () => createEntryMap(maxCapacityEntries),
+    [maxCapacityEntries],
+  );
+  const resourceOrder = useMemo(
+    () => getResourceOrder(capacityEntries, maxCapacityEntries),
+    [capacityEntries, maxCapacityEntries],
+  );
+  const inlineResourceNames = useMemo(
+    () => resourceOrder.slice(0, INLINE_RESOURCE_LIMIT),
+    [resourceOrder],
+  );
+  const overflowResourceNames = useMemo(
+    () => resourceOrder.slice(INLINE_RESOURCE_LIMIT),
+    [resourceOrder],
+  );
+  const hasOverflowResources = overflowResourceNames.length > 0;
+  const getInlineBadges = useMemo(
+    () => (entryMap: Map<string, ResourceVectorEntry>) => {
+      const badges: React.ReactNode[] = [];
+      inlineResourceNames.forEach((resourceName) => {
+        const entry = entryMap.get(normalizeResourceKey(resourceName));
+        if (!entry) {
+          return;
+        }
+        badges.push(
+          <Badge
+            key={`inline-${entry.resource}-${entry.value}`}
+            variant="outline"
+            className="px-1.5 py-0.5 text-[11px] leading-tight font-medium whitespace-normal break-all"
+          >
+            {entry.resource}: {entry.value}
+          </Badge>,
+        );
+      });
+      return badges;
+    },
+    [inlineResourceNames],
+  );
+  const capacityInlineBadges = getInlineBadges(capacityEntryMap);
+  const maxCapacityInlineBadges = getInlineBadges(maxCapacityEntryMap);
+  const overflowSummaryBadge = hasOverflowResources ? (
+    <Popover>
+      <PopoverTrigger asChild>
+        <Badge
+          asChild
+          variant="outline"
+          className="px-1.5 py-0.5 text-[11px] leading-tight font-medium cursor-pointer"
+        >
+          <button
+            type="button"
+            onClick={(event) => event.stopPropagation()}
+            onMouseDown={(event) => event.stopPropagation()}
+            onPointerDown={(event) => event.stopPropagation()}
+            aria-label={`Show ${overflowResourceNames.length} additional resource${
+              overflowResourceNames.length === 1 ? '' : 's'
+            }`}
+          >
+            +{overflowResourceNames.length} more
+          </button>
+        </Badge>
+      </PopoverTrigger>
+      <PopoverContent align="end" className="w-80">
+        <div className="space-y-3">
+          <div>
+            <p className="text-sm font-medium">Resource capacity details</p>
+            <p className="text-xs text-muted-foreground">
+              Review the full capacity and maximum capacity values.
+            </p>
+          </div>
+          <div className="grid grid-cols-[1.2fr_1fr_1fr] gap-x-3 gap-y-2 text-sm">
+            <span className="text-xs uppercase tracking-wide text-muted-foreground">resource</span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground text-right">
+              capacity
+            </span>
+            <span className="text-xs uppercase tracking-wide text-muted-foreground text-right">
+              max
+            </span>
+            {resourceOrder.map((resourceName) => {
+              const key = normalizeResourceKey(resourceName);
+              const capacityEntry = capacityEntryMap.get(key);
+              const maxEntry = maxCapacityEntryMap.get(key);
+              const displayName = capacityEntry?.resource ?? maxEntry?.resource ?? resourceName;
+              return (
+                <React.Fragment key={`resource-${key}`}>
+                  <span className="font-medium text-foreground">{displayName}</span>
+                  <span className="text-right tabular-nums">{capacityEntry?.value ?? '—'}</span>
+                  <span className="text-right tabular-nums">{maxEntry?.value ?? '—'}</span>
+                </React.Fragment>
+              );
+            })}
+          </div>
+        </div>
+      </PopoverContent>
+    </Popover>
+  ) : null;
 
   const openPropertyPanel = (
     event: React.MouseEvent,
@@ -258,30 +414,10 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     updateQueueProperty(queuePath, 'state', newState);
   };
 
-  const renderResourceEntries = (entries: ResourceVectorEntry[]) => {
-    if (!entries.length) {
-      return <span className="text-xs text-muted-foreground">N/A</span>;
-    }
-
-    return (
-      <div className="flex flex-wrap gap-1">
-        {entries.map(({ resource, value }, index) => (
-          <Badge
-            key={`${resource}-${value}-${index}`}
-            variant="outline"
-            className="px-1.5 py-0.5 text-[11px] leading-tight font-medium whitespace-normal break-all"
-          >
-            {resource}: {value}
-          </Badge>
-        ))}
-      </div>
-    );
-  };
-
   const cardContent = (
     <Card
       className={cn(
-        'relative w-[400px] h-[300px] transition-all duration-200 flex flex-col',
+        'relative transition-all duration-200 flex flex-col',
         // Enhanced background and border for better contrast
         'bg-gray-50 dark:bg-gray-900 border-gray-300 dark:border-gray-700',
         isAutoCreatedQueue &&
@@ -305,10 +441,12 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         isSelectedForComparison && !isSelectedQueue && 'bg-gray-200 dark:bg-gray-700',
         // Gray out inaccessible queues when filtered by label
         shouldGrayOut && 'opacity-50 grayscale',
+        'gap-4 py-5',
       )}
       onClick={(event) => openPropertyPanel(event, 'overview')}
+      style={{ width: QUEUE_CARD_WIDTH, height: QUEUE_CARD_HEIGHT }}
     >
-      <CardHeader>
+      <CardHeader className="px-5 pb-3 gap-1">
         <div className="flex items-start justify-between">
           <div className="flex-1">
             <CardTitle className="text-base truncate">{queueName}</CardTitle>
@@ -396,87 +534,101 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         </CardAction>
       </CardHeader>
 
-      <CardContent>
-        {/* Capacity info */}
-        <div className="mb-3">
-          {showVectorCapacity ? (
-            <div className="flex flex-col gap-1.5">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  capacity
-                </span>
-                <div className="flex-1 min-w-[120px]">
-                  {parsedCapacityDisplay.type === 'vector' ? (
-                    renderResourceEntries(parsedCapacityDisplay.entries)
-                  ) : (
-                    <span className="text-sm font-medium">
-                      {parsedCapacityDisplay.type === 'percentage' ||
-                      parsedCapacityDisplay.type === 'weight'
-                        ? parsedCapacityDisplay.formatted
-                        : 'N/A'}
-                    </span>
-                  )}
+      <CardContent className="px-5 pt-0 pb-4 flex-1 flex flex-col">
+        <div className="space-y-2">
+          {/* Capacity info */}
+          <div>
+            {showVectorCapacity ? (
+              <div className="flex flex-col gap-1">
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    capacity
+                  </span>
+                  <div className="flex-1 min-w-[120px]">
+                    {parsedCapacityDisplay.type === 'vector' ? (
+                      capacityInlineBadges.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">{capacityInlineBadges}</div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )
+                    ) : (
+                      <span className="text-sm font-medium">
+                        {parsedCapacityDisplay.type === 'percentage' ||
+                        parsedCapacityDisplay.type === 'weight'
+                          ? parsedCapacityDisplay.formatted
+                          : 'N/A'}
+                      </span>
+                    )}
+                  </div>
                 </div>
-              </div>
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="text-xs uppercase tracking-wide text-muted-foreground">
-                  maximum capacity
-                </span>
-                <div className="flex-1 min-w-[120px]">
-                  {parsedMaxCapacityDisplay.type === 'vector' ? (
-                    renderResourceEntries(parsedMaxCapacityDisplay.entries)
-                  ) : (
-                    <span className="text-sm font-medium text-muted-foreground">
-                      {parsedMaxCapacityDisplay.type === 'percentage' ||
-                      parsedMaxCapacityDisplay.type === 'weight'
-                        ? parsedMaxCapacityDisplay.formatted
-                        : 'N/A'}
-                    </span>
-                  )}
+                <div className="flex flex-wrap items-center gap-1.5">
+                  <span className="text-xs uppercase tracking-wide text-muted-foreground">
+                    max capacity
+                  </span>
+                  <div className="flex-1 min-w-[120px]">
+                    {parsedMaxCapacityDisplay.type === 'vector' ? (
+                      maxCapacityInlineBadges.length > 0 ? (
+                        <div className="flex flex-wrap gap-1">{maxCapacityInlineBadges}</div>
+                      ) : (
+                        <span className="text-xs text-muted-foreground">N/A</span>
+                      )
+                    ) : (
+                      <span className="text-sm font-medium text-muted-foreground">
+                        {parsedMaxCapacityDisplay.type === 'percentage' ||
+                        parsedMaxCapacityDisplay.type === 'weight'
+                          ? parsedMaxCapacityDisplay.formatted
+                          : 'N/A'}
+                      </span>
+                    )}
+                  </div>
                 </div>
+                {overflowSummaryBadge && (
+                  <div className="flex justify-end pt-0.5">{overflowSummaryBadge}</div>
+                )}
               </div>
-            </div>
-          ) : (
-            <>
-              <div className="flex items-baseline gap-1">
-                <span className="text-2xl font-bold">
-                  {parsedCapacityDisplay.type === 'percentage' ||
-                  parsedCapacityDisplay.type === 'weight'
-                    ? parsedCapacityDisplay.formatted
+            ) : (
+              <>
+                <div className="flex items-baseline gap-1">
+                  <span className="text-2xl font-bold">
+                    {parsedCapacityDisplay.type === 'percentage' ||
+                    parsedCapacityDisplay.type === 'weight'
+                      ? parsedCapacityDisplay.formatted
+                      : 'N/A'}
+                  </span>
+                  <span className="text-sm text-muted-foreground">capacity</span>
+                </div>
+                <div className="text-xs text-muted-foreground">
+                  Maximum capacity:{' '}
+                  {parsedMaxCapacityDisplay.type === 'percentage' ||
+                  parsedMaxCapacityDisplay.type === 'weight'
+                    ? parsedMaxCapacityDisplay.formatted
                     : 'N/A'}
-                </span>
-                <span className="text-sm text-muted-foreground">capacity</span>
-              </div>
-              <div className="text-xs text-muted-foreground">
-                Maximum capacity:{' '}
-                {parsedMaxCapacityDisplay.type === 'percentage' ||
-                parsedMaxCapacityDisplay.type === 'weight'
-                  ? parsedMaxCapacityDisplay.formatted
-                  : 'N/A'}
-              </div>
-            </>
+                </div>
+              </>
+            )}
+          </div>
+
+          {/* Show why queue is inaccessible */}
+          {shouldGrayOut && (
+            <div className="text-xs text-muted-foreground">
+              {labelCapacityInfo?.hasAccess && parseFloat(labelCapacityInfo.capacity) === 0
+                ? `No capacity allocated for partition: ${selectedNodeLabelFilter}`
+                : `No access to partition: ${selectedNodeLabelFilter}`}
+            </div>
           )}
         </div>
 
-        {/* Show why queue is inaccessible */}
-        {shouldGrayOut && (
-          <div className="text-xs text-muted-foreground mb-2">
-            {labelCapacityInfo?.hasAccess && parseFloat(labelCapacityInfo.capacity) === 0
-              ? `No capacity allocated for partition: ${selectedNodeLabelFilter}`
-              : `No access to partition: ${selectedNodeLabelFilter}`}
-          </div>
-        )}
+        <div className="mt-auto space-y-2.5 pt-2">
+          <QueueCapacityProgress
+            capacity={capacity}
+            maxCapacity={maxCapacity}
+            usedCapacity={usedCapacity}
+          />
 
-        <QueueCapacityProgress
-          capacity={capacity}
-          maxCapacity={maxCapacity}
-          usedCapacity={usedCapacity}
-        />
+          <div className="border-t border-border" />
 
-        {/* Divider */}
-        <div className="border-t border-border my-3" />
-
-        <QueueResourceStats numApplications={numApplications} resourcesUsed={resourcesUsed} />
+          <QueueResourceStats numApplications={numApplications} resourcesUsed={resourcesUsed} />
+        </div>
       </CardContent>
 
       <Handle
