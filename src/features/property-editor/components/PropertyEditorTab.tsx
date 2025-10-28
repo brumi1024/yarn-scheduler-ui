@@ -255,23 +255,38 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       return states;
     }, [properties, conditionBase]);
 
-    const visiblePropertiesByCategory = React.useMemo(() => {
-      const result: Partial<Record<PropertyCategory, typeof properties>> = {};
+    const { visibleByCategory: visiblePropertiesByCategory, fieldCategoryMap } =
+      React.useMemo(() => {
+        const visibleByCategory: Partial<Record<PropertyCategory, typeof properties>> = {};
+        const fieldCategoryMap = new Map<string, Set<PropertyCategory>>();
 
-      Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
-        const typedCategory = categoryKey as PropertyCategory;
-        const filtered = props.filter((property) => {
-          const propertyName = property.originalName || property.name;
-          return propertyStates.get(propertyName)?.visible ?? true;
-        }) as typeof properties;
+        Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
+          const typedCategory = categoryKey as PropertyCategory;
+          const filtered = props.filter((property) => {
+            const propertyName = property.originalName || property.name;
+            return propertyStates.get(propertyName)?.visible ?? true;
+          }) as typeof properties;
 
-        if (filtered.length > 0) {
-          result[typedCategory] = filtered;
-        }
-      });
+          if (filtered.length === 0) {
+            return;
+          }
 
-      return result;
-    }, [propertiesByCategory, propertyStates]);
+          visibleByCategory[typedCategory] = filtered;
+
+          filtered.forEach((property) => {
+            const keys = new Set<string>([property.originalName || property.name, property.name]);
+
+            keys.forEach((key) => {
+              if (!fieldCategoryMap.has(key)) {
+                fieldCategoryMap.set(key, new Set<PropertyCategory>());
+              }
+              fieldCategoryMap.get(key)!.add(typedCategory);
+            });
+          });
+        });
+
+        return { visibleByCategory, fieldCategoryMap };
+      }, [propertiesByCategory, propertyStates]);
 
     const availableCategories = React.useMemo(
       () =>
@@ -282,28 +297,33 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     );
 
     // Find categories with errors
-    const categoriesWithErrors = React.useMemo(() => {
-      const errorCategories: Set<PropertyCategory> = new Set();
+    const categoryErrorInfo = React.useMemo(() => {
+      const counts: Partial<Record<PropertyCategory, number>> = {};
 
       if (!errors || Object.keys(errors).length === 0) {
-        return errorCategories;
+        return counts;
       }
 
       Object.keys(errors).forEach((fieldName) => {
-        availableCategories.forEach((category) => {
-          const categoryProps = visiblePropertiesByCategory[category] ?? [];
-          if (
-            categoryProps.some(
-              (prop) => (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
-            )
-          ) {
-            errorCategories.add(category);
-          }
+        const categories = fieldCategoryMap.get(fieldName);
+        if (!categories) {
+          return;
+        }
+        categories.forEach((category) => {
+          counts[category] = (counts[category] ?? 0) + 1;
         });
       });
 
-      return errorCategories;
-    }, [errors, availableCategories, visiblePropertiesByCategory]);
+      return counts;
+    }, [errors, fieldCategoryMap]);
+
+    const categoriesWithErrors = React.useMemo(() => {
+      return new Set(
+        (Object.entries(categoryErrorInfo) as Array<[PropertyCategory, number]>)
+          .filter(([, count]) => count > 0)
+          .map(([category]) => category),
+      );
+    }, [categoryErrorInfo]);
 
     // Auto-expand categories with errors
     React.useEffect(() => {
@@ -338,12 +358,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                 const categoryProps = visiblePropertiesByCategory[category] ?? [];
                 const config = categoryConfig[category];
                 const hasErrors = categoriesWithErrors.has(category);
-                const errorCount = Object.keys(errors).filter((fieldName) =>
-                  categoryProps.some(
-                    (prop) =>
-                      (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
-                  ),
-                ).length;
+                const errorCount = categoryErrorInfo[category] ?? 0;
 
                 return (
                   <AccordionItem key={category} value={category} className="border rounded-lg mb-2">
@@ -393,7 +408,6 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                                 queueName={queue.queueName}
                                 parentQueuePath={parentQueuePath}
                                 currentValues={watchedValues}
-                                setFormValue={form.setValue}
                               />
                               {shouldRenderTemplateButton && (
                                 <div className="pt-1">

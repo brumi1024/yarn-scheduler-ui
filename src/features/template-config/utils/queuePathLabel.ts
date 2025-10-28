@@ -1,4 +1,4 @@
-const DEFAULT_QUEUE_PATH_LABEL_MAX_LENGTH = 40;
+const DEFAULT_QUEUE_PATH_LABEL_MAX_LENGTH = 28;
 
 export function formatQueuePathLabel(
   path: string,
