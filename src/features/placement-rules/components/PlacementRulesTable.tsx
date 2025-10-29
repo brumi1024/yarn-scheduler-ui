@@ -275,7 +275,7 @@ export function PlacementRulesTable({
             <>
               <DropZoneRow index={0} onReorder={onReorder} />
               {rules.map((rule, index) => (
-                <React.Fragment key={`rule-${index}`}>
+                <React.Fragment key={`rule-${rule.type}-${rule.matches}-${rule.policy}`}>
                   <DraggableTableRow
                     rule={rule}
                     index={index}

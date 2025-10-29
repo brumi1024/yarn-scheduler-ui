@@ -18,6 +18,7 @@ import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyCondition
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
 
 export const GlobalSettings: React.FC = () => {
+  'use memo';
   const {
     getGlobalPropertyValue,
     getQueuePropertyValue,

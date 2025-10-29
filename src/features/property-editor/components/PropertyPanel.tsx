@@ -49,8 +49,8 @@ export const PropertyPanel: React.FC = () => {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
-  const [isSummaryOpen, setSummaryOpen] = useState(false);
-  const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
 
   const propertyEditorRef = useRef<PropertyEditorTabHandle>(null);
   const { errors: validationState } = useValidation();
@@ -118,7 +118,7 @@ export const PropertyPanel: React.FC = () => {
 
   useEffect(() => {
     if (!isPropertyPanelOpen) {
-      setTemplateDialogOpen(false);
+      setIsTemplateDialogOpen(false);
     }
   }, [isPropertyPanelOpen]);
 
@@ -127,7 +127,7 @@ export const PropertyPanel: React.FC = () => {
       return;
     }
     if (showTemplateButton) {
-      setTemplateDialogOpen(true);
+      setIsTemplateDialogOpen(true);
     }
     clearTemplateConfigRequest();
   }, [shouldOpenTemplateConfig, showTemplateButton, clearTemplateConfigRequest]);
@@ -148,7 +148,7 @@ export const PropertyPanel: React.FC = () => {
       // Check if form is valid before submitting
       if (!propertyEditorRef.current.isValid()) {
         toast.error('Please fix validation errors before staging changes');
-        setSummaryOpen(true);
+        setIsSummaryOpen(true);
         return;
       }
 
@@ -166,7 +166,7 @@ export const PropertyPanel: React.FC = () => {
     if (propertyEditorRef.current) {
       propertyEditorRef.current.reset();
     }
-    setSummaryOpen(false);
+    setIsSummaryOpen(false);
   };
 
   const handleHasChangesChange = (newHasChanges: boolean) => {
@@ -185,7 +185,7 @@ export const PropertyPanel: React.FC = () => {
     // Check if form is valid
     if (propertyEditorRef.current && !propertyEditorRef.current.isValid()) {
       toast.error('Please fix validation errors before saving');
-      setSummaryOpen(true);
+      setIsSummaryOpen(true);
       return; // Don't close the dialog or panel
     }
 
@@ -207,13 +207,13 @@ export const PropertyPanel: React.FC = () => {
     if (!isPropertyPanelOpen || !selectedQueuePath) {
       setHasChanges(false);
       setIsFormDirty(false);
-      setSummaryOpen(false);
+      setIsSummaryOpen(false);
     }
   }, [isPropertyPanelOpen, selectedQueuePath]);
 
   useEffect(() => {
     if (!isPropertyPanelOpen) {
-      setSummaryOpen(false);
+      setIsSummaryOpen(false);
     }
   }, [isPropertyPanelOpen]);
 
@@ -267,7 +267,7 @@ export const PropertyPanel: React.FC = () => {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       element.focus?.();
     }
-    setSummaryOpen(false);
+    setIsSummaryOpen(false);
   }, []);
 
   if (!isPanelVisible || !selectedQueue) {
@@ -295,7 +295,7 @@ export const PropertyPanel: React.FC = () => {
                   <span className="text-xs text-muted-foreground">{selectedQueue.queuePath}</span>
                   <div className="flex-1" />
                   {issueList.length > 0 && (
-                    <Popover open={isSummaryOpen} onOpenChange={setSummaryOpen}>
+                    <Popover open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           size="sm"
@@ -434,7 +434,7 @@ export const PropertyPanel: React.FC = () => {
                           canManageTemplates: showTemplateButton,
                           legacyAvailable: legacyTemplateAvailable,
                           flexibleAvailable: flexibleTemplateAvailable,
-                          onOpenTemplateConfig: () => setTemplateDialogOpen(true),
+                          onOpenTemplateConfig: () => setIsTemplateDialogOpen(true),
                         }
                       : undefined
                   }
@@ -488,7 +488,7 @@ export const PropertyPanel: React.FC = () => {
         <TemplateConfigDialog
           open={isTemplateDialogOpen}
           queuePath={selectedQueuePath}
-          onClose={() => setTemplateDialogOpen(false)}
+          onClose={() => setIsTemplateDialogOpen(false)}
         />
       )}
     </>

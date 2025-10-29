@@ -494,8 +494,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
                       <ul className="text-sm space-y-1">
                         {validationErrors
                           .filter((e) => e.severity === 'error')
-                          .map((error, idx) => (
-                            <li key={idx}>• {error.message}</li>
+                          .map((error) => (
+                            <li key={`${error.field}-${error.message}`}>• {error.message}</li>
                           ))}
                       </ul>
                     </TooltipContent>

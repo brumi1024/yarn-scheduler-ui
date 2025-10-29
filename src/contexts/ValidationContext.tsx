@@ -1,11 +1,4 @@
-import {
-  createContext,
-  useCallback,
-  useContext,
-  useMemo,
-  useState,
-  type PropsWithChildren,
-} from 'react';
+import { createContext, use, useCallback, useMemo, useState, type PropsWithChildren } from 'react';
 import type { JSX } from 'react';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { mergeStagedConfig, applyFieldPreview } from '~/features/validation/utils/configUtils';
@@ -229,12 +222,12 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
     [errors, validateField, replaceQueueIssues, clearFieldErrors, clearQueueErrors, clearAllErrors],
   );
 
-  return <ValidationContext.Provider value={value}>{children}</ValidationContext.Provider>;
+  return <ValidationContext value={value}>{children}</ValidationContext>;
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
 export const useValidation = (): ValidationContextValue => {
-  const context = useContext(ValidationContext);
+  const context = use(ValidationContext);
   if (!context) {
     throw new Error('useValidation must be used within a ValidationProvider');
   }

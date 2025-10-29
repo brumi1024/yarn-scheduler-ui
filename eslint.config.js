@@ -80,6 +80,7 @@ export default tseslint.config(
       '@eslint-react/react-in-jsx-scope': 'off',
       '@eslint-react/prop-types': 'off',
       '@eslint-react/display-name': 'off',
+      '@eslint-react/hooks-extra/no-direct-set-state-in-use-effect': 'off',
     },
   },
 

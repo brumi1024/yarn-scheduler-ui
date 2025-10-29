@@ -82,8 +82,8 @@ const renderBusinessErrorsList = (fieldName: string, messages: string[]) => {
 
   return (
     <div className="mt-1 space-y-1">
-      {messages.map((message, index) => (
-        <div key={`business-error-${fieldName}-${index}`} className="text-xs text-destructive">
+      {messages.map((message) => (
+        <div key={`business-error-${fieldName}-${message}`} className="text-xs text-destructive">
           {message}
         </div>
       ))}
@@ -98,10 +98,10 @@ const PropertyWarnings: React.FC<{ warnings: string[] }> = ({ warnings }) => {
 
   return (
     <div className="mt-1 space-y-1">
-      {warnings.map((warning, index) => {
+      {warnings.map((warning) => {
         const isLegacyMode = warning.includes('legacy mode requirement');
         return (
-          <div key={`warning-${index}`} className="flex items-start gap-1.5">
+          <div key={`warning-${warning}`} className="flex items-start gap-1.5">
             <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-yellow-600 dark:text-yellow-500" />
             <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
             {isLegacyMode && (

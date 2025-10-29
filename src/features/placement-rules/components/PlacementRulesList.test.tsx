@@ -19,7 +19,7 @@ vi.mock('./PlacementRulesTable', () => ({
       <table>
         <tbody>
           {rules.map((rule: PlacementRule, index: number) => (
-            <tr key={index} onClick={() => onSelect(index)}>
+            <tr key={`${rule.type}-${rule.matches}-${rule.policy}`} onClick={() => onSelect(index)}>
               <td>{rule.type}</td>
               <td>{rule.matches}</td>
               <td>

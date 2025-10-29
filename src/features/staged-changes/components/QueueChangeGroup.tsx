@@ -20,7 +20,7 @@ export const QueueChangeGroup: React.FC<QueueChangeGroupProps> = ({
 }) => {
   const [isOpen, setIsOpen] = useState(true);
   const [expandedTypes, setExpandedTypes] = useState<Set<StagedChangeType>>(
-    new Set(['add', 'update', 'remove']),
+    () => new Set(['add', 'update', 'remove']),
   );
 
   // Group changes by type

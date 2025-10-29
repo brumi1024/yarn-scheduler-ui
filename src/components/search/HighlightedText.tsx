@@ -28,15 +28,17 @@ export const HighlightedText: React.FC<HighlightedTextProps> = ({ text, highligh
 
   return (
     <span className={className}>
+      {/* eslint-disable @eslint-react/no-array-index-key */}
       {parts.map((part, i) =>
         part.toLowerCase() === highlight.toLowerCase() ? (
-          <mark key={i} className="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">
+          <mark key={`${part}-${i}`} className="bg-yellow-200 dark:bg-yellow-800 px-0.5 rounded">
             {part}
           </mark>
         ) : (
-          <span key={i}>{part}</span>
+          <span key={`${part}-${i}`}>{part}</span>
         ),
       )}
+      {/* eslint-enable @eslint-react/no-array-index-key */}
     </span>
   );
 };

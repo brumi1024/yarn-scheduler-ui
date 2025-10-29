@@ -119,8 +119,8 @@ export const PlacementRulesMigrationDialog = ({
                   <AlertDescription>
                     Migration failed:
                     <ul className="mt-2 list-disc list-inside">
-                      {migrationResult.errors.map((error, i) => (
-                        <li key={i}>{error}</li>
+                      {migrationResult.errors.map((error) => (
+                        <li key={error}>{error}</li>
                       ))}
                     </ul>
                   </AlertDescription>
