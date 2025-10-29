@@ -13,6 +13,7 @@ import type {
   SchedulerResponse,
 } from '../types';
 import { QUEUE_TYPES, SPECIAL_VALUES } from '../types/constants';
+import { AUTO_CREATION_PROPS } from '../types/constants/auto-creation';
 
 const toEntryRecord = (entries?: Array<{ key: string; value: string }>) =>
   Object.fromEntries((entries ?? []).map(({ key, value }) => [key, value]));
@@ -865,6 +866,8 @@ describe('schedulerStore', () => {
       const store = createTestStore();
       const mockApiClient = vi.mocked(store.getState().apiClient);
 
+      await setupStoreWithData(store);
+
       store.getState().stageQueueAddition('root.production', 'analytics', {
         capacity: '10',
         state: 'RUNNING',
@@ -888,19 +891,33 @@ describe('schedulerStore', () => {
       expect(mockApiClient.validateSchedulerConf).toHaveBeenCalledTimes(1);
       expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(4);
 
-      const stopPayload = mockApiClient.updateSchedulerConf.mock.calls[0][0];
-      expect(stopPayload).toEqual({
-        'update-queue': [
-          {
+      const [stopPayload, finalPayload, restartPayload, childStartPayload] =
+        mockApiClient.updateSchedulerConf.mock.calls.map(([payload]) => payload);
+
+      expect(stopPayload?.['update-queue']).toHaveLength(3);
+      expect(stopPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
             'queue-name': 'root.production',
             params: {
               entry: [{ key: 'state', value: 'STOPPED' }],
             },
-          },
-        ],
-      });
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+        ]),
+      );
 
-      const finalPayload = mockApiClient.updateSchedulerConf.mock.calls[1][0];
       expect(finalPayload?.['add-queue']).toBeDefined();
       expect(finalPayload?.['global-updates']).toEqual(
         expect.arrayContaining([
@@ -915,19 +932,30 @@ describe('schedulerStore', () => {
         ]),
       );
 
-      const startPayload = mockApiClient.updateSchedulerConf.mock.calls[2][0];
-      expect(startPayload).toEqual({
-        'update-queue': [
-          {
+      expect(restartPayload?.['update-queue']).toHaveLength(3);
+      expect(restartPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
             'queue-name': 'root.production',
             params: {
               entry: [{ key: 'state', value: 'RUNNING' }],
             },
-          },
-        ],
-      });
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+        ]),
+      );
 
-      const childStartPayload = mockApiClient.updateSchedulerConf.mock.calls[3][0];
       expect(childStartPayload).toEqual({
         'update-queue': [
           {
@@ -938,6 +966,166 @@ describe('schedulerStore', () => {
           },
         ],
       });
+    });
+
+    it('should stop queue hierarchies depth-first when enabling auto creation and restart breadth-first', async () => {
+      const store = createTestStore();
+      const mockApiClient = vi.mocked(store.getState().apiClient);
+
+      await setupStoreWithData(store);
+
+      store
+        .getState()
+        .stageQueueChange('root.production', AUTO_CREATION_PROPS.LEGACY_ENABLED, 'true');
+
+      mockApiClient.validateSchedulerConf.mockResolvedValue({
+        validation: 'success',
+        versionId: 24680,
+      });
+      mockApiClient.updateSchedulerConf.mockResolvedValue(undefined);
+
+      mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+      mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+      mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+      mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+      mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
+      mockApiClient.getSchedulerConfVersion.mockResolvedValue({ versionId: 1234567895 });
+
+      await store.getState().applyChanges();
+
+      expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(3);
+
+      const [stopPayload, autoCreationUpdatePayload, restartPayload] =
+        mockApiClient.updateSchedulerConf.mock.calls.map(([payload]) => payload);
+
+      expect(stopPayload?.['update-queue']).toHaveLength(3);
+      expect(stopPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+        ]),
+      );
+
+      expect(autoCreationUpdatePayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: expect.arrayContaining([
+                expect.objectContaining({
+                  key: AUTO_CREATION_PROPS.LEGACY_ENABLED,
+                  value: 'true',
+                }),
+              ]),
+            },
+          }),
+        ]),
+      );
+      expect(autoCreationUpdatePayload?.['global-updates']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            entry: expect.arrayContaining([
+              expect.objectContaining({
+                key: 'yarn.webservice.mutation-api.version',
+                value: '24680',
+              }),
+            ]),
+          }),
+        ]),
+      );
+
+      expect(restartPayload?.['update-queue']).toHaveLength(3);
+      expect(restartPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+        ]),
+      );
+    });
+    it('should update flexible auto creation without stopping queues', async () => {
+      const store = createTestStore();
+      const mockApiClient = vi.mocked(store.getState().apiClient);
+
+      await setupStoreWithData(store);
+
+      store
+        .getState()
+        .stageQueueChange('root.production', AUTO_CREATION_PROPS.FLEXIBLE_ENABLED, 'true');
+
+      mockApiClient.validateSchedulerConf.mockResolvedValue({
+        validation: 'success',
+        versionId: 97531,
+      });
+      mockApiClient.updateSchedulerConf.mockResolvedValue(undefined);
+
+      mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+      mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
+      mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
+      mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
+      mockApiClient.getNodeToLabels.mockResolvedValue(mockNodeToLabelsResponse);
+      mockApiClient.getSchedulerConfVersion.mockResolvedValue({ versionId: 1234567896 });
+
+      await store.getState().applyChanges();
+
+      expect(mockApiClient.validateSchedulerConf).toHaveBeenCalledTimes(1);
+      expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(1);
+
+      const [payload] = mockApiClient.updateSchedulerConf.mock.calls.map(([args]) => args);
+      expect(payload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: expect.arrayContaining([
+                expect.objectContaining({
+                  key: AUTO_CREATION_PROPS.FLEXIBLE_ENABLED,
+                  value: 'true',
+                }),
+              ]),
+            },
+          }),
+        ]),
+      );
+
+      const queueEntries =
+        payload?.['update-queue']?.flatMap(
+          (item: { params: { entry: Array<{ key: string; value: string }> } }) => item.params.entry,
+        ) ?? [];
+      expect(queueEntries).not.toEqual(
+        expect.arrayContaining([expect.objectContaining({ key: 'state', value: 'STOPPED' })]),
+      );
     });
 
     it('should stop a queue before removing it', async () => {

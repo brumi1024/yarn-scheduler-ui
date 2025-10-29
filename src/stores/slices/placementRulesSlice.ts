@@ -33,7 +33,7 @@ export interface PlacementRulesSlice {
 }
 
 const MAPPING_RULE_FORMAT_WARNING_MISSING =
-  'Placement rule format is not set. Adding a rule will automatically stage the JSON format.';
+  'Placement rule format is not set. Adding a rule will automatically stage Mapping Rule Format: JSON setting.';
 const MAPPING_RULE_FORMAT_WARNING_LEGACY =
   'Placement rule format is set to "legacy". Update it to "json" so newly staged rules are applied when you commit the configuration.';
 

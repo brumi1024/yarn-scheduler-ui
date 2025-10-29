@@ -38,7 +38,7 @@ export type NodeLabelInfoItem = {
 };
 
 export type NodeLabelsResponse = {
-  nodeLabelInfo?: NodeLabelInfoItem[];
+  nodeLabelInfo?: NodeLabelInfoItem | NodeLabelInfoItem[];
 };
 
 export type NodeToLabelsMapEntry = {

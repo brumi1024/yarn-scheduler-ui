@@ -150,6 +150,19 @@ describe('searchSlice - node label filtering', () => {
       const capacity = store.getState().getQueueLabelCapacity('root.b', 'cpu');
       expect(capacity?.maxCapacity).toBe('100');
     });
+
+    it('should default root capacity to 100% for any label', () => {
+      const capacity = store.getState().getQueueLabelCapacity('root', 'gpu');
+      expect(capacity).toEqual({
+        capacity: '100',
+        maxCapacity: '100',
+        absoluteCapacity: '0',
+        isLabelSpecific: true,
+        label: 'gpu',
+        hasAccess: true,
+        canUseLabel: true,
+      });
+    });
   });
 
   describe('staged changes support', () => {
