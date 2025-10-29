@@ -22,6 +22,7 @@ export const QueueComparisonDialog: React.FC<QueueComparisonDialogProps> = ({
   open,
   onOpenChange,
 }) => {
+  'use memo';
   const { getComparisonData, comparisonQueues } = useSchedulerStore();
 
   const comparisonData = useMemo(() => {

@@ -29,6 +29,7 @@ interface NodesPanelProps {
 }
 
 export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
+  'use memo';
   const {
     nodes,
     nodeToLabels,

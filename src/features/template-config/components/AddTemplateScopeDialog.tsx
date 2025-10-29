@@ -48,6 +48,7 @@ export const AddTemplateScopeDialog: React.FC<AddTemplateScopeDialogProps> = ({
   onConfirm,
   existingQueuePaths,
 }) => {
+  'use memo';
   const [targetPath, setTargetPath] = useState(`${queuePath}.*`);
   const [templateType, setTemplateType] = useState<TemplateScopeType>('flexibleShared');
   const [error, setError] = useState<string | null>(null);

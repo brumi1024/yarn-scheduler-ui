@@ -17,6 +17,7 @@ interface ComparisonTableProps {
 }
 
 export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
+  'use memo';
   const { properties, queues, differences } = data;
 
   // Group properties by category

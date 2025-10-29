@@ -6,6 +6,7 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import { useSchedulerStore } from '~/stores/schedulerStore';
 
 export function GlobalRefreshButton() {
+  'use memo';
   const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
   const isLoading = useSchedulerStore((state) => state.isLoading);
 

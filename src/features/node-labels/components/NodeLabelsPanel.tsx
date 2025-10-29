@@ -8,6 +8,7 @@ import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidati
 import { AddLabelDialog } from '~/features/node-labels';
 
 export const NodeLabelsPanel: React.FC = () => {
+  'use memo';
   const {
     nodeLabels,
     selectedNodeLabel,

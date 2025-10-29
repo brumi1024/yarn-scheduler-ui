@@ -11,6 +11,7 @@ import { QUEUE_CARD_FLOW_MARGIN, QUEUE_CARD_HEIGHT } from '../constants';
  * Enhanced to span the full height of queue cards for true Sankey visualization.
  */
 function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
+  'use memo';
   // Generate unique gradient ID for this edge
   const gradientId = `gradient-${id}`;
 

@@ -19,6 +19,7 @@ interface DeleteQueueDialogProps {
 }
 
 export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialogProps) {
+  'use memo';
   const { deleteQueue, canDeleteQueue } = useQueueActions();
   const queueName = queuePath.split('.').pop() || queuePath;
 

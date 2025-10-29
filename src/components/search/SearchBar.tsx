@@ -17,6 +17,7 @@ interface SearchBarProps {
 }
 
 const SearchBarComponent: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
+  'use memo';
   const {
     searchQuery,
     searchContext,
