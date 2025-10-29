@@ -1,12 +1,14 @@
 import js from '@eslint/js';
 import globals from 'globals';
-import react from 'eslint-plugin-react';
+import eslintReact from '@eslint-react/eslint-plugin';
 import reactHooks from 'eslint-plugin-react-hooks';
 import reactRefresh from 'eslint-plugin-react-refresh';
 import tseslint from 'typescript-eslint';
 import prettierConfig from 'eslint-config-prettier';
+import reactCompiler from 'eslint-plugin-react-compiler';
 
 export default tseslint.config(
+  // 1. Ignores
   {
     ignores: [
       'build',
@@ -19,18 +21,26 @@ export default tseslint.config(
     ],
   },
 
-  // TypeScript and React files
+  // 2. Recommended configs
+  js.configs.recommended,
+  ...tseslint.configs.recommended,
+  eslintReact.configs.recommended,
+
+  // 3. TypeScript/React config object
   {
-    extends: [js.configs.recommended, ...tseslint.configs.recommended],
     files: ['**/*.{ts,tsx}'],
     languageOptions: {
       ecmaVersion: 2020,
       globals: globals.browser,
+      parserOptions: {
+        ecmaFeatures: { jsx: true },
+      },
     },
     plugins: {
-      react: react,
+      '@typescript-eslint': tseslint.plugin,
       'react-hooks': reactHooks,
       'react-refresh': reactRefresh,
+      'react-compiler': reactCompiler,
     },
     settings: {
       react: {
@@ -38,32 +48,10 @@ export default tseslint.config(
       },
     },
     rules: {
+      'react-compiler/react-compiler': 'error',
+
+      // React hooks rules
       ...reactHooks.configs.recommended.rules,
-
-      // React 17+ new JSX transform rules
-      'react/jsx-uses-react': 'off',
-      'react/react-in-jsx-scope': 'off',
-
-      // Modern React rules
-      'react/jsx-key': 'error',
-      'react/jsx-no-duplicate-props': 'error',
-      'react/jsx-no-undef': 'error',
-      'react/no-children-prop': 'error',
-      'react/no-danger-with-children': 'error',
-      'react/no-deprecated': 'error',
-      'react/no-direct-mutation-state': 'error',
-      'react/no-find-dom-node': 'error',
-      'react/no-is-mounted': 'error',
-      'react/no-render-return-value': 'error',
-      'react/no-string-refs': 'error',
-      'react/no-unescaped-entities': 'off',
-      'react/no-unknown-property': 'error',
-      'react/require-render-return': 'error',
-      'react/jsx-no-target-blank': 'warn',
-
-      // TypeScript handles these, so we disable them
-      'react/prop-types': 'off',
-      'react/display-name': 'off',
 
       // React Refresh
       'react-refresh/only-export-components': ['warn', { allowConstantExport: true }],
@@ -73,6 +61,8 @@ export default tseslint.config(
       'no-debugger': 'warn',
       curly: ['error', 'all'],
       'prefer-const': ['warn', { destructuring: 'all' }],
+
+      // TypeScript rules
       '@typescript-eslint/no-unused-vars': [
         'error',
         {
@@ -82,13 +72,18 @@ export default tseslint.config(
           varsIgnorePattern: '^_|^[A-Z_][A-Z0-9_]*$|^[A-Z][a-zA-Z0-9]*$',
         },
       ],
-      // Type safety rules
       '@typescript-eslint/no-explicit-any': 'error',
       '@typescript-eslint/explicit-function-return-type': 'off',
+
+      // Rules to disable from recommended configs
+      '@eslint-react/jsx-uses-react': 'off',
+      '@eslint-react/react-in-jsx-scope': 'off',
+      '@eslint-react/prop-types': 'off',
+      '@eslint-react/display-name': 'off',
     },
   },
 
-  // Mock files - allow console statements
+  // 4. Mock files config
   {
     files: ['**/mocks/**/*.{ts,tsx,js}'],
     rules: {
@@ -96,7 +91,7 @@ export default tseslint.config(
     },
   },
 
-  // Test files - relax some rules
+  // 5. Test files config
   {
     files: ['**/*.test.{ts,tsx}', '**/*.spec.{ts,tsx}'],
     rules: {
@@ -104,5 +99,6 @@ export default tseslint.config(
     },
   },
 
+  // 6. Prettier config
   prettierConfig,
 );

@@ -44,6 +44,7 @@ export const QueueStatusBadges: React.FC<QueueStatusBadgesProps> = ({
   labelInfo,
   creationMethod,
 }) => {
+  'use memo';
   const baseIconBadgeClasses = 'h-7 px-2 py-1 gap-1.5 [&>svg]:h-[16px] [&>svg]:w-[16px]';
 
   const getCapacityModeBadgeClass = () => {
