@@ -12,7 +12,12 @@ import type {
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import { DagreLayout } from '../utils/DagreLayout';
-import { QUEUE_CARD_CORNER_RADIUS, QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '../constants';
+import {
+  QUEUE_CARD_CORNER_RADIUS,
+  QUEUE_CARD_FLOW_MARGIN,
+  QUEUE_CARD_HEIGHT,
+  QUEUE_CARD_WIDTH,
+} from '../constants';
 import type { ValidationIssue } from '~/features/validation/types';
 
 export type QueueCardData = QueueInfo & {
@@ -471,24 +476,40 @@ function createEdges(
           const segmentEnd = (cumulativeCapacity + childAdjustedCapacity) / totalChildCapacity;
 
           const parentHeight = sourcePos.height ?? DEFAULT_CARD_HEIGHT;
+          const parentFlowTop = sourcePos.y + QUEUE_CARD_FLOW_MARGIN;
+          const parentFlowHeight = Math.max(
+            parentHeight - 2 * QUEUE_CARD_FLOW_MARGIN,
+            MIN_SEGMENT_HEIGHT,
+          );
+          const parentFlowBottom = parentFlowTop + parentFlowHeight;
+
           const childHeight = targetPos.height ?? DEFAULT_CARD_HEIGHT;
+          const targetFlowTop = targetPos.y + QUEUE_CARD_FLOW_MARGIN;
+          const targetFlowHeight = Math.max(
+            childHeight - 2 * QUEUE_CARD_FLOW_MARGIN,
+            MIN_SEGMENT_HEIGHT,
+          );
+          const targetFlowBottom = targetFlowTop + targetFlowHeight;
 
           // Ensure minimum segment height for visibility
           const segmentHeight = Math.max(
-            (segmentEnd - segmentStart) * parentHeight,
+            (segmentEnd - segmentStart) * parentFlowHeight,
             MIN_SEGMENT_HEIGHT,
           );
-          const adjustedSegmentEnd = segmentStart + segmentHeight / parentHeight;
+          const adjustedSegmentEnd = Math.min(segmentStart + segmentHeight / parentFlowHeight, 1);
 
           // Parent side: proportional segment based on capacity
           const parentTop = sourcePos.y;
-          const sourceStartY = parentTop + segmentStart * parentHeight;
-          const sourceEndY = parentTop + adjustedSegmentEnd * parentHeight;
+          const sourceStartY = parentFlowTop + segmentStart * parentFlowHeight;
+          const sourceEndY = Math.min(
+            parentFlowBottom,
+            parentFlowTop + adjustedSegmentEnd * parentFlowHeight,
+          );
 
           // Target side: full height (child receives the full connector)
           const targetTop = targetPos.y;
-          const targetStartY = targetTop;
-          const targetEndY = targetTop + childHeight;
+          const targetStartY = targetFlowTop;
+          const targetEndY = targetFlowBottom;
 
           const edge: Edge = {
             id: `${queueInfo.queuePath}-${child.queuePath}`,
@@ -526,7 +547,20 @@ function createEdges(
 
         if (sourcePos && targetPos) {
           const parentHeight = sourcePos.height ?? DEFAULT_CARD_HEIGHT;
+          const parentFlowTop = sourcePos.y + QUEUE_CARD_FLOW_MARGIN;
+          const parentFlowHeight = Math.max(
+            parentHeight - 2 * QUEUE_CARD_FLOW_MARGIN,
+            MIN_SEGMENT_HEIGHT,
+          );
+          const parentFlowBottom = parentFlowTop + parentFlowHeight;
+
           const childHeight = targetPos.height ?? DEFAULT_CARD_HEIGHT;
+          const targetFlowTop = targetPos.y + QUEUE_CARD_FLOW_MARGIN;
+          const targetFlowHeight = Math.max(
+            childHeight - 2 * QUEUE_CARD_FLOW_MARGIN,
+            MIN_SEGMENT_HEIGHT,
+          );
+          const targetFlowBottom = targetFlowTop + targetFlowHeight;
 
           const edge: Edge = {
             id: `${queueInfo.queuePath}-${child.queuePath}`,
@@ -537,10 +571,10 @@ function createEdges(
               capacity: child.capacity,
               targetState: child.state,
               // Fallback to full height
-              sourceStartY: sourcePos.y,
-              sourceEndY: sourcePos.y + parentHeight,
-              targetStartY: targetPos.y,
-              targetEndY: targetPos.y + childHeight,
+              sourceStartY: parentFlowTop,
+              sourceEndY: parentFlowBottom,
+              targetStartY: targetFlowTop,
+              targetEndY: targetFlowBottom,
               sourceTop: sourcePos.y,
               sourceBottom: sourcePos.y + parentHeight,
               targetTop: targetPos.y,

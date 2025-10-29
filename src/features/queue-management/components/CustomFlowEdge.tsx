@@ -1,5 +1,5 @@
 import { type EdgeProps } from '@xyflow/react';
-import { QUEUE_CARD_CORNER_RADIUS, QUEUE_CARD_HEIGHT } from '../constants';
+import { QUEUE_CARD_FLOW_MARGIN, QUEUE_CARD_HEIGHT } from '../constants';
 
 /**
  * Custom Sankey-like edge component that creates flowing connections between queue nodes.
@@ -55,11 +55,12 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
   const createSankeyPath = () => {
     const controlPointDistance = Math.abs(targetX - sourceX) * 0.5;
 
-    const fallbackHeight = QUEUE_CARD_HEIGHT;
-    const sourceStartY = data?.sourceStartY ?? sourceY - fallbackHeight / 2;
-    const sourceEndY = data?.sourceEndY ?? sourceY + fallbackHeight / 2;
-    const targetStartY = data?.targetStartY ?? targetY - fallbackHeight / 2;
-    const targetEndY = data?.targetEndY ?? targetY + fallbackHeight / 2;
+    const fallbackHeight = Math.max(QUEUE_CARD_HEIGHT - 2 * QUEUE_CARD_FLOW_MARGIN, 0);
+    const halfFallbackHeight = fallbackHeight / 2;
+    const sourceStartY = data?.sourceStartY ?? sourceY - halfFallbackHeight;
+    const sourceEndY = data?.sourceEndY ?? sourceY + halfFallbackHeight;
+    const targetStartY = data?.targetStartY ?? targetY - halfFallbackHeight;
+    const targetEndY = data?.targetEndY ?? targetY + halfFallbackHeight;
 
     return [
       // Start at source (proportional segment start)
