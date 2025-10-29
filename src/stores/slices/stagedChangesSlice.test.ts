@@ -195,9 +195,9 @@ describe('stagedChangesSlice - validation refresh', () => {
 });
 
 describe('stagedChangesSlice - auto-creation enablement', () => {
-  it('stops and restarts queues when enabling auto-creation', async () => {
+  it('stops and restarts queues when enabling legacy auto-creation', async () => {
     const queuePath = 'root.default';
-    const propertyKey = 'yarn.scheduler.capacity.root.default.auto-queue-creation-v2.enabled';
+    const propertyKey = 'yarn.scheduler.capacity.root.default.auto-create-child-queue.enabled';
 
     const updateSchedulerConf = vi.fn().mockResolvedValue(undefined);
     const validateSchedulerConf = vi.fn().mockResolvedValue({
@@ -221,6 +221,7 @@ describe('stagedChangesSlice - auto-creation enablement', () => {
     const state: any = {
       apiClient,
       refreshSchedulerData,
+      getChildQueues: () => [],
       schedulerData: {
         type: 'capacityScheduler',
         capacity: 100,
@@ -250,7 +251,7 @@ describe('stagedChangesSlice - auto-creation enablement', () => {
         id: '1',
         type: 'update' as const,
         queuePath,
-        property: 'auto-queue-creation-v2.enabled',
+        property: 'auto-create-child-queue.enabled',
         oldValue: 'false',
         newValue: 'true',
         timestamp: Date.now(),
@@ -265,13 +266,14 @@ describe('stagedChangesSlice - auto-creation enablement', () => {
         {
           'queue-name': queuePath,
           params: {
-            entry: [{ key: 'auto-queue-creation-v2.enabled', value: 'true' }],
+            entry: [{ key: 'auto-create-child-queue.enabled', value: 'true' }],
           },
         },
       ],
     });
 
     expect(updateSchedulerConf).toHaveBeenCalledTimes(3);
+
     expect(updateSchedulerConf.mock.calls[0][0]).toEqual({
       'update-queue': [
         {
@@ -288,7 +290,9 @@ describe('stagedChangesSlice - auto-creation enablement', () => {
       {
         'queue-name': queuePath,
         params: {
-          entry: expect.arrayContaining([{ key: 'auto-queue-creation-v2.enabled', value: 'true' }]),
+          entry: expect.arrayContaining([
+            { key: 'auto-create-child-queue.enabled', value: 'true' },
+          ]),
         },
       },
     ]);

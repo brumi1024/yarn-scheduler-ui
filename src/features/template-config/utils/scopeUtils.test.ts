@@ -10,9 +10,12 @@ describe('scopeUtils', () => {
   };
 
   const buildStagedChange = (queuePath: string): StagedChange => ({
-    type: 'change',
+    id: `change-${queuePath}`,
+    timestamp: Date.now(),
+    type: 'update',
     queuePath,
     property: 'dummy',
+    oldValue: 'old',
     newValue: 'new',
   });
 

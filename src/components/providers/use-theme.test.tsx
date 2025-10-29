@@ -16,8 +16,10 @@ const matchMediaMock = () => ({
 
 describe('useTheme', () => {
   beforeAll(() => {
-    // @ts-expect-error jsdom partial mock
-    window.matchMedia = vi.fn().mockImplementation(matchMediaMock);
+    Object.defineProperty(window, 'matchMedia', {
+      writable: true,
+      value: vi.fn().mockImplementation(matchMediaMock),
+    });
   });
 
   beforeEach(() => {

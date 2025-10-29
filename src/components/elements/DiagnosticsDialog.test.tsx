@@ -106,8 +106,11 @@ describe('DiagnosticsDialog', () => {
       await user.click(downloadButton);
 
       expect(createObjectURLMock).toHaveBeenCalledTimes(1);
-      const [blob] = createObjectURLMock.mock.calls[0] as [Blob];
-      const payloadText = await blob.text();
+      const firstCall = createObjectURLMock.mock.calls[0] as unknown[] | undefined;
+      expect(firstCall).toBeDefined();
+      const blobArg = firstCall?.[0];
+      expect(blobArg).toBeInstanceOf(Blob);
+      const payloadText = await (blobArg as Blob).text();
       const payload = JSON.parse(payloadText);
 
       expect(revokeObjectURLMock).toHaveBeenCalledWith('blob:url');

@@ -361,91 +361,101 @@ export const createStagedChangesSlice: StateCreator<
     const parentQueuesStopped = new Set<string>();
     const removalQueuesStopped = new Set<string>();
     const autoCreationQueuesStopped = new Set<string>();
-    const stoppedQueues = new Set<string>();
     const apiClient = get().apiClient;
     let mutationApplied = false;
 
-    const applyQueueState = async (queueName: string, state: 'STOPPED' | 'RUNNING') => {
+    const applyQueueStates = async (queueNames: Iterable<string>, state: 'STOPPED' | 'RUNNING') => {
+      const uniqueQueueNames = Array.from(new Set(queueNames)).filter(
+        (queueName) => queueName && queueName !== SPECIAL_VALUES.ROOT_QUEUE_NAME,
+      );
+      if (uniqueQueueNames.length === 0) return;
+
       const stateMutation: SchedConfUpdateInfo = {
         [MUTATION_OPERATIONS.UPDATE_QUEUE]: [
-          {
+          ...uniqueQueueNames.map((queueName) => ({
             'queue-name': queueName,
             params: {
               entry: [{ key: 'state', value: state }],
             },
-          },
+          })),
         ],
       };
 
       await apiClient.updateSchedulerConf(stateMutation);
     };
 
-    const stopQueueIfNeeded = async (queueName: string, trackingSet: Set<string>) => {
-      if (stoppedQueues.has(queueName)) {
-        return;
-      }
+    const collectQueueHierarchy = (queuePath: string): string[] => {
+      const visited = new Set<string>();
 
-      await applyQueueState(queueName, 'STOPPED');
-      trackingSet.add(queueName);
-      stoppedQueues.add(queueName);
+      const traverse = (path: string) => {
+        if (!path || visited.has(path)) {
+          return;
+        }
+
+        visited.add(path);
+
+        const childQueues = get()
+          .getChildQueues(path)
+          .map((child) => child.queuePath || `${path}.${child.queueName}`)
+          .filter(
+            (childPath): childPath is string =>
+              typeof childPath === 'string' && childPath.length > 0,
+          );
+
+        for (const childQueue of childQueues) {
+          traverse(childQueue);
+        }
+      };
+
+      traverse(queuePath);
+      return Array.from(visited);
     };
 
-    const restartParents = async () => {
-      if (parentQueuesStopped.size === 0) return;
-
-      const queues = Array.from(parentQueuesStopped);
-      for (const queueName of queues) {
-        try {
-          await applyQueueState(queueName, 'RUNNING');
-        } catch (startError) {
-          console.error(`Failed to restart queue ${queueName}:`, startError);
-        } finally {
-          parentQueuesStopped.delete(queueName);
+    const addQueueHierarchyToSet = (queuePath: string, trackingSet: Set<string>) => {
+      for (const path of collectQueueHierarchy(queuePath)) {
+        if (path !== SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+          trackingSet.add(path);
         }
       }
     };
 
-    const restartRemovalQueues = async () => {
-      if (removalQueuesStopped.size === 0) return;
+    const restartQueues = async (queueSet: Set<string>) => {
+      if (queueSet.size === 0) return;
 
-      const queues = Array.from(removalQueuesStopped);
-      for (const queueName of queues) {
-        try {
-          await applyQueueState(queueName, 'RUNNING');
-        } catch (startError) {
-          console.error(`Failed to restart queue ${queueName}:`, startError);
-        } finally {
-          removalQueuesStopped.delete(queueName);
-        }
+      try {
+        await applyQueueStates(queueSet, 'RUNNING');
+      } catch (startError) {
+        console.error(`Failed to restart queues:`, startError);
+      } finally {
+        queueSet.clear();
       }
     };
 
-    const restartAutoCreationQueues = async () => {
-      if (autoCreationQueuesStopped.size === 0) return;
-
-      const queues = Array.from(autoCreationQueuesStopped);
-      for (const queueName of queues) {
-        try {
-          await applyQueueState(queueName, 'RUNNING');
-        } catch (startError) {
-          console.error(`Failed to restart queue ${queueName}:`, startError);
-        } finally {
-          autoCreationQueuesStopped.delete(queueName);
-        }
-      }
-    };
+    const restartParents = async () => restartQueues(parentQueuesStopped);
+    const restartRemovalQueues = async () => restartQueues(removalQueuesStopped);
+    const restartAutoCreationQueues = async () => restartQueues(autoCreationQueuesStopped);
 
     try {
       for (const parentQueue of parentQueuesToStop) {
-        await stopQueueIfNeeded(parentQueue, parentQueuesStopped);
+        addQueueHierarchyToSet(parentQueue, parentQueuesStopped);
       }
 
       for (const queueName of queuesToStopForRemoval) {
-        await stopQueueIfNeeded(queueName, removalQueuesStopped);
+        addQueueHierarchyToSet(queueName, removalQueuesStopped);
       }
 
       for (const queueName of queuesToStopForAutoCreation) {
-        await stopQueueIfNeeded(queueName, autoCreationQueuesStopped);
+        addQueueHierarchyToSet(queueName, autoCreationQueuesStopped);
+      }
+
+      const allQueuesToStop = new Set<string>([
+        ...parentQueuesStopped,
+        ...removalQueuesStopped,
+        ...autoCreationQueuesStopped,
+      ]);
+
+      if (allQueuesToStop.size > 0) {
+        await applyQueueStates(allQueuesToStop, 'STOPPED');
       }
 
       const validationResponse = await apiClient.validateSchedulerConf(submissionRequest);
@@ -469,7 +479,7 @@ export const createStagedChangesSlice: StateCreator<
       await restartAutoCreationQueues();
 
       for (const queueName of childQueuesToStart) {
-        await applyQueueState(queueName, 'RUNNING');
+        await applyQueueStates([queueName], 'RUNNING');
       }
 
       // Reload configuration after successful update
@@ -707,10 +717,7 @@ function getQueuesForAutoCreationEnable(changes: StagedChange[]): string[] {
       continue;
     }
 
-    if (
-      change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED ||
-      change.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED
-    ) {
+    if (change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED) {
       const newValue = normalize(change.newValue);
       const oldValue = normalize(change.oldValue);
 
