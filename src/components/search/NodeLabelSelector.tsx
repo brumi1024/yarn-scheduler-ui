@@ -12,6 +12,7 @@ import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 export const NodeLabelSelector: React.FC = () => {
+  'use memo';
   const { nodeLabels, selectedNodeLabelFilter, selectNodeLabelFilter } = useSchedulerStore();
 
   const handleChange = (value: string) => {

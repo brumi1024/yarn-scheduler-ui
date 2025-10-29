@@ -36,92 +36,75 @@ export const GlobalSettings: React.FC = () => {
     ? getFilteredSettings()
     : globalPropertyDefinitions;
 
-  const globalValues = React.useMemo(() => {
-    const values: Record<string, string> = {};
-    globalPropertyDefinitions.forEach((property) => {
-      const { value } = getGlobalPropertyValue(property.name);
-      values[property.name] = value;
-    });
-    return values;
-  }, [getGlobalPropertyValue]);
+  const values: Record<string, string> = {};
+  globalPropertyDefinitions.forEach((property) => {
+    const { value } = getGlobalPropertyValue(property.name);
+    values[property.name] = value;
+  });
+  const globalValues = values;
 
-  const conditionBase = React.useMemo(() => {
-    const queueValueCache = new Map<string, string | undefined>();
+  const queueValueCache = new Map<string, string | undefined>();
 
-    const getGlobalValue = (name: string) => {
-      if (name in globalValues) {
-        return globalValues[name];
-      }
-      return getGlobalPropertyValue(name).value;
-    };
+  const getGlobalValue = (name: string) => {
+    if (name in globalValues) {
+      return globalValues[name];
+    }
+    return getGlobalPropertyValue(name).value;
+  };
 
-    const getValue = (name: string) => getGlobalValue(name);
+  const getValue = (name: string) => getGlobalValue(name);
 
-    const getQueueValue = (queuePath: string, property: string) => {
-      if (!queuePath) return undefined;
-      const cacheKey = `${queuePath}::${property}`;
-      if (!queueValueCache.has(cacheKey)) {
-        const { value } = getQueuePropertyValue(queuePath, property);
-        queueValueCache.set(cacheKey, value);
-      }
-      return queueValueCache.get(cacheKey);
-    };
+  const getQueueValue = (queuePath: string, property: string) => {
+    if (!queuePath) return undefined;
+    const cacheKey = `${queuePath}::${property}`;
+    if (!queueValueCache.has(cacheKey)) {
+      const { value } = getQueuePropertyValue(queuePath, property);
+      queueValueCache.set(cacheKey, value);
+    }
+    return queueValueCache.get(cacheKey);
+  };
 
-    return {
-      scope: 'global' as const,
-      values: globalValues,
-      globalValues,
-      queuePath: undefined,
-      queueInfo: undefined,
-      schedulerInfo: schedulerData,
-      stagedChanges,
-      configData,
-      getValue,
-      getGlobalValue,
-      getQueueValue,
-      getConfigValue: (key: string) => configData.get(key),
-    };
-  }, [
+  const conditionBase = {
+    scope: 'global' as const,
+    values: globalValues,
     globalValues,
-    getGlobalPropertyValue,
-    getQueuePropertyValue,
-    schedulerData,
+    queuePath: undefined,
+    queueInfo: undefined,
+    schedulerInfo: schedulerData,
     stagedChanges,
     configData,
-  ]);
+    getValue,
+    getGlobalValue,
+    getQueueValue,
+    getConfigValue: (key: string) => configData.get(key),
+  };
 
-  const propertyStates = React.useMemo(() => {
-    const states = new Map<
-      string,
-      {
-        visible: boolean;
-        enabled: boolean;
-      }
-    >();
+  const states = new Map<
+    string,
+    {
+      visible: boolean;
+      enabled: boolean;
+    }
+  >();
 
-    requestedPropertyDefinitions.forEach((property) => {
-      const propertyValue = conditionBase.getValue(property.name) ?? '';
-      const options = {
-        ...conditionBase,
-        property,
-        propertyValue,
-      };
-      const visible = shouldShowProperty(property, options);
-      const enabled = visible ? isPropertyEnabled(property, options) : false;
-      states.set(property.name, { visible, enabled });
-    });
+  requestedPropertyDefinitions.forEach((property) => {
+    const propertyValue = conditionBase.getValue(property.name) ?? '';
+    const options = {
+      ...conditionBase,
+      property,
+      propertyValue,
+    };
+    const visible = shouldShowProperty(property, options);
+    const enabled = visible ? isPropertyEnabled(property, options) : false;
+    states.set(property.name, { visible, enabled });
+  });
 
-    return states;
-  }, [requestedPropertyDefinitions, conditionBase]);
+  const propertyStates = states;
 
-  const activePropertyDefinitions = React.useMemo(
-    () =>
-      requestedPropertyDefinitions.filter((property) => {
-        const state = propertyStates.get(property.name);
-        return state ? state.visible : true;
-      }),
-    [requestedPropertyDefinitions, propertyStates],
-  );
+  const activePropertyDefinitions = requestedPropertyDefinitions.filter((property) => {
+    const state = propertyStates.get(property.name);
+    return state ? state.visible : true;
+  });
 
   const getGlobalPropertyCategories = () => {
     const categories: string[] = [];

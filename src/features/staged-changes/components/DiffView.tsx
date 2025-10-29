@@ -149,9 +149,9 @@ export const DiffView: React.FC<DiffViewProps> = ({ change, onRevert, timestamp 
         {/* Validation errors/warnings */}
         {change.validationErrors && change.validationErrors.length > 0 && (
           <div className="space-y-1 mt-2">
-            {change.validationErrors.map((error, index) => (
+            {change.validationErrors.map((error) => (
               <div
-                key={index}
+                key={`${error.queuePath}-${error.field}-${error.message}`}
                 className={cn(
                   'flex items-center gap-2 text-xs p-2 rounded-md',
                   error.severity === 'error'

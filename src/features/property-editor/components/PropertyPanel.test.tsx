@@ -46,24 +46,22 @@ vi.mock('~/contexts/ValidationContext', () => ({
 vi.mock('./PropertyEditorTab', async () => {
   const React = await import('react');
 
-  const PropertyEditorTab = React.forwardRef(
-    ({ onFormDirtyChange, onHasChangesChange }: any, ref: any) => {
-      React.useImperativeHandle(ref, () => ({
-        submit: () => mockSubmit(),
-        reset: () => mockReset(),
-        isValid: () => mockIsValid(),
-        getErrors: () => mockGetErrors(),
-      }));
+  const PropertyEditorTab = ({ onFormDirtyChange, onHasChangesChange, ref }: any) => {
+    React.useImperativeHandle(ref, () => ({
+      submit: () => mockSubmit(),
+      reset: () => mockReset(),
+      isValid: () => mockIsValid(),
+      getErrors: () => mockGetErrors(),
+    }));
 
-      return (
-        <div data-testid="property-editor">
-          <button onClick={() => onFormDirtyChange?.(true)}>Make Dirty</button>
-          <button onClick={() => onFormDirtyChange?.(false)}>Make Clean</button>
-          <button onClick={() => onHasChangesChange?.(true)}>Add Changes</button>
-        </div>
-      );
-    },
-  );
+    return (
+      <div data-testid="property-editor">
+        <button onClick={() => onFormDirtyChange?.(true)}>Make Dirty</button>
+        <button onClick={() => onFormDirtyChange?.(false)}>Make Clean</button>
+        <button onClick={() => onHasChangesChange?.(true)}>Add Changes</button>
+      </div>
+    );
+  };
 
   PropertyEditorTab.displayName = 'PropertyEditorTab';
 

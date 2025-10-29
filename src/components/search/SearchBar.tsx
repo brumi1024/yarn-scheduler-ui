@@ -2,7 +2,7 @@
  * Search bar component with context-aware search functionality
  */
 
-import { useEffect, useRef, useState, useMemo, memo } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -16,7 +16,8 @@ interface SearchBarProps {
   className?: string;
 }
 
-const SearchBarComponent: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
+export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...', className }) => {
+  'use memo';
   const {
     searchQuery,
     searchContext,
@@ -77,18 +78,11 @@ const SearchBarComponent: React.FC<SearchBarProps> = ({ placeholder = 'Search...
   };
 
   const results = getSearchResults();
-  const contextLabel = useMemo(() => {
-    switch (searchContext) {
-      case 'queues':
-        return 'Queues';
-      case 'nodes':
-        return 'Nodes';
-      case 'settings':
-        return 'Settings';
-      default:
-        return 'All';
-    }
-  }, [searchContext]);
+
+  let contextLabel = 'All';
+  if (searchContext === 'queues') contextLabel = 'Queues';
+  else if (searchContext === 'nodes') contextLabel = 'Nodes';
+  else if (searchContext === 'settings') contextLabel = 'Settings';
 
   return (
     <div className={cn('relative', className)}>
@@ -140,5 +134,3 @@ const SearchBarComponent: React.FC<SearchBarProps> = ({ placeholder = 'Search...
     </div>
   );
 };
-
-export const SearchBar = memo(SearchBarComponent);

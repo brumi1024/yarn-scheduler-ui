@@ -21,6 +21,7 @@ export function CustomPlacementHelpDialog({
   triggerText = 'Help',
   showIcon = true,
 }: CustomPlacementHelpDialogProps) {
+  'use memo';
   return (
     <Dialog>
       <DialogTrigger asChild>

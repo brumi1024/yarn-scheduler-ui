@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Save,
   RotateCcw,
@@ -49,8 +49,8 @@ export const PropertyPanel: React.FC = () => {
   const [isFormDirty, setIsFormDirty] = useState(false);
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
-  const [isSummaryOpen, setSummaryOpen] = useState(false);
-  const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
+  const [isSummaryOpen, setIsSummaryOpen] = useState(false);
+  const [isTemplateDialogOpen, setIsTemplateDialogOpen] = useState(false);
 
   const propertyEditorRef = useRef<PropertyEditorTabHandle>(null);
   const { errors: validationState } = useValidation();
@@ -118,7 +118,7 @@ export const PropertyPanel: React.FC = () => {
 
   useEffect(() => {
     if (!isPropertyPanelOpen) {
-      setTemplateDialogOpen(false);
+      setIsTemplateDialogOpen(false);
     }
   }, [isPropertyPanelOpen]);
 
@@ -127,7 +127,7 @@ export const PropertyPanel: React.FC = () => {
       return;
     }
     if (showTemplateButton) {
-      setTemplateDialogOpen(true);
+      setIsTemplateDialogOpen(true);
     }
     clearTemplateConfigRequest();
   }, [shouldOpenTemplateConfig, showTemplateButton, clearTemplateConfigRequest]);
@@ -148,7 +148,7 @@ export const PropertyPanel: React.FC = () => {
       // Check if form is valid before submitting
       if (!propertyEditorRef.current.isValid()) {
         toast.error('Please fix validation errors before staging changes');
-        setSummaryOpen(true);
+        setIsSummaryOpen(true);
         return;
       }
 
@@ -166,7 +166,7 @@ export const PropertyPanel: React.FC = () => {
     if (propertyEditorRef.current) {
       propertyEditorRef.current.reset();
     }
-    setSummaryOpen(false);
+    setIsSummaryOpen(false);
   };
 
   const handleHasChangesChange = (newHasChanges: boolean) => {
@@ -185,7 +185,7 @@ export const PropertyPanel: React.FC = () => {
     // Check if form is valid
     if (propertyEditorRef.current && !propertyEditorRef.current.isValid()) {
       toast.error('Please fix validation errors before saving');
-      setSummaryOpen(true);
+      setIsSummaryOpen(true);
       return; // Don't close the dialog or panel
     }
 
@@ -207,49 +207,37 @@ export const PropertyPanel: React.FC = () => {
     if (!isPropertyPanelOpen || !selectedQueuePath) {
       setHasChanges(false);
       setIsFormDirty(false);
-      setSummaryOpen(false);
+      setIsSummaryOpen(false);
     }
   }, [isPropertyPanelOpen, selectedQueuePath]);
 
   useEffect(() => {
     if (!isPropertyPanelOpen) {
-      setSummaryOpen(false);
+      setIsSummaryOpen(false);
     }
   }, [isPropertyPanelOpen]);
 
   const queuePath = selectedQueue?.queuePath;
 
-  const queueIssues = useMemo(() => {
-    if (!queuePath) {
-      return {} as Record<string, ValidationIssue[]>;
-    }
-    return validationState[queuePath] ?? {};
-  }, [queuePath, validationState]);
+  const queueIssues = !queuePath
+    ? ({} as Record<string, ValidationIssue[]>)
+    : (validationState[queuePath] ?? {});
 
-  const issueList = useMemo<Array<ValidationIssue & { field: string; key: string }>>(() => {
-    if (!queuePath) {
-      return [];
-    }
-    return Object.entries(queueIssues).flatMap(([field, issues]) =>
-      issues.map((issue, index) => ({
-        ...issue,
-        field,
-        key: `${field}-${issue.rule}-${index}`,
-      })),
-    );
-  }, [queueIssues, queuePath]);
+  const issueList: Array<ValidationIssue & { field: string; key: string }> = !queuePath
+    ? []
+    : Object.entries(queueIssues).flatMap(([field, issues]) =>
+        issues.map((issue, index) => ({
+          ...issue,
+          field,
+          key: `${field}-${issue.rule}-${index}`,
+        })),
+      );
 
-  const errorIssues = useMemo(
-    () => issueList.filter((issue) => issue.severity === 'error'),
-    [issueList],
-  );
+  const errorIssues = issueList.filter((issue) => issue.severity === 'error');
 
-  const warningIssues = useMemo(
-    () => issueList.filter((issue) => issue.severity === 'warning'),
-    [issueList],
-  );
+  const warningIssues = issueList.filter((issue) => issue.severity === 'warning');
 
-  const summaryLabel = useMemo(() => {
+  const summaryLabel = (() => {
     const parts: string[] = [];
     if (errorIssues.length) {
       parts.push(`${errorIssues.length} error${errorIssues.length === 1 ? '' : 's'}`);
@@ -258,17 +246,17 @@ export const PropertyPanel: React.FC = () => {
       parts.push(`${warningIssues.length} warning${warningIssues.length === 1 ? '' : 's'}`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Validation issues';
-  }, [errorIssues.length, warningIssues.length]);
+  })();
 
-  const handleIssueSelect = useCallback((field: string) => {
+  const handleIssueSelect = (field: string) => {
     const selector = `[data-field-id="${field.replace(/"/g, '\\"')}"]`;
     const element = document.querySelector(selector) as HTMLElement | null;
     if (element) {
       element.scrollIntoView({ behavior: 'smooth', block: 'center' });
       element.focus?.();
     }
-    setSummaryOpen(false);
-  }, []);
+    setIsSummaryOpen(false);
+  };
 
   if (!isPanelVisible || !selectedQueue) {
     return null;
@@ -295,7 +283,7 @@ export const PropertyPanel: React.FC = () => {
                   <span className="text-xs text-muted-foreground">{selectedQueue.queuePath}</span>
                   <div className="flex-1" />
                   {issueList.length > 0 && (
-                    <Popover open={isSummaryOpen} onOpenChange={setSummaryOpen}>
+                    <Popover open={isSummaryOpen} onOpenChange={setIsSummaryOpen}>
                       <PopoverTrigger asChild>
                         <Button
                           size="sm"
@@ -434,7 +422,7 @@ export const PropertyPanel: React.FC = () => {
                           canManageTemplates: showTemplateButton,
                           legacyAvailable: legacyTemplateAvailable,
                           flexibleAvailable: flexibleTemplateAvailable,
-                          onOpenTemplateConfig: () => setTemplateDialogOpen(true),
+                          onOpenTemplateConfig: () => setIsTemplateDialogOpen(true),
                         }
                       : undefined
                   }
@@ -488,7 +476,7 @@ export const PropertyPanel: React.FC = () => {
         <TemplateConfigDialog
           open={isTemplateDialogOpen}
           queuePath={selectedQueuePath}
-          onClose={() => setTemplateDialogOpen(false)}
+          onClose={() => setIsTemplateDialogOpen(false)}
         />
       )}
     </>

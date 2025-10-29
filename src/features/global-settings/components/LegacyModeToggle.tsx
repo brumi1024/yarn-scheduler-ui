@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -49,7 +49,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   const currentEnabled = value === 'true';
 
   // Calculate validation changes that would occur
-  const validationPreview = useMemo(() => {
+  const validationPreview = (() => {
     if (!schedulerData) return { added: [], removed: [], affectedQueues: 0 };
 
     const previewResults: ValidationPreview[] = [];
@@ -184,7 +184,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     ]).size;
 
     return { added, removed, affectedQueues };
-  }, [currentEnabled, schedulerData, configData, stagedChanges, property.name]);
+  })();
 
   return (
     <FieldSwitch
@@ -260,12 +260,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                               Errors that would be removed:
                             </h5>
                             <div className="space-y-2">
-                              {validationPreview.removed.map((item, idx) => (
-                                <div key={idx} className="space-y-1">
+                              {validationPreview.removed.map((item) => (
+                                <div key={`removed-${item.queuePath}`} className="space-y-1">
                                   <div className="text-xs font-medium">{item.queuePath}</div>
-                                  {item.errors.map((error, errorIdx) => (
+                                  {item.errors.map((error) => (
                                     <div
-                                      key={errorIdx}
+                                      key={`removed-${item.queuePath}-${error.field}-${error.message}`}
                                       className={cn(
                                         'flex items-start gap-2 text-xs p-2 rounded-md bg-green-50 dark:bg-green-950/20',
                                       )}
@@ -286,12 +286,12 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
                               New errors that would appear:
                             </h5>
                             <div className="space-y-2">
-                              {validationPreview.added.map((item, idx) => (
-                                <div key={idx} className="space-y-1">
+                              {validationPreview.added.map((item) => (
+                                <div key={`added-${item.queuePath}`} className="space-y-1">
                                   <div className="text-xs font-medium">{item.queuePath}</div>
-                                  {item.errors.map((error, errorIdx) => (
+                                  {item.errors.map((error) => (
                                     <div
-                                      key={errorIdx}
+                                      key={`added-${item.queuePath}-${error.field}-${error.message}`}
                                       className={cn(
                                         'flex items-start gap-2 text-xs p-2 rounded-md',
                                         error.severity === 'error'

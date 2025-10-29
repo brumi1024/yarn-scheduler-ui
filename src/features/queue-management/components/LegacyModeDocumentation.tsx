@@ -18,6 +18,7 @@ interface LegacyModeDocumentationProps {
 }
 
 export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = ({ children }) => {
+  'use memo';
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>

@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { RefreshCw } from 'lucide-react';
 
 import { Button } from '~/components/ui/button';
@@ -6,16 +5,17 @@ import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/comp
 import { useSchedulerStore } from '~/stores/schedulerStore';
 
 export function GlobalRefreshButton() {
+  'use memo';
   const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
   const isLoading = useSchedulerStore((state) => state.isLoading);
 
-  const handleRefresh = useCallback(async () => {
+  const handleRefresh = async () => {
     try {
       await loadInitialData();
     } catch (error) {
       console.error('Failed to refresh scheduler data:', error);
     }
-  }, [loadInitialData]);
+  };
 
   return (
     <TooltipProvider>

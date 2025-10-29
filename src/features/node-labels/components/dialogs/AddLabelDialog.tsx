@@ -35,6 +35,7 @@ export const AddLabelDialog: React.FC<AddLabelDialogProps> = ({
   existingLabels,
   isLoading = false,
 }) => {
+  'use memo';
   const [name, setName] = useState('');
   const [exclusivity, setExclusivity] = useState(false);
   const [error, setError] = useState('');

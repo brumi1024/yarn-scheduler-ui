@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Badge } from '~/components/ui/badge';
 import { cn } from '~/utils/cn';
 import {
@@ -20,18 +20,16 @@ export const ComparisonTable: React.FC<ComparisonTableProps> = ({ data }) => {
   const { properties, queues, differences } = data;
 
   // Group properties by category
-  const groupedProperties = useMemo(() => {
-    const groups = new Map<string, string[]>();
+  const groups = new Map<string, string[]>();
 
-    properties.forEach((_, prop) => {
-      const category = getPropertyCategory(prop);
-      const props = groups.get(category) || [];
-      props.push(prop);
-      groups.set(category, props);
-    });
+  properties.forEach((_, prop) => {
+    const category = getPropertyCategory(prop);
+    const props = groups.get(category) || [];
+    props.push(prop);
+    groups.set(category, props);
+  });
 
-    return groups;
-  }, [properties]);
+  const groupedProperties = groups;
 
   return (
     <div className="w-full h-full">

@@ -26,6 +26,7 @@ export const PlacementRulesMigrationDialog = ({
   open,
   onOpenChange,
 }: PlacementRulesMigrationDialogProps) => {
+  'use memo';
   const { legacyRules, migrateLegacyRules: storeMigrateLegacyRules } = useSchedulerStore();
 
   const [migrationResult, setMigrationResult] = useState<MigrationResult | null>(null);
@@ -119,8 +120,8 @@ export const PlacementRulesMigrationDialog = ({
                   <AlertDescription>
                     Migration failed:
                     <ul className="mt-2 list-disc list-inside">
-                      {migrationResult.errors.map((error, i) => (
-                        <li key={i}>{error}</li>
+                      {migrationResult.errors.map((error) => (
+                        <li key={error}>{error}</li>
                       ))}
                     </ul>
                   </AlertDescription>

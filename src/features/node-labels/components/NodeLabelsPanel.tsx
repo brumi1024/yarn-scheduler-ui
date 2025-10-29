@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { Tag, Plus, Trash2, Shield } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Button } from '~/components/ui/button';
@@ -57,9 +57,7 @@ export const NodeLabelsPanel: React.FC = () => {
     selectNodeLabel(labelName === selectedNodeLabel ? null : labelName);
   };
 
-  const existingLabelNames = useMemo(() => {
-    return nodeLabels.map((label) => label.name);
-  }, [nodeLabels]);
+  const existingLabelNames = nodeLabels.map((label) => label.name);
 
   return (
     <TooltipProvider>

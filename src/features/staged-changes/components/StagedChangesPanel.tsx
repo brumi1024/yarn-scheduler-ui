@@ -28,39 +28,35 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
     useSchedulerStore();
 
   // Group changes by queue path for organized display
-  const changesByQueue = React.useMemo(() => {
-    return stagedChanges.reduce(
-      (acc, change) => {
-        const queuePath = change.queuePath;
-        if (!acc[queuePath]) {
-          acc[queuePath] = [];
-        }
-        acc[queuePath].push(change);
-        return acc;
-      },
-      {} as Record<string, StagedChange[]>,
-    );
-  }, [stagedChanges]);
+  const changesByQueue = stagedChanges.reduce(
+    (acc, change) => {
+      const queuePath = change.queuePath;
+      if (!acc[queuePath]) {
+        acc[queuePath] = [];
+      }
+      acc[queuePath].push(change);
+      return acc;
+    },
+    {} as Record<string, StagedChange[]>,
+  );
 
   // Calculate validation summary
-  const validationSummary = React.useMemo(() => {
-    let errorCount = 0;
-    let warningCount = 0;
+  let errorCount = 0;
+  let warningCount = 0;
 
-    stagedChanges.forEach((change) => {
-      if (change.validationErrors) {
-        change.validationErrors.forEach((error) => {
-          if (error.severity === 'error') {
-            errorCount++;
-          } else {
-            warningCount++;
-          }
-        });
-      }
-    });
+  stagedChanges.forEach((change) => {
+    if (change.validationErrors) {
+      change.validationErrors.forEach((error) => {
+        if (error.severity === 'error') {
+          errorCount++;
+        } else {
+          warningCount++;
+        }
+      });
+    }
+  });
 
-    return { errorCount, warningCount };
-  }, [stagedChanges]);
+  const validationSummary = { errorCount, warningCount };
 
   const handleApplyChanges = async () => {
     setIsApplying(true);

@@ -19,6 +19,7 @@ import { ScrollArea } from '~/components/ui/scroll-area';
 import { POLICY_DESCRIPTIONS } from '../constants/policy-descriptions';
 
 export function PolicyReferenceDialog() {
+  'use memo';
   return (
     <Dialog>
       <DialogTrigger asChild>

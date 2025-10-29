@@ -10,6 +10,7 @@ import {
 import { useTheme } from '~/components/providers/use-theme';
 
 export function ModeToggle() {
+  'use memo';
   const { setTheme } = useTheme();
 
   return (

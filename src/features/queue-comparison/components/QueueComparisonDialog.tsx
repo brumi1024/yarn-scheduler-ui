@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Download } from 'lucide-react';
 import {
   Dialog,
@@ -22,12 +22,10 @@ export const QueueComparisonDialog: React.FC<QueueComparisonDialogProps> = ({
   open,
   onOpenChange,
 }) => {
-  const { getComparisonData, comparisonQueues } = useSchedulerStore();
+  const { getComparisonData } = useSchedulerStore();
 
-  const comparisonData = useMemo(() => {
-    const configs = getComparisonData();
-    return buildComparisonData(configs);
-  }, [getComparisonData, comparisonQueues]); // eslint-disable-line react-hooks/exhaustive-deps
+  const configs = getComparisonData();
+  const comparisonData = buildComparisonData(configs);
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
