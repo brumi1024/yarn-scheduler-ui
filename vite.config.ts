@@ -5,7 +5,8 @@ import tsconfigPaths from 'vite-tsconfig-paths';
 import babel from 'vite-plugin-babel';
 
 const ReactCompilerConfig = {
-  compilationMode: 'annotation',
+  // compilationMode: 'all' is the default - compile everything
+  // No longer need 'annotation' mode since all components are compatible
 };
 
 export default defineConfig(({ mode }) => {

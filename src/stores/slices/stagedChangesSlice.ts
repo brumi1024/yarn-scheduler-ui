@@ -717,7 +717,10 @@ function getQueuesForAutoCreationEnable(changes: StagedChange[]): string[] {
       continue;
     }
 
-    if (change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED) {
+    if (
+      change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED ||
+      change.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED
+    ) {
       const newValue = normalize(change.newValue);
       const oldValue = normalize(change.oldValue);
 

@@ -1074,7 +1074,7 @@ describe('schedulerStore', () => {
         ]),
       );
     });
-    it('should update flexible auto creation without stopping queues', async () => {
+    it('should stop and restart queues when enabling flexible auto creation', async () => {
       const store = createTestStore();
       const mockApiClient = vi.mocked(store.getState().apiClient);
 
@@ -1099,11 +1099,38 @@ describe('schedulerStore', () => {
 
       await store.getState().applyChanges();
 
-      expect(mockApiClient.validateSchedulerConf).toHaveBeenCalledTimes(1);
-      expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(1);
+      expect(mockApiClient.updateSchedulerConf).toHaveBeenCalledTimes(3);
 
-      const [payload] = mockApiClient.updateSchedulerConf.mock.calls.map(([args]) => args);
-      expect(payload?.['update-queue']).toEqual(
+      const [stopPayload, autoCreationUpdatePayload, restartPayload] =
+        mockApiClient.updateSchedulerConf.mock.calls.map(([payload]) => payload);
+
+      // Verify stop payload
+      expect(stopPayload?.['update-queue']).toHaveLength(3);
+      expect(stopPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'STOPPED' }],
+            },
+          }),
+        ]),
+      );
+
+      // Verify auto-creation update payload
+      expect(autoCreationUpdatePayload?.['update-queue']).toEqual(
         expect.arrayContaining([
           expect.objectContaining({
             'queue-name': 'root.production',
@@ -1119,12 +1146,29 @@ describe('schedulerStore', () => {
         ]),
       );
 
-      const queueEntries =
-        payload?.['update-queue']?.flatMap(
-          (item: { params: { entry: Array<{ key: string; value: string }> } }) => item.params.entry,
-        ) ?? [];
-      expect(queueEntries).not.toEqual(
-        expect.arrayContaining([expect.objectContaining({ key: 'state', value: 'STOPPED' })]),
+      // Verify restart payload
+      expect(restartPayload?.['update-queue']).toHaveLength(3);
+      expect(restartPayload?.['update-queue']).toEqual(
+        expect.arrayContaining([
+          expect.objectContaining({
+            'queue-name': 'root.production',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.batch',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+          expect.objectContaining({
+            'queue-name': 'root.production.interactive',
+            params: {
+              entry: [{ key: 'state', value: 'RUNNING' }],
+            },
+          }),
+        ]),
       );
     });
 

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   Save,
   RotateCcw,
@@ -219,37 +219,25 @@ export const PropertyPanel: React.FC = () => {
 
   const queuePath = selectedQueue?.queuePath;
 
-  const queueIssues = useMemo(() => {
-    if (!queuePath) {
-      return {} as Record<string, ValidationIssue[]>;
-    }
-    return validationState[queuePath] ?? {};
-  }, [queuePath, validationState]);
+  const queueIssues = !queuePath
+    ? ({} as Record<string, ValidationIssue[]>)
+    : (validationState[queuePath] ?? {});
 
-  const issueList = useMemo<Array<ValidationIssue & { field: string; key: string }>>(() => {
-    if (!queuePath) {
-      return [];
-    }
-    return Object.entries(queueIssues).flatMap(([field, issues]) =>
-      issues.map((issue, index) => ({
-        ...issue,
-        field,
-        key: `${field}-${issue.rule}-${index}`,
-      })),
-    );
-  }, [queueIssues, queuePath]);
+  const issueList: Array<ValidationIssue & { field: string; key: string }> = !queuePath
+    ? []
+    : Object.entries(queueIssues).flatMap(([field, issues]) =>
+        issues.map((issue, index) => ({
+          ...issue,
+          field,
+          key: `${field}-${issue.rule}-${index}`,
+        })),
+      );
 
-  const errorIssues = useMemo(
-    () => issueList.filter((issue) => issue.severity === 'error'),
-    [issueList],
-  );
+  const errorIssues = issueList.filter((issue) => issue.severity === 'error');
 
-  const warningIssues = useMemo(
-    () => issueList.filter((issue) => issue.severity === 'warning'),
-    [issueList],
-  );
+  const warningIssues = issueList.filter((issue) => issue.severity === 'warning');
 
-  const summaryLabel = useMemo(() => {
+  const summaryLabel = (() => {
     const parts: string[] = [];
     if (errorIssues.length) {
       parts.push(`${errorIssues.length} error${errorIssues.length === 1 ? '' : 's'}`);
@@ -258,9 +246,9 @@ export const PropertyPanel: React.FC = () => {
       parts.push(`${warningIssues.length} warning${warningIssues.length === 1 ? '' : 's'}`);
     }
     return parts.length > 0 ? parts.join(', ') : 'Validation issues';
-  }, [errorIssues.length, warningIssues.length]);
+  })();
 
-  const handleIssueSelect = useCallback((field: string) => {
+  const handleIssueSelect = (field: string) => {
     const selector = `[data-field-id="${field.replace(/"/g, '\\"')}"]`;
     const element = document.querySelector(selector) as HTMLElement | null;
     if (element) {
@@ -268,7 +256,7 @@ export const PropertyPanel: React.FC = () => {
       element.focus?.();
     }
     setIsSummaryOpen(false);
-  }, []);
+  };
 
   if (!isPanelVisible || !selectedQueue) {
     return null;

@@ -1,5 +1,5 @@
 import { Outlet, useLocation, Link } from 'react-router';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { StagedChangesPanel } from '~/features/staged-changes/components/StagedChangesPanel';
 import { AppSidebar } from '~/components/layouts/app-sidebar';
@@ -24,10 +24,8 @@ export default function Layout() {
   const location = useLocation();
 
   // Get legacy mode status considering staged changes
-  const legacyModeEnabled = useMemo(() => {
-    const mergedData = getMergedConfigData(configData, stagedChanges);
-    return mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
-  }, [configData, stagedChanges]);
+  const mergedData = getMergedConfigData(configData, stagedChanges);
+  const legacyModeEnabled = mergedData.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY) !== 'false';
 
   useEffect(() => {
     loadInitialData().catch((err) => {

@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useState } from 'react';
 import { FileDown } from 'lucide-react';
 
 import { Button } from '~/components/ui/button';
@@ -44,60 +44,55 @@ export function DiagnosticsDialog() {
   const [open, setOpen] = useState(false);
   const [selectedDatasets, setSelectedDatasets] = useState<DiagnosticDatasetId[]>(DEFAULT_SELECTED);
 
-  const schedulerConfiguration = useMemo(() => {
-    const entries = Array.from(configData.entries()).sort(([a], [b]) => a.localeCompare(b));
-    return {
-      version: configVersion,
-      properties: Object.fromEntries(entries),
-    };
-  }, [configData, configVersion]);
+  const entries = Array.from(configData.entries()).sort(([a], [b]) => a.localeCompare(b));
+  const schedulerConfiguration = {
+    version: configVersion,
+    properties: Object.fromEntries(entries),
+  };
 
-  const datasetOptions = useMemo<DiagnosticOption[]>(
-    () => [
-      {
-        id: 'schedulerConf',
-        label: 'Scheduler Configuration',
-        description: 'Key/value pairs returned by /scheduler-conf (including version metadata).',
-        data: schedulerConfiguration,
-      },
-      {
-        id: 'schedulerInfo',
-        label: 'Scheduler Info',
-        description: 'Current scheduler metrics returned by /scheduler.',
-        data: schedulerData,
-      },
-      {
-        id: 'nodeLabels',
-        label: 'Node Labels',
-        description: 'Label definitions from /node-labels.',
-        data: nodeLabels,
-      },
-      {
-        id: 'nodeToLabels',
-        label: 'Node-to-Labels Mapping',
-        description: 'Assignments from /node-to-labels.',
-        data: nodeToLabels,
-      },
-      {
-        id: 'nodes',
-        label: 'Nodes',
-        description: 'Node metadata returned by /nodes.',
-        data: nodes,
-      },
-    ],
-    [schedulerConfiguration, schedulerData, nodeLabels, nodeToLabels, nodes],
-  );
+  const datasetOptions: DiagnosticOption[] = [
+    {
+      id: 'schedulerConf',
+      label: 'Scheduler Configuration',
+      description: 'Key/value pairs returned by /scheduler-conf (including version metadata).',
+      data: schedulerConfiguration,
+    },
+    {
+      id: 'schedulerInfo',
+      label: 'Scheduler Info',
+      description: 'Current scheduler metrics returned by /scheduler.',
+      data: schedulerData,
+    },
+    {
+      id: 'nodeLabels',
+      label: 'Node Labels',
+      description: 'Label definitions from /node-labels.',
+      data: nodeLabels,
+    },
+    {
+      id: 'nodeToLabels',
+      label: 'Node-to-Labels Mapping',
+      description: 'Assignments from /node-to-labels.',
+      data: nodeToLabels,
+    },
+    {
+      id: 'nodes',
+      label: 'Nodes',
+      description: 'Node metadata returned by /nodes.',
+      data: nodes,
+    },
+  ];
 
-  const toggleDataset = useCallback((datasetId: DiagnosticDatasetId, checked: boolean) => {
+  const toggleDataset = (datasetId: DiagnosticDatasetId, checked: boolean) => {
     setSelectedDatasets((prev) => {
       if (checked) {
         return prev.includes(datasetId) ? prev : [...prev, datasetId];
       }
       return prev.filter((id) => id !== datasetId);
     });
-  }, []);
+  };
 
-  const handleDownload = useCallback(() => {
+  const handleDownload = () => {
     if (selectedDatasets.length === 0) {
       return;
     }
@@ -124,7 +119,7 @@ export function DiagnosticsDialog() {
     document.body.removeChild(anchor);
     URL.revokeObjectURL(url);
     setOpen(false);
-  }, [datasetOptions, selectedDatasets]);
+  };
 
   const isDownloadDisabled = selectedDatasets.length === 0;
 

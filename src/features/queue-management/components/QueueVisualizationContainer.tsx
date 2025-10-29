@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo } from 'react';
+import React from 'react';
 import {
   ReactFlow,
   Background,
@@ -41,27 +41,24 @@ const FlowInner: React.FC = () => {
 
   const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
 
-  // Calculate validation summary
-  const validationSummary = useMemo(() => {
-    let errorCount = 0;
-    let warningCount = 0;
-    const affectedQueues = new Set<string>();
+  let errorCount = 0;
+  let warningCount = 0;
+  const affectedQueues = new Set<string>();
 
-    stagedChanges.forEach((change) => {
-      if (change.validationErrors) {
-        change.validationErrors.forEach((error) => {
-          if (error.severity === 'error') {
-            errorCount++;
-          } else {
-            warningCount++;
-          }
-        });
-        affectedQueues.add(change.queuePath);
-      }
-    });
+  stagedChanges.forEach((change) => {
+    if (change.validationErrors) {
+      change.validationErrors.forEach((error) => {
+        if (error.severity === 'error') {
+          errorCount++;
+        } else {
+          warningCount++;
+        }
+      });
+      affectedQueues.add(change.queuePath);
+    }
+  });
 
-    return { errorCount, warningCount, affectedQueueCount: affectedQueues.size };
-  }, [stagedChanges]);
+  const validationSummary = { errorCount, warningCount, affectedQueueCount: affectedQueues.size };
 
   const colorMode =
     theme === 'system'
@@ -70,20 +67,17 @@ const FlowInner: React.FC = () => {
         : 'light'
       : theme;
 
-  const onNodesChange: OnNodesChange = useCallback(() => {
-    // We don't allow node position changes
-  }, []);
+  const onNodesChange: OnNodesChange = () => {
+    // don't allow node position changes
+  };
 
-  const onEdgesChange: OnEdgesChange = useCallback(() => {
-    // We don't allow edge changes
-  }, []);
+  const onEdgesChange: OnEdgesChange = () => {
+    // don't allow edge changes
+  };
 
-  const onNodeClick: NodeMouseHandler = useCallback(
-    (_, node) => {
-      selectQueue?.(node.id);
-    },
-    [selectQueue],
-  );
+  const onNodeClick: NodeMouseHandler = (_, node) => {
+    selectQueue?.(node.id);
+  };
 
   if (isLoading) {
     return (
