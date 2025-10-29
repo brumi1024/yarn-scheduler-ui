@@ -1,4 +1,4 @@
-import { createContext, use, useCallback, useMemo, useState, type PropsWithChildren } from 'react';
+import { createContext, use, useState, type PropsWithChildren } from 'react';
 import type { JSX } from 'react';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { mergeStagedConfig, applyFieldPreview } from '~/features/validation/utils/configUtils';
@@ -41,58 +41,55 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
   const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
 
-  const baseMergedConfig = useMemo(
-    () => mergeStagedConfig(configData, stagedChanges),
-    [configData, stagedChanges],
-  );
+  const baseMergedConfig = mergeStagedConfig(configData, stagedChanges);
 
-  const updateIssuesState = useCallback(
-    (issues: ValidationIssue[], impactedKeys: Array<{ queuePath: string; fieldName: string }>) => {
-      setErrors((prev) => {
-        const next: ValidationState = { ...prev };
+  const updateIssuesState = (
+    issues: ValidationIssue[],
+    impactedKeys: Array<{ queuePath: string; fieldName: string }>,
+  ) => {
+    setErrors((prev) => {
+      const next: ValidationState = { ...prev };
 
-        impactedKeys.forEach(({ queuePath, fieldName }) => {
-          if (!next[queuePath]) {
-            next[queuePath] = {};
-          } else {
-            next[queuePath] = { ...next[queuePath] };
-          }
-          // Clear existing issues for impacted keys before repopulating
-          delete next[queuePath][fieldName];
-        });
-
-        issues.forEach((issue) => {
-          if (!next[issue.queuePath]) {
-            next[issue.queuePath] = {};
-          }
-
-          const queueIssues = (next[issue.queuePath] = { ...next[issue.queuePath] });
-          const fieldIssues = queueIssues[issue.field] ? [...queueIssues[issue.field]] : [];
-
-          const duplicate = fieldIssues.some(
-            (existing) => existing.rule === issue.rule && existing.message === issue.message,
-          );
-
-          if (!duplicate) {
-            fieldIssues.push(issue);
-          }
-
-          queueIssues[issue.field] = fieldIssues;
-        });
-
-        Object.entries(next).forEach(([queuePath, fields]) => {
-          if (Object.keys(fields).length === 0) {
-            delete next[queuePath];
-          }
-        });
-
-        return next;
+      impactedKeys.forEach(({ queuePath, fieldName }) => {
+        if (!next[queuePath]) {
+          next[queuePath] = {};
+        } else {
+          next[queuePath] = { ...next[queuePath] };
+        }
+        // Clear existing issues for impacted keys before repopulating
+        delete next[queuePath][fieldName];
       });
-    },
-    [],
-  );
 
-  const replaceQueueIssues = useCallback((queuePath: string, issues: ValidationIssue[]) => {
+      issues.forEach((issue) => {
+        if (!next[issue.queuePath]) {
+          next[issue.queuePath] = {};
+        }
+
+        const queueIssues = (next[issue.queuePath] = { ...next[issue.queuePath] });
+        const fieldIssues = queueIssues[issue.field] ? [...queueIssues[issue.field]] : [];
+
+        const duplicate = fieldIssues.some(
+          (existing) => existing.rule === issue.rule && existing.message === issue.message,
+        );
+
+        if (!duplicate) {
+          fieldIssues.push(issue);
+        }
+
+        queueIssues[issue.field] = fieldIssues;
+      });
+
+      Object.entries(next).forEach(([queuePath, fields]) => {
+        if (Object.keys(fields).length === 0) {
+          delete next[queuePath];
+        }
+      });
+
+      return next;
+    });
+  };
+
+  const replaceQueueIssues = (queuePath: string, issues: ValidationIssue[]) => {
     setErrors((prev) => {
       const next: ValidationState = { ...prev };
 
@@ -115,66 +112,63 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
 
       return next;
     });
-  }, []);
+  };
 
-  const validateField = useCallback(
-    (
-      queuePath: string,
-      fieldName: string,
-      fieldValue: unknown,
-      options?: { pendingValues?: PendingFieldValue[] },
-    ) => {
-      let effectiveConfig = applyFieldPreview(baseMergedConfig, queuePath, fieldName, fieldValue);
+  const validateField = (
+    queuePath: string,
+    fieldName: string,
+    fieldValue: unknown,
+    options?: { pendingValues?: PendingFieldValue[] },
+  ) => {
+    let effectiveConfig = applyFieldPreview(baseMergedConfig, queuePath, fieldName, fieldValue);
 
-      if (options?.pendingValues?.length) {
-        options.pendingValues.forEach(
-          ({ queuePath: overrideQueuePath, fieldName: overrideField, value }) => {
-            const targetQueuePath = overrideQueuePath ?? queuePath;
-            if (targetQueuePath === queuePath && overrideField === fieldName) {
-              return;
-            }
-            effectiveConfig = applyFieldPreview(
-              effectiveConfig,
-              targetQueuePath,
-              overrideField,
-              value,
-            );
-          },
-        );
+    if (options?.pendingValues?.length) {
+      options.pendingValues.forEach(
+        ({ queuePath: overrideQueuePath, fieldName: overrideField, value }) => {
+          const targetQueuePath = overrideQueuePath ?? queuePath;
+          if (targetQueuePath === queuePath && overrideField === fieldName) {
+            return;
+          }
+          effectiveConfig = applyFieldPreview(
+            effectiveConfig,
+            targetQueuePath,
+            overrideField,
+            value,
+          );
+        },
+      );
+    }
+
+    const legacyValue = effectiveConfig.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY);
+
+    const ruleContext: RuleContext = {
+      queuePath,
+      fieldName,
+      fieldValue,
+      config: effectiveConfig,
+      schedulerData,
+      stagedChanges,
+      legacyModeEnabled: legacyValue !== 'false',
+    };
+
+    const issues = runFieldValidation(ruleContext);
+
+    const impactedKeys: Array<{ queuePath: string; fieldName: string }> = [];
+    const addImpact = (qp: string, fn: string) => {
+      if (!impactedKeys.some((entry) => entry.queuePath === qp && entry.fieldName === fn)) {
+        impactedKeys.push({ queuePath: qp, fieldName: fn });
       }
+    };
 
-      const legacyValue = effectiveConfig.get(SPECIAL_VALUES.LEGACY_MODE_PROPERTY);
+    addImpact(queuePath, fieldName);
+    issues.forEach((issue) => addImpact(issue.queuePath, issue.field));
 
-      const ruleContext: RuleContext = {
-        queuePath,
-        fieldName,
-        fieldValue,
-        config: effectiveConfig,
-        schedulerData,
-        stagedChanges,
-        legacyModeEnabled: legacyValue !== 'false',
-      };
+    updateIssuesState(issues, impactedKeys);
 
-      const issues = runFieldValidation(ruleContext);
+    return issues;
+  };
 
-      const impactedKeys: Array<{ queuePath: string; fieldName: string }> = [];
-      const addImpact = (qp: string, fn: string) => {
-        if (!impactedKeys.some((entry) => entry.queuePath === qp && entry.fieldName === fn)) {
-          impactedKeys.push({ queuePath: qp, fieldName: fn });
-        }
-      };
-
-      addImpact(queuePath, fieldName);
-      issues.forEach((issue) => addImpact(issue.queuePath, issue.field));
-
-      updateIssuesState(issues, impactedKeys);
-
-      return issues;
-    },
-    [baseMergedConfig, stagedChanges, schedulerData, updateIssuesState],
-  );
-
-  const clearFieldErrors = useCallback((queuePath: string, fieldName: string) => {
+  const clearFieldErrors = (queuePath: string, fieldName: string) => {
     setErrors((prev) => {
       if (!prev[queuePath]?.[fieldName]) {
         return prev;
@@ -192,9 +186,9 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
 
       return next;
     });
-  }, []);
+  };
 
-  const clearQueueErrors = useCallback((queuePath: string) => {
+  const clearQueueErrors = (queuePath: string) => {
     setErrors((prev) => {
       if (!prev[queuePath]) {
         return prev;
@@ -204,23 +198,20 @@ export const ValidationProvider = ({ children }: PropsWithChildren): JSX.Element
       delete next[queuePath];
       return next;
     });
-  }, []);
+  };
 
-  const clearAllErrors = useCallback(() => {
+  const clearAllErrors = () => {
     setErrors({});
-  }, []);
+  };
 
-  const value = useMemo<ValidationContextValue>(
-    () => ({
-      errors,
-      validateField,
-      replaceQueueIssues,
-      clearFieldErrors,
-      clearQueueErrors,
-      clearAllErrors,
-    }),
-    [errors, validateField, replaceQueueIssues, clearFieldErrors, clearQueueErrors, clearAllErrors],
-  );
+  const value: ValidationContextValue = {
+    errors,
+    validateField,
+    replaceQueueIssues,
+    clearFieldErrors,
+    clearQueueErrors,
+    clearAllErrors,
+  };
 
   return <ValidationContext value={value}>{children}</ValidationContext>;
 };

@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, useCallback } from 'react';
+import React, { useState, useImperativeHandle, useMemo } from 'react';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
@@ -83,14 +83,8 @@ export const PropertyEditorTab = ({
   const isFormInitializing =
     !control || !propertiesByCategory || Object.keys(propertiesByCategory).length === 0;
 
-  const parentQueuePath = React.useMemo(() => {
-    const parts = queue.queuePath.split('.');
-    if (parts.length <= 1) {
-      return undefined;
-    }
-
-    return parts.slice(0, -1).join('.');
-  }, [queue.queuePath]);
+  const parts = queue.queuePath.split('.');
+  const parentQueuePath = parts.length <= 1 ? undefined : parts.slice(0, -1).join('.');
 
   // Notify parent about hasChanges state
   React.useEffect(() => {
@@ -108,7 +102,7 @@ export const PropertyEditorTab = ({
   }, [formState.isDirty, onFormDirtyChange]);
 
   // Handle form submission (staging)
-  const onSubmit = React.useCallback(async () => {
+  const onSubmit = async () => {
     setIsSubmitting(true);
     try {
       await handleSubmit();
@@ -119,13 +113,13 @@ export const PropertyEditorTab = ({
     } finally {
       setIsSubmitting(false);
     }
-  }, [handleSubmit]);
+  };
 
   // Handle form reset
-  const onReset = useCallback(() => {
+  const onReset = () => {
     handleReset();
     toast.success('Form reset to current values');
-  }, [handleReset]);
+  };
 
   // Expose handlers to parent via ref
   useImperativeHandle(
@@ -139,192 +133,189 @@ export const PropertyEditorTab = ({
     [onSubmit, onReset, isValid, errors],
   );
 
-  const categoryOrder = React.useMemo<PropertyCategory[]>(() => [...baseCategoryOrder], []);
+  const categoryOrder: PropertyCategory[] = [...baseCategoryOrder];
 
-  const queueValues = React.useMemo(() => {
-    const values: Record<string, string> = {};
-    const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;
+  const queueValuesTemp: Record<string, string> = {};
+  const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;
 
-    properties.forEach((property) => {
-      const fieldName = property.formFieldName || property.name;
-      const rawValue = watchedRecord[fieldName];
-      let normalized = '';
-      if (typeof rawValue === 'string') {
-        normalized = rawValue;
-      } else if (rawValue != null) {
-        normalized = String(rawValue);
-      } else if (property.defaultValue) {
-        normalized = property.defaultValue;
-      }
-      values[property.originalName || property.name] = normalized;
-    });
+  properties.forEach((property) => {
+    const fieldName = property.formFieldName || property.name;
+    const rawValue = watchedRecord[fieldName];
+    let normalized = '';
+    if (typeof rawValue === 'string') {
+      normalized = rawValue;
+    } else if (rawValue != null) {
+      normalized = String(rawValue);
+    } else if (property.defaultValue) {
+      normalized = property.defaultValue;
+    }
+    queueValuesTemp[property.originalName || property.name] = normalized;
+  });
 
-    return values;
-  }, [properties, watchedValues]);
+  const queueValues = queueValuesTemp;
 
-  const globalValues = React.useMemo(() => {
-    const values: Record<string, string> = {};
-    globalPropertyDefinitions.forEach((property) => {
-      const { value } = getGlobalPropertyValue(property.name);
-      values[property.name] = value;
-    });
-    return values;
-  }, [getGlobalPropertyValue]);
+  const globalValuesTemp: Record<string, string> = {};
+  globalPropertyDefinitions.forEach((property) => {
+    const { value } = getGlobalPropertyValue(property.name);
+    globalValuesTemp[property.name] = value;
+  });
+  const globalValues = globalValuesTemp;
 
-  const conditionBase = React.useMemo(() => {
-    const queueValueCache = new Map<string, string | undefined>();
-    const globalValueCache = new Map<string, string | undefined>();
+  const queueValueCache = new Map<string, string | undefined>();
+  const globalValueCache = new Map<string, string | undefined>();
 
-    const getQueueValue = (targetQueuePath: string, name: string) => {
-      if (!targetQueuePath) return undefined;
+  const getQueueValue = (targetQueuePath: string, name: string) => {
+    if (!targetQueuePath) return undefined;
 
-      if (targetQueuePath === queue.queuePath) {
-        return queueValues[name];
-      }
+    if (targetQueuePath === queue.queuePath) {
+      return queueValues[name];
+    }
 
-      const cacheKey = `${targetQueuePath}::${name}`;
-      if (!queueValueCache.has(cacheKey)) {
-        const { value } = getQueuePropertyValue(targetQueuePath, name);
-        queueValueCache.set(cacheKey, value);
-      }
-      return queueValueCache.get(cacheKey);
-    };
+    const cacheKey = `${targetQueuePath}::${name}`;
+    if (!queueValueCache.has(cacheKey)) {
+      const { value } = getQueuePropertyValue(targetQueuePath, name);
+      queueValueCache.set(cacheKey, value);
+    }
+    return queueValueCache.get(cacheKey);
+  };
 
-    const getValue = (name: string) => {
-      if (name in queueValues) {
-        return queueValues[name];
-      }
-      return getQueueValue(queue.queuePath, name);
-    };
+  const getValue = (name: string) => {
+    if (name in queueValues) {
+      return queueValues[name];
+    }
+    return getQueueValue(queue.queuePath, name);
+  };
 
-    const getGlobalValue = (name: string) => {
-      if (name in globalValues) {
-        return globalValues[name];
-      }
-      if (!globalValueCache.has(name)) {
-        const { value } = getGlobalPropertyValue(name);
-        globalValueCache.set(name, value);
-      }
-      return globalValueCache.get(name);
-    };
+  const getGlobalValue = (name: string) => {
+    if (name in globalValues) {
+      return globalValues[name];
+    }
+    if (!globalValueCache.has(name)) {
+      const { value } = getGlobalPropertyValue(name);
+      globalValueCache.set(name, value);
+    }
+    return globalValueCache.get(name);
+  };
 
-    return {
-      scope: 'queue' as const,
-      values: queueValues,
-      globalValues,
-      queuePath: queue.queuePath,
-      queueInfo: queue,
-      schedulerInfo,
-      stagedChanges,
-      configData,
-      getValue,
-      getGlobalValue,
-      getQueueValue,
-      getConfigValue: (key: string) => configData.get(key),
-    };
-  }, [
-    queue,
-    queueValues,
+  const conditionBase = {
+    scope: 'queue' as const,
+    values: queueValues,
     globalValues,
-    getQueuePropertyValue,
-    getGlobalPropertyValue,
+    queuePath: queue.queuePath,
+    queueInfo: queue,
     schedulerInfo,
     stagedChanges,
     configData,
-  ]);
+    getValue,
+    getGlobalValue,
+    getQueueValue,
+    getConfigValue: (key: string) => configData.get(key),
+  };
 
-  const propertyStates = React.useMemo(() => {
-    const states = new Map<
-      string,
-      {
-        visible: boolean;
-        enabled: boolean;
-      }
-    >();
+  const propertyStates = new Map<
+    string,
+    {
+      visible: boolean;
+      enabled: boolean;
+    }
+  >();
 
-    properties.forEach((property) => {
+  properties.forEach((property) => {
+    const propertyName = property.originalName || property.name;
+    const propertyValue = conditionBase.getValue(propertyName) ?? '';
+    const options = {
+      ...conditionBase,
+      property,
+      propertyValue,
+    };
+    const visible = shouldShowProperty(property, options);
+    const enabled = visible ? isPropertyEnabled(property, options) : false;
+
+    propertyStates.set(propertyName, { visible, enabled });
+  });
+
+  const visiblePropertiesByCategory: Partial<Record<PropertyCategory, typeof properties>> = {};
+
+  Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
+    const typedCategory = categoryKey as PropertyCategory;
+    const filtered = props.filter((property) => {
       const propertyName = property.originalName || property.name;
-      const propertyValue = conditionBase.getValue(propertyName) ?? '';
-      const options = {
-        ...conditionBase,
-        property,
-        propertyValue,
-      };
-      const visible = shouldShowProperty(property, options);
-      const enabled = visible ? isPropertyEnabled(property, options) : false;
+      return propertyStates.get(propertyName)?.visible ?? true;
+    }) as typeof properties;
 
-      states.set(propertyName, { visible, enabled });
-    });
+    if (filtered.length === 0) {
+      return;
+    }
 
-    return states;
-  }, [properties, conditionBase]);
+    visiblePropertiesByCategory[typedCategory] = filtered;
+  });
 
-  const { visibleByCategory: visiblePropertiesByCategory, fieldCategoryMap } = React.useMemo(() => {
-    const visibleByCategory: Partial<Record<PropertyCategory, typeof properties>> = {};
-    const fieldCategoryMap = new Map<string, Set<PropertyCategory>>();
+  // Memoize fieldCategoryMap to prevent infinite loops in error categorization
+  // Build from all properties (not just visible) so errors can be mapped even for hidden fields
+  const fieldCategoryMap = useMemo(() => {
+    const categoryMap = new Map<string, Set<PropertyCategory>>();
 
     Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
       const typedCategory = categoryKey as PropertyCategory;
-      const filtered = props.filter((property) => {
-        const propertyName = property.originalName || property.name;
-        return propertyStates.get(propertyName)?.visible ?? true;
-      }) as typeof properties;
 
-      if (filtered.length === 0) {
-        return;
-      }
-
-      visibleByCategory[typedCategory] = filtered;
-
-      filtered.forEach((property) => {
+      props.forEach((property) => {
         const keys = new Set<string>([property.originalName || property.name, property.name]);
 
         keys.forEach((key) => {
-          if (!fieldCategoryMap.has(key)) {
-            fieldCategoryMap.set(key, new Set<PropertyCategory>());
+          if (!categoryMap.has(key)) {
+            categoryMap.set(key, new Set<PropertyCategory>());
           }
-          fieldCategoryMap.get(key)!.add(typedCategory);
+          categoryMap.get(key)!.add(typedCategory);
         });
       });
     });
 
-    return { visibleByCategory, fieldCategoryMap };
-  }, [propertiesByCategory, propertyStates]);
+    return categoryMap;
+  }, [propertiesByCategory]);
 
-  const availableCategories = React.useMemo(
-    () =>
-      categoryOrder.filter((category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0),
-    [categoryOrder, visiblePropertiesByCategory],
+  const availableCategories = categoryOrder.filter(
+    (category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0,
   );
 
-  // Find categories with errors
-  const categoryErrorInfo = React.useMemo(() => {
-    const counts: Partial<Record<PropertyCategory, number>> = {};
+  // Memoize error info and categoriesWithErrors to prevent infinite loops in useEffect
+  const categoriesWithErrors = useMemo(() => {
+    const categoryErrorInfoCounts: Partial<Record<PropertyCategory, number>> = {};
 
-    if (!errors || Object.keys(errors).length === 0) {
-      return counts;
+    if (errors && Object.keys(errors).length > 0) {
+      Object.keys(errors).forEach((fieldName) => {
+        const categories = fieldCategoryMap.get(fieldName);
+        if (!categories) {
+          return;
+        }
+        categories.forEach((category) => {
+          categoryErrorInfoCounts[category] = (categoryErrorInfoCounts[category] ?? 0) + 1;
+        });
+      });
     }
 
-    Object.keys(errors).forEach((fieldName) => {
-      const categories = fieldCategoryMap.get(fieldName);
-      if (!categories) {
-        return;
-      }
-      categories.forEach((category) => {
-        counts[category] = (counts[category] ?? 0) + 1;
-      });
-    });
-
-    return counts;
-  }, [errors, fieldCategoryMap]);
-
-  const categoriesWithErrors = React.useMemo(() => {
     return new Set(
-      (Object.entries(categoryErrorInfo) as Array<[PropertyCategory, number]>)
+      (Object.entries(categoryErrorInfoCounts) as Array<[PropertyCategory, number]>)
         .filter(([, count]) => count > 0)
         .map(([category]) => category),
     );
-  }, [categoryErrorInfo]);
+  }, [errors, fieldCategoryMap]);
+
+  // Compute categoryErrorInfo for rendering (error counts per category)
+  const categoryErrorInfo = useMemo(() => {
+    const counts: Partial<Record<PropertyCategory, number>> = {};
+    if (errors && Object.keys(errors).length > 0) {
+      Object.keys(errors).forEach((fieldName) => {
+        const categories = fieldCategoryMap.get(fieldName);
+        if (!categories) {
+          return;
+        }
+        categories.forEach((category) => {
+          counts[category] = (counts[category] ?? 0) + 1;
+        });
+      });
+    }
+    return counts;
+  }, [errors, fieldCategoryMap]);
 
   // Auto-expand categories with errors
   React.useEffect(() => {

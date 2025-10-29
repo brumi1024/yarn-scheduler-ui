@@ -1,4 +1,4 @@
-import React, { useCallback, useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import {
   Card,
   CardContent,
@@ -64,157 +64,123 @@ export const TemplateScopeForm: React.FC<TemplateScopeFormProps> = ({ scope, bas
     properties: templateProperties,
   });
 
-  const queueValues = useMemo(() => {
-    const values: Record<string, string> = {};
-    const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;
+  const queueValues: Record<string, string> = {};
+  const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;
 
-    properties.forEach((property) => {
-      const fieldName = property.formFieldName || property.name;
-      const rawValue = watchedRecord[fieldName];
-      let normalized = '';
-      if (typeof rawValue === 'string') {
-        normalized = rawValue;
-      } else if (rawValue != null) {
-        normalized = String(rawValue);
-      } else if (property.defaultValue) {
-        normalized = property.defaultValue;
-      }
-      values[property.originalName || property.name] = normalized;
-    });
+  properties.forEach((property) => {
+    const fieldName = property.formFieldName || property.name;
+    const rawValue = watchedRecord[fieldName];
+    let normalized = '';
+    if (typeof rawValue === 'string') {
+      normalized = rawValue;
+    } else if (rawValue != null) {
+      normalized = String(rawValue);
+    } else if (property.defaultValue) {
+      normalized = property.defaultValue;
+    }
+    queueValues[property.originalName || property.name] = normalized;
+  });
 
-    return values;
-  }, [properties, watchedValues]);
+  const globalValues: Record<string, string> = {};
+  globalPropertyDefinitions.forEach((property) => {
+    const { value } = getGlobalPropertyValue(property.name);
+    globalValues[property.name] = value;
+  });
 
-  const globalValues = useMemo(() => {
-    const values: Record<string, string> = {};
-    globalPropertyDefinitions.forEach((property) => {
-      const { value } = getGlobalPropertyValue(property.name);
-      values[property.name] = value;
-    });
-    return values;
-  }, [getGlobalPropertyValue]);
+  const queueValueCache = new Map<string, string | undefined>();
+  const globalValueCache = new Map<string, string | undefined>();
 
-  const conditionBase = useMemo(() => {
-    const queueValueCache = new Map<string, string | undefined>();
-    const globalValueCache = new Map<string, string | undefined>();
+  const getQueueValue = (targetQueuePath: string, name: string) => {
+    if (!targetQueuePath) return undefined;
 
-    const getQueueValue = (targetQueuePath: string, name: string) => {
-      if (!targetQueuePath) return undefined;
-
-      if (targetQueuePath === scope.queuePath) {
-        return queueValues[name];
-      }
-
-      const cacheKey = `${targetQueuePath}::${name}`;
-      if (!queueValueCache.has(cacheKey)) {
-        const { value } = getQueuePropertyValue(targetQueuePath, name);
-        queueValueCache.set(cacheKey, value);
-      }
-      return queueValueCache.get(cacheKey);
-    };
-
-    const getValue = (name: string) => {
-      if (name in queueValues) {
-        return queueValues[name];
-      }
-      return getQueueValue(scope.queuePath, name);
-    };
-
-    const getGlobalValue = (name: string) => {
-      if (name in globalValues) {
-        return globalValues[name];
-      }
-      if (!globalValueCache.has(name)) {
-        const { value } = getGlobalPropertyValue(name);
-        globalValueCache.set(name, value);
-      }
-      return globalValueCache.get(name);
-    };
-
-    return {
-      scope: 'queue' as const,
-      values: queueValues,
-      globalValues,
-      queuePath: scope.queuePath,
-      queueInfo: null,
-      schedulerInfo,
-      stagedChanges,
-      configData,
-      getValue,
-      getGlobalValue,
-      getQueueValue,
-      getConfigValue: (key: string) => configData.get(key),
-    };
-  }, [
-    configData,
-    getGlobalPropertyValue,
-    getQueuePropertyValue,
-    globalValues,
-    queueValues,
-    schedulerInfo,
-    scope.queuePath,
-    stagedChanges,
-  ]);
-
-  const propertyStates = useMemo(() => {
-    const states = new Map<
-      string,
-      {
-        visible: boolean;
-        enabled: boolean;
-      }
-    >();
-
-    properties.forEach((property) => {
-      const propertyName = property.originalName || property.name;
-      const propertyValue = conditionBase.getValue(propertyName) ?? '';
-      const options = {
-        ...conditionBase,
-        property,
-        propertyValue,
-      };
-      const visible = shouldShowProperty(property, options);
-      const enabled = visible ? isPropertyEnabled(property, options) : false;
-
-      states.set(propertyName, { visible, enabled });
-    });
-
-    return states;
-  }, [properties, conditionBase]);
-
-  const visiblePropertiesByCategory = useMemo(() => {
-    const result: Partial<Record<PropertyCategory, PropertyDescriptor[]>> = {};
-
-    Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
-      const typedCategory = categoryKey as PropertyCategory;
-      const filtered = props.filter((property) => {
-        const propertyName = property.originalName || property.name;
-        return propertyStates.get(propertyName)?.visible ?? true;
-      });
-
-      if (filtered.length > 0) {
-        result[typedCategory] = filtered;
-      }
-    });
-
-    return result;
-  }, [propertiesByCategory, propertyStates]);
-
-  const availableCategories = useMemo(
-    () =>
-      baseCategoryOrder.filter(
-        (category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0,
-      ),
-    [visiblePropertiesByCategory],
-  );
-
-  const categoriesWithErrors = useMemo(() => {
-    const errorCategories: Set<PropertyCategory> = new Set();
-
-    if (!errors || Object.keys(errors).length === 0) {
-      return errorCategories;
+    if (targetQueuePath === scope.queuePath) {
+      return queueValues[name];
     }
 
+    const cacheKey = `${targetQueuePath}::${name}`;
+    if (!queueValueCache.has(cacheKey)) {
+      const { value } = getQueuePropertyValue(targetQueuePath, name);
+      queueValueCache.set(cacheKey, value);
+    }
+    return queueValueCache.get(cacheKey);
+  };
+
+  const getValue = (name: string) => {
+    if (name in queueValues) {
+      return queueValues[name];
+    }
+    return getQueueValue(scope.queuePath, name);
+  };
+
+  const getGlobalValue = (name: string) => {
+    if (name in globalValues) {
+      return globalValues[name];
+    }
+    if (!globalValueCache.has(name)) {
+      const { value } = getGlobalPropertyValue(name);
+      globalValueCache.set(name, value);
+    }
+    return globalValueCache.get(name);
+  };
+
+  const conditionBase = {
+    scope: 'queue' as const,
+    values: queueValues,
+    globalValues,
+    queuePath: scope.queuePath,
+    queueInfo: null,
+    schedulerInfo,
+    stagedChanges,
+    configData,
+    getValue,
+    getGlobalValue,
+    getQueueValue,
+    getConfigValue: (key: string) => configData.get(key),
+  };
+
+  const propertyStates = new Map<
+    string,
+    {
+      visible: boolean;
+      enabled: boolean;
+    }
+  >();
+
+  properties.forEach((property) => {
+    const propertyName = property.originalName || property.name;
+    const propertyValue = conditionBase.getValue(propertyName) ?? '';
+    const options = {
+      ...conditionBase,
+      property,
+      propertyValue,
+    };
+    const visible = shouldShowProperty(property, options);
+    const enabled = visible ? isPropertyEnabled(property, options) : false;
+
+    propertyStates.set(propertyName, { visible, enabled });
+  });
+
+  const visiblePropertiesByCategory: Partial<Record<PropertyCategory, PropertyDescriptor[]>> = {};
+
+  Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
+    const typedCategory = categoryKey as PropertyCategory;
+    const filtered = props.filter((property) => {
+      const propertyName = property.originalName || property.name;
+      return propertyStates.get(propertyName)?.visible ?? true;
+    });
+
+    if (filtered.length > 0) {
+      visiblePropertiesByCategory[typedCategory] = filtered;
+    }
+  });
+
+  const availableCategories = baseCategoryOrder.filter(
+    (category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0,
+  );
+
+  const categoriesWithErrors: Set<PropertyCategory> = new Set();
+
+  if (errors && Object.keys(errors).length > 0) {
     Object.keys(errors).forEach((fieldName) => {
       availableCategories.forEach((category) => {
         const categoryProps = visiblePropertiesByCategory[category] ?? [];
@@ -223,22 +189,20 @@ export const TemplateScopeForm: React.FC<TemplateScopeFormProps> = ({ scope, bas
             (prop) => (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
           )
         ) {
-          errorCategories.add(category);
+          categoriesWithErrors.add(category);
         }
       });
     });
+  }
 
-    return errorCategories;
-  }, [errors, availableCategories, visiblePropertiesByCategory]);
-
-  const onSubmit = useCallback(async () => {
+  const onSubmit = async () => {
     setIsSubmitting(true);
     try {
       await handleSubmit();
     } finally {
       setIsSubmitting(false);
     }
-  }, [handleSubmit]);
+  };
 
   return (
     <Card className="border-border flex h-full min-h-0 flex-col">

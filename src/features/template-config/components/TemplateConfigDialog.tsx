@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -53,82 +53,74 @@ export const TemplateConfigDialog: React.FC<TemplateConfigDialogProps> = ({
     }
   }, [open]);
 
-  const legacyEnabled = useMemo(() => {
-    const { value } = getQueuePropertyValue(queuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED);
-    return value === 'true';
-  }, [getQueuePropertyValue, queuePath]);
+  const legacyEnabled =
+    getQueuePropertyValue(queuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED).value === 'true';
 
-  const flexibleEnabled = useMemo(() => {
-    const { value } = getQueuePropertyValue(queuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED);
-    return value === 'true';
-  }, [getQueuePropertyValue, queuePath]);
+  const flexibleEnabled =
+    getQueuePropertyValue(queuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED).value === 'true';
 
-  const baseGroups = useMemo(
-    () =>
-      buildTemplateScopeGroups({
-        queuePath,
-        configData,
-        stagedChanges,
-        legacyEnabled,
-        flexibleEnabled,
-      }),
-    [queuePath, configData, stagedChanges, legacyEnabled, flexibleEnabled],
+  const baseGroups = buildTemplateScopeGroups({
+    queuePath,
+    configData,
+    stagedChanges,
+    legacyEnabled,
+    flexibleEnabled,
+  });
+
+  const mergedGroupsMap = new Map<
+    'legacy' | 'flexible',
+    { label: string; scopes: TemplateScope[] }
+  >();
+
+  baseGroups.forEach((group) => {
+    mergedGroupsMap.set(group.type, {
+      label: group.label,
+      scopes: [...group.scopes],
+    });
+  });
+
+  pendingScopes.forEach((scope) => {
+    const groupKey = scope.type === 'legacyLeaf' ? 'legacy' : 'flexible';
+    const existing = mergedGroupsMap.get(groupKey);
+    const label = existing?.label ?? GROUP_FALLBACK_LABEL[groupKey];
+    if (!existing) {
+      mergedGroupsMap.set(groupKey, { label, scopes: [] });
+    }
+    const updated = mergedGroupsMap.get(groupKey);
+    if (!updated) {
+      return;
+    }
+    const alreadyPresent = updated.scopes.some((item) => item.queuePath === scope.queuePath);
+    if (!alreadyPresent) {
+      updated.scopes.push(createTemplateScope(queuePath, scope.queuePath, scope.type));
+    }
+  });
+
+  const mergedGroups = Array.from(mergedGroupsMap.entries())
+    .map(([type, value]) => ({
+      type,
+      label: value.label,
+      scopes: value.scopes.sort((a, b) => a.queuePath.localeCompare(b.queuePath)),
+    }))
+    .sort((a, b) => (a.type === 'legacy' ? -1 : b.type === 'legacy' ? 1 : 0));
+
+  const existingScopePaths = mergedGroups.flatMap((group) =>
+    group.scopes.map((scope) => scope.queuePath),
   );
 
-  const mergedGroups = useMemo(() => {
-    const map = new Map<'legacy' | 'flexible', { label: string; scopes: TemplateScope[] }>();
-
-    baseGroups.forEach((group) => {
-      map.set(group.type, {
-        label: group.label,
-        scopes: [...group.scopes],
-      });
-    });
-
-    pendingScopes.forEach((scope) => {
-      const groupKey = scope.type === 'legacyLeaf' ? 'legacy' : 'flexible';
-      const existing = map.get(groupKey);
-      const label = existing?.label ?? GROUP_FALLBACK_LABEL[groupKey];
-      if (!existing) {
-        map.set(groupKey, { label, scopes: [] });
-      }
-      const updated = map.get(groupKey);
-      if (!updated) {
-        return;
-      }
-      const alreadyPresent = updated.scopes.some((item) => item.queuePath === scope.queuePath);
-      if (!alreadyPresent) {
-        updated.scopes.push(createTemplateScope(queuePath, scope.queuePath, scope.type));
-      }
-    });
-
-    return Array.from(map.entries())
-      .map(([type, value]) => ({
-        type,
-        label: value.label,
-        scopes: value.scopes.sort((a, b) => a.queuePath.localeCompare(b.queuePath)),
-      }))
-      .sort((a, b) => (a.type === 'legacy' ? -1 : b.type === 'legacy' ? 1 : 0));
-  }, [baseGroups, pendingScopes, queuePath]);
-
-  const existingScopePaths = useMemo(
-    () => mergedGroups.flatMap((group) => group.scopes.map((scope) => scope.queuePath)),
-    [mergedGroups],
-  );
-
-  const handleAddScope = useCallback((scope: { queuePath: string; type: TemplateScopeType }) => {
+  const handleAddScope = (scope: { queuePath: string; type: TemplateScopeType }) => {
     setPendingScopes((current) => {
       if (current.some((item) => item.queuePath === scope.queuePath)) {
         return current;
       }
       return [...current, scope];
     });
-  }, []);
+  };
 
   const showFlexibleHelpers =
     flexibleEnabled || mergedGroups.some((group) => group.type === 'flexible');
 
-  const allScopes = useMemo(() => mergedGroups.flatMap((group) => group.scopes), [mergedGroups]);
+  const allScopes = mergedGroups.flatMap((group) => group.scopes);
 
   useEffect(() => {
     if (allScopes.length === 0) {
@@ -143,10 +135,7 @@ export const TemplateConfigDialog: React.FC<TemplateConfigDialogProps> = ({
     });
   }, [allScopes]);
 
-  const selectedScope = useMemo(
-    () => allScopes.find((scope) => scope.id === selectedScopeId) ?? null,
-    [allScopes, selectedScopeId],
-  );
+  const selectedScope = allScopes.find((scope) => scope.id === selectedScopeId) ?? null;
 
   return (
     <>

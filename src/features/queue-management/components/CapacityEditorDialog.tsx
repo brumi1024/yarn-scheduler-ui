@@ -254,217 +254,193 @@ export const CapacityEditorDialog: React.FC = () => {
     return state.getQueuePropertyValue(parentPath, capacityProperty).value;
   });
 
-  const rows = React.useMemo(
-    () =>
-      draftOrder
-        .map((queuePath) => drafts[queuePath])
-        .filter((row): row is CapacityRowDraft => Boolean(row)),
-    [draftOrder, drafts],
-  );
+  const rows = draftOrder
+    .map((queuePath) => drafts[queuePath])
+    .filter((row): row is CapacityRowDraft => Boolean(row));
 
-  const remainingHelper = React.useMemo(
-    () => computeRemainingHelper(rows, parentCapacityValue),
-    [rows, parentCapacityValue],
-  );
+  const remainingHelper = computeRemainingHelper(rows, parentCapacityValue);
 
-  const hasBlockingIssues = React.useMemo(
-    () => validationIssues.some((issue) => issue.severity === 'error'),
-    [validationIssues],
-  );
+  const hasBlockingIssues = validationIssues.some((issue) => issue.severity === 'error');
 
-  const handleSave = React.useCallback(
-    async (force: boolean) => {
-      const success = await saveCapacityDrafts({ force });
-      if (success) {
-        closeCapacityEditor();
+  const handleSave = async (force: boolean) => {
+    const success = await saveCapacityDrafts({ force });
+    if (success) {
+      closeCapacityEditor();
+    }
+  };
+
+  const handleModeChange = (queuePath: string, mode: CapacityResourceMode) => {
+    updateCapacityDraft(queuePath, (draft) => {
+      if (draft.mode === mode) {
+        return;
       }
-    },
-    [closeCapacityEditor, saveCapacityDrafts],
-  );
 
-  const handleModeChange = React.useCallback(
-    (queuePath: string, mode: CapacityResourceMode) => {
-      updateCapacityDraft(queuePath, (draft) => {
-        if (draft.mode === mode) {
-          return;
-        }
+      if (mode === 'simple') {
+        draft.capacityValue = convertVectorDraftToString(draft.vectorCapacity);
+        draft.maxCapacityValue = convertVectorDraftToString(draft.vectorMaxCapacity);
+        draft.vectorCapacity = [];
+        draft.vectorMaxCapacity = [];
+        draft.mode = 'simple';
+        return;
+      }
 
-        if (mode === 'simple') {
-          draft.capacityValue = convertVectorDraftToString(draft.vectorCapacity);
-          draft.maxCapacityValue = convertVectorDraftToString(draft.vectorMaxCapacity);
-          draft.vectorCapacity = [];
-          draft.vectorMaxCapacity = [];
-          draft.mode = 'simple';
-          return;
-        }
+      const nextCapacityVector = ensureCoreEntries(parseVectorDraft(draft.capacityValue), true);
+      const nextMaxVector = ensureCoreEntries(parseVectorDraft(draft.maxCapacityValue), true);
 
-        const nextCapacityVector = ensureCoreEntries(parseVectorDraft(draft.capacityValue), true);
-        const nextMaxVector = ensureCoreEntries(parseVectorDraft(draft.maxCapacityValue), true);
+      draft.vectorCapacity = nextCapacityVector;
+      draft.vectorMaxCapacity = nextMaxVector;
+      draft.mode = 'vector';
+    });
+  };
 
-        draft.vectorCapacity = nextCapacityVector;
-        draft.vectorMaxCapacity = nextMaxVector;
-        draft.mode = 'vector';
-      });
-    },
-    [updateCapacityDraft],
-  );
+  const handleVectorEntryChange = (
+    queuePath: string,
+    target: VectorTarget,
+    entryId: string,
+    field: 'key' | 'value',
+    value: string,
+  ) => {
+    updateCapacityDraft(queuePath, (draft) => {
+      const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
+      const entries = draft[key];
+      const index = entries.findIndex((entry) => entry.id === entryId);
+      if (index === -1) {
+        return;
+      }
+      entries[index] = {
+        ...entries[index],
+        [field]: value,
+      };
+    });
+  };
 
-  const handleVectorEntryChange = React.useCallback(
-    (
-      queuePath: string,
-      target: VectorTarget,
-      entryId: string,
-      field: 'key' | 'value',
-      value: string,
-    ) => {
-      updateCapacityDraft(queuePath, (draft) => {
-        const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
-        const entries = draft[key];
-        const index = entries.findIndex((entry) => entry.id === entryId);
-        if (index === -1) {
-          return;
-        }
-        entries[index] = {
-          ...entries[index],
-          [field]: value,
-        };
-      });
-    },
-    [updateCapacityDraft],
-  );
+  const handleAddVectorEntry = (queuePath: string, target: VectorTarget) => {
+    updateCapacityDraft(queuePath, (draft) => {
+      const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
+      draft[key] = [...draft[key], createEmptyVectorEntry()];
+    });
+  };
 
-  const handleAddVectorEntry = React.useCallback(
-    (queuePath: string, target: VectorTarget) => {
-      updateCapacityDraft(queuePath, (draft) => {
-        const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
-        draft[key] = [...draft[key], createEmptyVectorEntry()];
-      });
-    },
-    [updateCapacityDraft],
-  );
-
-  const handleRemoveVectorEntry = React.useCallback(
-    (queuePath: string, target: VectorTarget, entryId: string) => {
-      updateCapacityDraft(queuePath, (draft) => {
-        const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
-        draft[key] = draft[key].filter((entry) => entry.id !== entryId);
-        if (draft[key].length === 0) {
-          draft[key] = ensureCoreEntries([], true);
-        }
-      });
-    },
-    [updateCapacityDraft],
-  );
+  const handleRemoveVectorEntry = (queuePath: string, target: VectorTarget, entryId: string) => {
+    updateCapacityDraft(queuePath, (draft) => {
+      const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
+      draft[key] = draft[key].filter((entry) => entry.id !== entryId);
+      if (draft[key].length === 0) {
+        draft[key] = ensureCoreEntries([], true);
+      }
+    });
+  };
 
   const selectValue = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
 
-  const renderVectorEntries = React.useCallback(
-    (row: CapacityRowDraft, target: VectorTarget, issues: ValidationIssue[]) => {
-      const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
-      const entries = row[key];
-      const headline = target === 'capacity' ? 'Capacity vector' : 'Maximum capacity vector';
+  const renderVectorEntries = (
+    row: CapacityRowDraft,
+    target: VectorTarget,
+    issues: ValidationIssue[],
+  ) => {
+    const key = target === 'capacity' ? 'vectorCapacity' : 'vectorMaxCapacity';
+    const entries = row[key];
+    const headline = target === 'capacity' ? 'Capacity vector' : 'Maximum capacity vector';
 
-      return (
-        <Field>
-          <FieldLabel className="text-xs uppercase tracking-wide text-muted-foreground">
-            {headline}
-          </FieldLabel>
-          {issues.length === 0 && (
-            <>
-              <FieldDescription className="text-xs text-muted-foreground">
-                {isLegacyMode
-                  ? 'Legacy mode: enter numeric values per resource.'
-                  : 'Use numeric values for counts, append w for weights and % for percentages.'}
-              </FieldDescription>
-              <FieldDescription className="text-[11px] text-muted-foreground">
-                Base:{' '}
-                {target === 'capacity'
-                  ? row.baseCapacityValue || '—'
-                  : row.baseMaxCapacityValue || '—'}
-              </FieldDescription>
-            </>
-          )}
-          <div className="mt-2 space-y-2">
-            {entries.map((entry, index) => {
-              const isCoreResource = entry.key === 'memory' || entry.key === 'vcores' || index < 2;
-              return (
-                <div key={entry.id} className="flex items-center gap-2">
-                  <Input
-                    value={entry.key}
-                    onChange={(event) =>
-                      handleVectorEntryChange(
-                        row.queuePath,
-                        target,
-                        entry.id,
-                        'key',
-                        event.target.value,
-                      )
-                    }
-                    placeholder="resource"
-                    className="h-8 w-32 text-sm"
-                  />
-                  <Input
-                    value={entry.value}
-                    onChange={(event) =>
-                      handleVectorEntryChange(
-                        row.queuePath,
-                        target,
-                        entry.id,
-                        'value',
-                        event.target.value,
-                      )
-                    }
-                    placeholder={isLegacyMode ? '0' : '0 | 50% | 10w'}
-                    className="h-8 text-sm"
-                  />
-                  {!isCoreResource && (
-                    <Button
-                      type="button"
-                      size="icon"
-                      variant="ghost"
-                      className="h-8 w-8 text-muted-foreground"
-                      onClick={() => handleRemoveVectorEntry(row.queuePath, target, entry.id)}
-                    >
-                      <X className="h-4 w-4" />
-                    </Button>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-          <div className="mt-2">
-            <Button
-              type="button"
-              variant="ghost"
-              size="sm"
-              className="text-xs"
-              onClick={() => handleAddVectorEntry(row.queuePath, target)}
-            >
-              <Plus className="mr-2 h-3.5 w-3.5" />
-              Add resource
-            </Button>
-          </div>
-          {issues.length > 0 && (
-            <div className="mt-2 space-y-1">
-              {issues.map((issue) => (
-                <FieldMessage
-                  key={`${issue.rule}-${issue.field}`}
-                  className={
-                    issue.severity === 'error'
-                      ? 'text-[11px] text-destructive'
-                      : 'text-[11px] text-amber-600'
+    return (
+      <Field>
+        <FieldLabel className="text-xs uppercase tracking-wide text-muted-foreground">
+          {headline}
+        </FieldLabel>
+        {issues.length === 0 && (
+          <>
+            <FieldDescription className="text-xs text-muted-foreground">
+              {isLegacyMode
+                ? 'Legacy mode: enter numeric values per resource.'
+                : 'Use numeric values for counts, append w for weights and % for percentages.'}
+            </FieldDescription>
+            <FieldDescription className="text-[11px] text-muted-foreground">
+              Base:{' '}
+              {target === 'capacity'
+                ? row.baseCapacityValue || '—'
+                : row.baseMaxCapacityValue || '—'}
+            </FieldDescription>
+          </>
+        )}
+        <div className="mt-2 space-y-2">
+          {entries.map((entry, index) => {
+            const isCoreResource = entry.key === 'memory' || entry.key === 'vcores' || index < 2;
+            return (
+              <div key={entry.id} className="flex items-center gap-2">
+                <Input
+                  value={entry.key}
+                  onChange={(event) =>
+                    handleVectorEntryChange(
+                      row.queuePath,
+                      target,
+                      entry.id,
+                      'key',
+                      event.target.value,
+                    )
                   }
-                >
-                  {issue.message}
-                </FieldMessage>
-              ))}
-            </div>
-          )}
-        </Field>
-      );
-    },
-    [handleAddVectorEntry, handleRemoveVectorEntry, handleVectorEntryChange, isLegacyMode],
-  );
+                  placeholder="resource"
+                  className="h-8 w-32 text-sm"
+                />
+                <Input
+                  value={entry.value}
+                  onChange={(event) =>
+                    handleVectorEntryChange(
+                      row.queuePath,
+                      target,
+                      entry.id,
+                      'value',
+                      event.target.value,
+                    )
+                  }
+                  placeholder={isLegacyMode ? '0' : '0 | 50% | 10w'}
+                  className="h-8 text-sm"
+                />
+                {!isCoreResource && (
+                  <Button
+                    type="button"
+                    size="icon"
+                    variant="ghost"
+                    className="h-8 w-8 text-muted-foreground"
+                    onClick={() => handleRemoveVectorEntry(row.queuePath, target, entry.id)}
+                  >
+                    <X className="h-4 w-4" />
+                  </Button>
+                )}
+              </div>
+            );
+          })}
+        </div>
+        <div className="mt-2">
+          <Button
+            type="button"
+            variant="ghost"
+            size="sm"
+            className="text-xs"
+            onClick={() => handleAddVectorEntry(row.queuePath, target)}
+          >
+            <Plus className="mr-2 h-3.5 w-3.5" />
+            Add resource
+          </Button>
+        </div>
+        {issues.length > 0 && (
+          <div className="mt-2 space-y-1">
+            {issues.map((issue) => (
+              <FieldMessage
+                key={`${issue.rule}-${issue.field}`}
+                className={
+                  issue.severity === 'error'
+                    ? 'text-[11px] text-destructive'
+                    : 'text-[11px] text-amber-600'
+                }
+              >
+                {issue.message}
+              </FieldMessage>
+            ))}
+          </div>
+        )}
+      </Field>
+    );
+  };
 
   if (!isOpen) {
     return null;

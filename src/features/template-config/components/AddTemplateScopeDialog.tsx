@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -48,7 +48,6 @@ export const AddTemplateScopeDialog: React.FC<AddTemplateScopeDialogProps> = ({
   onConfirm,
   existingQueuePaths,
 }) => {
-  'use memo';
   const [targetPath, setTargetPath] = useState(`${queuePath}.*`);
   const [templateType, setTemplateType] = useState<TemplateScopeType>('flexibleShared');
   const [error, setError] = useState<string | null>(null);
@@ -61,10 +60,8 @@ export const AddTemplateScopeDialog: React.FC<AddTemplateScopeDialogProps> = ({
     }
   }, [open, queuePath]);
 
-  const helperText = useMemo(() => {
-    const suffix = getSuffixForTemplateType(templateType);
-    return `Configurations will be written under "${targetPath}.${suffix}"`;
-  }, [targetPath, templateType]);
+  const suffix = getSuffixForTemplateType(templateType);
+  const helperText = `Configurations will be written under "${targetPath}.${suffix}"`;
 
   const validate = () => {
     const trimmed = targetPath.trim();

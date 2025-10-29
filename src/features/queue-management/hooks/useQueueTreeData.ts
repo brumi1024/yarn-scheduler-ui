@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type {
@@ -683,7 +682,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
   const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
   const selectedNodeLabelFilter = useSchedulerStore((state) => state.selectedNodeLabelFilter);
 
-  const { nodes, edges } = useMemo(() => {
+  const { nodes, edges } = (() => {
     if (!schedulerData || isLoading) {
       return { nodes: [], edges: [] };
     }
@@ -717,14 +716,7 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
       console.error('Error processing queue tree data:', err);
       return { nodes: [], edges: [] };
     }
-  }, [
-    schedulerData,
-    stagedChanges,
-    isLoading,
-    searchQuery,
-    getFilteredQueues,
-    selectedNodeLabelFilter,
-  ]);
+  })();
 
   return {
     nodes,

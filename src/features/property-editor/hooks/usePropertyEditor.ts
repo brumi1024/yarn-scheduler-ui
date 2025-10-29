@@ -1,7 +1,7 @@
 import { useForm, useWatch } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { useCallback, useEffect, useMemo, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { PropertyDescriptor, ValidationRule } from '~/types/property-descriptor';
 import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
@@ -95,20 +95,23 @@ export function usePropertyEditor({
     }
   }, [queuePath]);
 
-  const allProperties = useMemo<
-    Array<PropertyDescriptor & { formFieldName: string; originalName: string }>
-  >(() => {
-    // Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
-    return properties.map((property) => ({
-      ...property,
-      formFieldName: property.formFieldName ?? property.name.replace(/\./g, '__DOT__'),
-      originalName: property.originalName ?? property.name,
-    }));
-  }, [properties]);
+  // Escape dot notation in property names to prevent React Hook Form from treating them as nested paths
+  // Note: This must be memoized because it's used as a dependency in useEffect below.
+  // Without memoization, it creates a new array on every render, causing infinite loops.
+  const allProperties = useMemo(
+    () =>
+      properties.map((property) => ({
+        ...property,
+        formFieldName: property.formFieldName ?? property.name.replace(/\./g, '__DOT__'),
+        originalName: property.originalName ?? property.name,
+      })),
+    [properties],
+  );
 
-  const knownFieldNames = useMemo(() => {
-    return new Set(allProperties.map((property) => property.originalName || property.name));
-  }, [allProperties]);
+  const knownFieldNames = useMemo(
+    () => new Set(allProperties.map((property) => property.originalName || property.name)),
+    [allProperties],
+  );
 
   const formSchema = useMemo(() => createFormSchema(allProperties), [allProperties]);
 
@@ -130,47 +133,35 @@ export function usePropertyEditor({
 
   const watchedValues = useWatch({ control });
 
-  const normalizeFieldName = useCallback(
-    (field: string): string => {
-      const property = allProperties.find(
-        (p) => p.formFieldName === field || p.originalName === field || p.name === field,
-      );
+  const normalizeFieldName = (field: string): string => {
+    const property = allProperties.find(
+      (p) => p.formFieldName === field || p.originalName === field || p.name === field,
+    );
 
-      if (property) {
-        return property.originalName || property.name;
-      }
+    if (property) {
+      return property.originalName || property.name;
+    }
 
-      return field.replace(/__DOT__/g, '.');
-    },
-    [allProperties],
-  );
+    return field.replace(/__DOT__/g, '.');
+  };
 
-  const getFieldIssues = useCallback(
-    (field: string): ValidationIssue[] => {
-      const normalized = normalizeFieldName(field);
-      const queueIssues = validationState[queuePath];
-      return queueIssues?.[normalized] ?? [];
-    },
-    [normalizeFieldName, validationState, queuePath],
-  );
+  const getFieldIssues = (field: string): ValidationIssue[] => {
+    const normalized = normalizeFieldName(field);
+    const queueIssues = validationState[queuePath];
+    return queueIssues?.[normalized] ?? [];
+  };
 
-  const getFieldErrors = useCallback(
-    (field: string): string[] => {
-      return getFieldIssues(field)
-        .filter((issue) => issue.severity === 'error')
-        .map((issue) => issue.message);
-    },
-    [getFieldIssues],
-  );
+  const getFieldErrors = (field: string): string[] => {
+    return getFieldIssues(field)
+      .filter((issue) => issue.severity === 'error')
+      .map((issue) => issue.message);
+  };
 
-  const getFieldWarnings = useCallback(
-    (field: string): string[] => {
-      return getFieldIssues(field)
-        .filter((issue) => issue.severity === 'warning')
-        .map((issue) => issue.message);
-    },
-    [getFieldIssues],
-  );
+  const getFieldWarnings = (field: string): string[] => {
+    return getFieldIssues(field)
+      .filter((issue) => issue.severity === 'warning')
+      .map((issue) => issue.message);
+  };
 
   useEffect(() => {
     const initialValues: Record<string, string> = {};
@@ -193,355 +184,320 @@ export function usePropertyEditor({
     }
   }, [queuePath, allProperties, getQueuePropertyValue, reset, stagedChanges]);
 
-  const getStagedStatus = useCallback(
-    (propertyName: string): 'new' | 'modified' | 'deleted' | undefined => {
-      const { isStaged } = getQueuePropertyValue(queuePath, propertyName);
-      return isStaged ? 'modified' : undefined;
-    },
-    [queuePath, getQueuePropertyValue],
-  );
+  const getStagedStatus = (propertyName: string): 'new' | 'modified' | 'deleted' | undefined => {
+    const { isStaged } = getQueuePropertyValue(queuePath, propertyName);
+    return isStaged ? 'modified' : undefined;
+  };
 
-  const stageChange = useCallback(
-    (propertyName: string, value: string, validationErrors?: ValidationIssue[]) => {
-      stageQueueChange(queuePath, propertyName, value, validationErrors);
-    },
-    [queuePath, stageQueueChange],
-  );
+  const stageChange = (
+    propertyName: string,
+    value: string,
+    validationErrors?: ValidationIssue[],
+  ) => {
+    stageQueueChange(queuePath, propertyName, value, validationErrors);
+  };
 
-  const collectTemplateMatches = useCallback(
-    <T>(
-      fromConfig: (key: string) => T | null | undefined,
-      fromChange: (change: (typeof stagedChanges)[number]) => T | null | undefined,
-    ): T[] => {
-      const matches = new Set<T>();
+  const collectTemplateMatches = <T>(
+    fromConfig: (key: string) => T | null | undefined,
+    fromChange: (change: (typeof stagedChanges)[number]) => T | null | undefined,
+  ): T[] => {
+    const matches = new Set<T>();
 
-      for (const key of configData.keys()) {
-        const match = fromConfig(key);
-        if (match != null) {
-          matches.add(match);
-        }
+    for (const key of configData.keys()) {
+      const match = fromConfig(key);
+      if (match != null) {
+        matches.add(match);
       }
+    }
 
-      stagedChanges.forEach((change) => {
-        const match = fromChange(change);
-        if (match != null) {
-          matches.add(match);
-        }
-      });
-
-      return Array.from(matches);
-    },
-    [configData, stagedChanges],
-  );
-
-  const collectTemplateProperties = useCallback(
-    (templateQueuePath: string): string[] => {
-      const prefix = `${CONFIG_PREFIXES.BASE}.${templateQueuePath}.`;
-
-      return collectTemplateMatches(
-        (key) => {
-          if (!key.startsWith(prefix)) {
-            return null;
-          }
-          const propertyName = key.slice(prefix.length);
-          return propertyName || null;
-        },
-        (change) => {
-          if (change.queuePath === templateQueuePath && change.property) {
-            return change.property;
-          }
-          return null;
-        },
-      );
-    },
-    [collectTemplateMatches],
-  );
-
-  const collectTemplateQueuePaths = useCallback(
-    (suffix: string): string[] => {
-      const configPrefix = `${CONFIG_PREFIXES.BASE}.`;
-      const basePrefix = `${queuePath}.`;
-      const suffixToken = `.${suffix}`;
-
-      const matches = collectTemplateMatches(
-        (key) => {
-          if (!key.startsWith(configPrefix)) {
-            return null;
-          }
-          const remainder = key.slice(configPrefix.length);
-          if (!remainder.startsWith(basePrefix)) {
-            return null;
-          }
-          const index = remainder.indexOf(suffixToken);
-          if (index === -1) {
-            return null;
-          }
-          return remainder.slice(0, index + suffix.length);
-        },
-        (change) => {
-          const changePath = change.queuePath;
-          if (!changePath) {
-            return null;
-          }
-          if (
-            changePath === `${queuePath}.${suffix}` ||
-            (changePath.startsWith(basePrefix) && changePath.includes(suffixToken))
-          ) {
-            return changePath;
-          }
-          return null;
-        },
-      );
-
-      const defaultPath = `${queuePath}.${suffix}`;
-      if (!matches.includes(defaultPath)) {
-        matches.push(defaultPath);
+    stagedChanges.forEach((change) => {
+      const match = fromChange(change);
+      if (match != null) {
+        matches.add(match);
       }
+    });
 
-      return Array.from(new Set(matches));
-    },
-    [collectTemplateMatches, queuePath],
-  );
+    return Array.from(matches);
+  };
 
-  const stageTemplatePropertyRemovals = useCallback(
-    (templateQueuePaths: string[]): number => {
-      let removals = 0;
+  const collectTemplateProperties = (templateQueuePath: string): string[] => {
+    const prefix = `${CONFIG_PREFIXES.BASE}.${templateQueuePath}.`;
 
-      templateQueuePaths.forEach((templatePath) => {
-        const properties = collectTemplateProperties(templatePath);
-        properties.forEach((property) => {
-          stageQueueChange(templatePath, property, '');
-          removals += 1;
-        });
-      });
-
-      return removals;
-    },
-    [collectTemplateProperties, stageQueueChange],
-  );
-
-  const handleFieldBlur = useCallback(
-    (
-      propertyName: string,
-      value: string,
-      options?: {
-        validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+    return collectTemplateMatches(
+      (key) => {
+        if (!key.startsWith(prefix)) {
+          return null;
+        }
+        const propertyName = key.slice(prefix.length);
+        return propertyName || null;
       },
-    ) => {
-      const normalizedName = normalizeFieldName(propertyName);
-      if (!knownFieldNames.has(normalizedName)) {
+      (change) => {
+        if (change.queuePath === templateQueuePath && change.property) {
+          return change.property;
+        }
+        return null;
+      },
+    );
+  };
+
+  const collectTemplateQueuePaths = (suffix: string): string[] => {
+    const configPrefix = `${CONFIG_PREFIXES.BASE}.`;
+    const basePrefix = `${queuePath}.`;
+    const suffixToken = `.${suffix}`;
+
+    const matches = collectTemplateMatches(
+      (key) => {
+        if (!key.startsWith(configPrefix)) {
+          return null;
+        }
+        const remainder = key.slice(configPrefix.length);
+        if (!remainder.startsWith(basePrefix)) {
+          return null;
+        }
+        const index = remainder.indexOf(suffixToken);
+        if (index === -1) {
+          return null;
+        }
+        return remainder.slice(0, index + suffix.length);
+      },
+      (change) => {
+        const changePath = change.queuePath;
+        if (!changePath) {
+          return null;
+        }
+        if (
+          changePath === `${queuePath}.${suffix}` ||
+          (changePath.startsWith(basePrefix) && changePath.includes(suffixToken))
+        ) {
+          return changePath;
+        }
+        return null;
+      },
+    );
+
+    const defaultPath = `${queuePath}.${suffix}`;
+    if (!matches.includes(defaultPath)) {
+      matches.push(defaultPath);
+    }
+
+    return Array.from(new Set(matches));
+  };
+
+  const stageTemplatePropertyRemovals = (templateQueuePaths: string[]): number => {
+    let removals = 0;
+
+    templateQueuePaths.forEach((templatePath) => {
+      const properties = collectTemplateProperties(templatePath);
+      properties.forEach((property) => {
+        stageQueueChange(templatePath, property, '');
+        removals += 1;
+      });
+    });
+
+    return removals;
+  };
+
+  const handleFieldBlur = (
+    propertyName: string,
+    value: string,
+    options?: {
+      validationOverrides?: Array<{ queuePath: string; field: string; value: string }>;
+    },
+  ) => {
+    const normalizedName = normalizeFieldName(propertyName);
+    if (!knownFieldNames.has(normalizedName)) {
+      return;
+    }
+    const normalizedValue = typeof value === 'string' ? value : value == null ? '' : String(value);
+
+    const pendingValues: Array<{ queuePath?: string; fieldName: string; value: unknown }> = [];
+
+    const collectOverrides = (dirtyEntry: unknown, fieldKey: string) => {
+      if (!dirtyEntry) {
         return;
       }
-      const normalizedValue =
-        typeof value === 'string' ? value : value == null ? '' : String(value);
 
-      const pendingValues: Array<{ queuePath?: string; fieldName: string; value: unknown }> = [];
-
-      const collectOverrides = (dirtyEntry: unknown, fieldKey: string) => {
-        if (!dirtyEntry) {
+      if (dirtyEntry === true) {
+        const normalizedField = normalizeFieldName(fieldKey);
+        if (!knownFieldNames.has(normalizedField)) {
           return;
         }
-
-        if (dirtyEntry === true) {
-          const normalizedField = normalizeFieldName(fieldKey);
-          if (!knownFieldNames.has(normalizedField)) {
-            return;
-          }
-          if (normalizedField === normalizedName) {
-            return;
-          }
-          const currentValue = getValues(fieldKey);
-          const currentValueAsString =
-            typeof currentValue === 'string'
-              ? currentValue
-              : currentValue == null
-                ? ''
-                : String(currentValue);
-          pendingValues.push({
-            queuePath,
-            fieldName: normalizedField,
-            value: currentValueAsString,
-          });
+        if (normalizedField === normalizedName) {
           return;
         }
+        const currentValue = getValues(fieldKey);
+        const currentValueAsString =
+          typeof currentValue === 'string'
+            ? currentValue
+            : currentValue == null
+              ? ''
+              : String(currentValue);
+        pendingValues.push({
+          queuePath,
+          fieldName: normalizedField,
+          value: currentValueAsString,
+        });
+        return;
+      }
 
-        if (typeof dirtyEntry === 'object') {
-          Object.entries(dirtyEntry as Record<string, unknown>).forEach(
-            ([childKey, childValue]) => {
-              const nextKey = fieldKey ? `${fieldKey}.${childKey}` : childKey;
-              collectOverrides(childValue, nextKey);
-            },
-          );
+      if (typeof dirtyEntry === 'object') {
+        Object.entries(dirtyEntry as Record<string, unknown>).forEach(([childKey, childValue]) => {
+          const nextKey = fieldKey ? `${fieldKey}.${childKey}` : childKey;
+          collectOverrides(childValue, nextKey);
+        });
+      }
+    };
+
+    Object.entries(form.formState.dirtyFields).forEach(([fieldKey, dirtyEntry]) => {
+      collectOverrides(dirtyEntry, fieldKey);
+    });
+
+    options?.validationOverrides?.forEach(({ queuePath: overrideQueuePath, field, value }) => {
+      pendingValues.push({
+        queuePath: overrideQueuePath,
+        fieldName: field,
+        value,
+      });
+    });
+
+    runContextValidation(queuePath, normalizedName, normalizedValue, {
+      pendingValues,
+    });
+  };
+
+  const onSubmit = async (data: Record<string, string>) => {
+    try {
+      const fieldNameMapping: Record<string, string> = {};
+      const changedData: Record<string, string> = {};
+
+      allProperties.forEach((property) => {
+        const escapedName = property.formFieldName || property.name;
+        const originalName = property.originalName || property.name;
+        fieldNameMapping[escapedName] = originalName;
+      });
+
+      Object.entries(form.formState.dirtyFields).forEach(([escapedFieldName, isDirty]) => {
+        if (isDirty && typeof data[escapedFieldName] === 'string') {
+          const originalName = fieldNameMapping[escapedFieldName] || escapedFieldName;
+          changedData[originalName] = data[escapedFieldName];
         }
+      });
+
+      const pendingEntries = Object.entries(changedData);
+
+      const previewConfigData = new Map(configData);
+      pendingEntries.forEach(([propertyName, value]) => {
+        const propertyKey = buildPropertyKey(queuePath, propertyName);
+        if (!value.trim()) {
+          previewConfigData.delete(propertyKey);
+        } else {
+          previewConfigData.set(propertyKey, value);
+        }
+      });
+
+      const queueValidation = validateQueue({
+        queuePath,
+        properties: changedData,
+        configData,
+        stagedChanges,
+        schedulerData,
+      });
+
+      replaceQueueIssues(queuePath, queueValidation.issues);
+
+      const blockingIssues = queueValidation.issues.filter((issue) =>
+        isBlockingError(issue.rule, issue.severity),
+      );
+
+      const nonBlockingIssues = queueValidation.issues.filter(
+        (issue) => !isBlockingError(issue.rule, issue.severity),
+      );
+
+      if (blockingIssues.length > 0) {
+        toast.error(`Cannot stage changes: ${blockingIssues[0].message}`);
+        return { success: false, message: blockingIssues[0].message };
+      }
+
+      let stagedCount = 0;
+      let flexibleTemplatesDisabled = false;
+
+      pendingEntries.forEach(([propertyName, value]) => {
+        const fieldIssues = nonBlockingIssues.filter((issue) => issue.field === propertyName);
+
+        const crossQueueIssues = validatePropertyChange({
+          propertyName,
+          propertyValue: value,
+          queuePath,
+          schedulerData,
+          configData: previewConfigData,
+          stagedChanges,
+          includeBlockingErrors: false,
+        });
+
+        const allIssues = [...fieldIssues, ...crossQueueIssues];
+
+        const uniqueIssues = allIssues.filter(
+          (issue, index, self) =>
+            index ===
+            self.findIndex(
+              (candidate) =>
+                candidate.queuePath === issue.queuePath &&
+                candidate.field === issue.field &&
+                candidate.message === issue.message &&
+                candidate.severity === issue.severity,
+            ),
+        );
+
+        stageChange(propertyName, value, uniqueIssues.length > 0 ? uniqueIssues : undefined);
+        stagedCount += 1;
+
+        if (propertyName === 'auto-queue-creation-v2.enabled' && value !== 'true') {
+          flexibleTemplatesDisabled = true;
+        }
+      });
+
+      if (flexibleTemplatesDisabled) {
+        const flexiblePaths = new Set<string>([
+          ...collectTemplateQueuePaths('auto-queue-creation-v2.template'),
+          ...collectTemplateQueuePaths('auto-queue-creation-v2.parent-template'),
+          ...collectTemplateQueuePaths('auto-queue-creation-v2.leaf-template'),
+        ]);
+        if (flexiblePaths.size > 0) {
+          stagedCount += stageTemplatePropertyRemovals(Array.from(flexiblePaths));
+        }
+      }
+
+      const result = {
+        success: true,
+        message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
       };
 
-      Object.entries(form.formState.dirtyFields).forEach(([fieldKey, dirtyEntry]) => {
-        collectOverrides(dirtyEntry, fieldKey);
-      });
-
-      options?.validationOverrides?.forEach(({ queuePath: overrideQueuePath, field, value }) => {
-        pendingValues.push({
-          queuePath: overrideQueuePath,
-          fieldName: field,
-          value,
+      if (stagedCount > 0) {
+        const latestValues = form.getValues();
+        reset(latestValues, {
+          keepDirty: false,
+          keepDirtyValues: false,
         });
-      });
-
-      runContextValidation(queuePath, normalizedName, normalizedValue, {
-        pendingValues,
-      });
-    },
-    [queuePath, normalizeFieldName, runContextValidation, form, getValues, knownFieldNames],
-  );
-
-  const onSubmit = useCallback(
-    async (data: Record<string, string>) => {
-      try {
-        const fieldNameMapping: Record<string, string> = {};
-        const changedData: Record<string, string> = {};
-
-        allProperties.forEach((property) => {
-          const escapedName = property.formFieldName || property.name;
-          const originalName = property.originalName || property.name;
-          fieldNameMapping[escapedName] = originalName;
-        });
-
-        Object.entries(form.formState.dirtyFields).forEach(([escapedFieldName, isDirty]) => {
-          if (isDirty && typeof data[escapedFieldName] === 'string') {
-            const originalName = fieldNameMapping[escapedFieldName] || escapedFieldName;
-            changedData[originalName] = data[escapedFieldName];
-          }
-        });
-
-        const pendingEntries = Object.entries(changedData);
-
-        const previewConfigData = new Map(configData);
-        pendingEntries.forEach(([propertyName, value]) => {
-          const propertyKey = buildPropertyKey(queuePath, propertyName);
-          if (!value.trim()) {
-            previewConfigData.delete(propertyKey);
-          } else {
-            previewConfigData.set(propertyKey, value);
-          }
-        });
-
-        const queueValidation = validateQueue({
-          queuePath,
-          properties: changedData,
-          configData,
-          stagedChanges,
-          schedulerData,
-        });
-
-        replaceQueueIssues(queuePath, queueValidation.issues);
-
-        const blockingIssues = queueValidation.issues.filter((issue) =>
-          isBlockingError(issue.rule, issue.severity),
-        );
-
-        const nonBlockingIssues = queueValidation.issues.filter(
-          (issue) => !isBlockingError(issue.rule, issue.severity),
-        );
-
-        if (blockingIssues.length > 0) {
-          toast.error(`Cannot stage changes: ${blockingIssues[0].message}`);
-          return { success: false, message: blockingIssues[0].message };
-        }
-
-        let stagedCount = 0;
-        let flexibleTemplatesDisabled = false;
-
-        pendingEntries.forEach(([propertyName, value]) => {
-          const fieldIssues = nonBlockingIssues.filter((issue) => issue.field === propertyName);
-
-          const crossQueueIssues = validatePropertyChange({
-            propertyName,
-            propertyValue: value,
-            queuePath,
-            schedulerData,
-            configData: previewConfigData,
-            stagedChanges,
-            includeBlockingErrors: false,
-          });
-
-          const allIssues = [...fieldIssues, ...crossQueueIssues];
-
-          const uniqueIssues = allIssues.filter(
-            (issue, index, self) =>
-              index ===
-              self.findIndex(
-                (candidate) =>
-                  candidate.queuePath === issue.queuePath &&
-                  candidate.field === issue.field &&
-                  candidate.message === issue.message &&
-                  candidate.severity === issue.severity,
-              ),
-          );
-
-          stageChange(propertyName, value, uniqueIssues.length > 0 ? uniqueIssues : undefined);
-          stagedCount += 1;
-
-          if (propertyName === 'auto-queue-creation-v2.enabled' && value !== 'true') {
-            flexibleTemplatesDisabled = true;
-          }
-        });
-
-        if (flexibleTemplatesDisabled) {
-          const flexiblePaths = new Set<string>([
-            ...collectTemplateQueuePaths('auto-queue-creation-v2.template'),
-            ...collectTemplateQueuePaths('auto-queue-creation-v2.parent-template'),
-            ...collectTemplateQueuePaths('auto-queue-creation-v2.leaf-template'),
-          ]);
-          if (flexiblePaths.size > 0) {
-            stagedCount += stageTemplatePropertyRemovals(Array.from(flexiblePaths));
-          }
-        }
-
-        const result = {
-          success: true,
-          message: `${stagedCount} change${stagedCount !== 1 ? 's' : ''} staged successfully!`,
-        };
-
-        if (stagedCount > 0) {
-          const latestValues = form.getValues();
-          reset(latestValues, {
-            keepDirty: false,
-            keepDirtyValues: false,
-          });
-          cleanResetRef.current = true;
-        }
-
-        if (nonBlockingIssues.length > 0) {
-          toast.warning(
-            `${result.message} (with ${nonBlockingIssues.length} validation warning${nonBlockingIssues.length !== 1 ? 's' : ''})`,
-          );
-        } else {
-          toast.success(result.message);
-        }
-
-        return result;
-      } catch (error) {
-        const errorMessage = error instanceof Error ? error.message : 'Failed to stage changes';
-        toast.error(errorMessage);
-        throw error;
+        cleanResetRef.current = true;
       }
-    },
-    [
-      stageChange,
-      allProperties,
-      queuePath,
-      replaceQueueIssues,
-      schedulerData,
-      configData,
-      stagedChanges,
-      reset,
-      form,
-      collectTemplateQueuePaths,
-      stageTemplatePropertyRemovals,
-    ],
-  );
 
-  const handleReset = useCallback(() => {
+      if (nonBlockingIssues.length > 0) {
+        toast.warning(
+          `${result.message} (with ${nonBlockingIssues.length} validation warning${nonBlockingIssues.length !== 1 ? 's' : ''})`,
+        );
+      } else {
+        toast.success(result.message);
+      }
+
+      return result;
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : 'Failed to stage changes';
+      toast.error(errorMessage);
+      throw error;
+    }
+  };
+
+  const handleReset = () => {
     // Clear only the changes for the current queue
     clearQueueChanges(queuePath);
     clearQueueErrors(queuePath);
@@ -555,86 +511,76 @@ export function usePropertyEditor({
     });
     cleanResetRef.current = true;
     reset(currentValues);
-  }, [queuePath, getQueuePropertyValue, clearQueueChanges, clearQueueErrors, reset, allProperties]);
+  };
 
-  const hasChanges = useMemo(() => {
-    if (!Array.isArray(stagedChanges)) {
-      return false;
+  const hasChangesCheck = !Array.isArray(stagedChanges)
+    ? false
+    : stagedChanges.filter((c) => c.queuePath === queuePath).length > 0;
+  const hasChanges = hasChangesCheck;
+
+  const propertiesByCategoryTemp: Record<string, PropertyDescriptor[]> = {};
+
+  allProperties.forEach((property) => {
+    if (!propertiesByCategoryTemp[property.category]) {
+      propertiesByCategoryTemp[property.category] = [];
     }
-    const queueChanges = stagedChanges.filter((c) => c.queuePath === queuePath);
-    return queueChanges.length > 0;
-  }, [stagedChanges, queuePath]);
+    propertiesByCategoryTemp[property.category].push(property);
+  });
 
-  const propertiesByCategory = useMemo(() => {
-    const categories: Record<string, PropertyDescriptor[]> = {};
-
-    allProperties.forEach((property) => {
-      if (!categories[property.category]) {
-        categories[property.category] = [];
-      }
-      categories[property.category].push(property);
-    });
-
-    return categories;
-  }, [allProperties]);
+  const propertiesByCategory = propertiesByCategoryTemp;
 
   // Get combined errors and validity state
-  const combinedErrors = useMemo(() => {
-    const zodErrors = form.formState.errors;
-    const queueIssues = validationState[queuePath] ?? {};
+  const zodErrors = form.formState.errors;
+  const queueIssues = validationState[queuePath] ?? {};
 
-    const combined: Record<string, { type: string; message: string }> = {};
+  const combinedErrorsTemp: Record<string, { type: string; message: string }> = {};
 
-    Object.entries(zodErrors).forEach(([field, error]) => {
-      if (!error) {
-        return;
-      }
+  Object.entries(zodErrors).forEach(([field, error]) => {
+    if (!error) {
+      return;
+    }
 
-      const normalizedField = normalizeFieldName(field);
-      const message = typeof error.message === 'string' ? error.message : 'Validation error';
+    const normalizedField = normalizeFieldName(field);
+    const message = typeof error.message === 'string' ? error.message : 'Validation error';
 
-      combined[normalizedField] = {
-        type: typeof error.type === 'string' ? error.type : 'validation',
-        message,
+    combinedErrorsTemp[normalizedField] = {
+      type: typeof error.type === 'string' ? error.type : 'validation',
+      message,
+    };
+  });
+
+  Object.entries(queueIssues).forEach(([field, issues]) => {
+    const errorMessages = issues
+      .filter((issue) => issue.severity === 'error')
+      .map((issue) => issue.message);
+
+    if (errorMessages.length === 0) {
+      return;
+    }
+
+    if (combinedErrorsTemp[field]) {
+      const existingMessage = combinedErrorsTemp[field].message || '';
+      combinedErrorsTemp[field] = {
+        ...combinedErrorsTemp[field],
+        message: existingMessage
+          ? `${existingMessage}. ${errorMessages.join('. ')}`
+          : errorMessages.join('. '),
       };
-    });
+    } else {
+      combinedErrorsTemp[field] = {
+        type: 'business',
+        message: errorMessages.join('. '),
+      };
+    }
+  });
 
-    Object.entries(queueIssues).forEach(([field, issues]) => {
-      const errorMessages = issues
-        .filter((issue) => issue.severity === 'error')
-        .map((issue) => issue.message);
+  const combinedErrors = combinedErrorsTemp;
 
-      if (errorMessages.length === 0) {
-        return;
-      }
-
-      if (combined[field]) {
-        const existingMessage = combined[field].message || '';
-        combined[field] = {
-          ...combined[field],
-          message: existingMessage
-            ? `${existingMessage}. ${errorMessages.join('. ')}`
-            : errorMessages.join('. '),
-        };
-      } else {
-        combined[field] = {
-          type: 'business',
-          message: errorMessages.join('. '),
-        };
-      }
-    });
-
-    return combined;
-  }, [form.formState.errors, validationState, queuePath, normalizeFieldName]);
-
-  const isFormValid = useMemo(() => {
-    const hasZodErrors = !form.formState.isValid;
-    const queueIssues = validationState[queuePath] ?? {};
-    const hasValidationErrors = Object.values(queueIssues).some((issues) =>
-      issues.some((issue) => issue.severity === 'error'),
-    );
-    return !hasZodErrors && !hasValidationErrors;
-  }, [form.formState.isValid, validationState, queuePath]);
+  const hasZodErrors = !form.formState.isValid;
+  const hasValidationErrors = Object.values(queueIssues).some((issues) =>
+    issues.some((issue) => issue.severity === 'error'),
+  );
+  const isFormValid = !hasZodErrors && !hasValidationErrors;
 
   return {
     form,

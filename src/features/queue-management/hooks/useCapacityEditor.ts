@@ -1,4 +1,3 @@
-import { useCallback } from 'react';
 import { SPECIAL_VALUES } from '~/types';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { CapacityEditorOrigin } from '~/stores/slices/capacityEditorSlice';
@@ -41,37 +40,34 @@ export const useCapacityEditor = () => {
   const selectedNodeLabelFilter = useSchedulerStore((state) => state.selectedNodeLabelFilter);
 
   return {
-    openCapacityEditor: useCallback(
-      ({
-        origin,
+    openCapacityEditor: ({
+      origin,
+      parentQueuePath,
+      originQueuePath,
+      originQueueName,
+      capacityValue = null,
+      maxCapacityValue = null,
+      markOriginAsNew = false,
+      queueState = null,
+      selectedNodeLabel,
+    }: LaunchCapacityEditorOptions) => {
+      const resolvedOriginPath = resolveOriginQueuePath(
         parentQueuePath,
         originQueuePath,
         originQueueName,
-        capacityValue = null,
-        maxCapacityValue = null,
-        markOriginAsNew = false,
-        queueState = null,
-        selectedNodeLabel,
-      }: LaunchCapacityEditorOptions) => {
-        const resolvedOriginPath = resolveOriginQueuePath(
-          parentQueuePath,
-          originQueuePath,
-          originQueueName,
-        );
+      );
 
-        openCapacityEditorAction({
-          origin,
-          parentQueuePath,
-          originQueuePath: resolvedOriginPath,
-          originQueueName,
-          originQueueState: queueState,
-          originInitialCapacity: capacityValue,
-          originInitialMaxCapacity: maxCapacityValue,
-          originIsNew: Boolean(markOriginAsNew),
-          selectedNodeLabel: selectedNodeLabel ?? selectedNodeLabelFilter ?? null,
-        });
-      },
-      [openCapacityEditorAction, selectedNodeLabelFilter],
-    ),
+      openCapacityEditorAction({
+        origin,
+        parentQueuePath,
+        originQueuePath: resolvedOriginPath,
+        originQueueName,
+        originQueueState: queueState,
+        originInitialCapacity: capacityValue,
+        originInitialMaxCapacity: maxCapacityValue,
+        originIsNew: Boolean(markOriginAsNew),
+        selectedNodeLabel: selectedNodeLabel ?? selectedNodeLabelFilter ?? null,
+      });
+    },
   };
 };

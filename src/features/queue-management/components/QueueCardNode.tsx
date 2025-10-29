@@ -1,4 +1,4 @@
-import React, { useMemo, useState } from 'react';
+import React, { useState } from 'react';
 import { Handle, Position, type NodeProps } from '@xyflow/react';
 
 import {
@@ -234,14 +234,8 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const parsedCapacityMode = parseCapacityValueUtil(displayCapacity);
   const capacityMode: 'percentage' | 'weight' | 'absolute' =
     parsedCapacityMode?.type ?? 'percentage';
-  const parsedCapacityDisplay = useMemo(
-    () => getCapacityDisplay(displayCapacity),
-    [displayCapacity],
-  );
-  const parsedMaxCapacityDisplay = useMemo(
-    () => getCapacityDisplay(displayMaxCapacity),
-    [displayMaxCapacity],
-  );
+  const parsedCapacityDisplay = getCapacityDisplay(displayCapacity);
+  const parsedMaxCapacityDisplay = getCapacityDisplay(displayMaxCapacity);
   const showVectorCapacity =
     parsedCapacityDisplay.type === 'vector' || parsedMaxCapacityDisplay.type === 'vector';
   const canAdd = canAddChildQueue(queuePath);
@@ -251,58 +245,35 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     autoCreationStatus?.status === 'legacy' || autoCreationStatus?.status === 'flexible';
   const isTemplateActionDisabled = stagedStatus === 'new' || isAutoCreatedQueue;
 
-  const capacityEntries = useMemo<ResourceVectorEntry[]>(() => {
-    if (parsedCapacityDisplay.type === 'vector') {
-      return parsedCapacityDisplay.entries;
-    }
-    return [];
-  }, [parsedCapacityDisplay]);
-  const maxCapacityEntries = useMemo<ResourceVectorEntry[]>(() => {
-    if (parsedMaxCapacityDisplay.type === 'vector') {
-      return parsedMaxCapacityDisplay.entries;
-    }
-    return [];
-  }, [parsedMaxCapacityDisplay]);
-  const capacityEntryMap = useMemo(() => createEntryMap(capacityEntries), [capacityEntries]);
-  const maxCapacityEntryMap = useMemo(
-    () => createEntryMap(maxCapacityEntries),
-    [maxCapacityEntries],
-  );
-  const resourceOrder = useMemo(
-    () => getResourceOrder(capacityEntries, maxCapacityEntries),
-    [capacityEntries, maxCapacityEntries],
-  );
-  const inlineResourceNames = useMemo(
-    () => resourceOrder.slice(0, INLINE_RESOURCE_LIMIT),
-    [resourceOrder],
-  );
-  const overflowResourceNames = useMemo(
-    () => resourceOrder.slice(INLINE_RESOURCE_LIMIT),
-    [resourceOrder],
-  );
+  const capacityEntries: ResourceVectorEntry[] =
+    parsedCapacityDisplay.type === 'vector' ? parsedCapacityDisplay.entries : [];
+  const maxCapacityEntries: ResourceVectorEntry[] =
+    parsedMaxCapacityDisplay.type === 'vector' ? parsedMaxCapacityDisplay.entries : [];
+  const capacityEntryMap = createEntryMap(capacityEntries);
+  const maxCapacityEntryMap = createEntryMap(maxCapacityEntries);
+  const resourceOrder = getResourceOrder(capacityEntries, maxCapacityEntries);
+  const inlineResourceNames = resourceOrder.slice(0, INLINE_RESOURCE_LIMIT);
+  const overflowResourceNames = resourceOrder.slice(INLINE_RESOURCE_LIMIT);
   const hasOverflowResources = overflowResourceNames.length > 0;
-  const getInlineBadges = useMemo(
-    () => (entryMap: Map<string, ResourceVectorEntry>) => {
-      const badges: React.ReactNode[] = [];
-      inlineResourceNames.forEach((resourceName) => {
-        const entry = entryMap.get(normalizeResourceKey(resourceName));
-        if (!entry) {
-          return;
-        }
-        badges.push(
-          <Badge
-            key={`inline-${entry.resource}-${entry.value}`}
-            variant="outline"
-            className="px-1.5 py-0.5 text-[11px] leading-tight font-medium whitespace-normal break-all"
-          >
-            {entry.resource}: {entry.value}
-          </Badge>,
-        );
-      });
-      return badges;
-    },
-    [inlineResourceNames],
-  );
+  const getInlineBadges = (entryMap: Map<string, ResourceVectorEntry>) => {
+    const badges: React.ReactNode[] = [];
+    inlineResourceNames.forEach((resourceName) => {
+      const entry = entryMap.get(normalizeResourceKey(resourceName));
+      if (!entry) {
+        return;
+      }
+      badges.push(
+        <Badge
+          key={`inline-${entry.resource}-${entry.value}`}
+          variant="outline"
+          className="px-1.5 py-0.5 text-[11px] leading-tight font-medium whitespace-normal break-all"
+        >
+          {entry.resource}: {entry.value}
+        </Badge>,
+      );
+    });
+    return badges;
+  };
   const capacityInlineBadges = getInlineBadges(capacityEntryMap);
   const maxCapacityInlineBadges = getInlineBadges(maxCapacityEntryMap);
   const overflowSummaryBadge = hasOverflowResources ? (

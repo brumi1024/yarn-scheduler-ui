@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react';
+import React from 'react';
 import { Monitor, HardDrive, Cpu, X } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Badge } from '~/components/ui/badge';
@@ -29,7 +29,6 @@ interface NodesPanelProps {
 }
 
 export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
-  'use memo';
   const {
     nodes,
     nodeToLabels,
@@ -41,29 +40,21 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
   } = useSchedulerStore();
 
   // Create a map of nodeId -> labels for quick lookup
-  const nodeLabelsMap = useMemo(() => {
-    const map = new Map<string, string[]>();
-    nodeToLabels.forEach((mapping: NodeToLabelMapping) => {
-      map.set(mapping.nodeId, mapping.nodeLabels);
-    });
-    return map;
-  }, [nodeToLabels]);
+  const nodeLabelsMap = new Map<string, string[]>();
+  nodeToLabels.forEach((mapping: NodeToLabelMapping) => {
+    nodeLabelsMap.set(mapping.nodeId, mapping.nodeLabels);
+  });
 
   // Get nodes filtered by search query
   const searchFilteredNodes = searchQuery ? getFilteredNodes() : nodes;
 
   // Filter nodes based on selected label
-  const filteredNodes = useMemo(() => {
-    if (!selectedLabel) {
-      // When no label is selected, show all nodes (this is the "overview" mode)
-      return searchFilteredNodes;
-    }
-
-    return searchFilteredNodes.filter((node: NodeInfo) => {
-      const assignedLabels = nodeLabelsMap.get(node.id) || [];
-      return assignedLabels.includes(selectedLabel);
-    });
-  }, [searchFilteredNodes, nodeLabelsMap, selectedLabel]);
+  const filteredNodes = !selectedLabel
+    ? searchFilteredNodes
+    : searchFilteredNodes.filter((node: NodeInfo) => {
+        const assignedLabels = nodeLabelsMap.get(node.id) || [];
+        return assignedLabels.includes(selectedLabel);
+      });
 
   const handleLabelChange = async (nodeId: string, newLabel: string | null) => {
     try {

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState } from 'react';
 import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
@@ -49,7 +49,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   const currentEnabled = value === 'true';
 
   // Calculate validation changes that would occur
-  const validationPreview = useMemo(() => {
+  const validationPreview = (() => {
     if (!schedulerData) return { added: [], removed: [], affectedQueues: 0 };
 
     const previewResults: ValidationPreview[] = [];
@@ -184,7 +184,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     ]).size;
 
     return { added, removed, affectedQueues };
-  }, [currentEnabled, schedulerData, configData, stagedChanges, property.name]);
+  })();
 
   return (
     <FieldSwitch
