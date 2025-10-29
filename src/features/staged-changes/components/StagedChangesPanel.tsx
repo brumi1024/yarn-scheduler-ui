@@ -118,7 +118,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                 <Alert variant="destructive">
                   <AlertCircle className="h-4 w-4" />
                   <AlertTitle>Failed to Apply Changes</AlertTitle>
-                  <AlertDescription>{applyError}</AlertDescription>
+                  <AlertDescription className="break-words">{applyError}</AlertDescription>
                 </Alert>
               )}
               <div className="flex items-center justify-between">

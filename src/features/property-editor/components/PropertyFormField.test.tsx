@@ -1,4 +1,4 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '~/testing/setup/setup';
 import { PropertyFormField } from './PropertyFormField';
 import { useForm, FormProvider } from 'react-hook-form';
@@ -78,6 +78,32 @@ describe('PropertyFormField', () => {
     const switchElement = screen.getByRole('switch');
     expect(switchElement).toBeInTheDocument();
     expect(switchElement).toHaveAttribute('aria-checked', 'true');
+  });
+
+  it('writes explicit false when boolean switch is toggled off', async () => {
+    const property = getMockPropertyDescriptor({
+      name: 'auto-queue-creation-v2.enabled',
+      displayName: 'Flexible Auto-Creation',
+      type: 'boolean',
+      required: false,
+    });
+
+    const onBlur = vi.fn();
+    const user = userEvent.setup();
+
+    render(
+      <FormWrapper defaultValues={{ 'auto-queue-creation-v2.enabled': 'true' }}>
+        <PropertyFormField property={property} control={undefined as any} onBlur={onBlur} />
+      </FormWrapper>,
+    );
+
+    const switchElement = screen.getByRole('switch');
+    expect(switchElement).toHaveAttribute('aria-checked', 'true');
+
+    await user.click(switchElement);
+
+    expect(switchElement).toHaveAttribute('aria-checked', 'false');
+    expect(onBlur).toHaveBeenCalledWith('auto-queue-creation-v2.enabled', 'false');
   });
 
   it('should render toggle group for enum property type', () => {

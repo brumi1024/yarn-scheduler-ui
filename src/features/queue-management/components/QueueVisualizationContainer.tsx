@@ -127,23 +127,23 @@ const FlowInner: React.FC = () => {
   return (
     <div className="relative h-full w-full flex flex-col">
       {hasAlert && (
-        <div className="absolute top-4 left-1/2 z-10 flex w-full max-w-xl -translate-x-1/2 justify-center px-4">
+        <div className="absolute top-4 left-1/2 z-20 flex w-full max-w-xl -translate-x-1/2 justify-center px-4">
           <div className="space-y-2 w-full">
             {applyError && (
               <Alert variant="destructive">
                 <AlertCircle className="h-4 w-4" />
                 <AlertTitle>Failed to Apply Changes</AlertTitle>
-                <AlertDescription>{applyError}</AlertDescription>
+                <AlertDescription className="break-words">{applyError}</AlertDescription>
               </Alert>
             )}
           </div>
         </div>
       )}
       {/* Header with controls */}
-      <div
-        className={`absolute right-4 z-10 flex items-center gap-4 ${hasAlert ? 'top-24' : 'top-4'}`}
-      >
-        <NodeLabelSelector />
+      <div className="pointer-events-none absolute inset-x-0 top-4 z-30 flex justify-end px-4">
+        <div className="pointer-events-auto">
+          <NodeLabelSelector />
+        </div>
       </div>
 
       {/* Label filter information */}

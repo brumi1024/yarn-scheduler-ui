@@ -1,6 +1,6 @@
 import React, { useState, useImperativeHandle, forwardRef, useCallback } from 'react';
-import { Settings, HardDrive, Gauge, Calendar, Shield, Sliders } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
+import { Button } from '~/components/ui/button';
 import {
   Accordion,
   AccordionContent,
@@ -16,6 +16,10 @@ import { Form } from '~/components/ui/form';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
+import {
+  baseCategoryOrder,
+  categoryConfig,
+} from '~/features/property-editor/constants/categoryConfig';
 
 export interface PropertyEditorTabHandle {
   submit: () => Promise<void>;
@@ -29,68 +33,19 @@ interface PropertyEditorTabProps {
   onHasChangesChange?: (hasChanges: boolean) => void;
   onIsSubmittingChange?: (isSubmitting: boolean) => void;
   onFormDirtyChange?: (isDirty: boolean) => void;
+  templateConfigControls?: {
+    canManageTemplates: boolean;
+    legacyAvailable: boolean;
+    flexibleAvailable: boolean;
+    onOpenTemplateConfig: () => void;
+  };
 }
 
-// Category display configuration with icons and enhanced styling
-const categoryConfig: Record<
-  PropertyCategory,
-  {
-    label: string;
-    description: string;
-    defaultExpanded: boolean;
-    icon: React.ReactElement;
-  }
-> = {
-  general: {
-    label: 'General Configuration',
-    description: 'Basic queue settings including capacity, state, and hierarchy',
-    defaultExpanded: true,
-    icon: <Settings className="h-4 w-4 text-primary" />,
-  },
-  resource: {
-    label: 'Resource Allocation',
-    description: 'Memory, CPU, and other resource allocation settings',
-    defaultExpanded: false,
-    icon: <HardDrive className="h-4 w-4 text-primary" />,
-  },
-  limits: {
-    label: 'Application Limits',
-    description: 'User limits, application counts, and resource constraints',
-    defaultExpanded: false,
-    icon: <Gauge className="h-4 w-4 text-primary" />,
-  },
-  scheduling: {
-    label: 'Scheduling Policy',
-    description: 'Application ordering and priority settings',
-    defaultExpanded: false,
-    icon: <Calendar className="h-4 w-4 text-primary" />,
-  },
-  security: {
-    label: 'Security & Access Control',
-    description: 'User and group access permissions (ACLs)',
-    defaultExpanded: false,
-    icon: <Shield className="h-4 w-4 text-primary" />,
-  },
-  advanced: {
-    label: 'Advanced Features',
-    description: 'Preemption, auto-queue creation, and other advanced settings',
-    defaultExpanded: false,
-    icon: <Sliders className="h-4 w-4 text-primary" />,
-  },
-};
-
-// Base category order for consistent display
-const baseCategoryOrder: PropertyCategory[] = [
-  'general',
-  'resource',
-  'limits',
-  'scheduling',
-  'security',
-  'advanced',
-];
-
 export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEditorTabProps>(
-  ({ queue, onHasChangesChange, onIsSubmittingChange, onFormDirtyChange }, ref) => {
+  (
+    { queue, onHasChangesChange, onIsSubmittingChange, onFormDirtyChange, templateConfigControls },
+    ref,
+  ) => {
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [expandedAccordions, setExpandedAccordions] = useState<string[]>(['general']);
 
@@ -300,23 +255,38 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
       return states;
     }, [properties, conditionBase]);
 
-    const visiblePropertiesByCategory = React.useMemo(() => {
-      const result: Partial<Record<PropertyCategory, typeof properties>> = {};
+    const { visibleByCategory: visiblePropertiesByCategory, fieldCategoryMap } =
+      React.useMemo(() => {
+        const visibleByCategory: Partial<Record<PropertyCategory, typeof properties>> = {};
+        const fieldCategoryMap = new Map<string, Set<PropertyCategory>>();
 
-      Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
-        const typedCategory = categoryKey as PropertyCategory;
-        const filtered = props.filter((property) => {
-          const propertyName = property.originalName || property.name;
-          return propertyStates.get(propertyName)?.visible ?? true;
-        }) as typeof properties;
+        Object.entries(propertiesByCategory).forEach(([categoryKey, props]) => {
+          const typedCategory = categoryKey as PropertyCategory;
+          const filtered = props.filter((property) => {
+            const propertyName = property.originalName || property.name;
+            return propertyStates.get(propertyName)?.visible ?? true;
+          }) as typeof properties;
 
-        if (filtered.length > 0) {
-          result[typedCategory] = filtered;
-        }
-      });
+          if (filtered.length === 0) {
+            return;
+          }
 
-      return result;
-    }, [propertiesByCategory, propertyStates]);
+          visibleByCategory[typedCategory] = filtered;
+
+          filtered.forEach((property) => {
+            const keys = new Set<string>([property.originalName || property.name, property.name]);
+
+            keys.forEach((key) => {
+              if (!fieldCategoryMap.has(key)) {
+                fieldCategoryMap.set(key, new Set<PropertyCategory>());
+              }
+              fieldCategoryMap.get(key)!.add(typedCategory);
+            });
+          });
+        });
+
+        return { visibleByCategory, fieldCategoryMap };
+      }, [propertiesByCategory, propertyStates]);
 
     const availableCategories = React.useMemo(
       () =>
@@ -327,28 +297,33 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
     );
 
     // Find categories with errors
-    const categoriesWithErrors = React.useMemo(() => {
-      const errorCategories: Set<PropertyCategory> = new Set();
+    const categoryErrorInfo = React.useMemo(() => {
+      const counts: Partial<Record<PropertyCategory, number>> = {};
 
       if (!errors || Object.keys(errors).length === 0) {
-        return errorCategories;
+        return counts;
       }
 
       Object.keys(errors).forEach((fieldName) => {
-        availableCategories.forEach((category) => {
-          const categoryProps = visiblePropertiesByCategory[category] ?? [];
-          if (
-            categoryProps.some(
-              (prop) => (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
-            )
-          ) {
-            errorCategories.add(category);
-          }
+        const categories = fieldCategoryMap.get(fieldName);
+        if (!categories) {
+          return;
+        }
+        categories.forEach((category) => {
+          counts[category] = (counts[category] ?? 0) + 1;
         });
       });
 
-      return errorCategories;
-    }, [errors, availableCategories, visiblePropertiesByCategory]);
+      return counts;
+    }, [errors, fieldCategoryMap]);
+
+    const categoriesWithErrors = React.useMemo(() => {
+      return new Set(
+        (Object.entries(categoryErrorInfo) as Array<[PropertyCategory, number]>)
+          .filter(([, count]) => count > 0)
+          .map(([category]) => category),
+      );
+    }, [categoryErrorInfo]);
 
     // Auto-expand categories with errors
     React.useEffect(() => {
@@ -383,12 +358,7 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                 const categoryProps = visiblePropertiesByCategory[category] ?? [];
                 const config = categoryConfig[category];
                 const hasErrors = categoriesWithErrors.has(category);
-                const errorCount = Object.keys(errors).filter((fieldName) =>
-                  categoryProps.some(
-                    (prop) =>
-                      (prop.originalName || prop.name) === fieldName || prop.name === fieldName,
-                  ),
-                ).length;
+                const errorCount = categoryErrorInfo[category] ?? 0;
 
                 return (
                   <AccordionItem key={category} value={category} className="border rounded-lg mb-2">
@@ -414,22 +384,45 @@ export const PropertyEditorTab = forwardRef<PropertyEditorTabHandle, PropertyEdi
                           if (propertyState && !propertyState.visible) {
                             return null;
                           }
+                          const supportsLegacyButton =
+                            propertyKey === 'auto-create-child-queue.enabled';
+                          const supportsFlexibleButton =
+                            propertyKey === 'auto-queue-creation-v2.enabled';
+                          const shouldRenderTemplateButton =
+                            Boolean(templateConfigControls?.canManageTemplates) &&
+                            ((supportsLegacyButton && templateConfigControls?.legacyAvailable) ||
+                              (supportsFlexibleButton &&
+                                templateConfigControls?.flexibleAvailable));
+
                           return (
-                            <PropertyFormField
-                              key={prop.name}
-                              property={prop}
-                              control={control}
-                              stagedStatus={getStagedStatus(prop.originalName || prop.name)}
-                              isEnabled={propertyState?.enabled ?? true}
-                              onBlur={handleFieldBlur}
-                              errors={getFieldErrors(prop.formFieldName || prop.name)}
-                              warnings={getFieldWarnings(prop.formFieldName || prop.name)}
-                              queuePath={queue.queuePath}
-                              queueName={queue.queueName}
-                              parentQueuePath={parentQueuePath}
-                              currentValues={watchedValues}
-                              setFormValue={form.setValue}
-                            />
+                            <div key={prop.name} className="space-y-2">
+                              <PropertyFormField
+                                property={prop}
+                                control={control}
+                                stagedStatus={getStagedStatus(prop.originalName || prop.name)}
+                                isEnabled={propertyState?.enabled ?? true}
+                                onBlur={handleFieldBlur}
+                                errors={getFieldErrors(prop.formFieldName || prop.name)}
+                                warnings={getFieldWarnings(prop.formFieldName || prop.name)}
+                                queuePath={queue.queuePath}
+                                queueName={queue.queueName}
+                                parentQueuePath={parentQueuePath}
+                                currentValues={watchedValues}
+                              />
+                              {shouldRenderTemplateButton && (
+                                <div className="pt-1">
+                                  <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    className="text-xs"
+                                    onClick={templateConfigControls?.onOpenTemplateConfig}
+                                  >
+                                    Manage template properties
+                                  </Button>
+                                </div>
+                              )}
+                            </div>
                           );
                         })}
                       </div>

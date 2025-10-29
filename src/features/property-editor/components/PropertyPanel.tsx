@@ -25,6 +25,8 @@ import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover
 import type { ValidationIssue } from '~/features/validation/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { cn } from '~/utils/cn';
+import { TemplateConfigDialog } from '~/features/template-config/components/TemplateConfigDialog';
+import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 
 export const PropertyPanel: React.FC = () => {
   const {
@@ -34,7 +36,12 @@ export const PropertyPanel: React.FC = () => {
     getQueueByPath,
     selectQueue,
     propertyPanelInitialTab,
+    shouldOpenTemplateConfig,
+    clearTemplateConfigRequest,
   } = useSchedulerStore();
+
+  const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
+  const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
 
   const [tabValue, setTabValue] = useState('overview');
   const [hasChanges, setHasChanges] = useState(false);
@@ -43,6 +50,7 @@ export const PropertyPanel: React.FC = () => {
   const [showUnsavedDialog, setShowUnsavedDialog] = useState(false);
   const [pendingClose, setPendingClose] = useState(false);
   const [isSummaryOpen, setSummaryOpen] = useState(false);
+  const [isTemplateDialogOpen, setTemplateDialogOpen] = useState(false);
 
   const propertyEditorRef = useRef<PropertyEditorTabHandle>(null);
   const { errors: validationState } = useValidation();
@@ -53,6 +61,44 @@ export const PropertyPanel: React.FC = () => {
     selectedQueue?.creationMethod === 'dynamicLegacy' ||
     selectedQueue?.creationMethod === 'dynamicFlexible';
   const isSettingsDisabled = Boolean(isAutoCreatedQueue);
+
+  const hasLegacyStagedEnable = Boolean(
+    selectedQueuePath &&
+      stagedChanges?.some(
+        (change) =>
+          change.queuePath === selectedQueuePath &&
+          change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED &&
+          change.newValue === 'true',
+      ),
+  );
+
+  const hasFlexibleStagedEnable = Boolean(
+    selectedQueuePath &&
+      stagedChanges?.some(
+        (change) =>
+          change.queuePath === selectedQueuePath &&
+          change.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED &&
+          change.newValue === 'true',
+      ),
+  );
+
+  const legacyTemplateAvailable = Boolean(
+    selectedQueuePath &&
+      (getQueuePropertyValue(selectedQueuePath, AUTO_CREATION_PROPS.LEGACY_ENABLED).value ===
+        'true' ||
+        hasLegacyStagedEnable),
+  );
+
+  const flexibleTemplateAvailable = Boolean(
+    selectedQueuePath &&
+      (getQueuePropertyValue(selectedQueuePath, AUTO_CREATION_PROPS.FLEXIBLE_ENABLED).value ===
+        'true' ||
+        hasFlexibleStagedEnable),
+  );
+
+  const showTemplateButton = Boolean(
+    selectedQueuePath && (legacyTemplateAvailable || flexibleTemplateAvailable),
+  );
 
   useEffect(() => {
     if (isPropertyPanelOpen) {
@@ -69,6 +115,22 @@ export const PropertyPanel: React.FC = () => {
       setTabValue('overview');
     }
   }, [isSettingsDisabled, tabValue]);
+
+  useEffect(() => {
+    if (!isPropertyPanelOpen) {
+      setTemplateDialogOpen(false);
+    }
+  }, [isPropertyPanelOpen]);
+
+  useEffect(() => {
+    if (!shouldOpenTemplateConfig) {
+      return;
+    }
+    if (showTemplateButton) {
+      setTemplateDialogOpen(true);
+    }
+    clearTemplateConfigRequest();
+  }, [shouldOpenTemplateConfig, showTemplateButton, clearTemplateConfigRequest]);
 
   const handleClose = (force = false) => {
     if (!force && isFormDirty && tabValue === 'settings') {
@@ -366,6 +428,16 @@ export const PropertyPanel: React.FC = () => {
                   onHasChangesChange={handleHasChangesChange}
                   onIsSubmittingChange={handleIsSubmittingChange}
                   onFormDirtyChange={handleFormDirtyChange}
+                  templateConfigControls={
+                    showTemplateButton
+                      ? {
+                          canManageTemplates: showTemplateButton,
+                          legacyAvailable: legacyTemplateAvailable,
+                          flexibleAvailable: flexibleTemplateAvailable,
+                          onOpenTemplateConfig: () => setTemplateDialogOpen(true),
+                        }
+                      : undefined
+                  }
                 />
               </TabsContent>
             </Tabs>
@@ -411,6 +483,14 @@ export const PropertyPanel: React.FC = () => {
         onDiscard={handleDiscardAndClose}
         isSaving={isSubmitting}
       />
+
+      {selectedQueuePath && (
+        <TemplateConfigDialog
+          open={isTemplateDialogOpen}
+          queuePath={selectedQueuePath}
+          onClose={() => setTemplateDialogOpen(false)}
+        />
+      )}
     </>
   );
 };

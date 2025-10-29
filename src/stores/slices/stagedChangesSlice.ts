@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import { nanoid } from 'nanoid';
-import { MUTATION_OPERATIONS, SPECIAL_VALUES } from '~/types';
+import { AUTO_CREATION_PROPS, MUTATION_OPERATIONS, SPECIAL_VALUES } from '~/types';
 import type { SchedConfUpdateInfo, StagedChange } from '~/types';
 import {
   buildGlobalPropertyKey,
@@ -356,9 +356,11 @@ export const createStagedChangesSlice: StateCreator<
     const queuesToStopForRemoval = getQueuesForRemoval(
       submissionRequest[MUTATION_OPERATIONS.REMOVE_QUEUE],
     );
+    const queuesToStopForAutoCreation = getQueuesForAutoCreationEnable(changes);
 
     const parentQueuesStopped = new Set<string>();
     const removalQueuesStopped = new Set<string>();
+    const autoCreationQueuesStopped = new Set<string>();
     const stoppedQueues = new Set<string>();
     const apiClient = get().apiClient;
     let mutationApplied = false;
@@ -418,6 +420,21 @@ export const createStagedChangesSlice: StateCreator<
       }
     };
 
+    const restartAutoCreationQueues = async () => {
+      if (autoCreationQueuesStopped.size === 0) return;
+
+      const queues = Array.from(autoCreationQueuesStopped);
+      for (const queueName of queues) {
+        try {
+          await applyQueueState(queueName, 'RUNNING');
+        } catch (startError) {
+          console.error(`Failed to restart queue ${queueName}:`, startError);
+        } finally {
+          autoCreationQueuesStopped.delete(queueName);
+        }
+      }
+    };
+
     try {
       for (const parentQueue of parentQueuesToStop) {
         await stopQueueIfNeeded(parentQueue, parentQueuesStopped);
@@ -425,6 +442,10 @@ export const createStagedChangesSlice: StateCreator<
 
       for (const queueName of queuesToStopForRemoval) {
         await stopQueueIfNeeded(queueName, removalQueuesStopped);
+      }
+
+      for (const queueName of queuesToStopForAutoCreation) {
+        await stopQueueIfNeeded(queueName, autoCreationQueuesStopped);
       }
 
       const validationResponse = await apiClient.validateSchedulerConf(submissionRequest);
@@ -445,6 +466,7 @@ export const createStagedChangesSlice: StateCreator<
       mutationApplied = true;
 
       await restartParents();
+      await restartAutoCreationQueues();
 
       for (const queueName of childQueuesToStart) {
         await applyQueueState(queueName, 'RUNNING');
@@ -490,6 +512,7 @@ export const createStagedChangesSlice: StateCreator<
       );
     } finally {
       await restartParents();
+      await restartAutoCreationQueues();
       if (!mutationApplied) {
         await restartRemovalQueues();
       }
@@ -664,6 +687,40 @@ function getQueuesForRemoval(
   }
 
   return [];
+}
+
+function getQueuesForAutoCreationEnable(changes: StagedChange[]): string[] {
+  if (!changes.length) {
+    return [];
+  }
+
+  const queues = new Set<string>();
+  const normalize = (value?: string) => value?.trim().toLowerCase() ?? '';
+
+  for (const change of changes) {
+    if (
+      change.type !== 'update' ||
+      !change.queuePath ||
+      change.queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME ||
+      change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH
+    ) {
+      continue;
+    }
+
+    if (
+      change.property === AUTO_CREATION_PROPS.LEGACY_ENABLED ||
+      change.property === AUTO_CREATION_PROPS.FLEXIBLE_ENABLED
+    ) {
+      const newValue = normalize(change.newValue);
+      const oldValue = normalize(change.oldValue);
+
+      if (newValue === 'true' && oldValue !== 'true') {
+        queues.add(change.queuePath);
+      }
+    }
+  }
+
+  return Array.from(queues);
 }
 
 function prepareMutationRequestForSubmission(request: SchedConfUpdateInfo): {

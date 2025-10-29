@@ -10,6 +10,11 @@ import {
   getSiblingQueues,
 } from '~/features/validation/utils/queueUtils';
 
+const TEMPLATE_QUEUE_MARKERS = ['leaf-queue-template', 'auto-queue-creation-v2.'];
+
+const isTemplateQueuePath = (queuePath: string): boolean =>
+  TEMPLATE_QUEUE_MARKERS.some((marker) => queuePath.includes(marker));
+
 export interface ValidationContext {
   queuePath: string;
   fieldName: string;
@@ -69,6 +74,9 @@ export function runFieldValidation(context: ValidationContext): ValidationIssue[
 // --- Rule evaluators -------------------------------------------------------
 
 function evaluateCapacityTypeConsistency(context: ValidationContext): ValidationIssue[] {
+  if (isTemplateQueuePath(context.queuePath)) {
+    return [];
+  }
   if (!context.legacyModeEnabled) {
     return [];
   }
@@ -109,6 +117,9 @@ function evaluateCapacityTypeConsistency(context: ValidationContext): Validation
 }
 
 function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[] {
+  if (isTemplateQueuePath(context.queuePath)) {
+    return [];
+  }
   if (!context.legacyModeEnabled) {
     return [];
   }
@@ -186,6 +197,9 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
 }
 
 function evaluateMaxCapacityRelationship(context: ValidationContext): ValidationIssue[] {
+  if (isTemplateQueuePath(context.queuePath)) {
+    return [];
+  }
   if (!context.legacyModeEnabled) {
     return [];
   }

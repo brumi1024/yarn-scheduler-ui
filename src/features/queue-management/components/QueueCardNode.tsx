@@ -28,6 +28,7 @@ import {
   AlertCircle,
   AlertTriangle,
   SlidersHorizontal,
+  FileCog,
 } from 'lucide-react';
 import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
@@ -182,6 +183,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     setPropertyPanelOpen,
     isPropertyPanelOpen,
     setPropertyPanelInitialTab,
+    requestTemplateConfigOpen,
     toggleComparisonQueue,
     selectedNodeLabelFilter,
     getQueueLabelCapacity,
@@ -245,6 +247,9 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
   const isRunning = state === QUEUE_STATES.RUNNING;
+  const isTemplateManageable =
+    autoCreationStatus?.status === 'legacy' || autoCreationStatus?.status === 'flexible';
+  const isTemplateActionDisabled = stagedStatus === 'new' || isAutoCreatedQueue;
 
   const capacityEntries = useMemo<ResourceVectorEntry[]>(() => {
     if (parsedCapacityDisplay.type === 'vector') {
@@ -680,6 +685,21 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
             <Edit className="mr-2 h-4 w-4" />
             Edit Properties
           </ContextMenuItem>
+
+          {isTemplateManageable && (
+            <ContextMenuItem
+              onClick={(e) => {
+                e.stopPropagation();
+                setPropertyPanelInitialTab('settings');
+                selectQueue(queuePath);
+                requestTemplateConfigOpen();
+              }}
+              disabled={isTemplateActionDisabled}
+            >
+              <FileCog className="mr-2 h-4 w-4" />
+              Manage Template Properties
+            </ContextMenuItem>
+          )}
 
           {queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME && (
             <ContextMenuItem onClick={(e) => handleOpenCapacityEditor(e)}>

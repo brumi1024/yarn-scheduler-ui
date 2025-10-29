@@ -40,6 +40,90 @@ interface PropertyFormFieldProps {
   setFormValue?: UseFormSetValue<Record<string, string>>;
 }
 
+interface PropertyLabelProps {
+  property: PropertyDescriptor;
+  stagedStatus?: 'new' | 'modified' | 'deleted';
+  isEnabled: boolean;
+  className?: string;
+  contentClassName?: string;
+  children?: React.ReactNode;
+}
+
+const PropertyLabel: React.FC<PropertyLabelProps> = ({
+  property,
+  stagedStatus,
+  isEnabled,
+  className,
+  contentClassName,
+  children,
+}) => (
+  <FieldLabel
+    className={cn('flex items-center gap-1', className, !isEnabled && 'text-muted-foreground')}
+  >
+    <div className={cn('flex items-center gap-1 min-w-0', contentClassName)}>
+      <span className="truncate">
+        {property.displayName}
+        {property.required ? ' *' : ''}
+      </span>
+      {stagedStatus === 'modified' && (
+        <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
+          Staged
+        </Badge>
+      )}
+    </div>
+    {children}
+  </FieldLabel>
+);
+
+const renderBusinessErrorsList = (fieldName: string, messages: string[]) => {
+  if (messages.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 space-y-1">
+      {messages.map((message, index) => (
+        <div key={`business-error-${fieldName}-${index}`} className="text-xs text-destructive">
+          {message}
+        </div>
+      ))}
+    </div>
+  );
+};
+
+const PropertyWarnings: React.FC<{ warnings: string[] }> = ({ warnings }) => {
+  if (warnings.length === 0) {
+    return null;
+  }
+
+  return (
+    <div className="mt-1 space-y-1">
+      {warnings.map((warning, index) => {
+        const isLegacyMode = warning.includes('legacy mode requirement');
+        return (
+          <div key={`warning-${index}`} className="flex items-start gap-1.5">
+            <AlertTriangle className="mt-0.5 h-3.5 w-3.5 flex-shrink-0 text-yellow-600 dark:text-yellow-500" />
+            <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
+            {isLegacyMode && (
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <Info className="mt-0.5 h-3.5 w-3.5 cursor-help flex-shrink-0 text-muted-foreground" />
+                </TooltipTrigger>
+                <TooltipContent className="max-w-xs">
+                  <p className="text-xs">
+                    This validation is enforced because legacy queue mode is enabled. You can
+                    disable legacy mode in Global Settings for more flexible capacity configuration.
+                  </p>
+                </TooltipContent>
+              </Tooltip>
+            )}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
 export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   property,
   control,
@@ -52,7 +136,9 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
   queueName,
   parentQueuePath,
   currentValues,
+  setFormValue: _setFormValue,
 }) => {
+  void _setFormValue;
   const { openCapacityEditor } = useCapacityEditor();
 
   // Render different input types based on property type
@@ -72,19 +158,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       : inlineBusinessError
         ? fieldErrors.slice(1)
         : [];
-    const renderBusinessErrorsList = (messages: string[]) =>
-      messages.length > 0 ? (
-        <div className="mt-1 space-y-1">
-          {messages.map((message, index) => (
-            <div key={`business-error-${fieldName}-${index}`} className="text-xs text-destructive">
-              {message}
-            </div>
-          ))}
-        </div>
-      ) : null;
-
     const commonProps = {
-      disabled: !isEnabled,
       className: cn(
         stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
         error && 'ring-2 ring-destructive ring-offset-1',
@@ -93,8 +167,24 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
 
     switch (property.type) {
       case 'boolean':
-        return (
-          <>
+        return (() => {
+          const isLegacyAutoCreationToggle = property.name === 'auto-create-child-queue.enabled';
+          const isLockedLegacyToggle = isLegacyAutoCreationToggle && field.value === 'true';
+          const switchDisabled = !isEnabled || isLockedLegacyToggle;
+
+          const descriptionContent = isLockedLegacyToggle ? (
+            <>
+              {property.description ? <span>{property.description}</span> : null}
+              <span className="block text-muted-foreground">
+                Legacy auto-created queues cannot be disabled. Remove and recreate the queue to turn
+                off auto-creation.
+              </span>
+            </>
+          ) : (
+            (property.description ?? null)
+          );
+
+          const switchControl = (
             <FieldSwitch
               id={fieldName}
               fieldName={fieldName}
@@ -106,18 +196,21 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   </Badge>
                 ) : null
               }
-              description={property.description}
+              description={descriptionContent}
               labelProps={{
                 className: cn(!isEnabled && 'text-muted-foreground'),
               }}
-              disabled={!isEnabled}
+              disabled={switchDisabled}
               checked={field.value === 'true'}
               onCheckedChange={(checked) => {
-                const nextValue = checked ? 'true' : '';
+                const nextValue = checked ? 'true' : 'false';
                 field.onChange(nextValue);
                 onBlur?.(property.name, nextValue);
               }}
-              switchClassName={commonProps.className}
+              switchClassName={cn(
+                commonProps.className,
+                isLockedLegacyToggle && 'disabled:opacity-100 disabled:bg-input',
+              )}
               message={
                 error
                   ? String(error.message ?? '')
@@ -126,9 +219,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     : undefined
               }
             />
-            {renderBusinessErrorsList(remainingBusinessErrors)}
-          </>
-        );
+          );
+
+          return (
+            <>
+              {switchControl}
+              {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+            </>
+          );
+        })();
 
       case 'enum': {
         const enumOptions = property.enumValues ?? [];
@@ -146,19 +245,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
 
         const renderChoiceCards = () => (
           <Field>
-            <FieldLabel
-              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
-            >
-              <span className="truncate">
-                {property.displayName}
-                {property.required ? ' *' : ''}
-              </span>
-              {stagedStatus === 'modified' && (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
-              )}
-            </FieldLabel>
+            <PropertyLabel property={property} stagedStatus={stagedStatus} isEnabled={isEnabled} />
             <FieldControl>
               <div className="grid gap-3 sm:grid-cols-2">
                 {enumOptions.map((option) => {
@@ -217,25 +304,13 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {error ? String(error.message ?? '') : inlineBusinessError}
               </FieldMessage>
             )}
-            {renderBusinessErrorsList(remainingBusinessErrors)}
+            {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
           </Field>
         );
 
         const renderToggleGroup = () => (
           <Field>
-            <FieldLabel
-              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
-            >
-              <span className="truncate">
-                {property.displayName}
-                {property.required ? ' *' : ''}
-              </span>
-              {stagedStatus === 'modified' && (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
-              )}
-            </FieldLabel>
+            <PropertyLabel property={property} stagedStatus={stagedStatus} isEnabled={isEnabled} />
             <FieldControl>
               <ToggleGroup
                 type="single"
@@ -267,7 +342,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {error ? String(error.message ?? '') : inlineBusinessError}
               </FieldMessage>
             )}
-            {renderBusinessErrorsList(remainingBusinessErrors)}
+            {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
           </Field>
         );
 
@@ -280,19 +355,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
       case 'number':
         return (
           <Field>
-            <FieldLabel
-              className={cn('flex items-center gap-1', !isEnabled && 'text-muted-foreground')}
-            >
-              <span className="truncate">
-                {property.displayName}
-                {property.required ? ' *' : ''}
-              </span>
-              {stagedStatus === 'modified' && (
-                <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                  Staged
-                </Badge>
-              )}
-            </FieldLabel>
+            <PropertyLabel property={property} stagedStatus={stagedStatus} isEnabled={isEnabled} />
             <FieldControl>
               <div className="relative">
                 <Input
@@ -330,7 +393,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {error ? String(error.message ?? '') : inlineBusinessError}
               </FieldMessage>
             )}
-            {renderBusinessErrorsList(remainingBusinessErrors)}
+            {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
           </Field>
         );
 
@@ -370,24 +433,13 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
 
           return (
             <Field>
-              <FieldLabel
-                className={cn(
-                  'flex flex-wrap items-center gap-2',
-                  !isEnabled && 'text-muted-foreground',
-                )}
+              <PropertyLabel
+                property={property}
+                stagedStatus={stagedStatus}
+                isEnabled={isEnabled}
+                className="flex-wrap gap-2"
+                contentClassName="flex-1 gap-1"
               >
-                <div className="flex min-w-0 flex-1 items-center gap-1">
-                  <span className="truncate">
-                    {property.displayName}
-                    {property.required ? ' *' : ''}
-                  </span>
-                  {stagedStatus === 'modified' && (
-                    <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                      Staged
-                    </Badge>
-                  )}
-                </div>
-
                 <div className="ml-auto flex-shrink-0">
                   {isCapacityField ? (
                     <Button
@@ -406,7 +458,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                     </span>
                   )}
                 </div>
-              </FieldLabel>
+              </PropertyLabel>
               <div className="mt-2 w-full break-all rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm font-mono text-foreground">
                 {displayValue}
               </div>
@@ -420,58 +472,20 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                   {error ? String(error.message ?? '') : inlineBusinessError}
                 </FieldMessage>
               )}
-              {renderBusinessErrorsList(remainingBusinessErrors)}
-              {warnings.length > 0 && (
-                <div className="mt-1 space-y-1">
-                  {warnings.map((warning, index) => {
-                    const isLegacyMode = warning.includes('legacy mode requirement');
-                    return (
-                      <div key={index} className="flex items-start gap-1.5">
-                        <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                        <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
-                        {isLegacyMode && (
-                          <Tooltip>
-                            <TooltipTrigger asChild>
-                              <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help mt-0.5 flex-shrink-0" />
-                            </TooltipTrigger>
-                            <TooltipContent className="max-w-xs">
-                              <p className="text-xs">
-                                This validation is enforced because legacy queue mode is enabled.
-                                You can disable legacy mode in Global Settings for more flexible
-                                capacity configuration.
-                              </p>
-                            </TooltipContent>
-                          </Tooltip>
-                        )}
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
+              {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+              <PropertyWarnings warnings={warnings} />
             </Field>
           );
         }
 
         return (
           <Field>
-            <FieldLabel
-              className={cn(
-                'flex items-center gap-2 justify-between',
-                !isEnabled && 'text-muted-foreground',
-              )}
-            >
-              <div className="flex items-center gap-1 min-w-0">
-                <span className="truncate">
-                  {property.displayName}
-                  {property.required ? ' *' : ''}
-                </span>
-                {stagedStatus === 'modified' && (
-                  <Badge variant="default" className="text-xs h-4 px-1 shrink-0">
-                    Staged
-                  </Badge>
-                )}
-              </div>
-            </FieldLabel>
+            <PropertyLabel
+              property={property}
+              stagedStatus={stagedStatus}
+              isEnabled={isEnabled}
+              className="justify-between gap-2"
+            />
             <FieldControl>
               {property.name.includes('acl') ? (
                 <textarea
@@ -519,34 +533,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {error ? String(error.message ?? '') : inlineBusinessError}
               </FieldMessage>
             )}
-            {renderBusinessErrorsList(remainingBusinessErrors)}
-            {warnings.length > 0 && (
-              <div className="mt-1 space-y-1">
-                {warnings.map((warning, index) => {
-                  const isLegacyMode = warning.includes('legacy mode requirement');
-                  return (
-                    <div key={index} className="flex items-start gap-1.5">
-                      <AlertTriangle className="h-3.5 w-3.5 text-yellow-600 dark:text-yellow-500 mt-0.5 flex-shrink-0" />
-                      <p className="text-sm text-yellow-600 dark:text-yellow-500">{warning}</p>
-                      {isLegacyMode && (
-                        <Tooltip>
-                          <TooltipTrigger asChild>
-                            <Info className="h-3.5 w-3.5 text-muted-foreground cursor-help mt-0.5 flex-shrink-0" />
-                          </TooltipTrigger>
-                          <TooltipContent className="max-w-xs">
-                            <p className="text-xs">
-                              This validation is enforced because legacy queue mode is enabled. You
-                              can disable legacy mode in Global Settings for more flexible capacity
-                              configuration.
-                            </p>
-                          </TooltipContent>
-                        </Tooltip>
-                      )}
-                    </div>
-                  );
-                })}
-              </div>
-            )}
+            {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+            <PropertyWarnings warnings={warnings} />
           </Field>
         );
       }

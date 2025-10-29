@@ -12,6 +12,7 @@ import type { ValidationIssue } from '~/features/validation/types';
 import { isBlockingError } from '~/features/validation/ruleCategories';
 import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';
+import { CONFIG_PREFIXES } from '~/types';
 
 function createFormSchema(
   properties: Array<
@@ -125,7 +126,7 @@ export function usePropertyEditor({
     criteriaMode: 'all', // Show all validation errors
   });
 
-  const { control, handleSubmit, reset, setValue, getValues } = form;
+  const { control, handleSubmit, reset, getValues } = form;
 
   const watchedValues = useWatch({ control });
 
@@ -202,22 +203,121 @@ export function usePropertyEditor({
 
   const stageChange = useCallback(
     (propertyName: string, value: string, validationErrors?: ValidationIssue[]) => {
-      const property = allProperties.find((p) => p.name === propertyName);
-      if (!property?.required && !value.trim()) {
-        return;
-      }
-
-      // Handle label properties differently than regular properties
       stageQueueChange(queuePath, propertyName, value, validationErrors);
     },
-    [queuePath, stageQueueChange, allProperties],
+    [queuePath, stageQueueChange],
   );
 
-  const handleFieldChange = useCallback(
-    (propertyName: string) => (value: string) => {
-      setValue(propertyName, value);
+  const collectTemplateMatches = useCallback(
+    <T>(
+      fromConfig: (key: string) => T | null | undefined,
+      fromChange: (change: (typeof stagedChanges)[number]) => T | null | undefined,
+    ): T[] => {
+      const matches = new Set<T>();
+
+      for (const key of configData.keys()) {
+        const match = fromConfig(key);
+        if (match != null) {
+          matches.add(match);
+        }
+      }
+
+      stagedChanges.forEach((change) => {
+        const match = fromChange(change);
+        if (match != null) {
+          matches.add(match);
+        }
+      });
+
+      return Array.from(matches);
     },
-    [setValue],
+    [configData, stagedChanges],
+  );
+
+  const collectTemplateProperties = useCallback(
+    (templateQueuePath: string): string[] => {
+      const prefix = `${CONFIG_PREFIXES.BASE}.${templateQueuePath}.`;
+
+      return collectTemplateMatches(
+        (key) => {
+          if (!key.startsWith(prefix)) {
+            return null;
+          }
+          const propertyName = key.slice(prefix.length);
+          return propertyName || null;
+        },
+        (change) => {
+          if (change.queuePath === templateQueuePath && change.property) {
+            return change.property;
+          }
+          return null;
+        },
+      );
+    },
+    [collectTemplateMatches],
+  );
+
+  const collectTemplateQueuePaths = useCallback(
+    (suffix: string): string[] => {
+      const configPrefix = `${CONFIG_PREFIXES.BASE}.`;
+      const basePrefix = `${queuePath}.`;
+      const suffixToken = `.${suffix}`;
+
+      const matches = collectTemplateMatches(
+        (key) => {
+          if (!key.startsWith(configPrefix)) {
+            return null;
+          }
+          const remainder = key.slice(configPrefix.length);
+          if (!remainder.startsWith(basePrefix)) {
+            return null;
+          }
+          const index = remainder.indexOf(suffixToken);
+          if (index === -1) {
+            return null;
+          }
+          return remainder.slice(0, index + suffix.length);
+        },
+        (change) => {
+          const changePath = change.queuePath;
+          if (!changePath) {
+            return null;
+          }
+          if (
+            changePath === `${queuePath}.${suffix}` ||
+            (changePath.startsWith(basePrefix) && changePath.includes(suffixToken))
+          ) {
+            return changePath;
+          }
+          return null;
+        },
+      );
+
+      const defaultPath = `${queuePath}.${suffix}`;
+      if (!matches.includes(defaultPath)) {
+        matches.push(defaultPath);
+      }
+
+      return Array.from(new Set(matches));
+    },
+    [collectTemplateMatches, queuePath],
+  );
+
+  const stageTemplatePropertyRemovals = useCallback(
+    (templateQueuePaths: string[]): number => {
+      let removals = 0;
+
+      templateQueuePaths.forEach((templatePath) => {
+        const properties = collectTemplateProperties(templatePath);
+        properties.forEach((property) => {
+          stageQueueChange(templatePath, property, '');
+          removals += 1;
+        });
+      });
+
+      return removals;
+    },
+    [collectTemplateProperties, stageQueueChange],
   );
 
   const handleFieldBlur = useCallback(
@@ -349,6 +449,8 @@ export function usePropertyEditor({
         }
 
         let stagedCount = 0;
+        let flexibleTemplatesDisabled = false;
+
         pendingEntries.forEach(([propertyName, value]) => {
           const fieldIssues = nonBlockingIssues.filter((issue) => issue.field === propertyName);
 
@@ -378,7 +480,22 @@ export function usePropertyEditor({
 
           stageChange(propertyName, value, uniqueIssues.length > 0 ? uniqueIssues : undefined);
           stagedCount += 1;
+
+          if (propertyName === 'auto-queue-creation-v2.enabled' && value !== 'true') {
+            flexibleTemplatesDisabled = true;
+          }
         });
+
+        if (flexibleTemplatesDisabled) {
+          const flexiblePaths = new Set<string>([
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.template'),
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.parent-template'),
+            ...collectTemplateQueuePaths('auto-queue-creation-v2.leaf-template'),
+          ]);
+          if (flexiblePaths.size > 0) {
+            stagedCount += stageTemplatePropertyRemovals(Array.from(flexiblePaths));
+          }
+        }
 
         const result = {
           success: true,
@@ -419,6 +536,8 @@ export function usePropertyEditor({
       stagedChanges,
       reset,
       form,
+      collectTemplateQueuePaths,
+      stageTemplatePropertyRemovals,
     ],
   );
 
@@ -522,7 +641,6 @@ export function usePropertyEditor({
     control,
     handleSubmit: handleSubmit(onSubmit),
     handleReset,
-    handleFieldChange,
     handleFieldBlur,
     stageChange,
     errors: combinedErrors,

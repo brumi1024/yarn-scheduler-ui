@@ -193,3 +193,126 @@ describe('stagedChangesSlice - validation refresh', () => {
     );
   });
 });
+
+describe('stagedChangesSlice - auto-creation enablement', () => {
+  it('stops and restarts queues when enabling auto-creation', async () => {
+    const queuePath = 'root.default';
+    const propertyKey = 'yarn.scheduler.capacity.root.default.auto-queue-creation-v2.enabled';
+
+    const updateSchedulerConf = vi.fn().mockResolvedValue(undefined);
+    const validateSchedulerConf = vi.fn().mockResolvedValue({
+      validation: 'passed',
+      versionId: '2',
+    });
+    const getSchedulerConf = vi.fn().mockResolvedValue({
+      property: [{ name: propertyKey, value: 'true' }],
+    });
+    const getSchedulerConfVersion = vi.fn().mockResolvedValue({ versionId: '2' });
+
+    const apiClient = {
+      updateSchedulerConf,
+      validateSchedulerConf,
+      getSchedulerConf,
+      getSchedulerConfVersion,
+    } as any;
+
+    const refreshSchedulerData = vi.fn().mockResolvedValue(undefined);
+
+    const state: any = {
+      apiClient,
+      refreshSchedulerData,
+      schedulerData: {
+        type: 'capacityScheduler',
+        capacity: 100,
+        usedCapacity: 0,
+        maxCapacity: 100,
+        queueName: 'root',
+        queues: { queue: [] },
+      },
+      configData: new Map(),
+      configVersion: 1,
+      isLoading: false,
+      error: null,
+      errorContext: null,
+      applyError: null,
+    };
+
+    const set = (fn: (draft: any) => void) => {
+      fn(state);
+    };
+    const get = () => state;
+
+    Object.assign(state, createStagedChangesSlice(set as any, get as any, {} as any));
+
+    state.configData = new Map([[propertyKey, 'false']]);
+    state.stagedChanges = [
+      {
+        id: '1',
+        type: 'update' as const,
+        queuePath,
+        property: 'auto-queue-creation-v2.enabled',
+        oldValue: 'false',
+        newValue: 'true',
+        timestamp: Date.now(),
+      },
+    ];
+
+    await state.applyChanges();
+
+    expect(validateSchedulerConf).toHaveBeenCalledTimes(1);
+    expect(validateSchedulerConf).toHaveBeenCalledWith({
+      'update-queue': [
+        {
+          'queue-name': queuePath,
+          params: {
+            entry: [{ key: 'auto-queue-creation-v2.enabled', value: 'true' }],
+          },
+        },
+      ],
+    });
+
+    expect(updateSchedulerConf).toHaveBeenCalledTimes(3);
+    expect(updateSchedulerConf.mock.calls[0][0]).toEqual({
+      'update-queue': [
+        {
+          'queue-name': queuePath,
+          params: {
+            entry: [{ key: 'state', value: 'STOPPED' }],
+          },
+        },
+      ],
+    });
+
+    const finalMutation = updateSchedulerConf.mock.calls[1][0];
+    expect(finalMutation['update-queue']).toEqual([
+      {
+        'queue-name': queuePath,
+        params: {
+          entry: expect.arrayContaining([{ key: 'auto-queue-creation-v2.enabled', value: 'true' }]),
+        },
+      },
+    ]);
+    expect(finalMutation['global-updates']).toEqual([
+      {
+        entry: expect.arrayContaining([
+          { key: 'yarn.webservice.mutation-api.version', value: '2' },
+        ]),
+      },
+    ]);
+
+    expect(updateSchedulerConf.mock.calls[2][0]).toEqual({
+      'update-queue': [
+        {
+          'queue-name': queuePath,
+          params: {
+            entry: [{ key: 'state', value: 'RUNNING' }],
+          },
+        },
+      ],
+    });
+
+    expect(refreshSchedulerData).toHaveBeenCalledTimes(1);
+    expect(state.stagedChanges).toEqual([]);
+    expect(state.configData.get(propertyKey)).toBe('true');
+  });
+});

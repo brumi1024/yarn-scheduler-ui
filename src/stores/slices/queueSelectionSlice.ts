@@ -16,6 +16,7 @@ export const createQueueSelectionSlice: StateCreator<
   comparisonQueues: [],
   isPropertyPanelOpen: false,
   propertyPanelInitialTab: 'overview',
+  shouldOpenTemplateConfig: false,
 
   selectQueue: (queuePath) => {
     // Validate that the queue exists if a path is provided
@@ -31,9 +32,11 @@ export const createQueueSelectionSlice: StateCreator<
       state.selectedQueuePath = queuePath;
       if (queuePath) {
         state.isPropertyPanelOpen = true;
+        state.shouldOpenTemplateConfig = false;
       }
       if (!queuePath) {
         state.propertyPanelInitialTab = 'overview';
+        state.shouldOpenTemplateConfig = false;
       }
     });
   },
@@ -56,6 +59,7 @@ export const createQueueSelectionSlice: StateCreator<
       if (!isOpen) {
         state.selectedQueuePath = null;
         state.propertyPanelInitialTab = 'overview';
+        state.shouldOpenTemplateConfig = false;
       }
     });
   },
@@ -63,6 +67,18 @@ export const createQueueSelectionSlice: StateCreator<
   setPropertyPanelInitialTab: (tab) => {
     set((state) => {
       state.propertyPanelInitialTab = tab;
+    });
+  },
+
+  requestTemplateConfigOpen: () => {
+    set((state) => {
+      state.shouldOpenTemplateConfig = true;
+    });
+  },
+
+  clearTemplateConfigRequest: () => {
+    set((state) => {
+      state.shouldOpenTemplateConfig = false;
     });
   },
 
