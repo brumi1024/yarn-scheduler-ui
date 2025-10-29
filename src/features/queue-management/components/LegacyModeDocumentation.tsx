@@ -15,14 +15,18 @@ import { Alert, AlertDescription } from '~/components/ui/alert';
 
 interface LegacyModeDocumentationProps {
   children: React.ReactNode;
+  legacyModeEnabled: boolean;
 }
 
-export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = ({ children }) => {
+export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = ({
+  children,
+  legacyModeEnabled,
+}) => {
   'use memo';
   return (
     <Dialog>
       <DialogTrigger asChild>{children}</DialogTrigger>
-      <DialogContent className="max-w-6xl max-h-[95vh]">
+      <DialogContent className="sm:max-w-2xl lg:max-w-4xl max-h-[95vh]">
         <DialogHeader>
           <DialogTitle>YARN Capacity Scheduler Queue Modes</DialogTitle>
           <DialogDescription>
@@ -45,6 +49,28 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
                 The YARN Capacity Scheduler supports two queue configuration modes that determine
                 how capacity values are validated and enforced.
               </p>
+
+              <Alert
+                className={
+                  legacyModeEnabled
+                    ? 'border-warning bg-warning/10'
+                    : 'border-green-600 bg-green-600/10'
+                }
+              >
+                <CheckCircle
+                  className={`h-4 w-4 ${legacyModeEnabled ? 'text-warning' : 'text-green-600'}`}
+                />
+                <AlertDescription>
+                  <p className="font-semibold mb-1">
+                    Currently Active: {legacyModeEnabled ? 'Legacy Mode' : 'Flexible Mode'}
+                  </p>
+                  <p className="text-sm">
+                    {legacyModeEnabled
+                      ? 'Strict capacity rules are enforced. All sibling queues must use the same capacity type and child capacities must sum to 100%.'
+                      : 'Flexible capacity configuration is allowed. Queues can use different capacity types and child capacities do not need to sum to 100%.'}
+                  </p>
+                </AlertDescription>
+              </Alert>
 
               <div className="space-y-3">
                 <div className="border rounded-lg p-4">
