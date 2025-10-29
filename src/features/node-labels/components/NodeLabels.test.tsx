@@ -1,5 +1,4 @@
-import { render, screen, within, waitFor } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import { NodeLabels } from './NodeLabels';
 import { useSchedulerStore } from '~/stores/schedulerStore';
@@ -22,7 +21,6 @@ vi.mock('./NodesPanel', () => ({
 
 describe('NodeLabels', () => {
   const mockRefreshSchedulerData = vi.fn();
-  const mockConsoleError = vi.spyOn(console, 'error').mockImplementation(() => {});
 
   const defaultStoreState = {
     isLoading: false,
@@ -36,12 +34,7 @@ describe('NodeLabels', () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
-    mockConsoleError.mockClear();
     vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
-  });
-
-  afterAll(() => {
-    mockConsoleError.mockRestore();
   });
 
   describe('Loading states', () => {
@@ -73,84 +66,27 @@ describe('NodeLabels', () => {
 
       render(<NodeLabels />);
 
-      expect(screen.getByText('Node Labels Management')).toBeInTheDocument();
       expect(screen.queryByText('Loading node labels...')).not.toBeInTheDocument();
+      expect(screen.getByText('Available Labels')).toBeInTheDocument();
       expect(screen.getByTestId('node-labels-panel')).toBeInTheDocument();
     });
   });
 
-  describe('Page header and description', () => {
-    it('should display the page title and description', () => {
+  describe('Header', () => {
+    it('should not render the duplicated page header', () => {
       render(<NodeLabels />);
 
-      expect(screen.getByText('Node Labels Management')).toBeInTheDocument();
-      expect(screen.getByText(/Manage node labels for the YARN cluster/)).toBeInTheDocument();
-      expect(screen.getByText(/Each node can be assigned to node labels/)).toBeInTheDocument();
+      expect(screen.queryByText('Node Labels Management')).not.toBeInTheDocument();
+      expect(screen.queryByText(/Manage node labels for the YARN cluster/)).not.toBeInTheDocument();
+      expect(
+        screen.queryByText(/Each node can be assigned to node labels/),
+      ).not.toBeInTheDocument();
     });
 
-    it('should display the refresh button', () => {
+    it('should not render a refresh button', () => {
       render(<NodeLabels />);
 
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      expect(refreshButton).toBeInTheDocument();
-      expect(refreshButton).not.toBeDisabled();
-    });
-  });
-
-  describe('Refresh functionality', () => {
-    it('should call refreshSchedulerData when refresh button is clicked', async () => {
-      mockRefreshSchedulerData.mockResolvedValue(undefined);
-
-      render(<NodeLabels />);
-
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      await userEvent.click(refreshButton as HTMLElement);
-
-      expect(mockRefreshSchedulerData).toHaveBeenCalledTimes(1);
-    });
-
-    it('should disable refresh button while loading', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
-        isLoading: true,
-        nodeLabels: [getMockNodeLabel()],
-      });
-
-      render(<NodeLabels />);
-
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      expect(refreshButton).toBeDisabled();
-    });
-
-    it('should show spinning animation on refresh icon when loading', () => {
-      vi.mocked(useSchedulerStore).mockReturnValue({
-        ...defaultStoreState,
-        isLoading: true,
-        nodeLabels: [getMockNodeLabel()],
-      });
-
-      render(<NodeLabels />);
-
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      const refreshIcon = refreshButton.querySelector('svg');
-      expect(refreshIcon).toHaveClass('animate-spin');
-    });
-
-    it('should handle refresh errors gracefully', async () => {
-      const testError = new Error('Failed to refresh');
-      mockRefreshSchedulerData.mockRejectedValue(testError);
-
-      render(<NodeLabels />);
-
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      await userEvent.click(refreshButton as HTMLElement);
-
-      await waitFor(() => {
-        expect(mockConsoleError).toHaveBeenCalledWith(
-          'Failed to refresh node labels data:',
-          testError,
-        );
-      });
+      expect(screen.queryByRole('button', { name: /refresh/i })).not.toBeInTheDocument();
     });
   });
 
@@ -325,16 +261,11 @@ describe('NodeLabels', () => {
   });
 
   describe('Accessibility', () => {
-    it('should have accessible page structure', () => {
+    it('should expose clear titles for the main sections', () => {
       render(<NodeLabels />);
 
-      // Main heading
-      const heading = screen.getByRole('heading', { name: 'Node Labels Management' });
-      expect(heading).toBeInTheDocument();
-
-      // Buttons should be accessible
-      const refreshButton = screen.getByRole('button', { name: /refresh/i });
-      expect(refreshButton).toHaveAccessibleName();
+      const titles = document.querySelectorAll('[data-slot="card-title"]');
+      expect(titles).toHaveLength(2);
     });
 
     it('should have proper card structure', () => {

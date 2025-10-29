@@ -4,6 +4,8 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { StagedChangesPanel } from '~/features/staged-changes/components/StagedChangesPanel';
 import { AppSidebar } from '~/components/layouts/app-sidebar';
 import { ModeToggle } from '~/components/elements/mode-toggle';
+import { GlobalRefreshButton } from '~/components/elements/GlobalRefreshButton';
+import { DiagnosticsDialog } from '~/components/elements/DiagnosticsDialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '~/components/ui/sidebar';
 import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
@@ -143,6 +145,8 @@ export default function Layout() {
                 <p className="text-sm text-muted-foreground">{pageInfo.description}</p>
               </div>
               <SearchBar className="w-64" placeholder="Search" />
+              <GlobalRefreshButton />
+              <DiagnosticsDialog />
               <ModeToggle />
             </header>
 
