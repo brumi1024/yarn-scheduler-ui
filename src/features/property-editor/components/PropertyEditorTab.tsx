@@ -1,4 +1,4 @@
-import React, { useState, useImperativeHandle, useMemo } from 'react';
+import React, { useState, useImperativeHandle, useMemo, useCallback } from 'react';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import {
@@ -102,7 +102,7 @@ export const PropertyEditorTab = ({
   }, [formState.isDirty, onFormDirtyChange]);
 
   // Handle form submission (staging)
-  const onSubmit = async () => {
+  const onSubmit = useCallback(async () => {
     setIsSubmitting(true);
     try {
       await handleSubmit();
@@ -113,13 +113,13 @@ export const PropertyEditorTab = ({
     } finally {
       setIsSubmitting(false);
     }
-  };
+  }, [handleSubmit]);
 
   // Handle form reset
-  const onReset = () => {
+  const onReset = useCallback(() => {
     handleReset();
     toast.success('Form reset to current values');
-  };
+  }, [handleReset]);
 
   // Expose handlers to parent via ref
   useImperativeHandle(
