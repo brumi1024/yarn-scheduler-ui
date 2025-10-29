@@ -225,7 +225,8 @@ export const createSearchSlice: StateCreator<
       `accessible-node-labels.${label}.absolute-capacity`,
     );
 
-    const capacity = capacityResult.value || '0';
+    const isRootQueue = queuePath === 'root';
+    const capacity = capacityResult.value || (isRootQueue ? '100' : '0');
 
     return {
       capacity,

@@ -397,13 +397,14 @@ describe('YarnApiClient', () => {
 
         const labels = response.nodeLabelInfo;
         expect(labels).toBeDefined();
-        expect(Array.isArray(labels)).toBe(true);
-
-        if (labels && labels.length > 0) {
-          const firstLabel = labels[0];
-          expect(firstLabel.name).toBeDefined();
-          expect(['boolean', 'string']).toContain(typeof firstLabel.exclusivity);
+        if (!labels) {
+          throw new Error('Expected node labels to be defined');
         }
+
+        const labelArray = Array.isArray(labels) ? labels : [labels];
+        const firstLabel = labelArray[0];
+        expect(firstLabel.name).toBeDefined();
+        expect(['boolean', 'string']).toContain(typeof firstLabel.exclusivity);
       });
 
       it('should handle empty node labels', async () => {

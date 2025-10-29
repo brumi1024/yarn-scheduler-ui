@@ -178,7 +178,12 @@ export const createNodeLabelsSlice: StateCreator<
  * Ensures exclusivity defaults to true if not specified (YARN default)
  */
 function normalizeNodeLabels(response?: NodeLabelsResponse): NodeLabel[] {
-  const nodeLabelInfo = response?.nodeLabelInfo || [];
+  const rawNodeLabelInfo = response?.nodeLabelInfo;
+  const nodeLabelInfo = Array.isArray(rawNodeLabelInfo)
+    ? rawNodeLabelInfo
+    : rawNodeLabelInfo
+      ? [rawNodeLabelInfo]
+      : [];
 
   return nodeLabelInfo.map((label) => ({
     ...label,
