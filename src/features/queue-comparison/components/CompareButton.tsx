@@ -5,7 +5,6 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { QueueComparisonDialog } from './QueueComparisonDialog';
 
 export const CompareButton: React.FC = () => {
-  'use memo';
   const { comparisonQueues, clearComparisonQueues, canCompareQueues } = useSchedulerStore();
   const [isOpen, setIsOpen] = useState(false);
 

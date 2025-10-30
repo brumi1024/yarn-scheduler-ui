@@ -33,7 +33,6 @@ interface DiagnosticOption {
 const DEFAULT_SELECTED: DiagnosticDatasetId[] = ['schedulerConf', 'schedulerInfo'];
 
 export function DiagnosticsDialog() {
-  'use memo';
   const configData = useSchedulerStore((state) => state.configData);
   const configVersion = useSchedulerStore((state) => state.configVersion);
   const schedulerData = useSchedulerStore((state) => state.schedulerData);

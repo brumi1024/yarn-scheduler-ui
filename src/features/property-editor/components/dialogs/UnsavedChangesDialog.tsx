@@ -25,7 +25,6 @@ export const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
   onDiscard,
   isSaving = false,
 }) => {
-  'use memo';
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>

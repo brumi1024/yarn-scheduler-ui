@@ -17,7 +17,6 @@ interface QueueInfoTabProps {
 }
 
 export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
-  'use memo';
   const getUsageColor = (percentage: number): string => {
     if (percentage >= 90) return 'bg-destructive';
     if (percentage >= 75) return 'bg-orange-500';

@@ -26,7 +26,6 @@ export const PlacementRulesMigrationDialog = ({
   open,
   onOpenChange,
 }: PlacementRulesMigrationDialogProps) => {
-  'use memo';
   const { legacyRules, migrateLegacyRules: storeMigrateLegacyRules } = useSchedulerStore();
 
   const [migrationResult, setMigrationResult] = useState<MigrationResult | null>(null);

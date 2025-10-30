@@ -33,7 +33,6 @@ const navigation = [
 ];
 
 export function AppSidebar() {
-  'use memo';
   const location = useLocation();
 
   return (

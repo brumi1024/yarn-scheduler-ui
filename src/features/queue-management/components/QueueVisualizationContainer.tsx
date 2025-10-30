@@ -35,7 +35,6 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-  'use memo';
   const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
   const { theme } = useTheme();
 
