@@ -8,7 +8,6 @@ import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { NodesPanel } from './NodesPanel';
 
 export const NodeLabels: React.FC = () => {
-  'use memo';
   const { isLoading, error, errorContext, applyError, nodeLabels, selectedNodeLabel } =
     useSchedulerStore();
 

@@ -19,7 +19,7 @@ This guide explains how to make new Capacity Scheduler properties editable in th
    - Use the fully qualified key (for example, `yarn.scheduler.capacity.maximum-applications`).
    - Populate `displayName`, `description`, `type`, `category`, `defaultValue`, and `required`.
    - Use `validationRules` for field-level checks (`range`, `pattern`, or `custom`). Import helpers from `src/config/schemas/validation.ts` when possible so rules stay consistent.
-   - Supply `enumValues` when `type` is `enum`. Each option should provide `{ value, label, description? }`. Use `enumDisplay` when you need `choiceCard`, `toggle`, or `select`.
+   - Supply `enumValues` when `type` is `enum`. Each option should provide `{ value, label, description? }`. Use `enumDisplay` to control the visual presentation: `choiceCard` for prominent cards or `toggle` for compact buttons (see below for guidance).
 
 - Use `displayFormat` to add user-friendly suffixes to numeric inputs.
 - Add conditional logic with `showWhen` / `enableWhen` when the property should only appear or be interactive under specific scheduler states. Each condition receives the merged configuration context (global + queue values, staged changes, scheduler metadata).
@@ -39,9 +39,104 @@ This guide explains how to make new Capacity Scheduler properties editable in th
 },
 ```
 
+### Choosing the right `enumDisplay` variant
+
+For `enum` type properties, you can control the visual presentation using the `enumDisplay` field:
+
+- **`choiceCard`** - Large bordered radio cards with labels, descriptions, and "Selected" badge. Best for 2-3 options where descriptions are important and visual prominence is desired.
+
+```ts
+{
+  name: 'yarn.scheduler.capacity.resource-calculator',
+  type: 'enum',
+  enumValues: [
+    {
+      value: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
+      label: 'Default (Memory Only)',
+      description: 'Memory-based calculator suitable for clusters without CPU enforcement.',
+    },
+    {
+      value: 'org.apache.hadoop.yarn.util.resource.DominantResourceCalculator',
+      label: 'Dominant Resource',
+      description: 'Considers the dominant resource usage across memory and CPU.',
+    },
+  ],
+  enumDisplay: 'choiceCard',  // Renders as large cards in a grid
+}
+```
+
+- **`toggle`** (default) - Compact toggle group (pill buttons) in horizontal layout. Space-efficient for 2-4 options with self-explanatory labels. This is the default when `enumDisplay` is omitted.
+
+```ts
+{
+  name: 'yarn.scheduler.capacity.queue-state',
+  type: 'enum',
+  enumValues: [
+    { value: 'RUNNING', label: 'Running' },
+    { value: 'STOPPED', label: 'Stopped' },
+    { value: 'DRAINING', label: 'Draining' },
+  ],
+  // enumDisplay defaults to 'toggle' - no need to specify
+}
+```
+
+### Using `displayFormat` for numeric inputs
+
+The `displayFormat` object adds visual hints and formatting to numeric input fields:
+
+```ts
+export type DisplayFormat = {
+  suffix?: string; // Text appended inside input (e.g., "(0.0-1.0)")
+  prefix?: string; // Text prepended to input
+  multiplier?: number; // Value multiplier for display
+  decimals?: number; // Number of decimal places (affects step)
+};
+```
+
+**Example:**
+
+```ts
+{
+  name: 'maximum-am-resource-percent',
+  type: 'number',
+  displayFormat: {
+    suffix: ' (0.0-1.0)',  // Shows range hint inside the input
+    decimals: 2,           // Allows 0.01 step increments
+  },
+}
+```
+
+The `suffix` renders as muted gray text positioned inside the right side of the input field, providing an inline hint about the expected range or format. The `decimals` value controls the input's `step` attribute (0.01 for 2 decimals, 0.001 for 3 decimals, etc.).
+
 2. **Adjust the UI if needed.** The global settings form renders inputs based on `PropertyDescriptor.type`. For bespoke widgets, extend `src/features/global-settings/components/PropertyInput.tsx`.
 3. **Update tests.** Extend `src/config/__tests__/propertyDefinitions.test.ts` if you need coverage for descriptor metadata.
 4. **Verify** by running the app or unit tests (`npm run test`) and confirming the new field renders with the expected validation feedback.
+
+### Using the `useGlobalPropertyValidation` hook
+
+The `useGlobalPropertyValidation` hook provides validation for global-level properties. It's a simple wrapper around the validation context that uses the special `GLOBAL_QUEUE_PATH` identifier to validate properties at the scheduler level rather than the queue level.
+
+**API:**
+
+```ts
+const { validateGlobalProperty } = useGlobalPropertyValidation();
+const issues = validateGlobalProperty(propertyKey, value);
+```
+
+**Usage Example** (from `src/features/global-settings/components/GlobalSettings.tsx`):
+
+```ts
+import { useGlobalPropertyValidation } from '~/features/global-settings/hooks/useGlobalPropertyValidation';
+
+const { validateGlobalProperty } = useGlobalPropertyValidation();
+
+const handlePropertyChange = (propertyKey: string, value: string) => {
+  const validationErrors = validateGlobalProperty(propertyKey, value);
+  stageGlobalChange(propertyKey, value, validationErrors);
+};
+```
+
+The hook returns a `validateGlobalProperty` function that takes a property key and value, and returns an array of `ValidationIssue` objects.
 
 ## Adding a queue-level property
 
@@ -120,6 +215,55 @@ Cross-field and cross-queue logic lives in `src/config/validation-rules.ts`. To 
 3. **Categorize severity (optional).** If the rule’s outcome should be treated as non-blocking despite returning `severity: 'error'`, update `src/features/validation/ruleCategories.ts` so `isBlockingError` reflects the desired behavior.
 4. **Surface to the UI.** The `ValidationContext` automatically merges new rule output. Field-level components read `ValidationIssue[]` through `useValidation`, so no extra wiring is required beyond returning the correct `rule` ID and `severity`.
 5. **Test it.** Add unit tests near the rule implementation (for example, under `src/config/__tests__` or a new `*.test.ts` beside the helper) and run `npm run test`.
+
+### Property condition utilities
+
+The `src/utils/propertyConditions.ts` module provides two utility functions for evaluating `showWhen` and `enableWhen` conditions outside of the form rendering pipeline. These are useful when you need to programmatically check property visibility or enabled state:
+
+#### `shouldShowProperty(property, options)`
+
+Evaluates all `showWhen` conditions for a property. Returns `true` if the property should be visible.
+
+```ts
+import { shouldShowProperty } from '~/utils/propertyConditions';
+
+const visible = shouldShowProperty(property, {
+  scope: 'global',
+  property,
+  propertyValue: currentValue,
+  values: formValues,
+  globalValues,
+  stagedChanges,
+  configData,
+  schedulerInfo,
+  // ... other context
+});
+```
+
+#### `isPropertyEnabled(property, options)`
+
+Evaluates all `enableWhen` conditions for a property. Returns `true` if the property should be interactive (not disabled).
+
+```ts
+import { isPropertyEnabled } from '~/utils/propertyConditions';
+
+const enabled = isPropertyEnabled(property, {
+  scope: 'queue',
+  queuePath: 'root.production',
+  property,
+  propertyValue: currentValue,
+  // ... other context
+});
+```
+
+**Error handling:** Both functions catch and log errors from condition evaluation, defaulting to `true` (show/enable) on failure to ensure the UI remains functional even with misconfigured conditions.
+
+**When to use these utilities:**
+
+- In component logic that needs to conditionally render UI based on property visibility
+- When computing available properties for autocomplete or validation
+- For debugging or testing property condition behavior
+- Use inline predicates in property definitions when the condition is simple and self-contained
 
 ## Sanity checklist
 

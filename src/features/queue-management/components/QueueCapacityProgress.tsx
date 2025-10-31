@@ -20,7 +20,6 @@ export const QueueCapacityProgress: React.FC<QueueCapacityProgressProps> = ({
   showHeader = true,
   usedLabelFormatter = (used) => `${used.toFixed(1)}% used`,
 }) => {
-  'use memo';
   const getUsageColor = (used: number): string => {
     if (capacity === 0) return 'bg-muted-foreground/30';
     if (used >= 90) return 'bg-destructive';

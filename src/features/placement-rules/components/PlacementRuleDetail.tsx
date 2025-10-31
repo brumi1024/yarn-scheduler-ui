@@ -9,7 +9,6 @@ import { getPolicyDescription } from '../constants/policy-descriptions';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRuleDetail() {
-  'use memo';
   const { rules, selectedRuleIndex, updateRule } = useSchedulerStore();
   const [isEditing, setIsEditing] = useState(false);
 

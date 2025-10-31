@@ -190,7 +190,7 @@ describe('PlacementRulesList', () => {
 
     expect(
       screen.getByText(
-        'Rules are evaluated from top to bottom. The first matching rule determines the queue assignment. Drag rules to reorder them.',
+        'Placement rules determine how the queue path is constructed for matching applications. Rules are evaluated from top to bottom, and the first matching rule determines the queue assignment. Drag rules to reorder them.',
       ),
     ).toBeInTheDocument();
   });

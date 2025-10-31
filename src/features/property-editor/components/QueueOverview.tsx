@@ -17,7 +17,6 @@ interface QueueOverviewProps {
 }
 
 export const QueueOverview: React.FC<QueueOverviewProps> = ({ queue }) => {
-  'use memo';
   const isParentQueue = !!queue.queues?.queue && queue.queues.queue.length > 0;
   const capacityPercent = queue.capacity || 0;
 

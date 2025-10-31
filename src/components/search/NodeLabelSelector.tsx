@@ -1,5 +1,5 @@
 import React from 'react';
-import { Tag, Info } from 'lucide-react';
+import { Tag } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   Select,
@@ -9,10 +9,8 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import { Badge } from '~/components/ui/badge';
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 
 export const NodeLabelSelector: React.FC = () => {
-  'use memo';
   const { nodeLabels, selectedNodeLabelFilter, selectNodeLabelFilter } = useSchedulerStore();
 
   const handleChange = (value: string) => {
@@ -49,22 +47,6 @@ export const NodeLabelSelector: React.FC = () => {
           ))}
         </SelectContent>
       </Select>
-
-      {selectedNodeLabelFilter && (
-        <TooltipProvider>
-          <Tooltip>
-            <TooltipTrigger asChild>
-              <Info className="h-4 w-4 text-muted-foreground" data-testid="info-icon" />
-            </TooltipTrigger>
-            <TooltipContent>
-              <p className="max-w-xs">
-                Showing capacity values for partition: <strong>{selectedNodeLabelFilter}</strong>.
-                Only queues with access to this label are highlighted.
-              </p>
-            </TooltipContent>
-          </Tooltip>
-        </TooltipProvider>
-      )}
     </div>
   );
 };

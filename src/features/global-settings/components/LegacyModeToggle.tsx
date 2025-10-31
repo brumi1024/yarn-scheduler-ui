@@ -192,7 +192,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
       label={property.displayName}
       disabled={disabled}
       labelSuffix={
-        <LegacyModeDocumentation>
+        <LegacyModeDocumentation legacyModeEnabled={currentEnabled}>
           <Button
             variant="ghost"
             size="sm"

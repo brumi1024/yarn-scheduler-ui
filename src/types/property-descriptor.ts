@@ -70,7 +70,7 @@ export type PropertyDescriptor = {
   templateSupport?: boolean;
   validationRules?: ValidationRule[];
   enumValues?: PropertyEnumOption[];
-  enumDisplay?: 'toggle' | 'choiceCard' | 'select';
+  enumDisplay?: 'toggle' | 'choiceCard';
   showWhen?: PropertyCondition[];
   enableWhen?: PropertyCondition[];
   displayFormat?: DisplayFormat;

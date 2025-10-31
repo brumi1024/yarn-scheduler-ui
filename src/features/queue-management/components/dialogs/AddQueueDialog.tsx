@@ -49,7 +49,6 @@ interface AddQueueDialogProps {
 }
 
 export function AddQueueDialog({ open, parentQueuePath, onClose }: AddQueueDialogProps) {
-  'use memo';
   const { addChildQueue } = useQueueActions();
   const parentQueueName = parentQueuePath.split('.').pop() || parentQueuePath;
 

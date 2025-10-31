@@ -2,12 +2,11 @@ import { useState, useEffect } from 'react';
 import { Button } from '~/components/ui/button';
 import { Card, CardContent } from '~/components/ui/card';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
-import { Plus, InfoIcon, HelpCircle, AlertCircle } from 'lucide-react';
+import { Plus, InfoIcon, AlertCircle } from 'lucide-react';
 import { PlacementRuleForm } from './PlacementRuleForm';
 import { PlacementRulesTable } from './PlacementRulesTable';
 import { PolicyReferenceDialog } from './PolicyReferenceDialog';
 import { PlacementRulesMigrationDialog } from './MigrationDialog';
-import { Tooltip, TooltipContent, TooltipTrigger } from '~/components/ui/tooltip';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
@@ -135,20 +134,10 @@ export function PlacementRulesList() {
       <div className="space-y-4">
         <Alert>
           <InfoIcon className="h-4 w-4" />
-          <AlertDescription className="flex items-center justify-between">
-            <span>
-              Rules are evaluated from top to bottom. The first matching rule determines the queue
-              assignment. Drag rules to reorder them.
-            </span>
-            <Tooltip>
-              <TooltipTrigger asChild>
-                <HelpCircle className="h-4 w-4 text-muted-foreground cursor-help ml-2 flex-shrink-0" />
-              </TooltipTrigger>
-              <TooltipContent className="max-w-xs">
-                Placement rules determine how the queue path is constructed for matching
-                applications
-              </TooltipContent>
-            </Tooltip>
+          <AlertDescription>
+            Placement rules determine how the queue path is constructed for matching applications.
+            Rules are evaluated from top to bottom, and the first matching rule determines the queue
+            assignment. Drag rules to reorder them.
           </AlertDescription>
         </Alert>
 

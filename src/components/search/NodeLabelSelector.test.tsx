@@ -108,28 +108,6 @@ describe('NodeLabelSelector', () => {
     expect(mockSelectNodeLabelFilter).toHaveBeenCalledWith('');
   });
 
-  it('should display info tooltip when a label is selected', () => {
-    vi.mocked(useSchedulerStore).mockReturnValue({
-      nodeLabels: mockNodeLabels,
-      selectedNodeLabelFilter: 'gpu',
-      selectNodeLabelFilter: mockSelectNodeLabelFilter,
-    } as any);
-
-    render(<NodeLabelSelector />);
-
-    // Look for the info icon
-    const infoIcon = screen.getByTestId('info-icon').closest('svg');
-    expect(infoIcon).toBeInTheDocument();
-  });
-
-  it('should not display info tooltip when DEFAULT is selected', () => {
-    render(<NodeLabelSelector />);
-
-    // Info icon should not be present
-    const infoIcon = screen.queryByTestId('info-icon');
-    expect(infoIcon).not.toBeInTheDocument();
-  });
-
   it('should show the selected label in the trigger', () => {
     vi.mocked(useSchedulerStore).mockReturnValue({
       nodeLabels: mockNodeLabels,

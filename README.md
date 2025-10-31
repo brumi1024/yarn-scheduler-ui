@@ -25,6 +25,7 @@ A modern web interface for managing Apache Hadoop YARN Capacity Scheduler config
 
 - **Framework**: React 19 + TypeScript (strict mode)
 - **Routing & Bundler**: React Router v7 CLI (SPA mode, powered by Vite tooling)
+- **Compiler**: React Compiler (babel-plugin-react-compiler) for automatic optimization
 - **State Management**: Zustand with Immer
 - **UI / Styling**: Tailwind CSS + shadcn/ui + Radix primitives
 - **Data Visualization**: XYFlow (React Flow)
@@ -129,7 +130,7 @@ Artifacts are emitted to `./build`. Provide the same environment variables at ru
 - **Interactive test UI**: `npm run test:ui`
 - **Type generation + type checking**: `npm run typecheck`
 - **Linting**: `npm run lint` (or `npm run lint:fix` to auto-fix)
-- **Lint SARIF for CI**: `npm run lint:ci`
+- **Lint SARIF for CI**: `npm run lint:ci` (generates SARIF report for CI pipelines)
 - **Formatting**: `npm run format` / `npm run format:check`
 
 ## Contributing

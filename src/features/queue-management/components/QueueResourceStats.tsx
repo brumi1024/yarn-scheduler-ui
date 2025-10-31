@@ -16,7 +16,6 @@ export const QueueResourceStats: React.FC<QueueResourceStatsProps> = ({
   resourcesUsed,
   className,
 }) => {
-  'use memo';
   return (
     <div className={cn('text-xs text-muted-foreground text-center', className)}>
       <span>Apps: {numApplications}</span>

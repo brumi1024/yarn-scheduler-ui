@@ -8,10 +8,8 @@ import { QUEUE_CARD_FLOW_MARGIN, QUEUE_CARD_HEIGHT } from '../constants';
  * flow between parent and child queues, similar to a Sankey diagram. The connections
  * use gradients and proper curve handling for a professional appearance.
  *
- * Enhanced to span the full height of queue cards for true Sankey visualization.
  */
 function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgeProps) {
-  'use memo';
   // Generate unique gradient ID for this edge
   const gradientId = `gradient-${id}`;
 
@@ -114,7 +112,6 @@ function CustomFlowEdge({ id, sourceX, sourceY, targetX, targetY, data }: EdgePr
         }}
       />
 
-      {/* Optional animated flow indication for running queues */}
       {data?.targetState === 'RUNNING' && <path d={sankeyPath} fill="none" />}
 
       <style>
