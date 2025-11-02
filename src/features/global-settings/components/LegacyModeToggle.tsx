@@ -234,7 +234,6 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
               </DialogHeader>
               <div className="space-y-3 overflow-y-auto max-h-[calc(80vh-8rem)]">
                 <div>
-                  <h4 className="font-medium text-sm">Validation Preview</h4>
                   <p className="text-xs text-muted-foreground mt-1">
                     Changes that would occur when switching to{' '}
                     {currentEnabled ? 'Flexible' : 'Legacy'} Mode

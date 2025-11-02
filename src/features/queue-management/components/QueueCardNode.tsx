@@ -450,45 +450,79 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
 
           {/* Validation error indicators */}
           {(validationErrors || isAffectedByErrors) && (
-            <div className="flex items-center gap-2 ml-2">
-              {validationErrors && validationErrors.length > 0 && (
-                <TooltipProvider>
-                  <Tooltip>
-                    <TooltipTrigger>
-                      <Badge variant="destructive" className="h-6 px-2">
-                        <AlertCircle className="h-3 w-3 mr-1" />
-                        {validationErrors.filter((e) => e.severity === 'error').length}
-                      </Badge>
-                    </TooltipTrigger>
-                    <TooltipContent className="max-w-xs">
-                      <p className="font-semibold mb-1">Validation Errors</p>
-                      <ul className="text-sm space-y-1">
-                        {validationErrors
-                          .filter((e) => e.severity === 'error')
-                          .map((error) => (
-                            <li key={`${error.field}-${error.message}`}>• {error.message}</li>
-                          ))}
-                      </ul>
-                    </TooltipContent>
-                  </Tooltip>
-                </TooltipProvider>
-              )}
+            <div className="flex items-center gap-1.5 ml-2">
+              {/* Direct errors badge */}
+              {validationErrors &&
+                validationErrors.filter((e) => e.severity === 'error').length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge variant="destructive" className="h-6 px-2">
+                          <AlertCircle className="h-3 w-3 mr-1" />
+                          {validationErrors.filter((e) => e.severity === 'error').length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-semibold mb-1">Validation Errors</p>
+                        <ul className="text-sm space-y-1">
+                          {validationErrors
+                            .filter((e) => e.severity === 'error')
+                            .map((error) => (
+                              <li key={`${error.field}-${error.message}`}>• {error.message}</li>
+                            ))}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
 
+              {/* Direct warnings badge */}
+              {validationErrors &&
+                validationErrors.filter((e) => e.severity === 'warning').length > 0 && (
+                  <TooltipProvider>
+                    <Tooltip>
+                      <TooltipTrigger>
+                        <Badge
+                          variant="outline"
+                          className="h-6 px-2 border-amber-500 text-amber-600 dark:text-amber-400 bg-amber-50 dark:bg-amber-950/30"
+                        >
+                          <AlertTriangle className="h-3 w-3 mr-1" />
+                          {validationErrors.filter((e) => e.severity === 'warning').length}
+                        </Badge>
+                      </TooltipTrigger>
+                      <TooltipContent className="max-w-xs">
+                        <p className="font-semibold mb-1">Validation Warnings</p>
+                        <ul className="text-sm space-y-1">
+                          {validationErrors
+                            .filter((e) => e.severity === 'warning')
+                            .map((warning) => (
+                              <li key={`${warning.field}-${warning.message}`}>
+                                • {warning.message}
+                              </li>
+                            ))}
+                        </ul>
+                      </TooltipContent>
+                    </Tooltip>
+                  </TooltipProvider>
+                )}
+
+              {/* Affected by child issues badge */}
               {isAffectedByErrors && (
                 <TooltipProvider>
                   <Tooltip>
                     <TooltipTrigger>
                       <Badge
                         variant="outline"
-                        className="h-6 px-2 border-amber-500 text-amber-600 dark:text-amber-400"
+                        className="h-6 px-2 border-orange-500 text-orange-600 dark:text-orange-400 bg-orange-50 dark:bg-orange-950/30"
                       >
-                        <AlertTriangle className="h-3 w-3" />
+                        <AlertTriangle className="h-3 w-3 mr-1" />
+                        Child
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent className="max-w-xs">
                       <p className="font-semibold mb-1">Affected by Child Queue Changes</p>
                       <p className="text-sm">
-                        This queue is affected by validation errors from{' '}
+                        This queue is affected by validation issues from{' '}
                         {errorSource ? `queue "${errorSource}"` : 'child queues'}.
                       </p>
                     </TooltipContent>

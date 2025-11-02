@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import { SPECIAL_VALUES, CONFIG_PREFIXES } from '~/types';
-import type { QueueInfo } from '~/types';
+import type { QueueInfo, CapacitySchedulerInfo, QueueCapacitiesByPartition } from '~/types';
 import { buildGlobalPropertyKey, buildPropertyKey } from '~/utils/propertyUtils';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import type { QueueDataSlice, SchedulerStore } from './types';
@@ -135,6 +135,68 @@ export const createQueueDataSlice: StateCreator<
     return Array.isArray(parentQueue.queues.queue)
       ? parentQueue.queues.queue
       : [parentQueue.queues.queue];
+  },
+
+  getQueuePartitionCapacities: (queuePath, partitionName) => {
+    const schedulerData = get().schedulerData as CapacitySchedulerInfo | null;
+    if (!schedulerData) return null;
+
+    // Handle root queue
+    if (queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+      if (!schedulerData.capacities?.queueCapacitiesByPartition) {
+        return null;
+      }
+
+      const partition = schedulerData.capacities.queueCapacitiesByPartition.find(
+        (p: QueueCapacitiesByPartition) => (p.partitionName || '') === partitionName,
+      );
+
+      return partition || null;
+    }
+
+    // For non-root queues, traverse the tree to find the queue with capacities data
+    // Note: The API returns richer data than the QueueInfo type suggests
+    const pathParts = queuePath.split('.');
+    if (!schedulerData.queues?.queue) return null;
+
+    const children = Array.isArray(schedulerData.queues.queue)
+      ? schedulerData.queues.queue
+      : [schedulerData.queues.queue];
+
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    let currentQueue: any = null;
+
+    for (let i = 1; i < pathParts.length; i++) {
+      const queueName = pathParts[i];
+
+      if (i === 1) {
+        // First level - search in root's children
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        currentQueue = children.find((q: any) => q.queueName === queueName) || null;
+      } else {
+        // Deeper levels - search in current queue's children
+        if (!currentQueue?.queues?.queue) return null;
+
+        const currentChildren = Array.isArray(currentQueue.queues.queue)
+          ? currentQueue.queues.queue
+          : [currentQueue.queues.queue];
+
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        currentQueue = currentChildren.find((q: any) => q.queueName === queueName) || null;
+      }
+
+      if (!currentQueue) return null;
+    }
+
+    if (!currentQueue?.capacities?.queueCapacitiesByPartition) {
+      return null;
+    }
+
+    const partition = currentQueue.capacities.queueCapacitiesByPartition.find(
+      (p: QueueCapacitiesByPartition) => (p.partitionName || '') === partitionName,
+    );
+
+    return partition || null;
   },
 });
 

@@ -10,6 +10,7 @@ import type {
   NodeToLabelMapping,
   StagedChange,
   QueueInfo,
+  QueueCapacitiesByPartition,
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
 import type { CapacityEditorSlice } from './capacityEditorSlice';
@@ -115,6 +116,10 @@ export interface QueueDataSlice {
   hasQueueProperty: (queuePath: string, property: string) => boolean;
   getQueueByPath: (queuePath: string) => QueueInfo | null;
   getChildQueues: (parentPath: string) => QueueInfo[];
+  getQueuePartitionCapacities: (
+    queuePath: string,
+    partitionName: string,
+  ) => QueueCapacitiesByPartition | null;
 }
 
 export interface SearchSlice {

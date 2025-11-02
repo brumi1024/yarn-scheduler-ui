@@ -38,6 +38,7 @@ import {
 } from '../utils/capacityEditor';
 import type { CapacityResourceMode, CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
 import { SPECIAL_VALUES } from '~/types';
+import type { QueueCapacitiesByPartition } from '~/types';
 import { parseCapacityValue } from '~/utils/capacityUtils';
 import type { ValidationIssue } from '~/features/validation/types';
 
@@ -47,11 +48,24 @@ const SUPPORTED_ABSOLUTE_RESOURCES = ['memory', 'vcores'] as const;
 type SupportedAbsoluteResource = (typeof SUPPORTED_ABSOLUTE_RESOURCES)[number];
 
 type RemainingHelper =
-  | { kind: 'percentage'; remaining: number; target: number }
-  | { kind: 'weight'; remaining: number; target: number }
   | {
-      kind: 'absolute';
-      resources: Array<{ resource: SupportedAbsoluteResource; remaining: number; target: number }>;
+      kind: 'percentage-legacy';
+      remaining: number;
+      target: number;
+      isOverOrUnder: boolean;
+    }
+  | {
+      kind: 'weight-legacy';
+      sum: number;
+    }
+  | {
+      kind: 'absolute-legacy';
+      resources: Array<{
+        resource: SupportedAbsoluteResource;
+        allocated: number;
+        remaining: number;
+        total: number;
+      }>;
     };
 
 const formatNumber = (value: number): string => {
@@ -69,6 +83,13 @@ const formatNumber = (value: number): string => {
 const computeRemainingHelper = (
   rows: CapacityRowDraft[],
   parentCapacityValue: string,
+  isLegacyMode: boolean,
+  parentQueuePath: string | null,
+  selectedNodeLabel: string | null,
+  getQueuePartitionCapacities: (
+    path: string,
+    partition: string,
+  ) => QueueCapacitiesByPartition | null,
 ): RemainingHelper | null => {
   if (rows.length === 0) {
     return null;
@@ -77,142 +98,135 @@ const computeRemainingHelper = (
   const allSimple = rows.every((row) => row.mode === 'simple');
   const allVector = rows.every((row) => row.mode === 'vector');
 
-  if (allSimple) {
-    let determinedType: 'percentage' | 'weight' | null = null;
-    let currentTotal = 0;
-    let baseTotal = 0;
+  // Legacy Mode
+  if (isLegacyMode) {
+    if (allSimple) {
+      let determinedType: 'percentage' | 'weight' | null = null;
+      let currentTotal = 0;
 
-    for (const row of rows) {
-      const currentParsed = parseCapacityValue(row.capacityValue);
-      const baseParsed = parseCapacityValue(row.baseCapacityValue);
+      for (const row of rows) {
+        const currentParsed = parseCapacityValue(row.capacityValue);
+        const baseParsed = parseCapacityValue(row.baseCapacityValue);
 
-      const candidateType =
-        currentParsed && (currentParsed.type === 'percentage' || currentParsed.type === 'weight')
-          ? currentParsed.type
-          : baseParsed && (baseParsed.type === 'percentage' || baseParsed.type === 'weight')
-            ? baseParsed.type
-            : null;
+        const candidateType =
+          currentParsed && (currentParsed.type === 'percentage' || currentParsed.type === 'weight')
+            ? currentParsed.type
+            : baseParsed && (baseParsed.type === 'percentage' || baseParsed.type === 'weight')
+              ? baseParsed.type
+              : null;
 
-      if (!candidateType) {
-        return null;
+        if (!candidateType) {
+          return null;
+        }
+
+        if (!determinedType) {
+          determinedType = candidateType;
+        } else if (determinedType !== candidateType) {
+          return null;
+        }
+
+        if (currentParsed?.type === determinedType) {
+          currentTotal += currentParsed.value;
+        }
       }
 
       if (!determinedType) {
-        determinedType = candidateType;
-      } else if (determinedType !== candidateType) {
         return null;
       }
 
-      if (currentParsed?.type === determinedType) {
-        currentTotal += currentParsed.value;
+      if (determinedType === 'percentage') {
+        const target = 100;
+        const remaining = target - currentTotal;
+        return {
+          kind: 'percentage-legacy',
+          remaining,
+          target,
+          isOverOrUnder: remaining !== 0,
+        };
       }
 
-      if (baseParsed?.type === determinedType) {
-        baseTotal += baseParsed.value;
+      if (determinedType === 'weight') {
+        return {
+          kind: 'weight-legacy',
+          sum: currentTotal,
+        };
       }
     }
 
-    if (!determinedType) {
-      return null;
+    if (allVector) {
+      // Legacy mode with absolute resources: show remaining capacity
+      if (!parentQueuePath) {
+        return null;
+      }
+
+      const partitionName = selectedNodeLabel || '';
+      const partition = getQueuePartitionCapacities(parentQueuePath, partitionName);
+
+      if (!partition) {
+        return null;
+      }
+
+      // Determine if parent is root to choose the appropriate total
+      const isParentRoot = parentQueuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
+
+      // Calculate allocated resources from all rows
+      const allocatedResources = new Map<string, number>();
+      rows.forEach((row) => {
+        row.vectorCapacity.forEach(({ key, value }) => {
+          if (key.trim().length === 0) {
+            return;
+          }
+          const numeric = Number.parseFloat(value);
+          if (!Number.isNaN(numeric)) {
+            const current = allocatedResources.get(key) ?? 0;
+            allocatedResources.set(key, current + numeric);
+          }
+        });
+      });
+
+      const resources: Array<{
+        resource: SupportedAbsoluteResource;
+        allocated: number;
+        remaining: number;
+        total: number;
+      }> = [];
+
+      SUPPORTED_ABSOLUTE_RESOURCES.forEach((resource) => {
+        const resourceKey = resource === 'vcores' ? 'vCores' : resource;
+
+        // For root, use effectiveMaxResource; for non-root, use configuredMinResource
+        const total = isParentRoot
+          ? (partition.effectiveMaxResource?.[resourceKey] ?? 0)
+          : (partition.configuredMinResource?.[resourceKey] ?? 0);
+
+        const allocated = allocatedResources.get(resource) ?? 0;
+        const remaining = total - allocated;
+
+        // Only include resources that have a total or allocation
+        if (total > 0 || allocated > 0) {
+          resources.push({
+            resource,
+            allocated,
+            remaining,
+            total,
+          });
+        }
+      });
+
+      if (resources.length === 0) {
+        return null;
+      }
+
+      return {
+        kind: 'absolute-legacy',
+        resources,
+      };
     }
 
-    const target = determinedType === 'percentage' ? 100 : baseTotal;
-    if (determinedType === 'weight' && target === 0) {
-      return null;
-    }
-
-    return {
-      kind: determinedType,
-      remaining: target - currentTotal,
-      target,
-    };
+    return null;
   }
 
-  if (allVector) {
-    const parentTotals = new Map<string, number>();
-    parseVectorDraft(parentCapacityValue).forEach(({ key, value }) => {
-      if (key.trim().length === 0) {
-        return;
-      }
-      const numeric = Number.parseFloat(value);
-      if (!Number.isNaN(numeric)) {
-        parentTotals.set(key, numeric);
-      }
-    });
-
-    let hasUnsupported = false;
-    const resourceTotals = new Map<string, { current: number; base: number }>();
-    const addValue = (resource: string, field: 'current' | 'base', amount: number) => {
-      const bucket = resourceTotals.get(resource) ?? { current: 0, base: 0 };
-      bucket[field] += amount;
-      resourceTotals.set(resource, bucket);
-    };
-
-    rows.forEach((row) => {
-      row.vectorCapacity.forEach(({ key, value }) => {
-        if (key.trim().length === 0) {
-          return;
-        }
-        const numeric = Number.parseFloat(value);
-        if (!Number.isNaN(numeric)) {
-          addValue(key, 'current', numeric);
-        }
-        if (!SUPPORTED_ABSOLUTE_RESOURCES.includes(key as SupportedAbsoluteResource)) {
-          hasUnsupported = true;
-        }
-      });
-
-      parseVectorDraft(row.baseCapacityValue).forEach(({ key, value }) => {
-        if (key.trim().length === 0) {
-          return;
-        }
-        const numeric = Number.parseFloat(value);
-        if (!Number.isNaN(numeric)) {
-          addValue(key, 'base', numeric);
-        }
-        if (!SUPPORTED_ABSOLUTE_RESOURCES.includes(key as SupportedAbsoluteResource)) {
-          hasUnsupported = true;
-        }
-      });
-    });
-
-    if (hasUnsupported) {
-      return null;
-    }
-
-    const resources: Array<{
-      resource: SupportedAbsoluteResource;
-      remaining: number;
-      target: number;
-    }> = [];
-
-    SUPPORTED_ABSOLUTE_RESOURCES.forEach((resource) => {
-      const totals = resourceTotals.get(resource) ?? { current: 0, base: 0 };
-      const parentTarget = parentTotals.get(resource);
-      const target =
-        parentTarget !== undefined && !Number.isNaN(parentTarget) ? parentTarget : totals.base;
-
-      if (target === 0 && totals.current === 0) {
-        return;
-      }
-
-      resources.push({
-        resource,
-        remaining: target - totals.current,
-        target,
-      });
-    });
-
-    if (resources.length === 0) {
-      return null;
-    }
-
-    return {
-      kind: 'absolute',
-      resources,
-    };
-  }
-
+  // Non-Legacy Mode: no strict validation rules, don't show helper
   return null;
 };
 
@@ -254,11 +268,22 @@ export const CapacityEditorDialog: React.FC = () => {
     return state.getQueuePropertyValue(parentPath, capacityProperty).value;
   });
 
+  const getQueuePartitionCapacities = useSchedulerStore(
+    (state) => state.getQueuePartitionCapacities,
+  );
+
   const rows = draftOrder
     .map((queuePath) => drafts[queuePath])
     .filter((row): row is CapacityRowDraft => Boolean(row));
 
-  const remainingHelper = computeRemainingHelper(rows, parentCapacityValue);
+  const remainingHelper = computeRemainingHelper(
+    rows,
+    parentCapacityValue,
+    isLegacyMode,
+    parentQueuePath,
+    selectedNodeLabel,
+    getQueuePartitionCapacities,
+  );
 
   const hasBlockingIssues = validationIssues.some((issue) => issue.severity === 'error');
 
@@ -483,8 +508,17 @@ export const CapacityEditorDialog: React.FC = () => {
           </div>
 
           {remainingHelper && (
-            <div className="mt-3 rounded-md border border-dashed bg-muted/40 px-3 py-2 text-xs text-muted-foreground text-left space-y-1">
-              {remainingHelper.kind === 'percentage' && (
+            <div
+              className={cn(
+                'mt-3 rounded-md border border-dashed px-3 py-2 text-xs text-left space-y-1',
+                (remainingHelper.kind === 'percentage-legacy' && remainingHelper.isOverOrUnder) ||
+                  (remainingHelper.kind === 'absolute-legacy' &&
+                    remainingHelper.resources.some((r) => r.remaining < 0))
+                  ? 'bg-amber-50/60 border-amber-500/60 text-amber-900'
+                  : 'bg-muted/40 text-muted-foreground',
+              )}
+            >
+              {remainingHelper.kind === 'percentage-legacy' && (
                 <p>
                   {remainingHelper.remaining >= 0
                     ? `${formatNumber(remainingHelper.remaining)}% capacity remaining`
@@ -492,22 +526,17 @@ export const CapacityEditorDialog: React.FC = () => {
                   (target {formatNumber(remainingHelper.target)}%)
                 </p>
               )}
-              {remainingHelper.kind === 'weight' && (
-                <p>
-                  {remainingHelper.remaining >= 0
-                    ? `${formatNumber(remainingHelper.remaining)} weight remaining`
-                    : `${formatNumber(Math.abs(remainingHelper.remaining))} weight over target`}{' '}
-                  (target {formatNumber(remainingHelper.target)})
-                </p>
+              {remainingHelper.kind === 'weight-legacy' && (
+                <p>Sum of weights: {formatNumber(remainingHelper.sum)}</p>
               )}
-              {remainingHelper.kind === 'absolute' &&
+              {remainingHelper.kind === 'absolute-legacy' &&
                 remainingHelper.resources.map((resource) => (
                   <p key={resource.resource}>
                     {resource.resource}:{' '}
                     {resource.remaining >= 0
                       ? `${formatNumber(resource.remaining)} remaining`
                       : `${formatNumber(Math.abs(resource.remaining))} over target`}{' '}
-                    {resource.target ? `(target ${formatNumber(resource.target)})` : null}
+                    (total {formatNumber(resource.total)})
                   </p>
                 ))}
             </div>
