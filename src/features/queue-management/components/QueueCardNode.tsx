@@ -240,6 +240,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     parsedCapacityDisplay.type === 'vector' || parsedMaxCapacityDisplay.type === 'vector';
   const canAdd = canAddChildQueue(queuePath);
   const canDelete = canDeleteQueue(queuePath);
+  const canToggleState = queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME;
   const isRunning = state === QUEUE_STATES.RUNNING;
   const isTemplateManageable =
     autoCreationStatus?.status === 'legacy' || autoCreationStatus?.status === 'flexible';
@@ -728,6 +729,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
               e.stopPropagation();
               handleToggleState();
             }}
+            disabled={!canToggleState}
           >
             {isRunning ? (
               <>
