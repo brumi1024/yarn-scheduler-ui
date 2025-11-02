@@ -26,12 +26,7 @@ export const NodeLabelSelector: React.FC = () => {
         </SelectTrigger>
         <SelectContent>
           <SelectItem value="DEFAULT">
-            <div className="flex items-center gap-2">
-              <Badge variant="outline" className="text-xs">
-                Default
-              </Badge>
-              <span>All Partitions</span>
-            </div>
+            <span>Default Partition</span>
           </SelectItem>
           {nodeLabels.map((label) => (
             <SelectItem key={label.name} value={label.name}>
