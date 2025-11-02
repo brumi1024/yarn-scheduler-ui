@@ -49,7 +49,6 @@ yarn-scheduler-ui/
 │   └── utils/             # Domain-specific helpers and validation
 ├── public/                # Static assets and mock API payloads
 ├── docs/                  # YARN scheduler reference docs
-├── test-helpers/          # Legacy helpers consumed by vitest suites
 ├── react-router.config.ts # React Router bundler configuration
 └── vitest.config.ts       # Vitest configuration
 ```

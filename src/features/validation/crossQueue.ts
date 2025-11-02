@@ -1,7 +1,7 @@
 import type { SchedulerInfo, StagedChange } from '~/types';
 import type { ValidationIssue } from './types';
 import { validateQueue } from './service';
-import { isBlockingError } from './ruleCategories';
+import { isBlockingError, isCrossQueueRule } from './ruleCategories';
 import { mergeStagedConfig } from './utils/configUtils';
 import { getAffectedQueuesForValidation } from './utils/affectedQueues';
 
@@ -72,7 +72,33 @@ export function validatePropertyChange({
       ? result.issues
       : result.issues.filter((issue) => !isBlockingError(issue.rule, issue.severity));
 
-    issues.push(...filtered);
+    // Only include issues that are relevant to the queue being changed.
+    // This prevents duplicate errors when multiple sibling queues have the same issue.
+    const relevantIssues = filtered.filter((issue) => {
+      // Always include issues for the queue being directly edited
+      if (issue.queuePath === queuePath) {
+        return true;
+      }
+
+      // For parent-child-capacity-mode: only include errors for child queues
+      // when their parent is the queue being changed (so parent mode changes
+      // show errors for all affected children)
+      if (issue.rule === 'parent-child-capacity-mode') {
+        // Check if queuePath is the parent of issue.queuePath
+        const isParentOfIssueQueue = issue.queuePath.startsWith(`${queuePath}.`);
+        return isParentOfIssueQueue;
+      }
+
+      // Include other cross-queue issues (like child-capacity-sum on parent,
+      // or parent-child-capacity-constraint warnings on children)
+      if (isCrossQueueRule(issue.rule)) {
+        return true;
+      }
+
+      return false;
+    });
+
+    issues.push(...relevantIssues);
   });
 
   return dedupeIssues(issues);

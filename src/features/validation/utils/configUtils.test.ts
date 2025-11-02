@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest';
 import { getMergedConfigData, getEffectivePropertyValue } from './configUtils';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
-import { createTestStagedChange } from '../../../../test-helpers/stagedChange';
+import { getMockStagedChange } from '~/testing/factories/factories';
 
 describe('configUtils', () => {
   describe('getMergedConfigData', () => {
@@ -25,13 +25,13 @@ describe('configUtils', () => {
       ]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.prod',
           property: 'capacity',
           oldValue: '60',
           newValue: '70',
         }),
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.dev',
           property: 'capacity',
           oldValue: '40',
@@ -49,7 +49,7 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
           property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
           oldValue: 'true',
@@ -66,7 +66,7 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.maximum-capacity', '100']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.prod',
           property: 'maximum-capacity',
           oldValue: '100',
@@ -83,13 +83,13 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.capacity', '60']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.prod',
           property: 'capacity',
           oldValue: '60',
           newValue: '70',
         }),
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.prod',
           property: 'capacity',
           oldValue: '70',
@@ -106,7 +106,7 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.existing.capacity', '100']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           type: 'add',
           queuePath: 'root.new',
           property: 'capacity',
@@ -129,7 +129,7 @@ describe('configUtils', () => {
       ]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           type: 'remove',
           queuePath: 'root.remove',
           property: SPECIAL_VALUES.QUEUE_MARKER,
@@ -150,7 +150,7 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.root.prod.capacity', '60']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: 'root.prod',
           property: 'capacity',
           oldValue: '60',
@@ -183,7 +183,7 @@ describe('configUtils', () => {
       const configData = new Map([['yarn.scheduler.capacity.legacy-queue-mode.enabled', 'true']]);
 
       const stagedChanges: StagedChange[] = [
-        createTestStagedChange({
+        getMockStagedChange({
           queuePath: SPECIAL_VALUES.GLOBAL_QUEUE_PATH,
           property: SPECIAL_VALUES.LEGACY_MODE_PROPERTY,
           oldValue: 'true',

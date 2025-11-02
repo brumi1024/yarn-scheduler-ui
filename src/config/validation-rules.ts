@@ -1,6 +1,7 @@
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { parseCapacityValue, getCapacityType } from '~/utils/capacityUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
+import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import type { StagedChange } from '~/types/staged-change';
 import type { SchedulerInfo } from '~/types';
 import type { ValidationIssue } from '~/features/validation/types';
@@ -61,6 +62,22 @@ export const QUEUE_VALIDATION_RULES: ValidationRule[] = [
     level: 'warning',
     triggers: ['capacity'],
     evaluate: (context) => evaluateParentChildCapacityConstraints(context),
+  },
+  {
+    id: 'PARENT_CHILD_CAPACITY_MODE',
+    description:
+      'Ensures that if parent uses absolute resources, children must also use absolute resources (legacy mode only).',
+    level: 'error',
+    triggers: ['capacity'],
+    evaluate: (context) => evaluateParentChildCapacityMode(context),
+  },
+  {
+    id: 'WEIGHT_MODE_TRANSITION_FLEXIBLE_AQC',
+    description:
+      'Ensures flexible auto-queue creation is disabled when transitioning from weight mode (legacy mode only).',
+    level: 'error',
+    triggers: ['capacity'],
+    evaluate: (context) => evaluateWeightModeTransitionFlexibleAQC(context),
   },
 ];
 
@@ -354,4 +371,124 @@ function evaluateParentChildCapacityConstraints(context: ValidationContext): Val
   });
 
   return issues;
+}
+
+function evaluateParentChildCapacityMode(context: ValidationContext): ValidationIssue[] {
+  if (isTemplateQueuePath(context.queuePath)) {
+    return [];
+  }
+  if (!context.legacyModeEnabled) {
+    return [];
+  }
+
+  // Root queue is always in percentage mode, skip it
+  if (context.queuePath === 'root') {
+    return [];
+  }
+
+  const parentPath = getParentPath(context.queuePath);
+  if (!parentPath) {
+    return [];
+  }
+
+  // Get the child's capacity value (current field being edited)
+  const childValue =
+    context.fieldName === 'capacity'
+      ? (context.fieldValue as string)
+      : context.config.get(buildPropertyKey(context.queuePath, 'capacity')) || '';
+
+  if (!childValue) {
+    return [];
+  }
+
+  const childType = getCapacityType(childValue);
+  if (!childType) {
+    return [];
+  }
+
+  // Get the parent's capacity value
+  const parentValue = context.config.get(buildPropertyKey(parentPath, 'capacity'));
+  if (!parentValue) {
+    return [];
+  }
+
+  const parentType = getCapacityType(parentValue);
+  if (!parentType) {
+    return [];
+  }
+
+  // Parent and child must use the same capacity mode (both absolute or both percentage/weight)
+  // Check both directions to catch all mismatches
+
+  if (parentType === 'absolute' && childType !== 'absolute') {
+    return [
+      {
+        queuePath: context.queuePath,
+        field: 'capacity',
+        message: `Parent queue uses absolute resources, child queue must also use absolute resources (legacy mode requirement)`,
+        severity: 'error',
+        rule: 'parent-child-capacity-mode',
+      },
+    ];
+  }
+
+  if (parentType !== 'absolute' && childType === 'absolute') {
+    return [
+      {
+        queuePath: context.queuePath,
+        field: 'capacity',
+        message: `Parent queue uses ${parentType} mode, child queue cannot use absolute resources (legacy mode requirement)`,
+        severity: 'error',
+        rule: 'parent-child-capacity-mode',
+      },
+    ];
+  }
+
+  return [];
+}
+
+function evaluateWeightModeTransitionFlexibleAQC(context: ValidationContext): ValidationIssue[] {
+  if (isTemplateQueuePath(context.queuePath)) {
+    return [];
+  }
+  if (!context.legacyModeEnabled) {
+    return [];
+  }
+
+  // Only check when the capacity field is being changed
+  if (context.fieldName !== 'capacity') {
+    return [];
+  }
+
+  // Get the old capacity value from config
+  const oldValue = context.config.get(buildPropertyKey(context.queuePath, 'capacity'));
+  const oldType = getCapacityType(oldValue);
+
+  // Get the new capacity value from the field being edited
+  const newValue = context.fieldValue as string;
+  const newType = getCapacityType(newValue);
+
+  // Check if we're transitioning from weight mode to percentage or absolute mode
+  if (oldType === 'weight' && (newType === 'percentage' || newType === 'absolute')) {
+    // Check if flexible auto-queue creation is enabled for this queue
+    const flexibleAQCKey = buildPropertyKey(
+      context.queuePath,
+      AUTO_CREATION_PROPS.FLEXIBLE_ENABLED,
+    );
+    const flexibleAQCValue = context.config.get(flexibleAQCKey);
+
+    if (flexibleAQCValue === 'true') {
+      return [
+        {
+          queuePath: context.queuePath,
+          field: 'capacity',
+          message: `Cannot change from weight mode to ${newType} mode while flexible auto-queue creation is enabled. Please disable "${AUTO_CREATION_PROPS.FLEXIBLE_ENABLED}" first (legacy mode requirement)`,
+          severity: 'error',
+          rule: 'weight-mode-transition-flexible-aqc',
+        },
+      ];
+    }
+  }
+
+  return [];
 }
