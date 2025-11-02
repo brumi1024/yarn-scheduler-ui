@@ -142,12 +142,14 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
   }
 
   const queue = findQueueByPath(context.schedulerData, context.queuePath);
-  if (!queue?.queues?.queue?.length) {
-    return [];
-  }
 
-  const childQueuePaths = new Set(queue.queues.queue.map((child) => child.queuePath));
+  // Track if parent originally had no children
+  const originallyHadNoChildren = !queue?.queues?.queue?.length;
 
+  // Initialize child queue paths (empty if no existing children)
+  const childQueuePaths = new Set(queue?.queues?.queue?.map((child) => child.queuePath) ?? []);
+
+  // Process staged changes to build the complete set of children
   context.stagedChanges.forEach((change) => {
     if (change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH) {
       return;
@@ -163,6 +165,11 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
       childQueuePaths.add(change.queuePath);
     }
   });
+
+  // If no children after processing staged changes, skip validation
+  if (childQueuePaths.size === 0) {
+    return [];
+  }
 
   const childCapacities: number[] = [];
   let allPercentages = true;
@@ -202,12 +209,17 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
     return [];
   }
 
+  // Use warning for parents that originally had no children (user is building structure)
+  // Use error for existing queue structures being modified
+  const severity = originallyHadNoChildren ? 'warning' : 'error';
+  const verb = originallyHadNoChildren ? 'should' : 'must';
+
   return [
     {
       queuePath: context.queuePath,
       field: 'capacity',
-      message: `Child queue capacities must sum to 100% (legacy mode requirement, current: ${sum.toFixed(1)}%)`,
-      severity: 'error',
+      message: `Child queue capacities ${verb} sum to 100% (legacy mode requirement, current: ${sum.toFixed(1)}%)`,
+      severity,
       rule: 'child-capacity-sum',
     },
   ];
@@ -388,6 +400,11 @@ function evaluateParentChildCapacityMode(context: ValidationContext): Validation
 
   const parentPath = getParentPath(context.queuePath);
   if (!parentPath) {
+    return [];
+  }
+
+  // Skip validation when parent is root - root's children can use any capacity mode
+  if (parentPath === 'root') {
     return [];
   }
 

@@ -225,6 +225,31 @@ describe('PARENT_CHILD_CAPACITY_MODE validation rule', () => {
     expect(parentChildModeIssues).toHaveLength(0);
   });
 
+  it('should allow root children to use absolute resources even when root uses percentage mode', () => {
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '[memory=8192,vcores=8]'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '[memory=8192,vcores=8]',
+      config,
+      schedulerData: createMockSchedulerData(),
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const parentChildModeIssues = issues.filter(
+      (issue) => issue.rule === 'parent-child-capacity-mode',
+    );
+
+    // Root's children should be allowed to use any capacity mode
+    expect(parentChildModeIssues).toHaveLength(0);
+  });
+
   it('should not produce error when validating existing queue with unchanged capacity', () => {
     const config = new Map([
       ['yarn.scheduler.capacity.root.capacity', '100'],
@@ -526,5 +551,634 @@ describe('WEIGHT_MODE_TRANSITION_FLEXIBLE_AQC validation rule', () => {
     );
 
     expect(transitionIssues).toHaveLength(0);
+  });
+});
+
+describe('CAPACITY_SUM validation rule', () => {
+  it('should show warning when adding single child to parent with no existing children', () => {
+    // Create parent queue with no children
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            // No children yet!
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '10'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production', // Validating parent queue
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'add',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '10',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(1);
+    expect(capacitySumIssues[0]).toMatchObject({
+      queuePath: 'root.production',
+      field: 'capacity',
+      severity: 'warning', // Should be warning for new parent
+      rule: 'child-capacity-sum',
+    });
+    expect(capacitySumIssues[0].message).toContain('should sum to 100%');
+    expect(capacitySumIssues[0].message).toContain('10.0%');
+  });
+
+  it('should show error when modifying children of parent that already had children', () => {
+    // Create parent queue WITH existing children
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            queues: {
+              queue: [
+                {
+                  queueName: 'team-a',
+                  queuePath: 'root.production.team-a',
+                  capacity: 50,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 50,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  queueType: 'leaf',
+                  state: 'RUNNING',
+                },
+                {
+                  queueName: 'team-b',
+                  queuePath: 'root.production.team-b',
+                  capacity: 30, // Was 50, now 30 = only 80% total
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 30,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  queueType: 'leaf',
+                  state: 'RUNNING',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '50'],
+      ['yarn.scheduler.capacity.root.production.team-b.capacity', '30'], // Modified to 30
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production', // Validating parent queue
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'update',
+          queuePath: 'root.production.team-b',
+          property: 'capacity',
+          oldValue: '50',
+          newValue: '30',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(1);
+    expect(capacitySumIssues[0]).toMatchObject({
+      queuePath: 'root.production',
+      field: 'capacity',
+      severity: 'error', // Should be error for existing parent
+      rule: 'child-capacity-sum',
+    });
+    expect(capacitySumIssues[0].message).toContain('must sum to 100%');
+    expect(capacitySumIssues[0].message).toContain('80.0%');
+  });
+
+  it('should pass when adding multiple children that sum to 100%', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            // No children yet
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '60'],
+      ['yarn.scheduler.capacity.root.production.team-b.capacity', '40'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'add',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '60',
+          timestamp: Date.now(),
+        },
+        {
+          id: '2',
+          type: 'add',
+          queuePath: 'root.production.team-b',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '40',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(0);
+  });
+
+  it('should show warning when adding multiple children that do not sum to 100%', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            // No children yet
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '30'],
+      ['yarn.scheduler.capacity.root.production.team-b.capacity', '30'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'add',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '30',
+          timestamp: Date.now(),
+        },
+        {
+          id: '2',
+          type: 'add',
+          queuePath: 'root.production.team-b',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '30',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(1);
+    expect(capacitySumIssues[0]).toMatchObject({
+      queuePath: 'root.production',
+      field: 'capacity',
+      severity: 'warning', // Warning because parent had no children originally
+      rule: 'child-capacity-sum',
+    });
+    expect(capacitySumIssues[0].message).toContain('should sum to 100%');
+    expect(capacitySumIssues[0].message).toContain('60.0%');
+  });
+
+  it('should pass after removing a child queue if remaining children sum to 100%', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            queues: {
+              queue: [
+                {
+                  queueName: 'team-a',
+                  queuePath: 'root.production.team-a',
+                  capacity: 60,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 60,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  queueType: 'leaf',
+                  state: 'RUNNING',
+                },
+                {
+                  queueName: 'team-b',
+                  queuePath: 'root.production.team-b',
+                  capacity: 40,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 40,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  queueType: 'leaf',
+                  state: 'RUNNING',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '100'], // Updated to 100
+      // team-b will be removed
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'remove',
+          queuePath: 'root.production.team-b',
+          property: 'capacity',
+          oldValue: '40',
+          newValue: undefined,
+          timestamp: Date.now(),
+        },
+        {
+          id: '2',
+          type: 'update',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: '60',
+          newValue: '100',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(0);
+  });
+
+  it('should skip validation for parent with no children after removals', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+            queues: {
+              queue: [
+                {
+                  queueName: 'team-a',
+                  queuePath: 'root.production.team-a',
+                  capacity: 100,
+                  usedCapacity: 0,
+                  maxCapacity: 100,
+                  absoluteCapacity: 100,
+                  absoluteMaxCapacity: 100,
+                  absoluteUsedCapacity: 0,
+                  numApplications: 0,
+                  numActiveApplications: 0,
+                  numPendingApplications: 0,
+                  queueType: 'leaf',
+                  state: 'RUNNING',
+                },
+              ],
+            },
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'remove',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: '100',
+          newValue: undefined,
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(0);
+  });
+
+  it('should skip validation when not in legacy mode', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '10'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '100',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'add',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '10',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: false, // Flexible mode
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    expect(capacitySumIssues).toHaveLength(0);
+  });
+
+  it('should skip validation for absolute capacity mode', () => {
+    const schedulerData: SchedulerInfo = {
+      type: 'capacityScheduler',
+      queueName: 'root',
+      capacity: 100,
+      usedCapacity: 0,
+      maxCapacity: 100,
+      queues: {
+        queue: [
+          {
+            queueName: 'production',
+            queuePath: 'root.production',
+            capacity: 100,
+            usedCapacity: 0,
+            maxCapacity: 100,
+            absoluteCapacity: 100,
+            absoluteMaxCapacity: 100,
+            absoluteUsedCapacity: 0,
+            numApplications: 0,
+            numActiveApplications: 0,
+            numPendingApplications: 0,
+            queueType: 'parent',
+            state: 'RUNNING',
+          },
+        ],
+      },
+    };
+
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.capacity', '100'],
+      ['yarn.scheduler.capacity.root.production.capacity', '[memory=8192,vcores=8]'],
+      ['yarn.scheduler.capacity.root.production.team-a.capacity', '[memory=2048,vcores=2]'],
+    ]);
+
+    const context: ValidationContext = {
+      queuePath: 'root.production',
+      fieldName: 'capacity',
+      fieldValue: '[memory=8192,vcores=8]',
+      config,
+      schedulerData,
+      stagedChanges: [
+        {
+          id: '1',
+          type: 'add',
+          queuePath: 'root.production.team-a',
+          property: 'capacity',
+          oldValue: undefined,
+          newValue: '[memory=2048,vcores=2]',
+          timestamp: Date.now(),
+        },
+      ],
+      legacyModeEnabled: true,
+    };
+
+    const issues = runFieldValidation(context);
+    const capacitySumIssues = issues.filter((issue) => issue.rule === 'child-capacity-sum');
+
+    // Should skip because absolute capacity doesn't have sum-to-100% requirement
+    expect(capacitySumIssues).toHaveLength(0);
   });
 });
