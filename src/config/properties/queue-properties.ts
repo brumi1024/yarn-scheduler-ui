@@ -39,6 +39,10 @@ const isLegacyQueueModeEnabled: PropertyCondition = ({ getGlobalValue }) => {
 };
 
 const shouldShowLegacyAutoCreation: PropertyCondition = (context) => {
+  // Never show legacy AQC for root queue
+  if (context.queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+    return false;
+  }
   return isLegacyQueueModeEnabled(context) && getQueueCapacityType(context) !== 'weight';
 };
 
@@ -46,7 +50,41 @@ const shouldShowFlexibleAutoCreation: PropertyCondition = (context) => {
   if (!isLegacyQueueModeEnabled(context)) {
     return true;
   }
+  // In legacy mode, always show for root (enableWhen handles the children capacity check)
+  if (context.queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+    return true;
+  }
+  // For non-root queues in legacy mode, only show if using weight capacity
   return getQueueCapacityType(context) === 'weight';
+};
+
+const canEnableFlexibleAutoCreationForRoot: PropertyCondition = (context) => {
+  // In non-legacy mode, always enabled
+  if (!isLegacyQueueModeEnabled(context)) {
+    return true;
+  }
+
+  // For non-root queues in legacy mode, always enabled (if visible)
+  if (context.queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME) {
+    return true;
+  }
+
+  // For root queue in legacy mode, check if all children use weight mode
+  const children = context.queueInfo?.queues?.queue;
+  if (!children || children.length === 0) {
+    // No children yet, allow enabling
+    return true;
+  }
+
+  // Check if all direct children use weight-based capacity
+  return children.every((child) => {
+    const capacity = context.getQueueValue?.(child.queuePath, 'capacity');
+    if (!capacity || !capacity.trim()) {
+      // If child has no capacity set, be permissive
+      return true;
+    }
+    return getCapacityType(capacity) === 'weight';
+  });
 };
 
 // Specify only the short config name (without the yarn.scheduler.capacity.<queue-path> prefix)
@@ -417,12 +455,14 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'auto-queue-creation-v2.enabled',
     displayName: 'Flexible Queue Auto-Creation',
-    description: 'Enable flexible queue auto-creation (parent and leaf queues)',
+    description:
+      'Enable flexible queue auto-creation (parent and leaf queues). In legacy queue mode, root queue requires all child queues to use weight-based capacity.',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [shouldShowFlexibleAutoCreation],
+    enableWhen: [canEnableFlexibleAutoCreationForRoot],
   },
   {
     name: 'auto-queue-creation-v2.max-queues',

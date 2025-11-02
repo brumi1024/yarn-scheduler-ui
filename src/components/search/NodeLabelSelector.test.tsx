@@ -24,7 +24,7 @@ vi.mock('~/components/ui/select', () => ({
   SelectValue: () => {
     const store = useSchedulerStore();
     const value = store.selectedNodeLabelFilter || 'DEFAULT';
-    if (value === 'DEFAULT') return <span>All Partitions</span>;
+    if (value === 'DEFAULT') return <span>Default Partition</span>;
     return <span>{value}</span>;
   },
   SelectContent: ({ children }: any) => <div data-testid="select-content">{children}</div>,
@@ -65,7 +65,7 @@ describe('NodeLabelSelector', () => {
     render(<NodeLabelSelector />);
 
     const trigger = screen.getByRole('combobox');
-    expect(trigger).toHaveTextContent('All Partitions');
+    expect(trigger).toHaveTextContent('Default Partition');
   });
 
   it('should display all node labels', () => {
@@ -73,7 +73,7 @@ describe('NodeLabelSelector', () => {
 
     // Check that labels are rendered - look within select content specifically
     const selectContent = screen.getByTestId('select-content');
-    expect(selectContent).toHaveTextContent('All Partitions');
+    expect(selectContent).toHaveTextContent('Default Partition');
     expect(selectContent).toHaveTextContent('gpu');
     expect(selectContent).toHaveTextContent('cpu');
     expect(selectContent).toHaveTextContent('memory');
@@ -132,6 +132,6 @@ describe('NodeLabelSelector', () => {
 
     const trigger = screen.getByRole('combobox');
     expect(trigger).toBeInTheDocument();
-    expect(trigger).toHaveTextContent('All Partitions');
+    expect(trigger).toHaveTextContent('Default Partition');
   });
 });

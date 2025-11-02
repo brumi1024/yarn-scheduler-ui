@@ -179,6 +179,190 @@ describe('propertyDefinitions', () => {
       expect(templateSupported.some((p) => p.name === 'capacity')).toBe(true);
     });
 
+    it('enables flexible auto-creation based on root queue children capacity mode', () => {
+      const flexibleAutoCreate = queuePropertyDefinitions.find(
+        (p) => p.name === 'auto-queue-creation-v2.enabled',
+      );
+
+      expect(flexibleAutoCreate).toBeDefined();
+      if (!flexibleAutoCreate) {
+        return;
+      }
+
+      const isEnabled = flexibleAutoCreate.enableWhen?.[0];
+      expect(isEnabled).toBeInstanceOf(Function);
+      if (!isEnabled) {
+        return;
+      }
+
+      // Non-root queue: always enabled
+      const nonRootOptions = createConditionOptions({
+        property: flexibleAutoCreate,
+        capacity: '2w',
+        legacyMode: 'false',
+      });
+      expect(isEnabled(nonRootOptions)).toBe(true);
+
+      // Root queue with no children: enabled
+      const rootNoChildrenOptions = {
+        ...createConditionOptions({
+          property: flexibleAutoCreate,
+          capacity: '100',
+          legacyMode: 'false',
+        }),
+        queuePath: 'root',
+        queueInfo: {
+          queueType: 'parent' as const,
+          queueName: 'root',
+          queuePath: 'root',
+          capacity: 100,
+          usedCapacity: 0,
+          maxCapacity: 100,
+          absoluteCapacity: 100,
+          absoluteMaxCapacity: 100,
+          absoluteUsedCapacity: 0,
+          numApplications: 0,
+          numActiveApplications: 0,
+          numPendingApplications: 0,
+          state: 'RUNNING' as const,
+          queues: {
+            queue: [],
+          },
+        },
+      };
+      expect(isEnabled(rootNoChildrenOptions)).toBe(true);
+
+      // LEGACY MODE TESTS - restrictions apply
+      // Root queue with all weight-mode children: enabled
+      const legacyRootWeightChildrenOptions = {
+        ...createConditionOptions({
+          property: flexibleAutoCreate,
+          capacity: '100',
+          legacyMode: 'true',
+        }),
+        queuePath: 'root',
+        queueInfo: {
+          queueType: 'parent' as const,
+          queueName: 'root',
+          queuePath: 'root',
+          capacity: 100,
+          usedCapacity: 0,
+          maxCapacity: 100,
+          absoluteCapacity: 100,
+          absoluteMaxCapacity: 100,
+          absoluteUsedCapacity: 0,
+          numApplications: 0,
+          numActiveApplications: 0,
+          numPendingApplications: 0,
+          state: 'RUNNING' as const,
+          queues: {
+            queue: [
+              {
+                queueType: 'leaf' as const,
+                queueName: 'child1',
+                queuePath: 'root.child1',
+                capacity: 2,
+                usedCapacity: 0,
+                maxCapacity: 100,
+                absoluteCapacity: 2,
+                absoluteMaxCapacity: 100,
+                absoluteUsedCapacity: 0,
+                numApplications: 0,
+                numActiveApplications: 0,
+                numPendingApplications: 0,
+                state: 'RUNNING' as const,
+              },
+              {
+                queueType: 'leaf' as const,
+                queueName: 'child2',
+                queuePath: 'root.child2',
+                capacity: 3,
+                usedCapacity: 0,
+                maxCapacity: 100,
+                absoluteCapacity: 3,
+                absoluteMaxCapacity: 100,
+                absoluteUsedCapacity: 0,
+                numApplications: 0,
+                numActiveApplications: 0,
+                numPendingApplications: 0,
+                state: 'RUNNING' as const,
+              },
+            ],
+          },
+        },
+        getQueueValue: (queuePath: string, name: string) => {
+          if (name === 'capacity' && queuePath === 'root.child1') return '2w';
+          if (name === 'capacity' && queuePath === 'root.child2') return '3w';
+          return undefined;
+        },
+      };
+      expect(isEnabled(legacyRootWeightChildrenOptions)).toBe(true);
+
+      // Legacy mode: Root queue with percentage-mode children: disabled
+      const legacyRootPercentChildrenOptions = {
+        ...legacyRootWeightChildrenOptions,
+        getQueueValue: (queuePath: string, name: string) => {
+          if (name === 'capacity' && queuePath === 'root.child1') return '40';
+          if (name === 'capacity' && queuePath === 'root.child2') return '60';
+          return undefined;
+        },
+      };
+      expect(isEnabled(legacyRootPercentChildrenOptions)).toBe(false);
+
+      // Legacy mode: Root queue with mixed-mode children: disabled
+      const legacyRootMixedChildrenOptions = {
+        ...legacyRootWeightChildrenOptions,
+        getQueueValue: (queuePath: string, name: string) => {
+          if (name === 'capacity' && queuePath === 'root.child1') return '2w';
+          if (name === 'capacity' && queuePath === 'root.child2') return '60';
+          return undefined;
+        },
+      };
+      expect(isEnabled(legacyRootMixedChildrenOptions)).toBe(false);
+
+      // NON-LEGACY MODE TESTS - no restrictions
+      // Non-legacy mode: enabled for root with percentage-mode children
+      const nonLegacyRootPercentOptions = {
+        ...createConditionOptions({
+          property: flexibleAutoCreate,
+          capacity: '100',
+          legacyMode: 'false',
+        }),
+        queuePath: 'root',
+        queueInfo: legacyRootWeightChildrenOptions.queueInfo,
+        getQueueValue: (queuePath: string, name: string) => {
+          // Children using percentage mode
+          if (name === 'capacity' && queuePath === 'root.child1') return '40';
+          if (name === 'capacity' && queuePath === 'root.child2') return '60';
+          return undefined;
+        },
+      };
+      expect(isEnabled(nonLegacyRootPercentOptions)).toBe(true);
+
+      // Non-legacy mode: also enabled with weight-mode children
+      const nonLegacyRootWeightOptions = {
+        ...nonLegacyRootPercentOptions,
+        getQueueValue: (queuePath: string, name: string) => {
+          // Children using weight mode
+          if (name === 'capacity' && queuePath === 'root.child1') return '2w';
+          if (name === 'capacity' && queuePath === 'root.child2') return '3w';
+          return undefined;
+        },
+      };
+      expect(isEnabled(nonLegacyRootWeightOptions)).toBe(true);
+
+      // Non-legacy mode: enabled even with mixed-mode children
+      const nonLegacyRootMixedOptions = {
+        ...nonLegacyRootPercentOptions,
+        getQueueValue: (queuePath: string, name: string) => {
+          if (name === 'capacity' && queuePath === 'root.child1') return '2w';
+          if (name === 'capacity' && queuePath === 'root.child2') return '60';
+          return undefined;
+        },
+      };
+      expect(isEnabled(nonLegacyRootMixedOptions)).toBe(true);
+    });
+
     it('shows correct auto-creation properties based on capacity and legacy mode', () => {
       const legacyAutoCreate = queuePropertyDefinitions.find(
         (p) => p.name === 'auto-create-child-queue.enabled',
@@ -196,6 +380,24 @@ describe('propertyDefinitions', () => {
       if (!legacyAutoCreate || !flexibleAutoCreate || !flexibleMaxQueues) {
         return;
       }
+
+      // Legacy AQC should never show for root queue (only creates leaf queues)
+      const rootLegacyOptions = createConditionOptions({
+        property: legacyAutoCreate,
+        capacity: '100',
+        legacyMode: 'true',
+      });
+      rootLegacyOptions.queuePath = 'root';
+      expect(shouldShowProperty(legacyAutoCreate, rootLegacyOptions)).toBe(false);
+
+      // Flexible AQC should show for root in legacy mode (even with percentage capacity)
+      const rootFlexibleLegacyOptions = createConditionOptions({
+        property: flexibleAutoCreate,
+        capacity: '100',
+        legacyMode: 'true',
+      });
+      rootFlexibleLegacyOptions.queuePath = 'root';
+      expect(shouldShowProperty(flexibleAutoCreate, rootFlexibleLegacyOptions)).toBe(true);
 
       // Legacy mode with weight capacity -> show only flexible auto-creation
       const legacyWeightOptions = createConditionOptions({
