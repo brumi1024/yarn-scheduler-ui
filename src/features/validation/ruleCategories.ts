@@ -2,6 +2,7 @@ export const CROSS_QUEUE_RULES = [
   'child-capacity-sum',
   'capacity-type-consistency',
   'parent-child-capacity-constraint',
+  'parent-child-capacity-mode',
   'label-capacity-sum',
 ] as const;
 
@@ -19,6 +20,7 @@ export const QUEUE_SPECIFIC_RULES = [
   'conversion-state-requirement',
   'conversion-empty-requirement',
   'queue-label-access',
+  'weight-mode-transition-flexible-aqc',
 ] as const;
 
 export const WARNING_ONLY_RULES = [

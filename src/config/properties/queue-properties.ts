@@ -150,6 +150,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         description: 'Queue rejects new applications but continues existing workloads.',
       },
     ],
+    enableWhen: [({ queuePath }) => queuePath !== SPECIAL_VALUES.ROOT_QUEUE_NAME],
   },
 
   {
