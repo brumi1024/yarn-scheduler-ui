@@ -188,6 +188,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     selectedNodeLabelFilter,
     getQueueLabelCapacity,
     clearQueueChanges,
+    hasPendingDeletion,
   } = useSchedulerStore();
 
   const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
@@ -745,15 +746,27 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
           </ContextMenuItem>
 
           {canAdd && stagedStatus !== 'new' && (
-            <ContextMenuItem
-              onClick={(e) => {
-                e.stopPropagation();
-                setAddDialogOpen(true);
-              }}
-            >
-              <Plus className="mr-2 h-4 w-4" />
-              Add Child Queue
-            </ContextMenuItem>
+            <TooltipProvider>
+              <Tooltip>
+                <TooltipTrigger asChild>
+                  <ContextMenuItem
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setAddDialogOpen(true);
+                    }}
+                    disabled={hasPendingDeletion(queuePath)}
+                  >
+                    <Plus className="mr-2 h-4 w-4" />
+                    Add Child Queue
+                  </ContextMenuItem>
+                </TooltipTrigger>
+                {hasPendingDeletion(queuePath) && (
+                  <TooltipContent>
+                    <p>Cannot add children to queue pending deletion</p>
+                  </TooltipContent>
+                )}
+              </Tooltip>
+            </TooltipProvider>
           )}
 
           {canDelete && stagedStatus !== 'new' && (

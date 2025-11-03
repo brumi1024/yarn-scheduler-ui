@@ -245,6 +245,9 @@ export const CapacityEditorDialog: React.FC = () => {
   const parentQueuePath = useSchedulerStore((state) => state.capacityEditor.parentQueuePath);
   const selectedNodeLabel = useSchedulerStore((state) => state.capacityEditor.selectedNodeLabel);
   const labelOptions = useSchedulerStore((state) => state.capacityEditor.labelOptions);
+  const labelsWithoutAccess = useSchedulerStore(
+    (state) => state.capacityEditor.labelsWithoutAccess,
+  );
   const validationIssues = useSchedulerStore((state) => state.capacityEditor.validationIssues);
   const isSaving = useSchedulerStore((state) => state.capacityEditor.isSaving);
   const saveError = useSchedulerStore((state) => state.capacityEditor.saveError);
@@ -504,6 +507,12 @@ export const CapacityEditorDialog: React.FC = () => {
                   ))}
                 </SelectContent>
               </Select>
+              {selectedNodeLabel && labelsWithoutAccess.has(selectedNodeLabel) && (
+                <FieldDescription className="text-xs text-amber-600 mt-1">
+                  Warning: This queue doesn't have access to the {selectedNodeLabel} label. You can
+                  edit capacities to remove them.
+                </FieldDescription>
+              )}
             </Field>
           </div>
 

@@ -122,6 +122,9 @@ function createSchedulerStoreState() {
     })),
     hasQueueProperty: vi.fn(() => false),
     getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
+    hasPendingDeletion: vi.fn(() => false),
+    clearQueueChanges: vi.fn(),
+    requestTemplateConfigOpen: vi.fn(),
     capacityEditor: {
       isOpen: false,
       origin: null,
@@ -359,6 +362,9 @@ describe('QueueVisualizationContainer', () => {
         })),
         hasQueueProperty: vi.fn(() => false),
         getGlobalPropertyValue: vi.fn(() => ({ value: 'false', isStaged: false })),
+        hasPendingDeletion: vi.fn(() => false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
         capacityEditor: {
           isOpen: false,
           origin: null,
