@@ -46,6 +46,7 @@ export interface PlacementRulesData {
   rules?: PlacementRule[];
   legacyRules?: string;
   requiresMigration?: boolean;
+  inconsistentFormat?: boolean; // True when JSON rules exist but format property is not 'json'
 }
 
 export interface MigrationResult {

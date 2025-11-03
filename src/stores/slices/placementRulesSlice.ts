@@ -3,6 +3,7 @@
  */
 
 import type { StateCreator } from 'zustand';
+import type { WritableDraft } from 'immer';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
 import { getMergedConfigData } from '~/features/validation/utils/configUtils';
@@ -52,6 +53,38 @@ function getFormatWarningMessage(formatValue?: string | null): string | null {
   }
 
   return `Placement rule format is set to "${formatValue}". Update it to "json" so newly staged rules are applied when you commit the configuration.`;
+}
+
+/**
+ * Helper function to auto-stage format to 'json' if needed
+ * This is called when rules are modified (add, update, delete, reorder)
+ */
+function autoStageFormatIfNeeded(
+  get: () => SchedulerStore,
+  set: (fn: (state: WritableDraft<SchedulerStore>) => void) => void,
+): void {
+  const { stageGlobalChange, configData, stagedChanges, legacyRules } = get();
+
+  const mergedConfig = getMergedConfigData(configData, stagedChanges);
+  const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
+  const normalizedFormat = formatValue?.trim().toLowerCase() ?? '';
+
+  if (!normalizedFormat) {
+    stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
+    set((state: WritableDraft<SchedulerStore>) => {
+      state.formatWarning = null;
+    });
+  } else if (normalizedFormat === 'legacy' && !legacyRules) {
+    // Format is legacy but no actual legacy rules exist - auto-stage to json
+    stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
+    set((state: WritableDraft<SchedulerStore>) => {
+      state.formatWarning = null;
+    });
+  } else if (normalizedFormat !== 'json') {
+    set((state: WritableDraft<SchedulerStore>) => {
+      state.formatWarning = getFormatWarningMessage(formatValue);
+    });
+  }
 }
 
 export const createPlacementRulesSlice: StateCreator<
@@ -188,28 +221,10 @@ export const createPlacementRulesSlice: StateCreator<
 
   // Add new rule
   addRule: (rule) => {
-    const { rules, stageGlobalChange, configData, stagedChanges, legacyRules } = get();
+    const { rules, stageGlobalChange } = get();
 
-    const mergedConfig = getMergedConfigData(configData, stagedChanges);
-    const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
-    const normalizedFormat = formatValue?.trim().toLowerCase() ?? '';
-
-    if (!normalizedFormat) {
-      stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
-      set((state) => {
-        state.formatWarning = null;
-      });
-    } else if (normalizedFormat === 'legacy' && !legacyRules) {
-      // Format is legacy but no actual legacy rules exist - auto-stage to json
-      stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
-      set((state) => {
-        state.formatWarning = null;
-      });
-    } else if (normalizedFormat !== 'json') {
-      set((state) => {
-        state.formatWarning = getFormatWarningMessage(formatValue);
-      });
-    }
+    // Auto-stage format to json if needed
+    autoStageFormatIfNeeded(get, set);
 
     const newRules = [...rules, rule];
 
@@ -225,6 +240,10 @@ export const createPlacementRulesSlice: StateCreator<
   // Update existing rule
   updateRule: (index, updates) => {
     const { rules, stageGlobalChange } = get();
+
+    // Auto-stage format to json if needed
+    autoStageFormatIfNeeded(get, set);
+
     const newRules = [...rules];
     newRules[index] = { ...newRules[index], ...updates };
 
@@ -240,6 +259,10 @@ export const createPlacementRulesSlice: StateCreator<
   // Delete rule
   deleteRule: (index) => {
     const { rules, stageGlobalChange } = get();
+
+    // Auto-stage format to json if needed
+    autoStageFormatIfNeeded(get, set);
+
     const newRules = rules.filter((_, i) => i !== index);
 
     set((state) => {
@@ -263,6 +286,9 @@ export const createPlacementRulesSlice: StateCreator<
   // destinationIndex: the drop zone index (position where item should be inserted)
   reorderRules: (sourceIndex, destinationIndex) => {
     const { rules, selectedRuleIndex, stageGlobalChange } = get();
+
+    // Auto-stage format to json if needed
+    autoStageFormatIfNeeded(get, set);
 
     // Validate indices
     if (
