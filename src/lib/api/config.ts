@@ -52,18 +52,7 @@ const resolveMockMode = (): MockMode => {
 };
 
 const mockMode = resolveMockMode();
-const defaultBaseUrl = resolveBaseUrl();
-
-const baseUrl = (() => {
-  if (mockMode === 'cluster') {
-    const clusterUrl = normalizeUrl(import.meta.env.VITE_MOCK_CLUSTER_URL);
-    if (clusterUrl) {
-      return clusterUrl;
-    }
-  }
-
-  return defaultBaseUrl;
-})();
+const baseUrl = resolveBaseUrl();
 
 export const API_CONFIG = {
   baseUrl,

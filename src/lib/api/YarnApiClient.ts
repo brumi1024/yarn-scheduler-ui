@@ -24,6 +24,7 @@ export class YarnApiClient {
   private readonly timeout: number;
   private readonly userName: string;
   private securityMode: 'simple' | 'kerberos' | null = null;
+  private isReadOnly: boolean = false;
   private initPromise: Promise<void> | null = null;
 
   constructor(baseUrl: string, config: ApiClientConfig = {}) {
@@ -43,19 +44,13 @@ export class YarnApiClient {
     const shouldDetectSecurityMode = config.detectSecurityMode ?? !isTestEnv;
 
     if (shouldDetectSecurityMode) {
-      // Initialize security mode detection
-      this.initPromise = this.detectSecurityMode()
-        .catch((error) => {
-          console.error('Failed to detect YARN security mode:', error);
-          // Don't rethrow - allow requests to proceed without auth detection
-        })
-        .finally(() => {
-          // Clear the promise after detection completes
-          this.initPromise = null;
-        });
+      // Defer detection until first request to ensure MSW is ready
+      // This is initialized lazily in the request() method
+      this.initPromise = null;
     } else {
       // Default to simple mode when skipping detection (e.g., unit tests)
       this.securityMode = 'simple';
+      this.isReadOnly = false;
       this.initPromise = null;
     }
   }
@@ -194,14 +189,33 @@ export class YarnApiClient {
   /**
    * GET /conf?name=<config> - Fetch YARN configuration value
    * Note: This endpoint is at the root level, not under /ws/v1/cluster
+   * Uses direct fetch() to avoid circular dependency during initialization
    */
   async getConfiguration(name: string): Promise<string> {
     const url = `${this.rootUrl}/conf?name=${encodeURIComponent(name)}`;
-    const response = await this.request<YarnConfigResponse>('GET', url, {
-      skipAuth: true,
-      absoluteUrl: true,
-    });
-    return response.property.value;
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.timeout);
+
+    try {
+      const response = await fetch(url, {
+        method: 'GET',
+        signal: controller.signal,
+        credentials: 'include',
+        headers: {
+          Accept: 'application/json',
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      }
+
+      const data = (await response.json()) as YarnConfigResponse;
+      return data.property.value;
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 
   /**
@@ -231,21 +245,63 @@ export class YarnApiClient {
   }
 
   /**
+   * Detect read-only mode by checking yarn.scheduler.capacity.ui.readonly
+   */
+  private async detectReadOnlyMode(): Promise<void> {
+    try {
+      const readOnlyValue = await this.getConfiguration('yarn.scheduler.capacity.ui.readonly');
+      // Convert string to boolean - treat 'true' (case-insensitive) as true, everything else as false
+      this.isReadOnly = readOnlyValue.toLowerCase() === 'true';
+    } catch (error) {
+      // If the configuration is not found or fails to fetch, default to writable (false)
+      this.isReadOnly = false;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('Read-only mode config not found, defaulting to writable:', message);
+    }
+  }
+
+  /**
+   * Get the current read-only mode status
+   */
+  getIsReadOnly(): boolean {
+    return this.isReadOnly;
+  }
+
+  /**
    * Simple request method - React Query handles retries and error states
    */
   private async request<T = void>(
     method: string,
     path: string,
-    options: RequestInit & { skipAuth?: boolean; absoluteUrl?: boolean; expectJson?: boolean } = {},
+    options: RequestInit & { skipAuth?: boolean; expectJson?: boolean } = {},
   ): Promise<T> {
+    // Lazy initialization: Start detection on first request (ensures MSW is ready)
+    if (this.initPromise === null && this.securityMode === null) {
+      this.initPromise = Promise.all([
+        this.detectSecurityMode().catch((error) => {
+          console.error('Failed to detect YARN security mode:', error);
+          // Don't rethrow - allow requests to proceed without auth detection
+        }),
+        this.detectReadOnlyMode().catch((error) => {
+          console.error('Failed to detect YARN read-only mode:', error);
+          // Don't rethrow - default to writable mode
+        }),
+      ])
+        .then(() => {})
+        .finally(() => {
+          // Clear the promise after detection completes
+          this.initPromise = null;
+        });
+    }
+
     // Wait for security mode detection to complete (if still in progress)
     if (this.initPromise) {
       await this.initPromise;
     }
 
-    // Build URL - use path as-is if absolute, otherwise append to baseUrl
-    const { skipAuth, absoluteUrl, expectJson = true, ...fetchOptions } = options;
-    let url = absoluteUrl ? path : `${this.baseUrl}${path}`;
+    // Build URL by appending path to baseUrl
+    const { skipAuth, expectJson = true, ...fetchOptions } = options;
+    let url = `${this.baseUrl}${path}`;
 
     // Add user.name parameter for simple auth mode (unless skipAuth is true)
     if (!skipAuth && this.securityMode === 'simple' && this.userName) {

@@ -59,8 +59,8 @@ export const NodesPanel: React.FC<NodesPanelProps> = ({ selectedLabel }) => {
   const handleLabelChange = async (nodeId: string, newLabel: string | null) => {
     try {
       await assignNodeToLabel(nodeId, newLabel);
-    } catch (error) {
-      console.error('Failed to assign node to label:', error);
+    } catch {
+      // Error is already set in the store, will be displayed by parent component
     }
   };
 

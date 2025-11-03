@@ -11,6 +11,7 @@ const createMockApiClient = () => ({
   getNodeToLabels: vi.fn(),
   getSchedulerConfVersion: vi.fn(),
   updateSchedulerConf: vi.fn(),
+  getIsReadOnly: vi.fn(() => false),
 });
 
 const createQueue = (

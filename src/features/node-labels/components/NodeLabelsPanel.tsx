@@ -4,7 +4,6 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Button } from '~/components/ui/button';
 import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
-import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import { AddLabelDialog } from '~/features/node-labels';
 
 export const NodeLabelsPanel: React.FC = () => {
@@ -22,33 +21,15 @@ export const NodeLabelsPanel: React.FC = () => {
   const handleAddLabel = async (name: string, exclusivity: boolean) => {
     try {
       await addNodeLabel(name, exclusivity);
-    } catch (error) {
-      console.error('Failed to add node label:', error);
+    } catch {
       // Error is already set in the store, will be displayed by parent component
     }
   };
 
   const handleRemoveLabel = async (labelName: string) => {
     try {
-      // Get nodeToLabels from store to create nodeAssignments Map for validation
-      const nodeToLabels = useSchedulerStore.getState().nodeToLabels;
-      const nodeAssignments = new Map<string, string[]>();
-
-      nodeToLabels.forEach((mapping) => {
-        nodeAssignments.set(mapping.nodeId, mapping.nodeLabels);
-      });
-
-      // Validate that the label can be safely removed
-      const validation = validateLabelRemoval(labelName, nodeAssignments);
-
-      if (!validation.valid) {
-        // Show error message
-        throw new Error(validation.error || 'Cannot remove label');
-      }
-
       await removeNodeLabel(labelName);
-    } catch (error) {
-      console.error('Failed to remove node label:', error);
+    } catch {
       // Error is already set in the store, will be displayed by parent component
     }
   };
@@ -114,25 +95,27 @@ export const NodeLabelsPanel: React.FC = () => {
                     </div>
                   </div>
 
-                  <Tooltip>
-                    <TooltipTrigger asChild>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleRemoveLabel(label.name);
-                        }}
-                        disabled={isLoading}
-                      >
-                        <Trash2 className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </TooltipTrigger>
-                    <TooltipContent>
-                      <p>Remove label</p>
-                    </TooltipContent>
-                  </Tooltip>
+                  {label.name.toUpperCase() !== 'DEFAULT' && (
+                    <Tooltip>
+                      <TooltipTrigger asChild>
+                        <Button
+                          variant="ghost"
+                          size="icon"
+                          className="h-8 w-8 opacity-0 transition-opacity group-hover:opacity-100"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveLabel(label.name);
+                          }}
+                          disabled={isLoading}
+                        >
+                          <Trash2 className="h-4 w-4 text-destructive" />
+                        </Button>
+                      </TooltipTrigger>
+                      <TooltipContent>
+                        <p>Remove label</p>
+                      </TooltipContent>
+                    </Tooltip>
+                  )}
                 </div>
               </li>
             );

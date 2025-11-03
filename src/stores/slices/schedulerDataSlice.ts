@@ -32,6 +32,7 @@ export const createSchedulerDataSlice: StateCreator<
   isLoading: false,
   error: null,
   errorContext: null,
+  isReadOnly: false,
 
   loadInitialData: async () => {
     set((state) => {
@@ -62,6 +63,7 @@ export const createSchedulerDataSlice: StateCreator<
         state.nodeToLabels = normalizeNodeToLabels(nodeToLabels);
 
         state.configVersion = version.versionId;
+        state.isReadOnly = get().apiClient.getIsReadOnly();
         state.isLoading = false;
         if (state.errorContext === 'load') {
           state.error = null;

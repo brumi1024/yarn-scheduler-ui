@@ -82,6 +82,47 @@ const staticHandlers: HttpHandler[] = [
     console.log('Mock: Removing node labels:', body);
     return HttpResponse.json({ message: 'Labels removed successfully' });
   }),
+
+  // Configuration endpoint (at root level, not under baseUrl)
+  http.get('/conf', ({ request }) => {
+    const url = new URL(request.url);
+    const configName = url.searchParams.get('name');
+
+    // Handle security authentication mode query
+    if (configName === 'hadoop.security.authentication') {
+      return HttpResponse.json({
+        property: {
+          name: 'hadoop.security.authentication',
+          value: 'simple',
+        },
+      });
+    }
+
+    // Handle read-only mode query
+    // TODO: change this to the actual config value
+    if (configName === 'yarn.scheduler.capacity.ui.readonly') {
+      // Default to false (writable mode) for development
+      // Set VITE_READONLY_MODE=true to test read-only mode
+      const readOnlyValue = import.meta.env.VITE_READONLY_MODE === 'true' ? 'true' : 'false';
+      return HttpResponse.json({
+        property: {
+          name: 'yarn.scheduler.capacity.ui.readonly',
+          value: readOnlyValue,
+        },
+      });
+    }
+
+    // Return empty/not found for unknown configs
+    return HttpResponse.json(
+      {
+        property: {
+          name: configName || '',
+          value: '',
+        },
+      },
+      { status: 404 },
+    );
+  }),
 ];
 
 export const handlers: HttpHandler[] = mockMode === 'cluster' ? [] : staticHandlers;
