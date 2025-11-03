@@ -283,7 +283,7 @@ describe('NodeLabelsPanel', () => {
       await userEvent.click(confirmButton as HTMLElement);
 
       await waitFor(() => {
-        expect(mockConsoleError).toHaveBeenCalledWith('Failed to add node label:', testError);
+        expect(mockAddNodeLabel).toHaveBeenCalledWith('error-label', false);
       });
     });
 
@@ -322,6 +322,31 @@ describe('NodeLabelsPanel', () => {
       });
     });
 
+    it('should not show delete button for DEFAULT label', () => {
+      const mockLabelsWithDefault: NodeLabel[] = [
+        getMockNodeLabel({ name: 'DEFAULT', exclusivity: true }),
+        getMockNodeLabel({ name: 'gpu', exclusivity: true }),
+      ];
+
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...defaultStoreState,
+        nodeLabels: mockLabelsWithDefault,
+      });
+
+      render(<NodeLabelsPanel />);
+
+      const defaultLabel = screen.getByText('DEFAULT').closest('div[class*="group"]');
+      const gpuLabel = screen.getByText('gpu').closest('div[class*="group"]');
+
+      // DEFAULT label should not have a delete button
+      const defaultButtons = within(defaultLabel! as HTMLElement).queryAllByRole('button');
+      expect(defaultButtons.length).toBe(0);
+
+      // Other labels should have a delete button
+      const gpuButtons = within(gpuLabel! as HTMLElement).getAllByRole('button');
+      expect(gpuButtons.length).toBeGreaterThan(0);
+    });
+
     it('should show delete button on hover', async () => {
       render(<NodeLabelsPanel />);
 
@@ -338,14 +363,8 @@ describe('NodeLabelsPanel', () => {
       expect(deleteButton).toHaveClass('group-hover:opacity-100');
     });
 
-    it('should validate label removal before deleting', async () => {
-      const mockNodeToLabels = [{ nodeId: 'node1', nodeLabels: ['gpu'] }];
-
-      mockGetState.mockReturnValue({ nodeToLabels: mockNodeToLabels });
-      vi.mocked(validateLabelRemoval).mockReturnValue({
-        valid: false,
-        error: 'Cannot remove label: nodes are assigned',
-      });
+    it('should call removeNodeLabel when delete button is clicked', async () => {
+      mockRemoveNodeLabel.mockResolvedValue(undefined);
 
       render(<NodeLabelsPanel />);
 
@@ -354,13 +373,7 @@ describe('NodeLabelsPanel', () => {
 
       await userEvent.click(deleteButton as HTMLElement);
 
-      expect(validateLabelRemoval).toHaveBeenCalledWith('gpu', new Map([['node1', ['gpu']]]));
-
-      expect(mockRemoveNodeLabel).not.toHaveBeenCalled();
-      expect(mockConsoleError).toHaveBeenCalledWith(
-        'Failed to remove node label:',
-        expect.any(Error),
-      );
+      expect(mockRemoveNodeLabel).toHaveBeenCalledWith('gpu');
     });
 
     it('should call removeNodeLabel when validation passes', async () => {
@@ -407,10 +420,9 @@ describe('NodeLabelsPanel', () => {
       });
     });
 
-    it('should handle remove label errors', async () => {
+    it('should handle remove label errors gracefully', async () => {
       const testError = new Error('Failed to remove label');
       mockRemoveNodeLabel.mockRejectedValue(testError);
-      vi.mocked(validateLabelRemoval).mockReturnValue({ valid: true });
 
       render(<NodeLabelsPanel />);
 
@@ -420,8 +432,9 @@ describe('NodeLabelsPanel', () => {
       await userEvent.click(deleteButton as HTMLElement);
 
       await waitFor(() => {
-        expect(mockConsoleError).toHaveBeenCalledWith('Failed to remove node label:', testError);
+        expect(mockRemoveNodeLabel).toHaveBeenCalledWith('gpu');
       });
+      // Error is now set in the store and displayed by parent component
     });
   });
 

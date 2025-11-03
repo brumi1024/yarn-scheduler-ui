@@ -71,27 +71,34 @@ npm install
 
 ### Environment configuration
 
-Create a `.env` file to describe how the UI should reach YARN APIs:
+Create a `.env` file to configure the UI. See `.env.example` for all available options.
+
+**For local development with mock data (default):**
 
 ```env
-# Base ResourceManager endpoint (optional; defaults to /ws/v1/cluster relative to the origin)
-VITE_YARN_API_URL=http://rm-host:8088/ws/v1/cluster
-
-# Mock service modes (defaults to `static` in dev builds)
-# static  - serves JSON fixtures from public/mock/ws/v1/cluster via MSW
-# cluster - proxies browser requests to the configured cluster target
-# off     - disables the mock service worker entirely
 VITE_API_MOCK_MODE=static
+```
 
-# Required when VITE_API_MOCK_MODE=cluster to proxy through the dev server
+**To connect to a real YARN cluster:**
+
+```env
+VITE_API_MOCK_MODE=cluster
 VITE_CLUSTER_PROXY_TARGET=http://rm-host:8088
-VITE_MOCK_CLUSTER_URL=/ws/v1/cluster
+```
 
-# Username used for simple-authenticated clusters
+**Optional settings:**
+
+```env
+# Username for simple-authenticated clusters (default: yarn)
 VITE_YARN_USER_NAME=yarn
+
+# Simulate read-only mode in local development (default: false)
+VITE_READONLY_MODE=false
 ```
 
 Mock payloads live in `public/mock/ws/v1/cluster/*.json` and are served automatically when `VITE_API_MOCK_MODE=static` (the default for `npm run dev`).
+
+The Vite dev server automatically proxies `/ws/v1/cluster` and `/conf` requests to `VITE_CLUSTER_PROXY_TARGET` when in cluster mode, avoiding CORS issues.
 
 ## Development
 

@@ -498,7 +498,7 @@ describe('NodesPanel', () => {
       expect(selectWrapper).toHaveAttribute('data-disabled', 'true');
     });
 
-    it('should handle assignment errors', async () => {
+    it('should handle assignment errors gracefully', async () => {
       const testError = new Error('Failed to assign label');
       mockAssignNodeToLabel.mockRejectedValue(testError);
 
@@ -508,8 +508,9 @@ describe('NodesPanel', () => {
       await userEvent.selectOptions(select, 'highmem');
 
       await waitFor(() => {
-        expect(mockConsoleError).toHaveBeenCalledWith('Failed to assign node to label:', testError);
+        expect(mockAssignNodeToLabel).toHaveBeenCalledWith('node-1', 'highmem');
       });
+      // Error is now set in the store and displayed by parent component
     });
   });
 

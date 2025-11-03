@@ -1,4 +1,4 @@
-import { Outlet, useLocation, Link } from 'react-router';
+import { Outlet, useLocation } from 'react-router';
 import { useState, useEffect } from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { StagedChangesPanel } from '~/features/staged-changes/components/StagedChangesPanel';
@@ -8,7 +8,8 @@ import { GlobalRefreshButton } from '~/components/elements/GlobalRefreshButton';
 import { DiagnosticsDialog } from '~/components/elements/DiagnosticsDialog';
 import { SidebarProvider, SidebarInset, SidebarTrigger } from '~/components/ui/sidebar';
 import { Badge } from '~/components/ui/badge';
-import { ChevronRight } from 'lucide-react';
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
+import { ChevronRight, Lock } from 'lucide-react';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
 import { getMergedConfigData } from '~/features/validation/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types';
@@ -20,6 +21,7 @@ export default function Layout() {
   const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const setSearchContext = useSchedulerStore((state) => state.setSearchContext);
+  const isReadOnly = useSchedulerStore((state) => state.isReadOnly);
   const location = useLocation();
 
   // Get legacy mode status considering staged changes
@@ -114,6 +116,21 @@ export default function Layout() {
                 <p className="text-sm text-muted-foreground">{pageInfo.description}</p>
               </div>
               <SearchBar className="w-64" placeholder="Search" />
+              {isReadOnly && (
+                <TooltipProvider>
+                  <Tooltip>
+                    <TooltipTrigger asChild>
+                      <Badge variant="destructive" className="gap-1.5">
+                        <Lock className="h-3 w-3" />
+                        Read-Only
+                      </Badge>
+                    </TooltipTrigger>
+                    <TooltipContent>
+                      <p>Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing</p>
+                    </TooltipContent>
+                  </Tooltip>
+                </TooltipProvider>
+              )}
               <GlobalRefreshButton />
               <DiagnosticsDialog />
               <ModeToggle />

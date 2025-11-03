@@ -296,6 +296,7 @@ const createMockApiClient = () => ({
   getSchedulerConfVersion: vi.fn(),
   validateSchedulerConf: vi.fn(),
   updateSchedulerConf: vi.fn(),
+  getIsReadOnly: vi.fn(() => false), // Default to writable mode in tests
 });
 
 // Helper to create store with mock API client

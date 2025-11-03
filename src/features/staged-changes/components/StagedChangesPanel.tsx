@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Trash2, Check, Gauge, AlertTriangle, AlertCircle } from 'lucide-react';
+import { Trash2, Check, Gauge, AlertTriangle, AlertCircle, Info } from 'lucide-react';
 import {
   Drawer,
   DrawerContent,
@@ -24,7 +24,7 @@ interface StagedChangesPanelProps {
 export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanelProps) {
   const [isApplying, setIsApplying] = useState(false);
 
-  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError } =
+  const { stagedChanges, revertChange, clearAllChanges, applyChanges, applyError, isReadOnly } =
     useSchedulerStore();
 
   // Group changes by queue path for organized display
@@ -158,6 +158,23 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
               <div className="text-center text-muted-foreground py-8">No staged changes</div>
             ) : (
               <div className="space-y-4">
+                {/* Read-only mode alert */}
+                {isReadOnly && (
+                  <Alert>
+                    <Info className="h-4 w-4" />
+                    <AlertTitle>Read-Only Mode</AlertTitle>
+                    <AlertDescription className="w-full">
+                      <div className="break-words">
+                        Changes are staged but cannot be applied. Set{' '}
+                        <code className="text-xs bg-muted px-1 py-0.5 rounded break-all">
+                          yarn.scheduler.capacity.ui.readonly=false
+                        </code>{' '}
+                        in YARN to enable editing.
+                      </div>
+                    </AlertDescription>
+                  </Alert>
+                )}
+
                 {Object.entries(changesByQueue).map(([queuePath, changes]) => (
                   <QueueChangeGroup
                     key={queuePath}
@@ -181,11 +198,13 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                 <Button
                   variant="default"
                   onClick={handleApplyChanges}
-                  disabled={isApplying || validationSummary.errorCount > 0}
+                  disabled={isApplying || validationSummary.errorCount > 0 || isReadOnly}
                   title={
-                    validationSummary.errorCount > 0
-                      ? 'Fix validation errors before applying changes'
-                      : undefined
+                    isReadOnly
+                      ? 'Cannot apply changes in read-only mode'
+                      : validationSummary.errorCount > 0
+                        ? 'Fix validation errors before applying changes'
+                        : undefined
                   }
                 >
                   {isApplying ? (

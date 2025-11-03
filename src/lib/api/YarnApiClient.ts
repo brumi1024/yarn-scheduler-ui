@@ -24,6 +24,7 @@ export class YarnApiClient {
   private readonly timeout: number;
   private readonly userName: string;
   private securityMode: 'simple' | 'kerberos' | null = null;
+  private isReadOnly: boolean = false;
   private initPromise: Promise<void> | null = null;
 
   constructor(baseUrl: string, config: ApiClientConfig = {}) {
@@ -43,19 +44,13 @@ export class YarnApiClient {
     const shouldDetectSecurityMode = config.detectSecurityMode ?? !isTestEnv;
 
     if (shouldDetectSecurityMode) {
-      // Initialize security mode detection
-      this.initPromise = this.detectSecurityMode()
-        .catch((error) => {
-          console.error('Failed to detect YARN security mode:', error);
-          // Don't rethrow - allow requests to proceed without auth detection
-        })
-        .finally(() => {
-          // Clear the promise after detection completes
-          this.initPromise = null;
-        });
+      // Defer detection until first request to ensure MSW is ready
+      // This is initialized lazily in the request() method
+      this.initPromise = null;
     } else {
       // Default to simple mode when skipping detection (e.g., unit tests)
       this.securityMode = 'simple';
+      this.isReadOnly = false;
       this.initPromise = null;
     }
   }
@@ -231,6 +226,29 @@ export class YarnApiClient {
   }
 
   /**
+   * Detect read-only mode by checking yarn.scheduler.capacity.ui.readonly
+   */
+  private async detectReadOnlyMode(): Promise<void> {
+    try {
+      const readOnlyValue = await this.getConfiguration('yarn.scheduler.capacity.ui.readonly');
+      // Convert string to boolean - treat 'true' (case-insensitive) as true, everything else as false
+      this.isReadOnly = readOnlyValue.toLowerCase() === 'true';
+    } catch (error) {
+      // If the configuration is not found or fails to fetch, default to writable (false)
+      this.isReadOnly = false;
+      const message = error instanceof Error ? error.message : String(error);
+      console.warn('Read-only mode config not found, defaulting to writable:', message);
+    }
+  }
+
+  /**
+   * Get the current read-only mode status
+   */
+  getIsReadOnly(): boolean {
+    return this.isReadOnly;
+  }
+
+  /**
    * Simple request method - React Query handles retries and error states
    */
   private async request<T = void>(
@@ -238,6 +256,25 @@ export class YarnApiClient {
     path: string,
     options: RequestInit & { skipAuth?: boolean; absoluteUrl?: boolean; expectJson?: boolean } = {},
   ): Promise<T> {
+    // Lazy initialization: Start detection on first request (ensures MSW is ready)
+    if (this.initPromise === null && this.securityMode === null) {
+      this.initPromise = Promise.all([
+        this.detectSecurityMode().catch((error) => {
+          console.error('Failed to detect YARN security mode:', error);
+          // Don't rethrow - allow requests to proceed without auth detection
+        }),
+        this.detectReadOnlyMode().catch((error) => {
+          console.error('Failed to detect YARN read-only mode:', error);
+          // Don't rethrow - default to writable mode
+        }),
+      ])
+        .then(() => {})
+        .finally(() => {
+          // Clear the promise after detection completes
+          this.initPromise = null;
+        });
+    }
+
     // Wait for security mode detection to complete (if still in progress)
     if (this.initPromise) {
       await this.initPromise;

@@ -17,6 +17,7 @@ import {
   ERROR_CODES,
   isNetworkError,
 } from '~/lib/errors';
+import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
 export const createNodeLabelsSlice: StateCreator<
@@ -37,6 +38,20 @@ export const createNodeLabelsSlice: StateCreator<
   },
 
   addNodeLabel: async (name, exclusivity) => {
+    // Block adding node labels in read-only mode
+    if (get().isReadOnly) {
+      const errorMessage =
+        'Cannot add node labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+
+      set((state) => {
+        state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
+        state.isLoading = false;
+      });
+
+      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+    }
+
     set((state) => {
       state.isLoading = true;
       if (state.errorContext === 'nodeLabels') {
@@ -77,6 +92,40 @@ export const createNodeLabelsSlice: StateCreator<
   },
 
   removeNodeLabel: async (name) => {
+    // Block removing node labels in read-only mode
+    if (get().isReadOnly) {
+      const errorMessage =
+        'Cannot remove node labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+
+      set((state) => {
+        state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
+        state.isLoading = false;
+      });
+
+      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+    }
+
+    // Validate that the label can be safely removed
+    const nodeToLabels = get().nodeToLabels;
+    const nodeAssignments = new Map<string, string[]>();
+    nodeToLabels.forEach((mapping) => {
+      nodeAssignments.set(mapping.nodeId, mapping.nodeLabels);
+    });
+
+    const validation = validateLabelRemoval(name, nodeAssignments);
+    if (!validation.valid) {
+      const errorMessage = validation.error || `Cannot remove label "${name}"`;
+
+      set((state) => {
+        state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
+        state.isLoading = false;
+      });
+
+      throw createStoreError(ERROR_CODES.REMOVE_NODE_LABEL_FAILED, errorMessage);
+    }
+
     set((state) => {
       state.isLoading = true;
       if (state.errorContext === 'nodeLabels') {
@@ -127,6 +176,20 @@ export const createNodeLabelsSlice: StateCreator<
   },
 
   assignNodeToLabel: async (nodeId, labelName) => {
+    // Block assigning nodes to labels in read-only mode
+    if (get().isReadOnly) {
+      const errorMessage =
+        'Cannot assign nodes to labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+
+      set((state) => {
+        state.error = errorMessage;
+        state.errorContext = 'nodeLabels';
+        state.isLoading = false;
+      });
+
+      throw createStoreError(ERROR_CODES.MUTATION_BLOCKED, errorMessage);
+    }
+
     set((state) => {
       state.isLoading = true;
       if (state.errorContext === 'nodeLabels') {

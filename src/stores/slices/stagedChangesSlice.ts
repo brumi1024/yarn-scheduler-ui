@@ -337,6 +337,14 @@ export const createStagedChangesSlice: StateCreator<
     const changes = get().stagedChanges;
     if (changes.length === 0) return;
 
+    // Block applying changes in read-only mode
+    if (get().isReadOnly) {
+      throw createStoreError(
+        ERROR_CODES.MUTATION_BLOCKED,
+        'Cannot apply changes in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.',
+      );
+    }
+
     set((state) => {
       state.isLoading = true;
       if (state.errorContext === 'mutation') {

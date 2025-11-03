@@ -19,6 +19,7 @@ const createMockApiClient = () => ({
   getNodeToLabels: vi.fn(),
   getSchedulerConfVersion: vi.fn(),
   updateSchedulerConf: vi.fn(),
+  getIsReadOnly: vi.fn(() => false),
 });
 
 // Helper to create store with mock API client

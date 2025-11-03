@@ -26,6 +26,7 @@ export interface SchedulerDataSlice {
   isLoading: boolean;
   error: string | null;
   errorContext: 'load' | 'mutation' | 'nodeLabels' | null;
+  isReadOnly: boolean;
 
   loadInitialData: () => Promise<void>;
   refreshSchedulerData: () => Promise<void>;
