@@ -40,5 +40,23 @@ export function extractPlacementRulesFromConfig(
     };
   }
 
+  // Check if JSON rules exist even though format is not 'json'
+  // This handles the edge case where format='legacy' but no queue-mappings exist and JSON rules do exist
+  const jsonStr = configData.get(SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY);
+  if (jsonStr) {
+    try {
+      const parsed = JSON.parse(jsonStr);
+      if (parsed.rules && parsed.rules.length > 0) {
+        return {
+          format: 'json',
+          rules: parsed.rules,
+          inconsistentFormat: true, // Flag that format property doesn't match the actual rules format
+        };
+      }
+    } catch {
+      // If JSON parsing fails, continue to return 'none'
+    }
+  }
+
   return { format: 'none' };
 }

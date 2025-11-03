@@ -134,4 +134,27 @@ describe('extractPlacementRulesFromConfig', () => {
     expect(result.rules).toHaveLength(1);
     expect(result.legacyRules).toBeUndefined();
   });
+
+  it('should auto-detect JSON rules when format is legacy but no queue-mappings exist', () => {
+    const configData = new Map([
+      ['yarn.scheduler.capacity.mapping-rule-format', 'legacy'],
+      [
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        JSON.stringify({
+          rules: [
+            { type: 'user', matches: '*', policy: 'user', parentQueue: 'root.users' },
+            { type: 'group', matches: 'dev', policy: 'specified', value: 'root.dev' },
+          ],
+        }),
+      ],
+      // Note: no queue-mappings property
+    ]);
+
+    const result = extractPlacementRulesFromConfig(configData);
+
+    expect(result.format).toBe('json');
+    expect(result.rules).toHaveLength(2);
+    expect(result.inconsistentFormat).toBe(true);
+    expect(result.legacyRules).toBeUndefined();
+  });
 });

@@ -624,4 +624,168 @@ describe('placementRulesSlice', () => {
       expect(store.getState().rulesError).toBeNull();
     });
   });
+
+  describe('auto-staging format when rules are changed', () => {
+    beforeEach(() => {
+      // Mock getMergedConfigData to return the input config as-is by default
+      vi.mocked(getMergedConfigData).mockImplementation((config) => config);
+    });
+
+    it('should auto-stage format to json when updating a rule with legacy format but no legacy rules', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with legacy format but no legacy rules
+      store.setState({
+        rules: [...mockPlacementRules],
+        configData: new Map([['yarn.scheduler.capacity.mapping-rule-format', 'legacy']]),
+        legacyRules: null, // No legacy rules exist
+      });
+
+      store.getState().updateRule(0, { matches: 'updated-user' });
+
+      // Should have staged the format change
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
+      // Should also stage the rule update
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        expect.any(Object),
+      );
+    });
+
+    it('should auto-stage format to json when deleting a rule with legacy format but no legacy rules', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with legacy format but no legacy rules
+      store.setState({
+        rules: [...mockPlacementRules],
+        configData: new Map([['yarn.scheduler.capacity.mapping-rule-format', 'legacy']]),
+        legacyRules: null, // No legacy rules exist
+      });
+
+      store.getState().deleteRule(0);
+
+      // Should have staged the format change
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
+      // Should also stage the rule deletion
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        expect.any(Object),
+      );
+    });
+
+    it('should auto-stage format to json when reordering rules with legacy format but no legacy rules', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with legacy format but no legacy rules
+      store.setState({
+        rules: [...mockPlacementRules],
+        configData: new Map([['yarn.scheduler.capacity.mapping-rule-format', 'legacy']]),
+        legacyRules: null, // No legacy rules exist
+      });
+
+      store.getState().reorderRules(0, 2);
+
+      // Should have staged the format change
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
+      // Should also stage the reordered rules
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        expect.any(Object),
+      );
+    });
+
+    it('should auto-stage format to json when format is missing and adding a rule', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with no format specified
+      store.setState({
+        rules: [],
+        configData: new Map(),
+        legacyRules: null,
+      });
+
+      const newRule: PlacementRule = {
+        type: 'user',
+        matches: 'test',
+        policy: 'primaryGroup',
+        fallbackResult: 'skip',
+      };
+
+      store.getState().addRule(newRule);
+
+      // Should have staged the format change
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+    });
+
+    it('should NOT auto-stage format when actual legacy rules exist', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with legacy format AND legacy rules present
+      store.setState({
+        rules: [...mockPlacementRules],
+        configData: new Map([['yarn.scheduler.capacity.mapping-rule-format', 'legacy']]),
+        legacyRules: 'u:alice:root.users.alice', // Legacy rules exist
+      });
+
+      store.getState().updateRule(0, { matches: 'updated-user' });
+
+      // Should NOT have staged the format change (only the rule update)
+      expect(stageGlobalChangeSpy).not.toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
+      // Should still stage the rule update
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        expect.any(Object),
+      );
+    });
+
+    it('should NOT auto-stage format when format is already json', () => {
+      const store = createTestStore();
+      const stageGlobalChangeSpy = vi.spyOn(store.getState(), 'stageGlobalChange');
+
+      // Set up state with json format
+      store.setState({
+        rules: [...mockPlacementRules],
+        configData: new Map([['yarn.scheduler.capacity.mapping-rule-format', 'json']]),
+        legacyRules: null,
+      });
+
+      store.getState().updateRule(0, { matches: 'updated-user' });
+
+      // Should NOT have staged the format change
+      expect(stageGlobalChangeSpy).not.toHaveBeenCalledWith(
+        'yarn.scheduler.capacity.mapping-rule-format',
+        'json',
+      );
+
+      // Should only stage the rule update
+      expect(stageGlobalChangeSpy).toHaveBeenCalledWith(
+        SPECIAL_VALUES.MAPPING_RULE_JSON_PROPERTY,
+        expect.any(Object),
+      );
+    });
+  });
 });
