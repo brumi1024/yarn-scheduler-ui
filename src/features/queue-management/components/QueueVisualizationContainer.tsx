@@ -11,7 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
-import { AlertCircle, Tag } from 'lucide-react';
+import { AlertCircle, Tag, Search, X } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { useQueueTreeData, type QueueCardData } from '../hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
@@ -35,7 +35,8 @@ const edgeTypes = {
 };
 
 const FlowInner: React.FC = () => {
-  const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter } = useSchedulerStore();
+  const { selectQueue, stagedChanges, searchQuery, selectedNodeLabelFilter, getSearchResults } =
+    useSchedulerStore();
   const { theme } = useTheme();
 
   const { nodes, edges, isLoading, loadError, applyError } = useQueueTreeData();
@@ -58,6 +59,9 @@ const FlowInner: React.FC = () => {
   });
 
   const validationSummary = { errorCount, warningCount, affectedQueueCount: affectedQueues.size };
+
+  const searchResults = getSearchResults();
+  const hasSearchFilter = Boolean(searchQuery && searchResults.hasResults && nodes.length > 0);
 
   const colorMode =
     theme === 'system'
@@ -150,6 +154,43 @@ const FlowInner: React.FC = () => {
                 Filtering by partition: <strong>{selectedNodeLabelFilter}</strong>. Queues without
                 access are shown in gray.
               </span>
+            </AlertDescription>
+          </Alert>
+        </div>
+      )}
+
+      {/* Search filter information */}
+      {hasSearchFilter && (
+        <div
+          className={`absolute left-4 z-10 ${
+            hasAlert
+              ? selectedNodeLabelFilter
+                ? 'top-40'
+                : 'top-24'
+              : selectedNodeLabelFilter
+                ? 'top-20'
+                : 'top-4'
+          }`}
+        >
+          <Alert className="py-2 px-4 pr-2">
+            <Search className="h-4 w-4" />
+            <AlertDescription className="flex items-center gap-2">
+              <span>
+                Filtered view - showing <strong>{searchResults.count}</strong> match
+                {searchResults.count !== 1 ? 'es' : ''} for{' '}
+                <strong>&quot;{searchQuery}&quot;</strong>
+              </span>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="h-6 w-6 p-0 ml-auto"
+                onClick={() => {
+                  useSchedulerStore.getState().setSearchQuery('');
+                }}
+                aria-label="Clear search filter"
+              >
+                <X className="h-4 w-4" />
+              </Button>
             </AlertDescription>
           </Alert>
         </div>

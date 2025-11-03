@@ -187,6 +187,7 @@ export const GlobalSettings: React.FC = () => {
                               isStaged={isStaged}
                               onChange={(newValue) => handlePropertyChange(property.name, newValue)}
                               disabled={!isEnabled}
+                              searchQuery={searchQuery}
                             />
                           ) : (
                             <PropertyInput

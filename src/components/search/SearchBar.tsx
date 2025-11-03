@@ -2,7 +2,7 @@
  * Search bar component with context-aware search functionality
  */
 
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useRef, useState, useMemo } from 'react';
 import { Search, X } from 'lucide-react';
 import { Input } from '~/components/ui/input';
 import { Button } from '~/components/ui/button';
@@ -10,6 +10,7 @@ import { Badge } from '~/components/ui/badge';
 import { cn } from '~/utils/cn';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { useDebounce } from '~/hooks/useDebounce';
+import { calculateSearchResults } from '~/utils/searchUtils';
 
 interface SearchBarProps {
   placeholder?: string;
@@ -24,7 +25,9 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
     setSearchQuery,
     clearSearch,
     setSearchFocused,
-    getSearchResults,
+    getFilteredQueues,
+    getFilteredNodes,
+    getFilteredSettings,
   } = useSchedulerStore();
 
   const inputRef = useRef<HTMLInputElement>(null);
@@ -76,7 +79,18 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
     inputRef.current?.focus();
   };
 
-  const results = getSearchResults();
+  // Calculate search results directly, memoized to avoid unnecessary recalculations
+  const results = useMemo(
+    () =>
+      calculateSearchResults({
+        searchQuery,
+        searchContext,
+        filteredQueues: getFilteredQueues(),
+        filteredNodes: getFilteredNodes(),
+        filteredSettings: getFilteredSettings(),
+      }),
+    [searchQuery, searchContext, getFilteredQueues, getFilteredNodes, getFilteredSettings],
+  );
 
   let contextLabel = 'All';
   if (searchContext === 'queues') contextLabel = 'Queues';
