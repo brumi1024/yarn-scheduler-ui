@@ -35,7 +35,7 @@ export interface PlacementRulesSlice {
 const MAPPING_RULE_FORMAT_WARNING_MISSING =
   'Placement rule format is not set. Adding a rule will automatically stage Mapping Rule Format: JSON setting.';
 const MAPPING_RULE_FORMAT_WARNING_LEGACY =
-  'Placement rule format is set to "legacy". Update it to "json" so newly staged rules are applied when you commit the configuration.';
+  'Placement rule format is set to "legacy". Adding a rule will automatically stage Mapping Rule Format: JSON setting, or you can manually update it.';
 
 function getFormatWarningMessage(formatValue?: string | null): string | null {
   if (!formatValue || formatValue.trim() === '') {
@@ -188,13 +188,19 @@ export const createPlacementRulesSlice: StateCreator<
 
   // Add new rule
   addRule: (rule) => {
-    const { rules, stageGlobalChange, configData, stagedChanges } = get();
+    const { rules, stageGlobalChange, configData, stagedChanges, legacyRules } = get();
 
     const mergedConfig = getMergedConfigData(configData, stagedChanges);
     const formatValue = mergedConfig.get(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY);
     const normalizedFormat = formatValue?.trim().toLowerCase() ?? '';
 
     if (!normalizedFormat) {
+      stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
+      set((state) => {
+        state.formatWarning = null;
+      });
+    } else if (normalizedFormat === 'legacy' && !legacyRules) {
+      // Format is legacy but no actual legacy rules exist - auto-stage to json
       stageGlobalChange(SPECIAL_VALUES.MAPPING_RULE_FORMAT_PROPERTY, 'json');
       set((state) => {
         state.formatWarning = null;

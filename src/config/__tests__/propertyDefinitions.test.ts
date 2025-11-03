@@ -179,6 +179,44 @@ describe('propertyDefinitions', () => {
       expect(templateSupported.some((p) => p.name === 'capacity')).toBe(true);
     });
 
+    it('disables state property for root queue', () => {
+      const stateProperty = queuePropertyDefinitions.find((p) => p.name === 'state');
+      expect(stateProperty).toBeDefined();
+      if (!stateProperty) {
+        return;
+      }
+
+      expect(Array.isArray(stateProperty.enableWhen)).toBe(true);
+      const enableCondition = stateProperty.enableWhen?.[0];
+      expect(enableCondition).toBeInstanceOf(Function);
+
+      if (enableCondition) {
+        // Test root queue - should be disabled
+        const rootOptions = createConditionOptions({
+          property: stateProperty,
+          values: { state: 'RUNNING' },
+        });
+        rootOptions.queuePath = 'root';
+        expect(enableCondition(rootOptions)).toBe(false);
+
+        // Test non-root queue - should be enabled
+        const nonRootOptions = createConditionOptions({
+          property: stateProperty,
+          values: { state: 'RUNNING' },
+        });
+        nonRootOptions.queuePath = 'root.default';
+        expect(enableCondition(nonRootOptions)).toBe(true);
+
+        // Test nested non-root queue - should be enabled
+        const nestedOptions = createConditionOptions({
+          property: stateProperty,
+          values: { state: 'STOPPED' },
+        });
+        nestedOptions.queuePath = 'root.production.critical';
+        expect(enableCondition(nestedOptions)).toBe(true);
+      }
+    });
+
     it('enables flexible auto-creation based on root queue children capacity mode', () => {
       const flexibleAutoCreate = queuePropertyDefinitions.find(
         (p) => p.name === 'auto-queue-creation-v2.enabled',

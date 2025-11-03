@@ -545,4 +545,62 @@ describe('QueueCardNode', () => {
 
     expect(mockSelectQueue).toHaveBeenCalledWith(null);
   });
+
+  describe('Root queue state restrictions', () => {
+    it('should disable Stop/Start context menu item for root queue', async () => {
+      const user = userEvent.setup();
+      const rootNodeData: QueueCardData = {
+        ...defaultNodeData,
+        queuePath: 'root',
+        queueName: 'root',
+        queueType: 'parent',
+        isLeaf: false,
+      };
+
+      renderWithProviders(<QueueCardNode {...createNodeProps(rootNodeData)} />);
+
+      // Find by data-slot="card-title" to get the queue name, then get the context menu trigger
+      const rootElements = screen.getAllByText('root');
+      const trigger = rootElements[0].closest('[data-slot="context-menu-trigger"]');
+      if (!trigger) throw new Error('Context menu trigger not found');
+
+      await user.pointer({ keys: '[MouseRight]', target: trigger });
+
+      const stopQueueItem = await screen.findByText('Stop Queue');
+      expect(stopQueueItem).toHaveAttribute('data-disabled');
+    });
+
+    it('should enable Stop/Start context menu item for non-root queues', async () => {
+      const user = userEvent.setup();
+
+      renderWithProviders(<QueueCardNode {...createNodeProps(defaultNodeData)} />);
+
+      const trigger = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+      if (!trigger) throw new Error('Context menu trigger not found');
+
+      await user.pointer({ keys: '[MouseRight]', target: trigger });
+
+      const stopQueueItem = await screen.findByText('Stop Queue');
+      expect(stopQueueItem).not.toHaveAttribute('data-disabled');
+    });
+
+    it('should show Start Queue menu item when queue is stopped', async () => {
+      const user = userEvent.setup();
+      const stoppedQueueData: QueueCardData = {
+        ...defaultNodeData,
+        state: 'STOPPED',
+      };
+
+      renderWithProviders(<QueueCardNode {...createNodeProps(stoppedQueueData)} />);
+
+      const trigger = screen.getByText('default').closest('[data-slot="context-menu-trigger"]');
+      if (!trigger) throw new Error('Context menu trigger not found');
+
+      await user.pointer({ keys: '[MouseRight]', target: trigger });
+
+      const startQueueItem = await screen.findByText('Start Queue');
+      expect(startQueueItem).toBeInTheDocument();
+      expect(startQueueItem).not.toHaveAttribute('data-disabled');
+    });
+  });
 });
