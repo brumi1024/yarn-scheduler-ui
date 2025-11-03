@@ -99,6 +99,7 @@ const staticHandlers: HttpHandler[] = [
     }
 
     // Handle read-only mode query
+    // TODO: change this to the actual config value
     if (configName === 'yarn.scheduler.capacity.ui.readonly') {
       // Default to false (writable mode) for development
       // Set VITE_READONLY_MODE=true to test read-only mode
