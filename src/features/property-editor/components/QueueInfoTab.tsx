@@ -328,9 +328,9 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
           <AccordionContent className="px-4 pb-3 space-y-1">
             {queue.queueAcls && queue.queueAcls.queueAcl && queue.queueAcls.queueAcl.length > 0 && (
               <>
-                {queue.queueAcls.queueAcl.map((acl, index) => (
+                {queue.queueAcls.queueAcl.map((acl) => (
                   <MetricRow
-                    key={index}
+                    key={acl.accessType}
                     label={acl.accessType}
                     value={
                       <span className="font-mono text-xs">{acl.accessControlList || 'N/A'}</span>
