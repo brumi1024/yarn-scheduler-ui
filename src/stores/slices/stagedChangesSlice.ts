@@ -580,6 +580,10 @@ export const createStagedChangesSlice: StateCreator<
     return get().stagedChanges.filter((c) => c.queuePath === queuePath);
   },
 
+  hasPendingDeletion: (queuePath) => {
+    return get().stagedChanges.some((c) => c.queuePath === queuePath && c.type === 'remove');
+  },
+
   getStagedChangeById: (changeId) => {
     return get().stagedChanges.find((c) => c.id === changeId);
   },

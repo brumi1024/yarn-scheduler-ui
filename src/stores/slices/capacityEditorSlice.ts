@@ -57,8 +57,10 @@ interface CapacityEditorDialogState {
   originIsNew: boolean;
   selectedNodeLabel: string | null;
   labelOptions: Array<{ value: string; label: string }>;
+  labelsWithoutAccess: Set<string>;
   drafts: Record<string, CapacityRowDraft>;
   draftOrder: string[];
+  draftCache: Record<string, { drafts: Record<string, CapacityRowDraft>; draftOrder: string[] }>;
   isSaving: boolean;
   saveError: string | null;
   validationIssues: ValidationIssue[];
@@ -81,8 +83,10 @@ const createEmptyDialogState = (): CapacityEditorDialogState => ({
       label: 'Default partition',
     },
   ],
+  labelsWithoutAccess: new Set<string>(),
   drafts: {},
   draftOrder: [],
+  draftCache: {},
   isSaving: false,
   saveError: null,
   validationIssues: [],
@@ -176,10 +180,12 @@ export const createCapacityEditorSlice: StateCreator<
       selectedNodeLabel,
     });
 
-    const labelOptions = normalizeLabelOptions(
-      buildCapacityEditorLabelOptions(store, parentQueuePath),
+    const { options, labelsWithoutAccess } = buildCapacityEditorLabelOptions(
+      store,
+      originQueuePath,
       selectedNodeLabel,
     );
+    const labelOptions = normalizeLabelOptions(options, selectedNodeLabel);
 
     set((state) => {
       const editorState = state.capacityEditor;
@@ -194,6 +200,7 @@ export const createCapacityEditorSlice: StateCreator<
       editorState.originIsNew = originIsNew;
       editorState.selectedNodeLabel = selectedNodeLabel;
       editorState.labelOptions = labelOptions;
+      editorState.labelsWithoutAccess = labelsWithoutAccess;
       applyDraftsToState(editorState, drafts);
     });
   },
@@ -212,6 +219,10 @@ export const createCapacityEditorSlice: StateCreator<
       originInitialCapacity,
       originInitialMaxCapacity,
       originIsNew,
+      selectedNodeLabel: currentLabel,
+      drafts: currentDrafts,
+      draftOrder: currentDraftOrder,
+      draftCache,
     } = store.capacityEditor;
 
     if (!parentQueuePath || !originQueuePath || !originQueueName) {
@@ -221,26 +232,51 @@ export const createCapacityEditorSlice: StateCreator<
       return;
     }
 
-    const drafts = buildCapacityEditorDrafts({
-      store,
-      parentQueuePath,
-      originQueuePath,
-      originQueueName,
-      originInitialCapacity,
-      originInitialMaxCapacity,
-      originIsNew,
-      selectedNodeLabel: label,
-    });
+    // Save current drafts to cache before switching labels
+    const cacheKey = currentLabel ?? DEFAULT_PARTITION_VALUE;
+    const updatedCache = {
+      ...draftCache,
+      [cacheKey]: {
+        drafts: { ...currentDrafts },
+        draftOrder: [...currentDraftOrder],
+      },
+    };
 
-    const labelOptions = normalizeLabelOptions(
-      buildCapacityEditorLabelOptions(store, parentQueuePath),
+    // Check if we have cached drafts for the new label
+    const newCacheKey = label ?? DEFAULT_PARTITION_VALUE;
+    const cachedData = updatedCache[newCacheKey];
+
+    let drafts: CapacityRowDraft[];
+    if (cachedData) {
+      // Restore from cache
+      drafts = cachedData.draftOrder.map((queuePath) => cachedData.drafts[queuePath]);
+    } else {
+      // Build new drafts from scratch
+      drafts = buildCapacityEditorDrafts({
+        store,
+        parentQueuePath,
+        originQueuePath,
+        originQueueName,
+        originInitialCapacity,
+        originInitialMaxCapacity,
+        originIsNew,
+        selectedNodeLabel: label,
+      });
+    }
+
+    const { options, labelsWithoutAccess } = buildCapacityEditorLabelOptions(
+      store,
+      originQueuePath,
       label,
     );
+    const labelOptions = normalizeLabelOptions(options, label);
 
     set((state) => {
       const editorState = state.capacityEditor;
       editorState.selectedNodeLabel = label;
       editorState.labelOptions = labelOptions;
+      editorState.labelsWithoutAccess = labelsWithoutAccess;
+      editorState.draftCache = updatedCache;
       applyDraftsToState(editorState, drafts);
     });
   },
@@ -301,6 +337,7 @@ export const createCapacityEditorSlice: StateCreator<
       selectedNodeLabel,
       drafts,
       draftOrder,
+      draftCache,
     } = storeSnapshot.capacityEditor;
 
     if (!parentQueuePath || !originQueuePath || !originQueueName) {
@@ -315,51 +352,65 @@ export const createCapacityEditorSlice: StateCreator<
       }
     });
 
-    const capacityProperty = getPropertyNameForLabel(selectedNodeLabel, 'capacity');
-    const maxCapacityProperty = getPropertyNameForLabel(selectedNodeLabel, 'maximum-capacity');
-
     const normalizeValue = (value: string) => value.trim();
 
     const changesByQueue = new Map<string, Record<string, string>>();
 
-    draftOrder.forEach((queuePath) => {
-      const draft = drafts[queuePath];
-      if (!draft) {
-        return;
-      }
+    // Build a complete cache including the current drafts
+    const currentCacheKey = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
+    const completeDraftCache = {
+      ...draftCache,
+      [currentCacheKey]: {
+        drafts: { ...drafts },
+        draftOrder: [...draftOrder],
+      },
+    };
 
-      const capacityString =
-        draft.mode === 'vector'
-          ? convertVectorDraftToString(draft.vectorCapacity)
-          : draft.capacityValue;
-      const maxCapacityString =
-        draft.mode === 'vector'
-          ? convertVectorDraftToString(draft.vectorMaxCapacity)
-          : draft.maxCapacityValue;
+    // Process all cached labels (including the currently selected one)
+    Object.entries(completeDraftCache).forEach(([cacheKey, cachedData]) => {
+      const label = cacheKey === DEFAULT_PARTITION_VALUE ? null : cacheKey;
+      const capacityProperty = getPropertyNameForLabel(label, 'capacity');
+      const maxCapacityProperty = getPropertyNameForLabel(label, 'maximum-capacity');
 
-      const currentCapacity = normalizeValue(capacityString);
-      const currentMaxCapacity = normalizeValue(maxCapacityString);
+      cachedData.draftOrder.forEach((queuePath) => {
+        const draft = cachedData.drafts[queuePath];
+        if (!draft) {
+          return;
+        }
 
-      const existingCapacity = normalizeValue(
-        storeSnapshot.getQueuePropertyValue(queuePath, capacityProperty).value,
-      );
-      const existingMaxCapacity = normalizeValue(
-        storeSnapshot.getQueuePropertyValue(queuePath, maxCapacityProperty).value,
-      );
+        const capacityString =
+          draft.mode === 'vector'
+            ? convertVectorDraftToString(draft.vectorCapacity)
+            : draft.capacityValue;
+        const maxCapacityString =
+          draft.mode === 'vector'
+            ? convertVectorDraftToString(draft.vectorMaxCapacity)
+            : draft.maxCapacityValue;
 
-      const propertyChanges: Record<string, string> = {};
+        const currentCapacity = normalizeValue(capacityString);
+        const currentMaxCapacity = normalizeValue(maxCapacityString);
 
-      if (currentCapacity !== existingCapacity) {
-        propertyChanges[capacityProperty] = currentCapacity;
-      }
+        const existingCapacity = normalizeValue(
+          storeSnapshot.getQueuePropertyValue(queuePath, capacityProperty).value,
+        );
+        const existingMaxCapacity = normalizeValue(
+          storeSnapshot.getQueuePropertyValue(queuePath, maxCapacityProperty).value,
+        );
 
-      if (currentMaxCapacity !== existingMaxCapacity) {
-        propertyChanges[maxCapacityProperty] = currentMaxCapacity;
-      }
+        const existingChanges = changesByQueue.get(queuePath) ?? {};
 
-      if (Object.keys(propertyChanges).length > 0) {
-        changesByQueue.set(queuePath, propertyChanges);
-      }
+        if (currentCapacity !== existingCapacity) {
+          existingChanges[capacityProperty] = currentCapacity;
+        }
+
+        if (currentMaxCapacity !== existingMaxCapacity) {
+          existingChanges[maxCapacityProperty] = currentMaxCapacity;
+        }
+
+        if (Object.keys(existingChanges).length > 0) {
+          changesByQueue.set(queuePath, existingChanges);
+        }
+      });
     });
 
     if (changesByQueue.size === 0) {
@@ -458,6 +509,7 @@ export const createCapacityEditorSlice: StateCreator<
       editorState.isSaving = false;
       editorState.saveError = null;
       editorState.validationIssues = aggregatedIssues;
+      editorState.draftCache = {}; // Clear cache after successful save
       if (refreshedOrigin) {
         editorState.originInitialCapacity = refreshedOrigin.capacityValue;
         editorState.originInitialMaxCapacity = refreshedOrigin.maxCapacityValue;

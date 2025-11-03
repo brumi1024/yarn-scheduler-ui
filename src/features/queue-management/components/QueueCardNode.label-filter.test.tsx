@@ -77,6 +77,9 @@ describe('QueueCardNode - Node Label Filtering', () => {
       toggleComparisonQueue: vi.fn(),
       selectedNodeLabelFilter: '',
       getQueueLabelCapacity: mockGetQueueLabelCapacity,
+      hasPendingDeletion: vi.fn().mockReturnValue(false),
+      clearQueueChanges: vi.fn(),
+      requestTemplateConfigOpen: vi.fn(),
     } as any);
   });
 
@@ -133,6 +136,9 @@ describe('QueueCardNode - Node Label Filtering', () => {
         toggleComparisonQueue: vi.fn(),
         selectedNodeLabelFilter: 'gpu',
         getQueueLabelCapacity: mockGetQueueLabelCapacity,
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       } as any);
     });
 
@@ -240,6 +246,9 @@ describe('QueueCardNode - Node Label Filtering', () => {
         toggleComparisonQueue: vi.fn(),
         selectedNodeLabelFilter: 'gpu',
         getQueueLabelCapacity: mockGetQueueLabelCapacity,
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       } as any);
 
       mockGetQueueLabelCapacity.mockReturnValue({

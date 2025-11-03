@@ -343,10 +343,81 @@ export interface LabelOption {
   label: string;
 }
 
+export interface CapacityEditorLabelOptions {
+  options: LabelOption[];
+  labelsWithoutAccess: Set<string>;
+}
+
+/**
+ * Gets all labels that have configured capacities for a specific queue.
+ * Scans configData for any accessible-node-labels.<label>.capacity properties.
+ */
+const getConfiguredLabelsForQueue = (store: SchedulerStore, queuePath: string): Set<string> => {
+  const configured = new Set<string>();
+  const prefix = buildPropertyKey(queuePath, 'accessible-node-labels.');
+
+  store.configData.forEach((_, key) => {
+    if (key.startsWith(prefix)) {
+      const remainder = key.substring(prefix.length);
+      const match = remainder.match(/^([^.]+)\.(capacity|maximum-capacity)$/);
+      if (match && match[1]) {
+        configured.add(match[1]);
+      }
+    }
+  });
+
+  return configured;
+};
+
+/**
+ * Gets the accessible labels for a queue based on its nodeLabels field.
+ * Falls back to parent queue if current queue's nodeLabels is undefined/empty.
+ */
+const getAccessibleLabelsForQueue = (
+  store: SchedulerStore,
+  queuePath: string,
+): { labels: Set<string>; hasWildcard: boolean } => {
+  const queue = store.getQueueByPath(queuePath);
+
+  // Check current queue's nodeLabels
+  if (queue?.nodeLabels && queue.nodeLabels.length > 0) {
+    const hasWildcard = queue.nodeLabels.includes('*');
+    const labels = new Set<string>();
+
+    if (hasWildcard) {
+      // Add all system-wide labels
+      store.nodeLabels.forEach((label) => {
+        if (label.name) {
+          labels.add(label.name);
+        }
+      });
+    } else {
+      // Add specific labels from nodeLabels array
+      queue.nodeLabels.forEach((label) => {
+        if (label && label !== '*') {
+          labels.add(label);
+        }
+      });
+    }
+
+    return { labels, hasWildcard };
+  }
+
+  // Fallback to parent if nodeLabels is undefined or empty
+  const parentPath = getParentPath(queuePath);
+  if (parentPath && parentPath !== queuePath) {
+    return getAccessibleLabelsForQueue(store, parentPath);
+  }
+
+  // No accessible labels found
+  return { labels: new Set<string>(), hasWildcard: false };
+};
+
 export const buildCapacityEditorLabelOptions = (
   store: SchedulerStore,
-  parentQueuePath: string | null,
-): LabelOption[] => {
+  queuePath: string | null,
+  currentlySelectedLabel?: string | null,
+): CapacityEditorLabelOptions => {
   const options: LabelOption[] = [
     {
       value: DEFAULT_PARTITION_VALUE,
@@ -354,48 +425,44 @@ export const buildCapacityEditorLabelOptions = (
     },
   ];
 
-  if (!parentQueuePath) {
-    return options;
+  const labelsWithoutAccess = new Set<string>();
+
+  if (!queuePath) {
+    return { options, labelsWithoutAccess };
   }
 
-  const accessibleResult = store.getQueuePropertyValue(parentQueuePath, 'accessible-node-labels');
-  const accessibleRaw = sanitize(accessibleResult.value);
+  // Get accessible labels based on nodeLabels field
+  const { labels: accessibleLabels } = getAccessibleLabelsForQueue(store, queuePath);
 
-  const labels = new Set<string>();
+  // Get configured labels (those with existing capacity config)
+  const configuredLabels = getConfiguredLabelsForQueue(store, queuePath);
 
-  if (accessibleRaw === '*') {
-    store.nodeLabels.forEach((label) => {
-      if (label.name) {
-        labels.add(label.name);
-      }
-    });
+  // Combine all labels: accessible + configured
+  const allLabels = new Set([...accessibleLabels, ...configuredLabels]);
+
+  // Add currently selected label if not already included
+  if (currentlySelectedLabel && currentlySelectedLabel !== DEFAULT_PARTITION_VALUE) {
+    allLabels.add(currentlySelectedLabel);
   }
 
-  if (accessibleRaw !== '*' && accessibleRaw.length > 0) {
-    accessibleRaw
-      .split(',')
-      .map((name) => name.trim())
-      .filter((name) => name.length > 0)
-      .forEach((name) => labels.add(name));
-  }
-
-  store.stagedChanges.forEach((change) => {
-    if (!change.queuePath) {
-      return;
-    }
-
-    const changeParent = getParentPath(change.queuePath);
-    if (changeParent !== parentQueuePath) {
-      return;
-    }
-
-    const match = change.property.match(/^accessible-node-labels\.([^.]+)\./);
-    if (match && match[1]) {
-      labels.add(match[1]);
+  // Track which labels are configured but not accessible
+  configuredLabels.forEach((label) => {
+    if (!accessibleLabels.has(label)) {
+      labelsWithoutAccess.add(label);
     }
   });
 
-  Array.from(labels)
+  // Track if currently selected label doesn't have access
+  if (
+    currentlySelectedLabel &&
+    currentlySelectedLabel !== DEFAULT_PARTITION_VALUE &&
+    !accessibleLabels.has(currentlySelectedLabel)
+  ) {
+    labelsWithoutAccess.add(currentlySelectedLabel);
+  }
+
+  // Convert to options and sort
+  Array.from(allLabels)
     .sort((a, b) => a.localeCompare(b))
     .forEach((label) => {
       options.push({
@@ -404,5 +471,5 @@ export const buildCapacityEditorLabelOptions = (
       });
     });
 
-  return options;
+  return { options, labelsWithoutAccess };
 };

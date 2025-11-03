@@ -6,47 +6,154 @@ import { buildCapacityEditorLabelOptions, buildCapacityEditorDrafts } from './ca
 
 describe('capacity editor utilities', () => {
   it('includes accessible labels and staged labels when building options', () => {
+    const configData = new Map<string, string>();
     const store = {
       getQueuePropertyValue: () => ({ value: 'gpu,fpga', isStaged: false }),
+      getQueueByPath: (queuePath: string) =>
+        ({
+          queuePath,
+          queueName: queuePath.split('.').pop() || queuePath,
+          nodeLabels: ['gpu', 'fpga'],
+        }) as unknown as QueueInfo,
       nodeLabels: [
         { name: 'gpu', exclusivity: false },
         { name: 'fpga', exclusivity: false },
       ],
       stagedChanges: [],
+      configData,
     } as unknown as SchedulerStore;
 
-    const options = buildCapacityEditorLabelOptions(store, 'root.parent');
-    expect(options).toEqual([
+    const result = buildCapacityEditorLabelOptions(store, 'root.parent', null);
+    expect(result.options).toEqual([
       { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
       { value: 'fpga', label: 'fpga' },
       { value: 'gpu', label: 'gpu' },
     ]);
+    expect(result.labelsWithoutAccess.size).toBe(0);
   });
 
-  it('adds staged labels when parent has empty accessible-node-labels', () => {
-    const stagedChanges: StagedChange[] = [
-      {
-        id: 'change-1',
-        type: 'update',
-        queuePath: 'root.parent.child',
-        property: 'accessible-node-labels.ssd.capacity',
-        oldValue: undefined,
-        newValue: '20',
-        timestamp: Date.now(),
-      },
-    ];
+  it('adds configured labels even when queue has no access to them', () => {
+    const configData = new Map<string, string>([
+      ['yarn.scheduler.capacity.root.parent.accessible-node-labels.ssd.capacity', '20'],
+    ]);
 
     const store = {
       getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+      getQueueByPath: (queuePath: string) =>
+        ({
+          queuePath,
+          queueName: queuePath.split('.').pop() || queuePath,
+          nodeLabels: [], // Queue has no access to any labels
+        }) as unknown as QueueInfo,
       nodeLabels: [],
-      stagedChanges,
+      stagedChanges: [],
+      configData,
     } as unknown as SchedulerStore;
 
-    const options = buildCapacityEditorLabelOptions(store, 'root.parent');
-    expect(options).toEqual([
+    const result = buildCapacityEditorLabelOptions(store, 'root.parent', null);
+    expect(result.options).toEqual([
       { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
       { value: 'ssd', label: 'ssd' },
     ]);
+    // ssd should be marked as without access
+    expect(result.labelsWithoutAccess.has('ssd')).toBe(true);
+  });
+
+  it('shows all system labels when queue has wildcard access', () => {
+    const configData = new Map<string, string>();
+    const store = {
+      getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+      getQueueByPath: (queuePath: string) =>
+        ({
+          queuePath,
+          queueName: queuePath.split('.').pop() || queuePath,
+          nodeLabels: ['*'], // Wildcard means access to all labels
+        }) as unknown as QueueInfo,
+      nodeLabels: [
+        { name: 'gpu', exclusivity: false },
+        { name: 'fpga', exclusivity: false },
+        { name: 'ssd', exclusivity: false },
+      ],
+      stagedChanges: [],
+      configData,
+    } as unknown as SchedulerStore;
+
+    const result = buildCapacityEditorLabelOptions(store, 'root.parent', null);
+    expect(result.options).toEqual([
+      { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
+      { value: 'fpga', label: 'fpga' },
+      { value: 'gpu', label: 'gpu' },
+      { value: 'ssd', label: 'ssd' },
+    ]);
+    expect(result.labelsWithoutAccess.size).toBe(0);
+  });
+
+  it('includes currently selected label even if not accessible', () => {
+    const configData = new Map<string, string>();
+    const store = {
+      getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+      getQueueByPath: (queuePath: string) =>
+        ({
+          queuePath,
+          queueName: queuePath.split('.').pop() || queuePath,
+          nodeLabels: ['gpu'], // Only has access to gpu
+        }) as unknown as QueueInfo,
+      nodeLabels: [
+        { name: 'gpu', exclusivity: false },
+        { name: 'fpga', exclusivity: false },
+      ],
+      stagedChanges: [],
+      configData,
+    } as unknown as SchedulerStore;
+
+    // User has selected fpga which the queue doesn't have access to
+    const result = buildCapacityEditorLabelOptions(store, 'root.parent', 'fpga');
+    expect(result.options).toEqual([
+      { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
+      { value: 'fpga', label: 'fpga' },
+      { value: 'gpu', label: 'gpu' },
+    ]);
+    // fpga should be marked as without access
+    expect(result.labelsWithoutAccess.has('fpga')).toBe(true);
+    expect(result.labelsWithoutAccess.has('gpu')).toBe(false);
+  });
+
+  it('falls back to parent when queue has no nodeLabels', () => {
+    const configData = new Map<string, string>();
+    const store = {
+      getQueuePropertyValue: () => ({ value: '', isStaged: false }),
+      getQueueByPath: (queuePath: string) => {
+        if (queuePath === 'root.parent.child') {
+          return {
+            queuePath,
+            queueName: 'child',
+            nodeLabels: undefined, // No nodeLabels, should fallback to parent
+          } as unknown as QueueInfo;
+        }
+        if (queuePath === 'root.parent') {
+          return {
+            queuePath,
+            queueName: 'parent',
+            nodeLabels: ['gpu', 'fpga'], // Parent has these labels
+          } as unknown as QueueInfo;
+        }
+        return null;
+      },
+      nodeLabels: [
+        { name: 'gpu', exclusivity: false },
+        { name: 'fpga', exclusivity: false },
+      ],
+      stagedChanges: [],
+      configData,
+    } as unknown as SchedulerStore;
+
+    const result = buildCapacityEditorLabelOptions(store, 'root.parent.child', null);
+    expect(result.options).toEqual([
+      { value: '__DEFAULT_PARTITION__', label: 'Default partition' },
+      { value: 'fpga', label: 'fpga' },
+      { value: 'gpu', label: 'gpu' },
+    ]);
+    expect(result.labelsWithoutAccess.size).toBe(0);
   });
 
   it('builds drafts including staged additions and origin queue first', () => {

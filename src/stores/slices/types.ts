@@ -81,6 +81,7 @@ export interface StagedChangesSlice {
   clearQueueChanges: (queuePath: string) => void;
   hasUnsavedChanges: () => boolean;
   getChangesForQueue: (queuePath: string) => StagedChange[];
+  hasPendingDeletion: (queuePath: string) => boolean;
   getStagedChangeById: (changeId: string) => StagedChange | undefined;
   getLabelChangesForQueue: (queuePath: string, label: string) => StagedChange[];
   refreshValidationErrors: () => void;

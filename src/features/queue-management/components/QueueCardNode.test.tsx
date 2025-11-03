@@ -110,6 +110,9 @@ describe('QueueCardNode', () => {
           hasAccess: true,
           canUseLabel: true,
         }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       };
       return selector ? selector(state) : state;
     });
@@ -336,6 +339,9 @@ describe('QueueCardNode', () => {
           hasAccess: true,
           canUseLabel: true,
         }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       };
       return selector ? selector(state) : state;
     });
@@ -367,6 +373,9 @@ describe('QueueCardNode', () => {
           hasAccess: true,
           canUseLabel: true,
         }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       };
       return selector ? selector(state) : state;
     });
@@ -525,6 +534,9 @@ describe('QueueCardNode', () => {
           hasAccess: true,
           canUseLabel: true,
         }),
+        hasPendingDeletion: vi.fn().mockReturnValue(false),
+        clearQueueChanges: vi.fn(),
+        requestTemplateConfigOpen: vi.fn(),
       };
       return selector ? selector(state) : state;
     });
