@@ -13,7 +13,9 @@ describe('SearchBar', () => {
   const mockSetSearchQuery = vi.fn();
   const mockClearSearch = vi.fn();
   const mockSetSearchFocused = vi.fn();
-  const mockGetSearchResults = vi.fn();
+  const mockGetFilteredQueues = vi.fn();
+  const mockGetFilteredNodes = vi.fn();
+  const mockGetFilteredSettings = vi.fn();
 
   const defaultStoreState = {
     searchQuery: '',
@@ -22,14 +24,18 @@ describe('SearchBar', () => {
     setSearchQuery: mockSetSearchQuery,
     clearSearch: mockClearSearch,
     setSearchFocused: mockSetSearchFocused,
-    getSearchResults: mockGetSearchResults,
+    getFilteredQueues: mockGetFilteredQueues,
+    getFilteredNodes: mockGetFilteredNodes,
+    getFilteredSettings: mockGetFilteredSettings,
   };
 
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(useSchedulerStore).mockReturnValue(defaultStoreState);
     vi.mocked(useDebounce).mockImplementation((value) => value);
-    mockGetSearchResults.mockReturnValue({ count: 0, hasResults: false });
+    mockGetFilteredQueues.mockReturnValue(null);
+    mockGetFilteredNodes.mockReturnValue([]);
+    mockGetFilteredSettings.mockReturnValue([]);
   });
 
   describe('Rendering', () => {
@@ -56,6 +62,9 @@ describe('SearchBar', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         searchContext: 'nodes',
+        getFilteredQueues: mockGetFilteredQueues,
+        getFilteredNodes: mockGetFilteredNodes,
+        getFilteredSettings: mockGetFilteredSettings,
       });
       const { unmount: unmount1 } = render(<SearchBar />);
       expect(screen.getByPlaceholderText('Search... in Nodes')).toBeInTheDocument();
@@ -65,6 +74,9 @@ describe('SearchBar', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         searchContext: 'settings',
+        getFilteredQueues: mockGetFilteredQueues,
+        getFilteredNodes: mockGetFilteredNodes,
+        getFilteredSettings: mockGetFilteredSettings,
       });
       render(<SearchBar />);
       expect(screen.getByPlaceholderText('Search... in Settings')).toBeInTheDocument();
@@ -75,27 +87,40 @@ describe('SearchBar', () => {
       expect(screen.queryByLabelText('Clear search')).not.toBeInTheDocument();
     });
 
-    it('should display clear button and match count when search has value', async () => {
-      const user = userEvent.setup();
-      mockGetSearchResults.mockReturnValue({ count: 5, hasResults: true });
+    it('should display clear button and match count when search has value', () => {
+      // Mock the store to have an active search with results
+      // Use settings context to match the filtered settings we're providing
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...defaultStoreState,
+        searchQuery: 'test',
+        searchContext: 'settings',
+        getFilteredQueues: () => null,
+        getFilteredNodes: () => [],
+        getFilteredSettings: () => [{}, {}, {}, {}, {}], // 5 items
+      });
 
       render(<SearchBar />);
-      const input = screen.getByLabelText('Search Queues');
 
-      await user.type(input, 'test');
-
+      // When there's a search query, should show clear button and match count
       expect(screen.getByLabelText('Clear search')).toBeInTheDocument();
       expect(screen.getByText('5 matches')).toBeInTheDocument();
+      // Input should reflect the query from the store
+      expect(screen.getByLabelText('Search Settings')).toHaveValue('test');
     });
 
-    it('should display singular match for count of 1', async () => {
-      const user = userEvent.setup();
-      mockGetSearchResults.mockReturnValue({ count: 1, hasResults: true });
+    it('should display singular match for count of 1', () => {
+      // Mock the store to have an active search with 1 result
+      // Use settings context to match the filtered settings we're providing
+      vi.mocked(useSchedulerStore).mockReturnValue({
+        ...defaultStoreState,
+        searchQuery: 'test',
+        searchContext: 'settings',
+        getFilteredQueues: () => null,
+        getFilteredNodes: () => [],
+        getFilteredSettings: () => [{}], // 1 item
+      });
 
       render(<SearchBar />);
-      const input = screen.getByLabelText('Search Queues');
-
-      await user.type(input, 'test');
 
       expect(screen.getByText('1 match')).toBeInTheDocument();
     });
@@ -184,6 +209,9 @@ describe('SearchBar', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         isSearchFocused: true,
+        getFilteredQueues: mockGetFilteredQueues,
+        getFilteredNodes: mockGetFilteredNodes,
+        getFilteredSettings: mockGetFilteredSettings,
       });
 
       render(<SearchBar />);
@@ -214,6 +242,9 @@ describe('SearchBar', () => {
       vi.mocked(useSchedulerStore).mockReturnValue({
         ...defaultStoreState,
         isSearchFocused: true,
+        getFilteredQueues: mockGetFilteredQueues,
+        getFilteredNodes: mockGetFilteredNodes,
+        getFilteredSettings: mockGetFilteredSettings,
       });
 
       render(<SearchBar />);
@@ -311,7 +342,10 @@ describe('SearchBar', () => {
 
     it('should handle empty search results gracefully', async () => {
       const user = userEvent.setup();
-      mockGetSearchResults.mockReturnValue({ count: 0, hasResults: false });
+      // All filtered results return empty arrays (0 matches)
+      mockGetFilteredQueues.mockReturnValue(null);
+      mockGetFilteredNodes.mockReturnValue([]);
+      mockGetFilteredSettings.mockReturnValue([]);
 
       render(<SearchBar />);
       await user.type(screen.getByLabelText('Search Queues'), 'test');

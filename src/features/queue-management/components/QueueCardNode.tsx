@@ -34,6 +34,7 @@ import type { QueueCardData } from '../hooks/useQueueTreeData';
 import { useQueueActions } from '../hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { cn } from '~/utils/cn';
+import { HighlightedText } from '~/components/search/HighlightedText';
 import { AddQueueDialog } from './dialogs/AddQueueDialog';
 import { DeleteQueueDialog } from './dialogs/DeleteQueueDialog';
 import { QueueCapacityProgress } from './QueueCapacityProgress';
@@ -189,6 +190,7 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
     getQueueLabelCapacity,
     clearQueueChanges,
     hasPendingDeletion,
+    searchQuery,
   } = useSchedulerStore();
 
   const { canAddChildQueue, canDeleteQueue, updateQueueProperty } = useQueueActions();
@@ -427,8 +429,20 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
       <CardHeader className="px-5 pb-3 gap-1">
         <div className="flex items-start justify-between">
           <div className="flex-1">
-            <CardTitle className="text-base truncate">{queueName}</CardTitle>
-            <CardDescription>{queuePath}</CardDescription>
+            <CardTitle className="text-base truncate">
+              {searchQuery ? (
+                <HighlightedText text={queueName} highlight={searchQuery} />
+              ) : (
+                queueName
+              )}
+            </CardTitle>
+            <CardDescription>
+              {searchQuery ? (
+                <HighlightedText text={queuePath} highlight={searchQuery} />
+              ) : (
+                queuePath
+              )}
+            </CardDescription>
 
             <CardDescription>
               <QueueStatusBadges

@@ -7,6 +7,7 @@ import type { SearchSlice, SchedulerStore } from './types';
 import { schedulerTreeUtils } from '~/utils/schedulerTreeUtils';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { buildGlobalPropertyKey } from '~/utils/propertyUtils';
+import { calculateSearchResults } from '~/utils/searchUtils';
 
 // Memoization cache for search results
 let cachedSearchQuery: string | null = null;
@@ -118,31 +119,19 @@ export const createSearchSlice: StateCreator<
       return cachedSearchResults;
     }
 
-    let count = 0;
-
-    switch (searchContext) {
-      case 'queues': {
-        const filteredQueues = get().getFilteredQueues();
-        if (filteredQueues) {
-          count = schedulerTreeUtils.flattenSchedulerTree(filteredQueues).length;
-        }
-        break;
-      }
-      case 'nodes':
-        count = get().getFilteredNodes().length;
-        break;
-      case 'settings':
-        count = get().getFilteredSettings().length;
-        break;
-    }
+    // Calculate results using shared utility
+    const results = calculateSearchResults({
+      searchQuery,
+      searchContext,
+      filteredQueues: get().getFilteredQueues(),
+      filteredNodes: get().getFilteredNodes(),
+      filteredSettings: get().getFilteredSettings(),
+    });
 
     // Cache the results
     cachedSearchQuery = searchQuery;
     cachedSearchContext = searchContext;
-    cachedSearchResults = {
-      count,
-      hasResults: count > 0,
-    };
+    cachedSearchResults = results;
 
     return cachedSearchResults;
   },

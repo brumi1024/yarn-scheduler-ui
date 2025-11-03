@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { FieldSwitch } from '~/components/ui/field-switch';
 import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
+import { HighlightedText } from '~/components/search/HighlightedText';
 import {
   Dialog,
   DialogContent,
@@ -29,6 +30,7 @@ interface LegacyModeToggleProps {
     description: string;
   };
   disabled?: boolean;
+  searchQuery?: string;
 }
 
 interface ValidationPreview {
@@ -42,6 +44,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
   onChange,
   property,
   disabled = false,
+  searchQuery,
 }) => {
   const [showPreview, setShowPreview] = useState(false);
   const { schedulerData, configData, stagedChanges } = useSchedulerStore();
@@ -186,10 +189,22 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
     return { added, removed, affectedQueues };
   })();
 
+  const labelNode = searchQuery ? (
+    <HighlightedText text={property.displayName} highlight={searchQuery} />
+  ) : (
+    property.displayName
+  );
+
+  const descriptionNode = searchQuery ? (
+    <HighlightedText text={property.description} highlight={searchQuery} />
+  ) : (
+    property.description
+  );
+
   return (
     <FieldSwitch
       id={property.name}
-      label={property.displayName}
+      label={labelNode}
       disabled={disabled}
       labelSuffix={
         <LegacyModeDocumentation legacyModeEnabled={currentEnabled}>
@@ -203,7 +218,7 @@ export const LegacyModeToggle: React.FC<LegacyModeToggleProps> = ({
           </Button>
         </LegacyModeDocumentation>
       }
-      description={property.description}
+      description={descriptionNode}
       addon={
         <>
           {isStaged && (
