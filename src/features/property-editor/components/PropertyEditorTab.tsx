@@ -385,7 +385,7 @@ export const PropertyEditorTab = ({
                       )}
                     </div>
                   </AccordionTrigger>
-                  <AccordionContent className="px-4 pb-4">
+                  <AccordionContent className="p-4">
                     <div className="space-y-3">
                       {categoryProps.map((prop) => {
                         const propertyKey = prop.originalName || prop.name;

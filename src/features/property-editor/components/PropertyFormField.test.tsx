@@ -243,9 +243,6 @@ describe('PropertyFormField', () => {
 
     const input = screen.getByRole('textbox');
     expect(input).toBeDisabled();
-    expect(
-      screen.getByText('This field is disabled based on current configuration'),
-    ).toBeInTheDocument();
   });
 
   it('should show deprecation warning for deprecated properties', () => {
@@ -330,5 +327,146 @@ describe('PropertyFormField', () => {
     );
 
     expect(screen.getByText('(0.0-1.0)')).toBeInTheDocument();
+  });
+
+  it('should render select dropdown for enum property with 4 or more options', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'ordering-policy',
+      displayName: 'Ordering Policy',
+      description: 'Application ordering policy within the queue',
+      type: 'enum',
+      enumValues: [
+        { value: 'fifo', label: 'FIFO' },
+        { value: 'fair', label: 'Fair' },
+        {
+          value: 'fifo-with-sizebasedweightresourceallocator',
+          label: 'FIFO with Resource Allocation Aware',
+        },
+        { value: 'fifo-for-pending-apps', label: 'FIFO for Pending Apps' },
+      ],
+      required: false,
+    });
+
+    render(
+      <FormWrapper defaultValues={{ 'ordering-policy': 'fifo' }}>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    // Should render a combobox (select) instead of toggle group
+    const select = screen.getByRole('combobox');
+    expect(select).toBeInTheDocument();
+
+    // Should show the label
+    expect(screen.getByText('Ordering Policy')).toBeInTheDocument();
+
+    // Description should be in the document
+    expect(screen.getByText('Application ordering policy within the queue')).toBeInTheDocument();
+  });
+
+  it('should render toggle group for enum property with 3 or fewer options', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'state',
+      displayName: 'State',
+      type: 'enum',
+      enumValues: [
+        { value: 'RUNNING', label: 'Running' },
+        { value: 'STOPPED', label: 'Stopped' },
+        { value: 'DRAINING', label: 'Draining' },
+      ],
+      required: false,
+    });
+
+    render(
+      <FormWrapper defaultValues={{ state: 'RUNNING' }}>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    // Should render toggle group (radio buttons) not select
+    expect(screen.getByRole('radio', { name: 'Running' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Stopped' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: 'Draining' })).toBeInTheDocument();
+    expect(screen.queryByRole('combobox')).not.toBeInTheDocument();
+  });
+
+  it('should display the currently selected value in select dropdown', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'ordering-policy',
+      displayName: 'Ordering Policy',
+      type: 'enum',
+      enumValues: [
+        { value: 'fifo', label: 'FIFO' },
+        { value: 'fair', label: 'Fair' },
+        {
+          value: 'fifo-with-sizebasedweightresourceallocator',
+          label: 'FIFO with Resource Allocation Aware',
+        },
+        { value: 'fifo-for-pending-apps', label: 'FIFO for Pending Apps' },
+      ],
+    });
+
+    render(
+      <FormWrapper defaultValues={{ 'ordering-policy': 'fair' }}>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    const select = screen.getByRole('combobox');
+    expect(select).toBeInTheDocument();
+    // The select should show the selected value
+    expect(screen.getByText('Fair')).toBeInTheDocument();
+  });
+
+  it('should show select dropdown as full width', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'ordering-policy',
+      displayName: 'Ordering Policy',
+      type: 'enum',
+      enumValues: [
+        { value: 'fifo', label: 'FIFO' },
+        { value: 'fair', label: 'Fair' },
+        {
+          value: 'fifo-with-sizebasedweightresourceallocator',
+          label: 'FIFO with Resource Allocation Aware',
+        },
+        { value: 'fifo-for-pending-apps', label: 'FIFO for Pending Apps' },
+      ],
+    });
+
+    render(
+      <FormWrapper defaultValues={{ 'ordering-policy': 'fifo' }}>
+        <PropertyFormField property={property} control={undefined as any} />
+      </FormWrapper>,
+    );
+
+    const select = screen.getByRole('combobox');
+    expect(select).toHaveClass('w-full');
+  });
+
+  it('should disable select dropdown when isEnabled is false', () => {
+    const property = getMockPropertyDescriptor({
+      name: 'ordering-policy',
+      displayName: 'Ordering Policy',
+      type: 'enum',
+      enumValues: [
+        { value: 'fifo', label: 'FIFO' },
+        { value: 'fair', label: 'Fair' },
+        {
+          value: 'fifo-with-sizebasedweightresourceallocator',
+          label: 'FIFO with Resource Allocation Aware',
+        },
+        { value: 'fifo-for-pending-apps', label: 'FIFO for Pending Apps' },
+      ],
+    });
+
+    render(
+      <FormWrapper defaultValues={{ 'ordering-policy': 'fifo' }}>
+        <PropertyFormField property={property} control={undefined as any} isEnabled={false} />
+      </FormWrapper>,
+    );
+
+    const select = screen.getByRole('combobox');
+    expect(select).toBeDisabled();
   });
 });

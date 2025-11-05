@@ -47,7 +47,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Resource Utilization Details</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             <MetricRow
               label="Partition"
               value={<Badge variant="secondary">{partitionLabel}</Badge>}
@@ -94,7 +94,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Absolute Capacity Metrics</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             <MetricRow
               label="Absolute Used Capacity"
               value={formatPercentage(queue.absoluteUsedCapacity)}
@@ -118,7 +118,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Application Master Limits</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.configuredMaxAMResourceLimit !== undefined && (
               <MetricRow
                 label="Configured Max Application Master Limit"
@@ -162,7 +162,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Application Limits & Policies</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.maxApplications !== undefined && (
               <MetricRow label="Max Applications" value={formatCount(queue.maxApplications)} />
             )}
@@ -207,7 +207,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Container Information</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.numContainers !== undefined && (
               <MetricRow label="Num Containers" value={formatCount(queue.numContainers)} />
             )}
@@ -245,7 +245,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Ordering & Preemption</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.orderingPolicy && (
               <MetricRow label="Ordering Policy" value={queue.orderingPolicy} />
             )}
@@ -287,7 +287,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Node Labels & Partitions</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.nodeLabels && queue.nodeLabels.length > 0 && (
               <MetricRow
                 label="Accessible Node Labels"
@@ -325,7 +325,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Access & Priority</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.queueAcls && queue.queueAcls.queueAcl && queue.queueAcls.queueAcl.length > 0 && (
               <>
                 {queue.queueAcls.queueAcl.map((acl) => (
@@ -365,7 +365,7 @@ export const QueueInfoTab: React.FC<QueueInfoTabProps> = ({ queue }) => {
               <span className="text-sm font-medium">Lifecycle Settings</span>
             </div>
           </AccordionTrigger>
-          <AccordionContent className="px-4 pb-3 space-y-1">
+          <AccordionContent className="p-4 space-y-1">
             {queue.defaultApplicationLifetime !== undefined && (
               <MetricRow
                 label="Default Application Lifetime"
