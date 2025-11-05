@@ -82,6 +82,44 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
       },
     ],
   },
+  {
+    name: 'yarn.scheduler.capacity.minimum-user-limit-percent',
+    displayName: 'Minimum User Limit Percent (Global)',
+    description:
+      'Global default for minimum percentage of queue resources allocated to a user when there is demand. Default is 100 (no user limits). Can be overridden on a per-queue basis.',
+    type: 'number' as PropertyType,
+    category: 'resource' as PropertyCategory,
+    defaultValue: '100',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be between 0 and 100',
+        min: 0,
+        max: 100,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.user-limit-factor',
+    displayName: 'User Limit Factor (Global)',
+    description:
+      "Global default for user limit factor, which controls the max amount of resources a single user can consume as a multiple of the queue's capacity. Default is 1. Set to -1 for unlimited. Can be overridden on a per-queue basis. Note: auto-queue-creation-v2 with weights automatically sets this to -1 on the created queues.",
+    type: 'number' as PropertyType,
+    category: 'resource' as PropertyCategory,
+    defaultValue: '1',
+    required: false,
+    validationRules: [
+      {
+        type: 'custom',
+        message: 'Must be -1 (unlimited) or >= 0',
+        validator: (value: string) => {
+          const num = parseFloat(value);
+          return num === -1 || num >= 0;
+        },
+      },
+    ],
+  },
 
   // Locality Settings
   {

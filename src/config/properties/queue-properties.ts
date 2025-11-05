@@ -157,7 +157,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     name: 'minimum-user-limit-percent',
     displayName: 'Minimum User Limit Percent',
     description:
-      "Each queue enforces a limit on the percentage of resources allocated to a user at any given time. The default is 100, it means no user limits, any user can use all of the queue's guaranteed resources.",
+      'Minimum percentage of queue resources allocated to a user when there is demand. Default is 100 (no user limits). Overrides the global default if set.',
     type: 'number' as PropertyType,
     category: 'limits' as PropertyCategory,
     defaultValue: '',
@@ -175,7 +175,8 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'user-limit-factor',
     displayName: 'User Limit Factor',
-    description: 'Multiplier for user resource limits beyond queue capacity. Use -1 to disable.',
+    description:
+      "Controls the max amount of resources a single user can consume as a multiple of the queue's capacity. Default is 1 (limited to queue capacity). Set to -1 for unlimited. Overrides the global default if set. Note: auto-queue-creation-v2 with weights automatically sets this to -1 on the created queues.",
     type: 'number' as PropertyType,
     category: 'limits' as PropertyCategory,
     defaultValue: '',
@@ -184,11 +185,11 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     validationRules: [
       {
         type: 'custom',
-        message: 'Must be positive number or -1',
+        message: 'Must be -1 (unlimited) or >= 0',
         validator: (value: string) => {
           if (!value.trim()) return true;
           const num = parseFloat(value);
-          return !isNaN(num) && (num > 0 || num === -1);
+          return !isNaN(num) && (num === -1 || num >= 0);
         },
       },
     ],
