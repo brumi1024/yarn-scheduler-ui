@@ -14,14 +14,20 @@ import { LegacyModeDocumentation } from '~/features/queue-management/components/
 import { getMergedConfigData } from '~/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types';
 import { SearchBar } from '~/components/search/SearchBar';
+import { useKeyboardShortcuts } from '~/hooks/useKeyboardShortcuts';
+import { toast } from 'sonner';
 
 export default function Layout() {
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
+  const [isApplying, setIsApplying] = useState(false);
   const loadInitialData = useSchedulerStore((state) => state.loadInitialData);
   const configData = useSchedulerStore((state) => state.configData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
   const setSearchContext = useSchedulerStore((state) => state.setSearchContext);
   const isReadOnly = useSchedulerStore((state) => state.isReadOnly);
+  const applyChanges = useSchedulerStore((state) => state.applyChanges);
+  const clearAllChanges = useSchedulerStore((state) => state.clearAllChanges);
+  const isPropertyPanelOpen = useSchedulerStore((state) => state.isPropertyPanelOpen);
   const location = useLocation();
 
   // Get legacy mode status considering staged changes
@@ -46,6 +52,71 @@ export default function Layout() {
       setSearchContext(null);
     }
   }, [location.pathname, setSearchContext]);
+
+  // Calculate if there are validation errors blocking apply
+  const hasValidationErrors = stagedChanges.some((change) =>
+    change.validationErrors?.some((error) => error.severity === 'error'),
+  );
+
+  // Global keyboard shortcuts for staged changes
+  useKeyboardShortcuts([
+    {
+      key: 's',
+      ctrl: true,
+      meta: true,
+      preventDefault: true,
+      handler: async () => {
+        // Don't trigger if property panel is open (let PropertyPanel handle it)
+        if (isPropertyPanelOpen) {
+          return;
+        }
+
+        // If no staged changes, inform user
+        if (stagedChanges.length === 0) {
+          return;
+        }
+
+        // If panel is closed, open it
+        if (!stagedChangesPanelOpen) {
+          setStagedChangesPanelOpen(true);
+          toast.info('Staged changes panel opened. Press Cmd/Ctrl+S again to apply changes.');
+          return;
+        }
+
+        // If panel is open and there are changes without validation errors, apply them
+        if (!isApplying && !hasValidationErrors && !isReadOnly) {
+          setIsApplying(true);
+          try {
+            await applyChanges();
+            toast.success('All changes applied successfully');
+            setStagedChangesPanelOpen(false);
+          } catch (error) {
+            toast.error('Failed to apply changes');
+            console.error('Failed to apply changes:', error);
+          } finally {
+            setIsApplying(false);
+          }
+        } else if (hasValidationErrors) {
+          toast.error('Cannot apply changes with validation errors');
+        } else if (isReadOnly) {
+          toast.error('Cannot apply changes in read-only mode');
+        }
+      },
+    },
+    {
+      key: 'k',
+      ctrl: true,
+      meta: true,
+      preventDefault: true,
+      handler: () => {
+        // Only trigger when staged changes panel is open and property panel is not
+        if (stagedChangesPanelOpen && !isPropertyPanelOpen && stagedChanges.length > 0) {
+          clearAllChanges();
+          toast.info('All staged changes cleared');
+        }
+      },
+    },
+  ]);
 
   // Determine page title and description based on current route
   const getPageInfo = () => {

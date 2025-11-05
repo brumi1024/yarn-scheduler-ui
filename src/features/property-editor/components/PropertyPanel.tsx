@@ -27,6 +27,8 @@ import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { cn } from '~/utils/cn';
 import { TemplateConfigDialog } from '~/features/template-config/components/TemplateConfigDialog';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
+import { useKeyboardShortcuts, getModifierKey } from '~/hooks/useKeyboardShortcuts';
+import { Kbd } from '~/components/ui/kbd';
 
 export const PropertyPanel: React.FC = () => {
   const {
@@ -258,6 +260,36 @@ export const PropertyPanel: React.FC = () => {
     setIsSummaryOpen(false);
   };
 
+  // Keyboard shortcuts - only active when panel is open and on settings tab
+  useKeyboardShortcuts(
+    isPanelVisible && tabValue === 'settings'
+      ? [
+          {
+            key: 's',
+            ctrl: true,
+            meta: true,
+            preventDefault: true,
+            handler: () => {
+              if (!isSubmitting && (hasChanges || isFormDirty)) {
+                handleSubmit();
+              }
+            },
+          },
+          {
+            key: 'k',
+            ctrl: true,
+            meta: true,
+            preventDefault: true,
+            handler: () => {
+              if (!isSubmitting && (hasChanges || isFormDirty)) {
+                handleReset();
+              }
+            },
+          },
+        ]
+      : [],
+  );
+
   if (!isPanelVisible || !selectedQueue) {
     return null;
   }
@@ -437,24 +469,28 @@ export const PropertyPanel: React.FC = () => {
                   variant="outline"
                   onClick={handleReset}
                   disabled={isSubmitting || (!hasChanges && !isFormDirty)}
+                  className="gap-2"
                 >
-                  <RotateCcw className="h-4 w-4 mr-2" />
+                  <RotateCcw className="h-4 w-4" />
                   Reset
+                  <Kbd className="ml-auto">{getModifierKey()}+K</Kbd>
                 </Button>
                 <Button
                   variant="default"
                   onClick={handleSubmit}
                   disabled={isSubmitting || (!hasChanges && !isFormDirty)}
+                  className="gap-2"
                 >
                   {isSubmitting ? (
                     <>
-                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
                       Staging...
                     </>
                   ) : (
                     <>
-                      <Save className="h-4 w-4 mr-2" />
+                      <Save className="h-4 w-4" />
                       {isFormDirty ? 'Stage Changes' : 'No Changes'}
+                      <Kbd className="ml-auto">{getModifierKey()}+S</Kbd>
                     </>
                   )}
                 </Button>

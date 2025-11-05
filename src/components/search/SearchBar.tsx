@@ -46,8 +46,8 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
   // Keyboard shortcuts
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Cmd/Ctrl + K to focus search
-      if ((e.metaKey || e.ctrlKey) && e.key === 'k') {
+      // Cmd/Ctrl + G to focus search
+      if ((e.metaKey || e.ctrlKey) && e.key === 'g') {
         e.preventDefault();
         inputRef.current?.focus();
       }
@@ -140,7 +140,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ placeholder = 'Search...',
 
       {isSearchFocused && (
         <div className="absolute right-0 top-full mt-1 text-xs text-muted-foreground z-50 bg-background p-1 rounded shadow-sm transition-opacity duration-200">
-          <kbd className="rounded border px-1">⌘K</kbd> to focus •
+          <kbd className="rounded border px-1">⌘G</kbd> to focus •
           <kbd className="rounded border px-1 ml-1">Esc</kbd> to clear
         </div>
       )}
