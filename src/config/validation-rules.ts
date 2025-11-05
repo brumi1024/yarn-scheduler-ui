@@ -1,20 +1,10 @@
-import { buildPropertyKey } from '~/utils/propertyUtils';
+import { buildPropertyKey, getParentQueuePath } from '~/utils/propertyUtils';
 import { parseCapacityValue, getCapacityType } from '~/utils/capacityUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
-import type { StagedChange } from '~/types/staged-change';
-import type { SchedulerInfo } from '~/types';
-import type { ValidationIssue } from '~/features/validation/types';
-import {
-  findQueueByPath,
-  getParentPath,
-  getSiblingQueues,
-} from '~/features/validation/utils/queueUtils';
-
-const TEMPLATE_QUEUE_MARKERS = ['leaf-queue-template', 'auto-queue-creation-v2.'];
-
-const isTemplateQueuePath = (queuePath: string): boolean =>
-  TEMPLATE_QUEUE_MARKERS.some((marker) => queuePath.includes(marker));
+import type { StagedChange, ValidationIssue, SchedulerInfo } from '~/types';
+import { findQueueByPath, getSiblingQueues } from '~/utils/queueTreeUtils';
+import { isTemplateQueuePath } from '~/utils/templateUtils';
 
 export interface ValidationContext {
   queuePath: string;
@@ -154,7 +144,7 @@ function evaluateChildCapacitySum(context: ValidationContext): ValidationIssue[]
     if (change.queuePath === SPECIAL_VALUES.GLOBAL_QUEUE_PATH) {
       return;
     }
-    const parentPath = getParentPath(change.queuePath);
+    const parentPath = getParentQueuePath(change.queuePath);
     if (parentPath !== context.queuePath) {
       return;
     }
@@ -324,7 +314,7 @@ function evaluateParentChildCapacityConstraints(context: ValidationContext): Val
     return [];
   }
 
-  const parentPath = getParentPath(context.queuePath);
+  const parentPath = getParentQueuePath(context.queuePath);
   if (!parentPath) {
     return [];
   }
@@ -398,7 +388,7 @@ function evaluateParentChildCapacityMode(context: ValidationContext): Validation
     return [];
   }
 
-  const parentPath = getParentPath(context.queuePath);
+  const parentPath = getParentQueuePath(context.queuePath);
   if (!parentPath) {
     return [];
   }

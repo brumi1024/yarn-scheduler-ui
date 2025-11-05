@@ -11,12 +11,12 @@ import { Badge } from '~/components/ui/badge';
 import { Button } from '~/components/ui/button';
 import { Form } from '~/components/ui/form';
 import { ScrollArea } from '~/components/ui/scroll-area';
-import { PropertyFormField } from '~/features/property-editor/components/PropertyFormField';
-import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
 import {
+  PropertyFormField,
+  usePropertyEditor,
   baseCategoryOrder,
   categoryConfig,
-} from '~/features/property-editor/constants/categoryConfig';
+} from '~/features/property-editor';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
 import { getTemplatePropertyDefinitions } from '~/config/properties/helpers';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';

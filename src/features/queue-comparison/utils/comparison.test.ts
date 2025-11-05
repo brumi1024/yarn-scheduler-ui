@@ -1,10 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import {
-  buildComparisonData,
-  getPropertyCategory,
-  formatPropertyName,
-  exportComparison,
-} from './comparison';
+import { buildComparisonData, exportComparison } from './comparison';
+import { getPropertyCategory, formatPropertyName } from '~/utils/formatUtils';
 
 describe('buildComparisonData', () => {
   it('should build comparison data with no differences', () => {

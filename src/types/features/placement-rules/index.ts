@@ -2,6 +2,16 @@
  * Types for YARN placement rules feature
  */
 
+// Import PlacementRule type for local use, then re-export
+import type { PlacementRule } from './validators';
+export type { PlacementRule };
+export {
+  PlacementRuleSchema,
+  isPlacementRule,
+  validatePlacementRule,
+  isValidPlacementRule,
+} from './validators';
+
 export type RuleType = 'user' | 'group' | 'application';
 
 export type PlacementPolicy =
@@ -18,17 +28,6 @@ export type PlacementPolicy =
   | 'setDefaultQueue';
 
 export type FallbackResult = 'skip' | 'placeDefault' | 'reject';
-
-export interface PlacementRule {
-  type: RuleType;
-  matches: string;
-  policy: PlacementPolicy;
-  parentQueue?: string;
-  value?: string;
-  customPlacement?: string;
-  create?: boolean;
-  fallbackResult?: FallbackResult;
-}
 
 export interface PlacementRulesConfig {
   rules: PlacementRule[];
@@ -54,11 +53,3 @@ export interface MigrationResult {
   rules: PlacementRule[];
   errors: string[];
 }
-
-// Re-export validators
-export {
-  PlacementRuleSchema,
-  isPlacementRule,
-  validatePlacementRule,
-  isValidPlacementRule,
-} from './validators';

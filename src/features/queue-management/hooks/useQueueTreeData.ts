@@ -17,7 +17,7 @@ import {
   QUEUE_CARD_HEIGHT,
   QUEUE_CARD_WIDTH,
 } from '../constants';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 
 export type QueueCardData = QueueInfo & {
   stagedStatus?: 'new' | 'modified' | 'deleted';

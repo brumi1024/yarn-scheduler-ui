@@ -40,7 +40,7 @@ import type { CapacityResourceMode, CapacityRowDraft } from '~/stores/slices/cap
 import { SPECIAL_VALUES } from '~/types';
 import type { QueueCapacitiesByPartition } from '~/types';
 import { parseCapacityValue } from '~/utils/capacityUtils';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 
 type VectorTarget = 'capacity' | 'maxCapacity';
 

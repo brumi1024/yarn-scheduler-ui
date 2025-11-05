@@ -1,13 +1,13 @@
 import { createContext, use, useState, type PropsWithChildren } from 'react';
 import type { JSX } from 'react';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
-import { mergeStagedConfig, applyFieldPreview } from '~/features/validation/utils/configUtils';
+import { mergeStagedConfig, applyFieldPreview } from '~/utils/configUtils';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   runFieldValidation,
   type ValidationContext as RuleContext,
 } from '~/config/validation-rules';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 
 type FieldIssues = ValidationIssue[];
 type QueueIssues = Record<string, FieldIssues>;

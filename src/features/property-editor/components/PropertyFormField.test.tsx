@@ -2,9 +2,23 @@ import { describe, it, expect, vi } from 'vitest';
 import { render, screen } from '~/testing/setup/setup';
 import { PropertyFormField } from './PropertyFormField';
 import { useForm, FormProvider } from 'react-hook-form';
-import { getMockPropertyDescriptor } from '~/testing/factories';
 import userEvent from '@testing-library/user-event';
 import { TooltipProvider } from '~/components/ui/tooltip';
+import type { PropertyDescriptor } from '~/types/property-descriptor';
+
+// Test helper
+const getMockPropertyDescriptor = (overrides?: Partial<PropertyDescriptor>): PropertyDescriptor => {
+  return {
+    name: 'capacity',
+    displayName: 'Capacity',
+    description: 'Queue capacity as percentage, weight, or absolute resources',
+    type: 'string',
+    category: 'general',
+    required: true,
+    defaultValue: '0',
+    ...overrides,
+  };
+};
 
 // Helper component to wrap PropertyFormField with form context
 function FormWrapper({

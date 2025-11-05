@@ -22,7 +22,7 @@ import type { PropertyEditorTabHandle } from './PropertyEditorTab';
 import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { cn } from '~/utils/cn';
 import { TemplateConfigDialog } from '~/features/template-config/components/TemplateConfigDialog';

@@ -1,11 +1,10 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validateField, validateQueue, hasBlockingIssues, splitIssues } from '../service';
-import type { SchedulerInfo, StagedChange } from '~/types';
-import type { ValidationIssue } from '../types';
+import type { SchedulerInfo, StagedChange, ValidationIssue } from '~/types';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 // Mock dependencies
-vi.mock('../utils/configUtils', () => ({
+vi.mock('~/utils/configUtils', () => ({
   mergeStagedConfig: vi.fn(),
   applyFieldPreview: vi.fn(),
   buildEffectivePropertyKey: vi.fn(),
@@ -19,7 +18,7 @@ import {
   mergeStagedConfig,
   applyFieldPreview,
   buildEffectivePropertyKey,
-} from '../utils/configUtils';
+} from '~/utils/configUtils';
 import { runFieldValidation } from '~/config/validation-rules';
 
 describe('validation service', () => {

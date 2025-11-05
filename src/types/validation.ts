@@ -1,3 +1,7 @@
+/**
+ * Validation types for YARN Capacity Scheduler configuration
+ */
+
 export type CapacityType = 'percentage' | 'weight' | 'absolute';
 
 export interface ParsedCapacity {

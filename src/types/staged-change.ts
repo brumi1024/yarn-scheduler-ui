@@ -1,4 +1,4 @@
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from './validation';
 
 export type StagedChangeType = 'add' | 'update' | 'remove';
 

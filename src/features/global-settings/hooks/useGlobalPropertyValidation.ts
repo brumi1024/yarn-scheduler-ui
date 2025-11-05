@@ -1,5 +1,5 @@
 import { SPECIAL_VALUES } from '~/types';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 import { useValidation } from '~/contexts/ValidationContext';
 
 export function useGlobalPropertyValidation() {

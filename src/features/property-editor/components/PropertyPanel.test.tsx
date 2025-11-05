@@ -4,8 +4,30 @@ import { PropertyPanel } from './PropertyPanel';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
-import { getMockQueueInfo } from '~/testing/factories';
+import type { QueueInfo } from '~/types';
 import { toast } from 'sonner';
+
+// Test helper
+const getMockQueueInfo = (overrides?: Partial<QueueInfo>): QueueInfo => {
+  return {
+    queueType: 'leaf',
+    queueName: 'default',
+    queuePath: 'root.default',
+    capacity: 10,
+    maxCapacity: 100,
+    absoluteCapacity: 10,
+    absoluteMaxCapacity: 100,
+    absoluteUsedCapacity: 5,
+    usedCapacity: 5,
+    numApplications: 2,
+    numPendingApplications: 0,
+    numActiveApplications: 2,
+    state: 'RUNNING',
+    queues: undefined,
+    creationMethod: 'static',
+    ...overrides,
+  };
+};
 
 // Mock the store
 vi.mock('~/stores/schedulerStore');

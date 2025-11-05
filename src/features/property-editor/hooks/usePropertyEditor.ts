@@ -8,7 +8,7 @@ import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
 import { toast } from 'sonner';
 import { useValidation } from '~/contexts/ValidationContext';
 import { validateQueue } from '~/features/validation/service';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 import { isBlockingError } from '~/features/validation/ruleCategories';
 import { validatePropertyChange } from '~/features/validation/crossQueue';
 import { buildPropertyKey } from '~/utils/propertyUtils';

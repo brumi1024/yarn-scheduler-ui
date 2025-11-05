@@ -76,7 +76,6 @@ function getQueues(
     }
   }
 
-  // Sort by queue path for better UX
   return result.sort((a, b) => a.value.localeCompare(b.value));
 }
 

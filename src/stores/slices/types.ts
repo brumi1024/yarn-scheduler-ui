@@ -11,6 +11,7 @@ import type {
   StagedChange,
   QueueInfo,
   QueueCapacitiesByPartition,
+  ValidationIssue,
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
 import type { CapacityEditorSlice } from './capacityEditorSlice';
@@ -43,8 +44,6 @@ export interface NodeLabelsSlice {
   removeNodeLabel: (name: string) => Promise<void>;
   assignNodeToLabel: (nodeId: string, labelName: string | null) => Promise<void>;
 }
-
-import type { ValidationIssue } from '~/features/validation/types';
 
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];

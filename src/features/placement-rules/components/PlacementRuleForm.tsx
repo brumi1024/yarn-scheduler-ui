@@ -29,7 +29,7 @@ import {
 } from '../schemas/placement-rule-schema';
 import { CustomPlacementHelpDialog } from './CustomPlacementHelpDialog';
 import { getPolicyDescription, POLICY_DISPLAY_NAMES } from '../constants/policy-descriptions';
-import { getAllParentQueues, getAllQueues } from '../utils/queue-utils';
+import { getAllParentQueues, getAllQueues } from '../utils/queueOptions';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 const PARENT_QUEUE_POLICIES = [

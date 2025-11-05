@@ -13,8 +13,8 @@ import {
 import { AlertCircle, AlertTriangle, ChevronDown, ChevronUp, Info } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { validateQueue } from '~/features/validation/service';
-import type { ValidationIssue } from '~/features/validation/types';
-import { getMergedConfigData } from '~/features/validation/utils/configUtils';
+import type { ValidationIssue } from '~/types';
+import { getMergedConfigData } from '~/utils/configUtils';
 import { cn } from '~/utils/cn';
 import { SPECIAL_VALUES } from '~/types';
 import type { StagedChange } from '~/types';

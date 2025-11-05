@@ -3,12 +3,12 @@ import { createSchedulerStore } from '../schedulerStore';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
-import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
-import { getMergedConfigData } from '~/features/validation/utils/configUtils';
+import { extractPlacementRulesFromConfig } from '~/features/placement-rules/utils/placementRulesUtils';
+import { getMergedConfigData } from '~/utils/configUtils';
 
 // Mock the utils module
-vi.mock('~/utils/placementRulesUtils');
-vi.mock('~/features/validation/utils/configUtils');
+vi.mock('~/features/placement-rules/utils/placementRulesUtils');
+vi.mock('~/utils/configUtils');
 
 // Create mock API client
 const createMockApiClient = () => ({
