@@ -4,8 +4,6 @@ import {
   buildGlobalPropertyKey,
   buildNodeLabelPropertyKey,
   validateQueueName,
-  splitQueuePath,
-  joinQueuePath,
   getQueueNameFromPath,
   getParentQueuePath,
   isRootQueue,
@@ -168,40 +166,6 @@ describe('propertyUtils', () => {
   });
 
   describe('queue path utilities', () => {
-    describe('splitQueuePath', () => {
-      it('should split queue path into segments', () => {
-        expect(splitQueuePath('root')).toEqual(['root']);
-        expect(splitQueuePath('root.production')).toEqual(['root', 'production']);
-        expect(splitQueuePath('root.production.team1')).toEqual(['root', 'production', 'team1']);
-        expect(splitQueuePath('root.a.b.c.d')).toEqual(['root', 'a', 'b', 'c', 'd']);
-      });
-
-      it('should handle empty path', () => {
-        expect(splitQueuePath('')).toEqual([]);
-      });
-
-      it('should handle single segment', () => {
-        expect(splitQueuePath('single')).toEqual(['single']);
-      });
-    });
-
-    describe('joinQueuePath', () => {
-      it('should join queue segments into path', () => {
-        expect(joinQueuePath(['root'])).toBe('root');
-        expect(joinQueuePath(['root', 'production'])).toBe('root.production');
-        expect(joinQueuePath(['root', 'production', 'team1'])).toBe('root.production.team1');
-        expect(joinQueuePath(['root', 'a', 'b', 'c', 'd'])).toBe('root.a.b.c.d');
-      });
-
-      it('should handle empty segments', () => {
-        expect(joinQueuePath([])).toBe('');
-      });
-
-      it('should handle single segment', () => {
-        expect(joinQueuePath(['single'])).toBe('single');
-      });
-    });
-
     describe('getQueueNameFromPath', () => {
       it('should extract queue name from path', () => {
         expect(getQueueNameFromPath('root')).toBe('root');
