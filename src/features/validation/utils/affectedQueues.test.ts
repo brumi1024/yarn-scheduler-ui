@@ -1,8 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import {
-  getAffectedQueuesForValidation,
-  collectAffectedQueuesValidationErrors,
-} from './affectedQueues';
+import { getAffectedQueuesForValidation } from './affectedQueues';
 import type { SchedulerInfo, QueueInfo, StagedChange } from '~/types';
 
 describe('affectedQueues', () => {
@@ -161,58 +158,6 @@ describe('affectedQueues', () => {
       );
 
       expect(affected).toEqual(['root.parent.child']);
-    });
-  });
-
-  describe('collectAffectedQueuesValidationErrors', () => {
-    it('should collect errors from all affected queues', () => {
-      const allErrors = [
-        {
-          queuePath: 'root.parent',
-          errors: [
-            { field: 'capacity', message: 'Parent error 1' },
-            { field: 'capacity', message: 'Parent error 2' },
-          ],
-        },
-        {
-          queuePath: 'root.parent.child',
-          errors: [{ field: 'capacity', message: 'Child error' }],
-        },
-        {
-          queuePath: 'root.other',
-          errors: [{ field: 'state', message: 'Other error' }],
-        },
-      ];
-
-      const collected = collectAffectedQueuesValidationErrors(
-        ['root.parent', 'root.parent.child'],
-        allErrors,
-      );
-
-      expect(collected).toHaveLength(3);
-      expect(collected).toContainEqual({ field: 'capacity', message: 'Parent error 1' });
-      expect(collected).toContainEqual({ field: 'capacity', message: 'Parent error 2' });
-      expect(collected).toContainEqual({ field: 'capacity', message: 'Child error' });
-      expect(collected).not.toContainEqual({ field: 'state', message: 'Other error' });
-    });
-
-    it('should handle empty error lists', () => {
-      const collected = collectAffectedQueuesValidationErrors(['root.parent'], []);
-
-      expect(collected).toEqual([]);
-    });
-
-    it('should handle queues with no errors', () => {
-      const allErrors = [
-        {
-          queuePath: 'root.other',
-          errors: [{ field: 'state', message: 'Other error' }],
-        },
-      ];
-
-      const collected = collectAffectedQueuesValidationErrors(['root.parent'], allErrors);
-
-      expect(collected).toEqual([]);
     });
   });
 });

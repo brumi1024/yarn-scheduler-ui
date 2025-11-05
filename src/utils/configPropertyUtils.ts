@@ -27,29 +27,3 @@ export function getQueueProperties(
 
   return properties;
 }
-
-/**
- * Get all global scheduler properties from the configuration map
- * Global properties are those that don't contain a queue path (no "root" in the key)
- * @param configData The configuration data map
- * @returns Record of global property names to values
- */
-export function getGlobalProperties(configData: Map<string, string>): Record<string, string> {
-  const properties: Record<string, string> = {};
-
-  configData.forEach((value, key) => {
-    // Global properties are those that don't contain a queue path
-    // All queue properties contain "root" in their key
-    if (!key.includes('.root.') && !key.endsWith('.root')) {
-      properties[key] = value;
-    }
-  });
-
-  return properties;
-}
-
-// Export as namespace for easier use
-export const configPropertyUtils = {
-  getQueueProperties,
-  getGlobalProperties,
-};

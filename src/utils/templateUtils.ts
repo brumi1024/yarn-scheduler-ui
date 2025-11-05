@@ -17,14 +17,9 @@ export const TEMPLATE_SUFFIXES = {
 } as const;
 
 /**
- * Array of all template suffix values for iteration
- */
-export const ALL_TEMPLATE_SUFFIXES = Object.values(TEMPLATE_SUFFIXES);
-
-/**
  * Template markers used in queue paths
  */
-export const TEMPLATE_MARKERS = [TEMPLATE_SUFFIXES.LEGACY, 'auto-queue-creation-v2.'] as const;
+const TEMPLATE_MARKERS = [TEMPLATE_SUFFIXES.LEGACY, 'auto-queue-creation-v2.'] as const;
 
 /**
  * Check if a queue path represents a template queue

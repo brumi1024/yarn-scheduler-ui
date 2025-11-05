@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { configPropertyUtils } from './configPropertyUtils';
+import { getQueueProperties } from './configPropertyUtils';
 
 describe('configPropertyUtils', () => {
   const createTestConfigData = () => {
@@ -26,7 +26,7 @@ describe('configPropertyUtils', () => {
   describe('getQueueProperties', () => {
     it('should return all direct properties for a queue', () => {
       const configData = createTestConfigData();
-      const props = configPropertyUtils.getQueueProperties(configData, 'root.default');
+      const props = getQueueProperties(configData, 'root.default');
 
       expect(props).toEqual({
         capacity: '40',
@@ -37,7 +37,7 @@ describe('configPropertyUtils', () => {
 
     it('should return properties for root queue', () => {
       const configData = createTestConfigData();
-      const props = configPropertyUtils.getQueueProperties(configData, 'root');
+      const props = getQueueProperties(configData, 'root');
 
       expect(props).toEqual({
         capacity: '100',
@@ -47,7 +47,7 @@ describe('configPropertyUtils', () => {
 
     it('should skip nested properties', () => {
       const configData = createTestConfigData();
-      const props = configPropertyUtils.getQueueProperties(configData, 'root.production');
+      const props = getQueueProperties(configData, 'root.production');
 
       expect(props).toEqual({
         capacity: '60',
@@ -59,38 +59,7 @@ describe('configPropertyUtils', () => {
 
     it('should return empty object for non-existent queue', () => {
       const configData = createTestConfigData();
-      const props = configPropertyUtils.getQueueProperties(configData, 'root.nonexistent');
-
-      expect(props).toEqual({});
-    });
-  });
-
-  describe('getGlobalProperties', () => {
-    it('should return all global properties', () => {
-      const configData = createTestConfigData();
-      const props = configPropertyUtils.getGlobalProperties(configData);
-
-      expect(props).toEqual({
-        'yarn.scheduler.capacity.maximum-applications': '10000',
-        'yarn.scheduler.capacity.resource-calculator': 'DefaultResourceCalculator',
-        'yarn.scheduler.capacity.node-locality-delay': '40',
-        'yarn.resourcemanager.scheduler.class': 'CapacityScheduler',
-        'yarn.acl.enable': 'true',
-      });
-    });
-
-    it('should exclude all queue properties', () => {
-      const configData = createTestConfigData();
-      const props = configPropertyUtils.getGlobalProperties(configData);
-
-      // Should not include any properties with queue paths
-      expect(Object.keys(props).some((key) => key.includes('.root.'))).toBe(false);
-      expect(Object.keys(props).some((key) => key.endsWith('.root'))).toBe(false);
-    });
-
-    it('should handle empty config data', () => {
-      const configData = new Map<string, string>();
-      const props = configPropertyUtils.getGlobalProperties(configData);
+      const props = getQueueProperties(configData, 'root.nonexistent');
 
       expect(props).toEqual({});
     });

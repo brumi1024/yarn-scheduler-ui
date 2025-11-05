@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { SchedulerData, ConfigData, CapacitySchedulerInfo } from '../index';
 import type { NodeLabelsResponse } from '../api';
-import { isQueueInfo, isCapacitySchedulerInfo, isLeafQueue, isParentQueue } from '../guards';
+import { isLeafQueue, isParentQueue } from '../guards';
 import { QUEUE_STATES, SCHEDULER_TYPES } from '../constants';
 
 describe('Integration Tests - Complete API Responses', () => {
@@ -137,12 +137,12 @@ describe('Integration Tests - Complete API Responses', () => {
       };
 
       const info = schedulerResponse.scheduler.schedulerInfo;
-      expect(isCapacitySchedulerInfo(info)).toBe(true);
+      expect(info.type).toBe(SCHEDULER_TYPES.CAPACITY);
       expect(info.queues.queue).toHaveLength(3);
 
       // Verify queue hierarchy
       const prodQueue = info.queues.queue[0];
-      expect(isQueueInfo(prodQueue)).toBe(true);
+      expect(prodQueue.queuePath).toBe('root.production');
       expect(isParentQueue(prodQueue)).toBe(true);
       expect(prodQueue.queues?.queue).toHaveLength(2);
 

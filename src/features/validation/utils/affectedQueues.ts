@@ -77,19 +77,3 @@ export function getAffectedQueuesForValidation(
 
   return affectedQueues;
 }
-
-export function collectAffectedQueuesValidationErrors(
-  affectedQueues: string[],
-  allValidationErrors: Array<{ queuePath: string; errors: unknown[] }>,
-): unknown[] {
-  const collectedErrors: unknown[] = [];
-
-  affectedQueues.forEach((queuePath) => {
-    const queueErrors = allValidationErrors.find((item) => item.queuePath === queuePath);
-    if (queueErrors?.errors) {
-      collectedErrors.push(...queueErrors.errors);
-    }
-  });
-
-  return collectedErrors;
-}
