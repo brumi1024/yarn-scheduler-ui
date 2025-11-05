@@ -1,5 +1,11 @@
 import type { CapacityType, ParsedCapacity } from '~/types';
 
+/**
+ * Parse a capacity value string into a structured format
+ * Supports: percentages (50%), weights (5w), absolute resources ([memory=1024,vcores=2])
+ * @param value Capacity value string
+ * @returns Parsed capacity object or null if invalid
+ */
 export function parseCapacityValue(value: string | undefined): ParsedCapacity | null {
   if (!value || value.trim() === '') {
     return null;

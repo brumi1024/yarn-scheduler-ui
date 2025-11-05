@@ -1,6 +1,6 @@
 # Adding Validation Rules
 
-This guide explains how to add new validation rules to the Capacity Scheduler UI. Validation rules enforce business logic constraints across queue configurations, ensuring that changes are valid before being applied to the YARN cluster.
+This guide explains how to add new validation rules to the Capacity Scheduler UI. Validation rules enforce business logic constraints across queue configurations, ensuring that changes are valid before being applied to the YARN cluster. The general idea is to have little frontend validation to rule out the straightforward issues and let YARN validate the more complicated configs.
 
 ## Overview
 

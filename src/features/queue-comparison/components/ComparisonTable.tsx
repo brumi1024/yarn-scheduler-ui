@@ -10,7 +10,7 @@ import {
   TableRow,
 } from '~/components/ui/table';
 import type { ComparisonData } from '../utils/comparison';
-import { getPropertyCategory, formatPropertyName } from '../utils/comparison';
+import { getPropertyCategory, formatPropertyName } from '~/utils/formatUtils';
 
 interface ComparisonTableProps {
   data: ComparisonData;

@@ -4,8 +4,7 @@ import {
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,
 } from '../crossQueue';
-import type { SchedulerInfo, StagedChange } from '~/types';
-import type { ValidationIssue } from '../types';
+import type { SchedulerInfo, StagedChange, ValidationIssue } from '~/types';
 
 // Mock dependencies
 vi.mock('../service', () => ({

@@ -7,9 +7,7 @@ import {
   runFieldValidation,
   type ValidationContext as RuleContext,
 } from '~/config/validation-rules';
-import type { ValidationIssue } from './types';
-import type { SchedulerInfo } from '~/types/scheduler';
-import type { StagedChange } from '~/types/staged-change';
+import type { ValidationIssue, SchedulerInfo, StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 type Severity = ValidationIssue['severity'];

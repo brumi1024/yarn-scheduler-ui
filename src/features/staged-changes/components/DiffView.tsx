@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader } from '~/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
+import { formatPropertyName } from '~/utils/formatUtils';
 
 interface DiffViewProps {
   change: StagedChange;
@@ -40,24 +41,6 @@ const getChangeTypeVariant = (
     default:
       return 'default';
   }
-};
-
-const formatPropertyName = (property: string | undefined): string => {
-  if (!property) return 'Queue operation';
-
-  if (property === SPECIAL_VALUES.QUEUE_MARKER) {
-    return 'Queue removal';
-  }
-
-  // Handle node label properties with better formatting
-  if (property.includes('accessible-node-labels.') && property.split('.').length === 3) {
-    const parts = property.split('.');
-    const label = parts[1];
-    const labelProperty = parts[2];
-    return `${labelProperty} (label: ${label})`;
-  }
-
-  return property;
 };
 
 const DiffValue: React.FC<{

@@ -1,7 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { validateField, validateQueue, hasBlockingIssues, splitIssues } from '../service';
-import type { SchedulerInfo, StagedChange } from '~/types';
-import type { ValidationIssue } from '../types';
+import type { SchedulerInfo, StagedChange, ValidationIssue } from '~/types';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 // Mock dependencies

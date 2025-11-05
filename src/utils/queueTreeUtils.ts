@@ -2,7 +2,7 @@
  * Utilities for working with queue tree structures
  */
 
-import type { QueueInfo } from '~/types';
+import type { QueueInfo, SchedulerInfo } from '~/types';
 
 /**
  * Flatten a queue tree into a flat array of all queues
@@ -44,22 +44,77 @@ export function traverseQueueTree(
 }
 
 /**
- * Find a queue by its path in the tree
- * @param root The root queue to search from
- * @param path The queue path to find (e.g., "root.production.team1")
+ * Find a queue by its path in the queue tree or scheduler data
+ * @param rootOrScheduler The root queue or scheduler data to search from
+ * @param queuePath The queue path to find (e.g., "root", "root.production.team1")
  * @returns The queue if found, null otherwise
  */
-export function findQueueByPath(root: QueueInfo, path: string): QueueInfo | null {
-  if (root.queuePath === path) return root;
+export function findQueueByPath(
+  rootOrScheduler: QueueInfo | SchedulerInfo | undefined | null,
+  queuePath: string,
+): QueueInfo | null {
+  if (!rootOrScheduler || !queuePath) {
+    return null;
+  }
 
-  if (root.queues?.queue) {
-    for (const child of root.queues.queue) {
-      const found = findQueueByPath(child, path);
-      if (found) return found;
+  // Handle root queue special case for SchedulerInfo
+  if (
+    'queueName' in rootOrScheduler &&
+    rootOrScheduler.queueName === 'root' &&
+    queuePath === 'root'
+  ) {
+    return rootOrScheduler as unknown as QueueInfo;
+  }
+
+  // If it's a QueueInfo and matches, return it
+  if ('queuePath' in rootOrScheduler && rootOrScheduler.queuePath === queuePath) {
+    return rootOrScheduler as QueueInfo;
+  }
+
+  // Use iterative approach for performance
+  const pathParts = queuePath.split('.');
+  let currentQueue: QueueInfo | undefined = rootOrScheduler as QueueInfo;
+
+  // Verify first part matches root queue name
+  if (!currentQueue || pathParts[0] !== currentQueue.queueName) {
+    return null;
+  }
+
+  // Traverse down the path
+  for (let i = 1; i < pathParts.length; i += 1) {
+    if (!currentQueue?.queues?.queue) {
+      return null;
+    }
+
+    currentQueue = currentQueue.queues.queue.find((q) => q.queueName === pathParts[i]);
+
+    if (!currentQueue) {
+      return null;
     }
   }
 
-  return null;
+  return currentQueue;
+}
+
+/**
+ * Get all sibling queues for a given queue path
+ * @param schedulerData The scheduler data
+ * @param queuePath The queue path to find siblings for
+ * @returns Array of sibling queues (excluding the queue itself)
+ */
+export function getSiblingQueues(
+  schedulerData: SchedulerInfo | undefined | null,
+  queuePath: string,
+): QueueInfo[] {
+  const lastDotIndex = queuePath.lastIndexOf('.');
+  const parentPath = lastDotIndex > 0 ? queuePath.substring(0, lastDotIndex) : null;
+
+  if (!parentPath) {
+    return [];
+  }
+
+  const parentQueue = findQueueByPath(schedulerData, parentPath);
+  return parentQueue?.queues?.queue || [];
 }
 
 // Export as namespace for easier use
@@ -67,4 +122,5 @@ export const queueTreeUtils = {
   flattenQueueTree,
   traverseQueueTree,
   findQueueByPath,
+  getSiblingQueues,
 };
