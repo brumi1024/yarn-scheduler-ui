@@ -38,7 +38,7 @@ export function PolicyReferenceDialog() {
         <ScrollArea className="h-[600px] pr-4 mt-4">
           <Accordion type="single" collapsible className="w-full">
             {POLICY_DESCRIPTIONS.map((policy) => (
-              <AccordionItem key={policy.id} value={policy.id}>
+              <AccordionItem key={policy.id} value={policy.id} className="border-b last:border-b-0">
                 <AccordionTrigger className="hover:no-underline">
                   <div className="flex items-center justify-between w-full mr-2">
                     <span className="text-sm font-medium text-left">{policy.name}</span>
