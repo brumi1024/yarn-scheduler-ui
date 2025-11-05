@@ -2,7 +2,7 @@ import type { SchedulerInfo, StagedChange } from '~/types';
 import type { ValidationIssue } from './types';
 import { validateQueue } from './service';
 import { isBlockingError, isCrossQueueRule } from './ruleCategories';
-import { mergeStagedConfig } from './utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { getAffectedQueuesForValidation } from './utils/affectedQueues';
 
 interface ValidatePropertyChangeOptions {

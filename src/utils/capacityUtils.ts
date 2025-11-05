@@ -1,4 +1,4 @@
-import type { CapacityType, ParsedCapacity } from '~/features/validation/types';
+import type { CapacityType, ParsedCapacity } from '~/types';
 
 export function parseCapacityValue(value: string | undefined): ParsedCapacity | null {
   if (!value || value.trim() === '') {

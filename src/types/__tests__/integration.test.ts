@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { SchedulerData, ConfigData, NodeLabelsInfo, CapacitySchedulerInfo } from '../index';
+import type { SchedulerData, ConfigData, CapacitySchedulerInfo } from '../index';
+import type { NodeLabelsResponse } from '../api';
 import { isQueueInfo, isCapacitySchedulerInfo, isLeafQueue, isParentQueue } from '../guards';
 import { QUEUE_STATES, SCHEDULER_TYPES } from '../constants';
 
@@ -414,7 +415,7 @@ describe('Integration Tests - Complete API Responses', () => {
 
   describe('Node Labels API Response', () => {
     it('should handle node labels response', () => {
-      const nodeLabelsResponse: NodeLabelsInfo = {
+      const nodeLabelsResponse: NodeLabelsResponse = {
         nodeLabelInfo: [
           {
             name: 'gpu',
@@ -434,14 +435,17 @@ describe('Integration Tests - Complete API Responses', () => {
         ],
       };
 
-      expect(nodeLabelsResponse.nodeLabelInfo).toHaveLength(3);
+      expect(Array.isArray(nodeLabelsResponse.nodeLabelInfo)).toBe(true);
+      if (Array.isArray(nodeLabelsResponse.nodeLabelInfo)) {
+        expect(nodeLabelsResponse.nodeLabelInfo).toHaveLength(3);
 
-      const gpuLabel = nodeLabelsResponse.nodeLabelInfo.find((l) => l.name === 'gpu');
-      expect(gpuLabel?.exclusivity).toBe(true);
-      expect(gpuLabel?.activeNMs).toBe(4);
+        const gpuLabel = nodeLabelsResponse.nodeLabelInfo.find((l) => l.name === 'gpu');
+        expect(gpuLabel?.exclusivity).toBe(true);
+        expect(gpuLabel?.activeNMs).toBe(4);
 
-      const nonExclusiveLabels = nodeLabelsResponse.nodeLabelInfo.filter((l) => !l.exclusivity);
-      expect(nonExclusiveLabels).toHaveLength(2);
+        const nonExclusiveLabels = nodeLabelsResponse.nodeLabelInfo.filter((l) => !l.exclusivity);
+        expect(nonExclusiveLabels).toHaveLength(2);
+      }
     });
   });
 

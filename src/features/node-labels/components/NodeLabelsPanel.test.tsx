@@ -4,8 +4,16 @@ import { vi } from 'vitest';
 import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
-import { getMockNodeLabel } from '~/testing/factories';
 import type { NodeLabel } from '~/types';
+
+// Test helper
+const getMockNodeLabel = (overrides?: Partial<NodeLabel>): NodeLabel => {
+  return {
+    name: 'gpu',
+    exclusivity: true,
+    ...overrides,
+  };
+};
 
 // Mock dependencies
 vi.mock('~/stores/schedulerStore');

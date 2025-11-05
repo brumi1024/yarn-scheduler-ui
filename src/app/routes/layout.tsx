@@ -11,7 +11,7 @@ import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import { ChevronRight, Lock } from 'lucide-react';
 import { LegacyModeDocumentation } from '~/features/queue-management/components/LegacyModeDocumentation';
-import { getMergedConfigData } from '~/features/validation/utils/configUtils';
+import { getMergedConfigData } from '~/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types';
 import { SearchBar } from '~/components/search/SearchBar';
 

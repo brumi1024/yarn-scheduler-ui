@@ -2,7 +2,7 @@ import {
   mergeStagedConfig,
   applyFieldPreview,
   buildEffectivePropertyKey,
-} from './utils/configUtils';
+} from '~/utils/configUtils';
 import {
   runFieldValidation,
   type ValidationContext as RuleContext,

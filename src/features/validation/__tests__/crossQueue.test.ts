@@ -17,7 +17,7 @@ vi.mock('../ruleCategories', () => ({
   isCrossQueueRule: vi.fn(),
 }));
 
-vi.mock('../utils/configUtils', () => ({
+vi.mock('~/utils/configUtils', () => ({
   mergeStagedConfig: vi.fn(),
 }));
 
@@ -27,7 +27,7 @@ vi.mock('../utils/affectedQueues', () => ({
 
 import { validateQueue } from '../service';
 import { isBlockingError, isCrossQueueRule } from '../ruleCategories';
-import { mergeStagedConfig } from '../utils/configUtils';
+import { mergeStagedConfig } from '~/utils/configUtils';
 import { getAffectedQueuesForValidation } from '../utils/affectedQueues';
 
 describe('crossQueue validation', () => {

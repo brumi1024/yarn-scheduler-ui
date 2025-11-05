@@ -5,6 +5,7 @@ export * from './resource';
 export * from './node-label';
 export * from './node';
 export * from './staged-change';
+export * from './validation';
 export * from './property-descriptor';
 export * from './mutation';
 export * from './guards';

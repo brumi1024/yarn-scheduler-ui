@@ -2,7 +2,20 @@ import { describe, it, expect } from 'vitest';
 import { getMergedConfigData, getEffectivePropertyValue } from './configUtils';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
-import { getMockStagedChange } from '~/testing/factories/factories';
+
+// Test helper
+const getMockStagedChange = (overrides?: Partial<StagedChange>): StagedChange => {
+  return {
+    id: 'change-1',
+    queuePath: 'root.default',
+    property: 'capacity',
+    oldValue: '10',
+    newValue: '20',
+    type: 'update',
+    timestamp: Date.now(),
+    ...overrides,
+  };
+};
 
 describe('configUtils', () => {
   describe('getMergedConfigData', () => {

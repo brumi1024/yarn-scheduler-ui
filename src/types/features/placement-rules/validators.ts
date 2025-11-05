@@ -16,6 +16,7 @@ export const PlacementRuleSchema = z.object({
     'reject',
     'defaultQueue',
     'user',
+    'applicationName',
     'custom',
     'setDefaultQueue',
   ]),

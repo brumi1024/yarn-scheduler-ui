@@ -5,8 +5,8 @@
 import type { StateCreator } from 'zustand';
 import type { WritableDraft } from 'immer';
 import type { PlacementRule } from '~/types/features/placement-rules';
-import { extractPlacementRulesFromConfig } from '~/utils/placementRulesUtils';
-import { getMergedConfigData } from '~/features/validation/utils/configUtils';
+import { extractPlacementRulesFromConfig } from '~/features/placement-rules/utils/placementRulesUtils';
+import { getMergedConfigData } from '~/utils/configUtils';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 import { migrateLegacyRules } from '~/features/placement-rules/utils/migration';
 import type { SchedulerStore } from './types';

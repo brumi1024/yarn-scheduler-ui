@@ -2,8 +2,16 @@ import { render, screen, within } from '@testing-library/react';
 import { vi } from 'vitest';
 import { NodeLabels } from './NodeLabels';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { getMockNodeLabel } from '~/testing/factories';
 import type { NodeLabel } from '~/types/node-label';
+
+// Test helper
+const getMockNodeLabel = (overrides?: Partial<NodeLabel>): NodeLabel => {
+  return {
+    name: 'gpu',
+    exclusivity: true,
+    ...overrides,
+  };
+};
 
 // Mock the store
 vi.mock('~/stores/schedulerStore');

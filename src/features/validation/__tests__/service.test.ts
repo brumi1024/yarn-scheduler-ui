@@ -5,7 +5,7 @@ import type { ValidationIssue } from '../types';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
 
 // Mock dependencies
-vi.mock('../utils/configUtils', () => ({
+vi.mock('~/utils/configUtils', () => ({
   mergeStagedConfig: vi.fn(),
   applyFieldPreview: vi.fn(),
   buildEffectivePropertyKey: vi.fn(),
@@ -19,7 +19,7 @@ import {
   mergeStagedConfig,
   applyFieldPreview,
   buildEffectivePropertyKey,
-} from '../utils/configUtils';
+} from '~/utils/configUtils';
 import { runFieldValidation } from '~/config/validation-rules';
 
 describe('validation service', () => {

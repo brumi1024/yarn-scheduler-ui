@@ -17,7 +17,7 @@ import {
 } from '~/features/queue-management/utils/capacityEditor';
 import { buildPropertyKey } from '~/utils/propertyUtils';
 import { validateQueue } from '~/features/validation/service';
-import type { ValidationIssue } from '~/features/validation/types';
+import type { ValidationIssue } from '~/types';
 
 export type CapacityEditorOrigin = 'property-editor' | 'context-menu' | 'add-queue';
 
