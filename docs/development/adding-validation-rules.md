@@ -152,12 +152,19 @@ Add test cases in `src/config/__tests__/validation-rules.test.ts`:
 ```typescript
 describe('MY_NEW_RULE', () => {
   it('should pass when condition is valid', () => {
-    const context = buildTestContext({
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.test.related-field', 'compatible-value'],
+    ]);
+
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'my-property',
       fieldValue: 'valid-value',
-      config: new Map([['yarn.scheduler.capacity.root.test.related-field', 'compatible-value']]),
-    });
+      config,
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
 
     const issues = runFieldValidation(context);
 
@@ -165,12 +172,19 @@ describe('MY_NEW_RULE', () => {
   });
 
   it('should return error when condition is violated', () => {
-    const context = buildTestContext({
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.test.related-field', 'incompatible-value'],
+    ]);
+
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'my-property',
       fieldValue: 'invalid-value',
-      config: new Map([['yarn.scheduler.capacity.root.test.related-field', 'incompatible-value']]),
-    });
+      config,
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
 
     const issues = runFieldValidation(context);
 
@@ -185,12 +199,15 @@ describe('MY_NEW_RULE', () => {
   });
 
   it('should skip validation when not in legacy mode', () => {
-    const context = buildTestContext({
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'my-property',
       fieldValue: 'invalid-value',
+      config: new Map(),
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
       legacyModeEnabled: false,
-    });
+    };
 
     const issues = runFieldValidation(context);
 
@@ -461,12 +478,19 @@ export const QUEUE_SPECIFIC_RULES = [
 
 describe('DEFAULT_LIFETIME_CONSTRAINT', () => {
   it('should pass when default lifetime is less than maximum', () => {
-    const context = buildTestContext({
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.test.maximum-application-lifetime', '7200'],
+    ]);
+
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'default-application-lifetime',
       fieldValue: '3600',
-      config: new Map([['yarn.scheduler.capacity.root.test.maximum-application-lifetime', '7200']]),
-    });
+      config,
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
 
     const issues = runFieldValidation(context);
 
@@ -474,12 +498,19 @@ describe('DEFAULT_LIFETIME_CONSTRAINT', () => {
   });
 
   it('should return error when default exceeds maximum', () => {
-    const context = buildTestContext({
+    const config = new Map([
+      ['yarn.scheduler.capacity.root.test.maximum-application-lifetime', '3600'],
+    ]);
+
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'default-application-lifetime',
       fieldValue: '7200',
-      config: new Map([['yarn.scheduler.capacity.root.test.maximum-application-lifetime', '3600']]),
-    });
+      config,
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
 
     const issues = runFieldValidation(context);
 
@@ -494,12 +525,15 @@ describe('DEFAULT_LIFETIME_CONSTRAINT', () => {
   });
 
   it('should skip validation when maximum is not set', () => {
-    const context = buildTestContext({
+    const context: ValidationContext = {
       queuePath: 'root.test',
       fieldName: 'default-application-lifetime',
       fieldValue: '7200',
       config: new Map(),
-    });
+      schedulerData: mockSchedulerData,
+      stagedChanges: [],
+      legacyModeEnabled: true,
+    };
 
     const issues = runFieldValidation(context);
 
@@ -533,11 +567,11 @@ describe('DEFAULT_LIFETIME_CONSTRAINT', () => {
 - Ensure test context includes all required config values
 - Check that `legacyModeEnabled` is set correctly
 - Verify scheduler data structure matches expectations
-- Use `buildTestContext()` helper for consistent test setup
+- Construct `ValidationContext` objects with all required fields (see examples above)
 
 ## Further Reading
 
 - `docs/validation_overhaul.md` - Architecture overview of the validation system
 - `docs/development/extending-scheduler-properties.md` - Adding new properties with schema validation
-- `src/features/validation/README.md` - Validation feature documentation (if exists)
+- `src/features/validation/` - Validation feature implementation (crossQueue.ts, service.ts, ruleCategories.ts)
 - YARN Capacity Scheduler documentation - Official YARN scheduler constraints
