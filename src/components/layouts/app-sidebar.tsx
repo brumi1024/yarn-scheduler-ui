@@ -46,9 +46,7 @@ export function AppSidebar() {
         <SidebarMenu>
           {navigation.map((item) => {
             const Icon = item.icon;
-            const isActive =
-              location.pathname === item.path ||
-              (item.path === '/' && location.pathname.startsWith('/queue/'));
+            const isActive = location.pathname === item.path;
 
             return (
               <SidebarMenuItem key={item.path}>
