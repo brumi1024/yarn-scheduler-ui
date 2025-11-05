@@ -17,15 +17,12 @@ export const TEMPLATE_SUFFIXES = {
 } as const;
 
 /**
- * Template markers used in queue paths
- */
-const TEMPLATE_MARKERS = [TEMPLATE_SUFFIXES.LEGACY, 'auto-queue-creation-v2.'] as const;
-
-/**
  * Check if a queue path represents a template queue
  * @param queuePath Queue path to check
  * @returns True if the path includes a template marker
  */
 export function isTemplateQueuePath(queuePath: string): boolean {
-  return TEMPLATE_MARKERS.some((marker) => queuePath.includes(marker));
+  return [TEMPLATE_SUFFIXES.LEGACY, 'auto-queue-creation-v2.'].some((marker) =>
+    queuePath.includes(marker),
+  );
 }
