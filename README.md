@@ -39,6 +39,7 @@ A modern web interface for managing Apache Hadoop YARN Capacity Scheduler config
 yarn-scheduler-ui/
 ├── src/
 │   ├── app/               # React Router entry points and route modules
+│   ├── components/        # Shared UI components (shadcn/ui, layouts, providers)
 │   ├── config/            # Scheduler schemas, defaults, property metadata
 │   ├── features/          # Feature slices (queues, placement-rules, comparison, etc.)
 │   ├── hooks/             # Shared React hooks
@@ -138,6 +139,14 @@ Artifacts are emitted to `./build`. Provide the same environment variables at ru
 - **Linting**: `npm run lint` (or `npm run lint:fix` to auto-fix)
 - **Lint SARIF for CI**: `npm run lint:ci` (generates SARIF report for CI pipelines)
 - **Formatting**: `npm run format` / `npm run format:check`
+
+## Developer Documentation
+
+For contributors and developers working with the codebase, additional technical documentation is available:
+
+- **[Extending Scheduler Properties](docs/development/extending-scheduler-properties.md)** - Comprehensive guide for adding new queue and global properties to the UI, including validation rules and conditional logic
+- **[Validation System Architecture](docs/validation_overhaul.md)** - Design overview of the declarative validation engine and how it processes cross-queue rules
+- **[Validation Rule Inventory](docs/validation_rule_inventory.md)** - Complete reference of all validation rules enforced by the system
 
 ## Contributing
 

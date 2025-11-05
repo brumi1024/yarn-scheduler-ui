@@ -36,7 +36,7 @@ export default function Layout() {
 
   // Update search context based on current route
   useEffect(() => {
-    if (location.pathname === '/' || location.pathname.startsWith('/queue/')) {
+    if (location.pathname === '/') {
       setSearchContext('queues');
     } else if (location.pathname === '/node-labels') {
       setSearchContext('nodes');
@@ -68,12 +68,6 @@ export default function Layout() {
       return {
         title: 'Placement Rules',
         description: 'Define rules for application placement in queues',
-      };
-    } else if (location.pathname.startsWith('/queue/')) {
-      const queuePath = location.pathname.replace('/queue/', '');
-      return {
-        title: `Queue: ${queuePath}`,
-        description: 'View and edit queue properties',
       };
     }
     return { title: '', description: '' };

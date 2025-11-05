@@ -98,33 +98,6 @@ describe('AppSidebar', () => {
       expect(globalSettingsLink).toHaveAttribute('data-active', 'false');
     });
 
-    it('should mark Queues as active when on queue detail path', () => {
-      mockLocation.pathname = '/queue/root.production';
-      render(<AppSidebar />);
-
-      const queuesLink = screen.getByRole('link', { name: /Queues/i });
-      expect(queuesLink).toHaveAttribute('data-active', 'true');
-    });
-
-    it('should mark Queues as active for any queue subpath', () => {
-      const queuePaths = [
-        '/queue/root',
-        '/queue/root.production',
-        '/queue/root.production.team-a',
-        '/queue/anything',
-      ];
-
-      queuePaths.forEach((path) => {
-        mockLocation.pathname = path;
-        const { unmount } = render(<AppSidebar />);
-
-        const queuesLink = screen.getByRole('link', { name: /Queues/i });
-        expect(queuesLink).toHaveAttribute('data-active', 'true');
-
-        unmount();
-      });
-    });
-
     it('should mark Node Labels as active when on node labels path', () => {
       mockLocation.pathname = '/node-labels';
       render(<AppSidebar />);

@@ -37,7 +37,7 @@ export const UnsavedChangesDialog: React.FC<UnsavedChangesDialogProps> = ({
             You have unsaved changes. Would you like to save them before closing?
           </DialogDescription>
         </DialogHeader>
-        <DialogFooter className="gap-2 sm:gap-0">
+        <DialogFooter className="gap-2">
           <Button variant="outline" onClick={onDiscard} disabled={isSaving}>
             Discard Changes
           </Button>

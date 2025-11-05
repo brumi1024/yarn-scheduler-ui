@@ -3,6 +3,7 @@ import type { Control, ControllerRenderProps, FormState, UseFormSetValue } from 
 import { cn } from '~/utils/cn';
 import { Input } from '~/components/ui/input';
 import { FieldSwitch } from '~/components/ui/field-switch';
+import { FieldSelect } from '~/components/ui/field-select';
 import { Badge } from '~/components/ui/badge';
 import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
@@ -308,6 +309,52 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           </Field>
         );
 
+        const renderSelect = () => {
+          const selectOptions = enumOptions.map((option) => ({
+            value: option.value,
+            label: option.label,
+            // Omit descriptions to prevent overflow in the dropdown
+          }));
+
+          return (
+            <>
+              <FieldSelect
+                id={fieldName}
+                fieldName={fieldName}
+                label={
+                  <PropertyLabel
+                    property={property}
+                    stagedStatus={stagedStatus}
+                    isEnabled={isEnabled}
+                  />
+                }
+                description={property.description}
+                options={selectOptions}
+                value={field.value || ''}
+                onValueChange={(value) => {
+                  if (value) {
+                    field.onChange(value);
+                    onBlur?.(property.name, value);
+                  }
+                }}
+                placeholder="Select an option..."
+                disabled={!isEnabled}
+                fieldClassName="space-y-2"
+                triggerClassName={cn('w-full', commonProps.className)}
+                selectClassName="w-[var(--radix-select-trigger-width)]"
+                message={
+                  error
+                    ? String(error.message ?? '')
+                    : inlineBusinessError
+                      ? inlineBusinessError
+                      : undefined
+                }
+              />
+              {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+            </>
+          );
+        };
+
         const renderToggleGroup = () => (
           <Field>
             <PropertyLabel property={property} stagedStatus={stagedStatus} isEnabled={isEnabled} />
@@ -346,9 +393,15 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           </Field>
         );
 
+        // Use choiceCard for explicit display preference
         if (property.enumDisplay === 'choiceCard') {
           return renderChoiceCards();
         }
+        // Use select dropdown for 4 or more options
+        if (enumOptions.length >= 4) {
+          return renderSelect();
+        }
+        // Use toggle group for 2-3 options
         return renderToggleGroup();
       }
 
@@ -551,7 +604,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
             {renderInput(field, formState)}
 
             {/* Status badges and helper text */}
-            {(property.deprecated || property.deprecationMessage || !isEnabled) && (
+            {(property.deprecated || property.deprecationMessage) && (
               <div className="flex items-center flex-wrap gap-1 mt-2">
                 {property.deprecated && (
                   <Badge
@@ -563,11 +616,6 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 )}
                 {property.deprecated && property.deprecationMessage && (
                   <span className="text-xs text-orange-500">{property.deprecationMessage}</span>
-                )}
-                {!isEnabled && (
-                  <span className="text-xs text-muted-foreground">
-                    This field is disabled based on current configuration
-                  </span>
                 )}
               </div>
             )}

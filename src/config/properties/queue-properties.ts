@@ -270,6 +270,16 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
         label: 'Fair',
         description: 'Balances resource allocation across applications for fairness.',
       },
+      {
+        value: 'fifo-with-partitions',
+        label: 'FIFO with Partitions',
+        description: 'FIFO scheduling with support for node label partitions.',
+      },
+      {
+        value: 'fifo-for-pending-apps',
+        label: 'FIFO for Pending Apps',
+        description: 'FIFO ordering specifically for pending applications.',
+      },
     ],
   },
   {
