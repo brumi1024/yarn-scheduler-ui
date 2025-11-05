@@ -2,7 +2,16 @@ import { describe, expect, it } from 'vitest';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import type { QueueInfo } from '~/types';
 import type { StagedChange } from '~/types/staged-change';
-import { buildCapacityEditorLabelOptions, buildCapacityEditorDrafts } from './capacityEditor';
+import {
+  buildCapacityEditorLabelOptions,
+  buildCapacityEditorDrafts,
+  parseVectorDraft,
+  ensureCoreEntries,
+  createRowDraft,
+  convertVectorDraftToString,
+  createEmptyVectorEntry,
+  getPropertyNameForLabel,
+} from './capacityEditor';
 
 describe('capacity editor utilities', () => {
   it('includes accessible labels and staged labels when building options', () => {
@@ -243,5 +252,478 @@ describe('capacity editor utilities', () => {
     expect(drafts[1].isNew).toBe(true);
     expect(drafts[1].capacityValue).toBe('30');
     expect(drafts[1].maxCapacityValue).toBe('60');
+  });
+
+  describe('parseVectorDraft', () => {
+    it('should parse valid vector string with two resources', () => {
+      const result = parseVectorDraft('[memory=2048,vcores=4]');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[0].value).toBe('2048');
+      expect(result[0].id).toBeDefined();
+      expect(result[1].key).toBe('vcores');
+      expect(result[1].value).toBe('4');
+      expect(result[1].id).toBeDefined();
+    });
+
+    it('should parse vector with multiple resources', () => {
+      const result = parseVectorDraft('[memory=2048,vcores=4,gpu=2]');
+
+      expect(result).toHaveLength(3);
+      expect(result[2].key).toBe('gpu');
+      expect(result[2].value).toBe('2');
+    });
+
+    it('should handle vector with whitespace', () => {
+      const result = parseVectorDraft('[ memory = 2048 , vcores = 4 ]');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[0].value).toBe('2048');
+      expect(result[1].key).toBe('vcores');
+      expect(result[1].value).toBe('4');
+    });
+
+    it('should return empty array for non-vector string', () => {
+      const result = parseVectorDraft('100');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for empty string', () => {
+      const result = parseVectorDraft('');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for empty brackets', () => {
+      const result = parseVectorDraft('[]');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return empty array for brackets with only whitespace', () => {
+      const result = parseVectorDraft('[   ]');
+
+      expect(result).toEqual([]);
+    });
+
+    it('should skip entries without key', () => {
+      const result = parseVectorDraft('[memory=2048,=100,vcores=4]');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[1].key).toBe('vcores');
+    });
+
+    it('should handle entries with missing value', () => {
+      const result = parseVectorDraft('[memory=2048,vcores=]');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[0].value).toBe('2048');
+      expect(result[1].key).toBe('vcores');
+      expect(result[1].value).toBe('');
+    });
+
+    it('should handle entries with no equals sign', () => {
+      const result = parseVectorDraft('[memory=2048,vcores]');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[1].key).toBe('vcores');
+      expect(result[1].value).toBe('');
+    });
+
+    it('should handle vector with leading/trailing whitespace', () => {
+      const result = parseVectorDraft('  [memory=2048,vcores=4]  ');
+
+      expect(result).toHaveLength(2);
+      expect(result[0].key).toBe('memory');
+      expect(result[0].value).toBe('2048');
+    });
+  });
+
+  describe('ensureCoreEntries', () => {
+    it('should add missing memory entry', () => {
+      const entries = [{ id: '1', key: 'vcores', value: '4' }];
+      const result = ensureCoreEntries(entries);
+
+      expect(result).toHaveLength(2);
+      expect(result.some((e) => e.key === 'memory')).toBe(true);
+      expect(result.some((e) => e.key === 'vcores')).toBe(true);
+    });
+
+    it('should add missing vcores entry', () => {
+      const entries = [{ id: '1', key: 'memory', value: '2048' }];
+      const result = ensureCoreEntries(entries);
+
+      expect(result).toHaveLength(2);
+      expect(result.some((e) => e.key === 'memory')).toBe(true);
+      expect(result.some((e) => e.key === 'vcores')).toBe(true);
+    });
+
+    it('should add both memory and vcores when empty', () => {
+      const entries: any[] = [];
+      const result = ensureCoreEntries(entries);
+
+      expect(result).toHaveLength(2);
+      expect(result.some((e) => e.key === 'memory')).toBe(true);
+      expect(result.some((e) => e.key === 'vcores')).toBe(true);
+    });
+
+    it('should not duplicate existing entries', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: 'vcores', value: '4' },
+      ];
+      const result = ensureCoreEntries(entries);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('1');
+      expect(result[1].id).toBe('2');
+    });
+
+    it('should preserve custom entries', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: 'gpu', value: '2' },
+      ];
+      const result = ensureCoreEntries(entries);
+
+      expect(result).toHaveLength(3);
+      expect(result.some((e) => e.key === 'memory')).toBe(true);
+      expect(result.some((e) => e.key === 'gpu')).toBe(true);
+      expect(result.some((e) => e.key === 'vcores')).toBe(true);
+    });
+
+    it('should not add defaults when includeDefaults is false', () => {
+      const entries = [{ id: '1', key: 'gpu', value: '2' }];
+      const result = ensureCoreEntries(entries, false);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].key).toBe('gpu');
+    });
+
+    it('should set empty value for added core entries', () => {
+      const entries: any[] = [];
+      const result = ensureCoreEntries(entries);
+
+      result.forEach((entry) => {
+        expect(entry.value).toBe('');
+        expect(entry.id).toBeDefined();
+      });
+    });
+  });
+
+  describe('createRowDraft', () => {
+    it('should create draft in simple mode for percentage values', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+      });
+
+      expect(draft.queuePath).toBe('root.default');
+      expect(draft.queueName).toBe('default');
+      expect(draft.mode).toBe('simple');
+      expect(draft.baseMode).toBe('simple');
+      expect(draft.capacityValue).toBe('50');
+      expect(draft.maxCapacityValue).toBe('100');
+      expect(draft.vectorCapacity).toEqual([]);
+      expect(draft.vectorMaxCapacity).toEqual([]);
+      expect(draft.isOrigin).toBe(false);
+      expect(draft.isNew).toBe(false);
+      expect(draft.hasStagedChange).toBe(false);
+    });
+
+    it('should create draft in vector mode for vector values', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '[memory=2048,vcores=4]',
+        baseMaxCapacity: '[memory=4096,vcores=8]',
+      });
+
+      expect(draft.mode).toBe('vector');
+      expect(draft.baseMode).toBe('vector');
+      expect(draft.vectorCapacity.length).toBeGreaterThan(0);
+      expect(draft.vectorMaxCapacity.length).toBeGreaterThan(0);
+    });
+
+    it('should use currentCapacity when provided', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+        currentCapacity: '60',
+        currentMaxCapacity: '80',
+      });
+
+      expect(draft.capacityValue).toBe('60');
+      expect(draft.maxCapacityValue).toBe('80');
+      expect(draft.baseCapacityValue).toBe('50');
+      expect(draft.baseMaxCapacityValue).toBe('100');
+    });
+
+    it('should set isOrigin flag', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+        isOrigin: true,
+      });
+
+      expect(draft.isOrigin).toBe(true);
+    });
+
+    it('should set isNew flag', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+        isNew: true,
+      });
+
+      expect(draft.isNew).toBe(true);
+    });
+
+    it('should set hasStagedChange flag', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+        hasStagedChange: true,
+      });
+
+      expect(draft.hasStagedChange).toBe(true);
+    });
+
+    it('should handle null current values', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '50',
+        baseMaxCapacity: '100',
+        currentCapacity: null,
+        currentMaxCapacity: null,
+      });
+
+      expect(draft.capacityValue).toBe('50');
+      expect(draft.maxCapacityValue).toBe('100');
+    });
+
+    it('should handle undefined base values', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: undefined,
+        baseMaxCapacity: undefined,
+      });
+
+      expect(draft.baseCapacityValue).toBe('');
+      expect(draft.baseMaxCapacityValue).toBe('');
+      expect(draft.capacityValue).toBe('');
+      expect(draft.maxCapacityValue).toBe('');
+    });
+
+    it('should trim whitespace from values', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '  50  ',
+        baseMaxCapacity: '  100  ',
+      });
+
+      expect(draft.capacityValue).toBe('50');
+      expect(draft.maxCapacityValue).toBe('100');
+    });
+
+    it('should ensure core entries in vector mode', () => {
+      const draft = createRowDraft({
+        queuePath: 'root.default',
+        queueName: 'default',
+        baseCapacity: '[gpu=2]',
+        baseMaxCapacity: '[gpu=4]',
+      });
+
+      expect(draft.mode).toBe('vector');
+      expect(draft.vectorCapacity.some((e) => e.key === 'memory')).toBe(true);
+      expect(draft.vectorCapacity.some((e) => e.key === 'vcores')).toBe(true);
+      expect(draft.vectorCapacity.some((e) => e.key === 'gpu')).toBe(true);
+    });
+  });
+
+  describe('convertVectorDraftToString', () => {
+    it('should convert entries to vector string', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: 'vcores', value: '4' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=4]');
+    });
+
+    it('should handle single entry', () => {
+      const entries = [{ id: '1', key: 'memory', value: '2048' }];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048]');
+    });
+
+    it('should return empty string for empty array', () => {
+      const result = convertVectorDraftToString([]);
+
+      expect(result).toBe('');
+    });
+
+    it('should trim whitespace from keys and values', () => {
+      const entries = [
+        { id: '1', key: '  memory  ', value: '  2048  ' },
+        { id: '2', key: '  vcores  ', value: '  4  ' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=4]');
+    });
+
+    it('should filter out entries with empty keys', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: '', value: '100' },
+        { id: '3', key: 'vcores', value: '4' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=4]');
+    });
+
+    it('should filter out entries with whitespace-only keys', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: '   ', value: '100' },
+        { id: '3', key: 'vcores', value: '4' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=4]');
+    });
+
+    it('should preserve entries with empty values', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: 'vcores', value: '' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=]');
+    });
+
+    it('should handle multiple resources', () => {
+      const entries = [
+        { id: '1', key: 'memory', value: '2048' },
+        { id: '2', key: 'vcores', value: '4' },
+        { id: '3', key: 'gpu', value: '2' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('[memory=2048,vcores=4,gpu=2]');
+    });
+
+    it('should return empty string when all entries have empty keys', () => {
+      const entries = [
+        { id: '1', key: '', value: '100' },
+        { id: '2', key: '   ', value: '200' },
+      ];
+      const result = convertVectorDraftToString(entries);
+
+      expect(result).toBe('');
+    });
+  });
+
+  describe('createEmptyVectorEntry', () => {
+    it('should create entry with default empty values', () => {
+      const entry = createEmptyVectorEntry();
+
+      expect(entry.key).toBe('');
+      expect(entry.value).toBe('');
+      expect(entry.id).toBeDefined();
+      expect(typeof entry.id).toBe('string');
+      expect(entry.id.length).toBeGreaterThan(0);
+    });
+
+    it('should create entry with provided key', () => {
+      const entry = createEmptyVectorEntry('memory');
+
+      expect(entry.key).toBe('memory');
+      expect(entry.value).toBe('');
+    });
+
+    it('should create entry with provided key and value', () => {
+      const entry = createEmptyVectorEntry('memory', '2048');
+
+      expect(entry.key).toBe('memory');
+      expect(entry.value).toBe('2048');
+    });
+
+    it('should generate unique IDs for multiple entries', () => {
+      const entry1 = createEmptyVectorEntry();
+      const entry2 = createEmptyVectorEntry();
+
+      expect(entry1.id).not.toBe(entry2.id);
+    });
+
+    it('should handle empty string arguments', () => {
+      const entry = createEmptyVectorEntry('', '');
+
+      expect(entry.key).toBe('');
+      expect(entry.value).toBe('');
+      expect(entry.id).toBeDefined();
+    });
+  });
+
+  describe('getPropertyNameForLabel', () => {
+    it('should return base property name when label is null', () => {
+      const result = getPropertyNameForLabel(null, 'capacity');
+
+      expect(result).toBe('capacity');
+    });
+
+    it('should return base property name for maximum-capacity when label is null', () => {
+      const result = getPropertyNameForLabel(null, 'maximum-capacity');
+
+      expect(result).toBe('maximum-capacity');
+    });
+
+    it('should return label-prefixed property name for capacity', () => {
+      const result = getPropertyNameForLabel('gpu', 'capacity');
+
+      expect(result).toBe('accessible-node-labels.gpu.capacity');
+    });
+
+    it('should return label-prefixed property name for maximum-capacity', () => {
+      const result = getPropertyNameForLabel('gpu', 'maximum-capacity');
+
+      expect(result).toBe('accessible-node-labels.gpu.maximum-capacity');
+    });
+
+    it('should handle different label names', () => {
+      const result = getPropertyNameForLabel('ssd', 'capacity');
+
+      expect(result).toBe('accessible-node-labels.ssd.capacity');
+    });
+
+    it('should handle label with special characters', () => {
+      const result = getPropertyNameForLabel('gpu-high-memory', 'capacity');
+
+      expect(result).toBe('accessible-node-labels.gpu-high-memory.capacity');
+    });
   });
 });

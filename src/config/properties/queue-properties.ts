@@ -157,7 +157,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     name: 'minimum-user-limit-percent',
     displayName: 'Minimum User Limit Percent',
     description:
-      'Minimum percentage of queue resources per user (0-100). 100 means no user limits.',
+      "Each queue enforces a limit on the percentage of resources allocated to a user at any given time. The default is 100, it means no user limits, any user can use all of the queue's guaranteed resources.",
     type: 'number' as PropertyType,
     category: 'limits' as PropertyCategory,
     defaultValue: '',
