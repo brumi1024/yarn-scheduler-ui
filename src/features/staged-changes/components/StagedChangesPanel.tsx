@@ -14,6 +14,8 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { StagedChange } from '~/types';
 import { QueueChangeGroup } from './QueueChangeGroup';
 import { toast } from 'sonner';
+import { Kbd } from '~/components/ui/kbd';
+import { getModifierKey } from '~/hooks/useKeyboardShortcuts';
 
 interface StagedChangesPanelProps {
   open: boolean;
@@ -190,10 +192,16 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
           {/* Actions */}
           {stagedChanges.length > 0 && (
             <DrawerFooter className="border-t">
-              <div className="flex justify-between items-center w-full">
-                <Button variant="outline" onClick={handleClearAll} disabled={isApplying}>
-                  <Trash2 className="h-4 w-4 mr-2" />
+              <div className="flex justify-between items-center w-full gap-2">
+                <Button
+                  variant="outline"
+                  onClick={handleClearAll}
+                  disabled={isApplying}
+                  className="gap-2"
+                >
+                  <Trash2 className="h-4 w-4" />
                   Clear All
+                  <Kbd className="ml-auto">{getModifierKey()}+K</Kbd>
                 </Button>
                 <Button
                   variant="default"
@@ -206,16 +214,18 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                         ? 'Fix validation errors before applying changes'
                         : undefined
                   }
+                  className="gap-2"
                 >
                   {isApplying ? (
                     <>
-                      <div className="h-4 w-4 mr-2 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                      <div className="h-4 w-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
                       Applying...
                     </>
                   ) : (
                     <>
-                      <Check className="h-4 w-4 mr-2" />
+                      <Check className="h-4 w-4" />
                       Apply All Changes
+                      <Kbd className="ml-auto">{getModifierKey()}+S</Kbd>
                     </>
                   )}
                 </Button>

@@ -186,21 +186,21 @@ describe('SearchBar', () => {
   });
 
   describe('Keyboard Shortcuts', () => {
-    it('should focus input on Cmd+K', async () => {
+    it('should focus input on Cmd+G', async () => {
       const user = userEvent.setup();
       render(<SearchBar />);
       const input = screen.getByLabelText('Search Queues');
 
-      await user.keyboard('{Meta>}k{/Meta}');
+      await user.keyboard('{Meta>}g{/Meta}');
       expect(input).toHaveFocus();
     });
 
-    it('should focus input on Ctrl+K', async () => {
+    it('should focus input on Ctrl+G', async () => {
       const user = userEvent.setup();
       render(<SearchBar />);
       const input = screen.getByLabelText('Search Queues');
 
-      await user.keyboard('{Control>}k{/Control}');
+      await user.keyboard('{Control>}g{/Control}');
       expect(input).toHaveFocus();
     });
 
@@ -249,7 +249,7 @@ describe('SearchBar', () => {
 
       render(<SearchBar />);
 
-      expect(screen.getByText(/⌘K/)).toBeInTheDocument();
+      expect(screen.getByText(/⌘G/)).toBeInTheDocument();
       expect(screen.getByText(/to focus/)).toBeInTheDocument();
       expect(screen.getByText(/Esc/)).toBeInTheDocument();
       expect(screen.getByText(/to clear/)).toBeInTheDocument();
@@ -258,7 +258,7 @@ describe('SearchBar', () => {
     it('should not display keyboard shortcuts hint when not focused', () => {
       render(<SearchBar />);
 
-      expect(screen.queryByText(/⌘K/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/⌘G/)).not.toBeInTheDocument();
       expect(screen.queryByText(/to focus/)).not.toBeInTheDocument();
     });
   });
