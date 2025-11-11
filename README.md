@@ -145,8 +145,7 @@ Artifacts are emitted to `./build`. Provide the same environment variables at ru
 For contributors and developers working with the codebase, additional technical documentation is available:
 
 - **[Extending Scheduler Properties](docs/development/extending-scheduler-properties.md)** - Comprehensive guide for adding new queue and global properties to the UI, including validation rules and conditional logic
-- **[Validation System Architecture](docs/validation_overhaul.md)** - Design overview of the declarative validation engine and how it processes cross-queue rules
-- **[Validation Rule Inventory](docs/validation_rule_inventory.md)** - Complete reference of all validation rules enforced by the system
+- **[Adding Validation Rules](docs/development/adding-validation-rules.md)** - Step-by-step guide for adding new validation rules to the system
 
 ## Contributing
 

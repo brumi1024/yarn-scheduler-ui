@@ -571,7 +571,7 @@ describe('DEFAULT_LIFETIME_CONSTRAINT', () => {
 
 ## Further Reading
 
-- `docs/validation_overhaul.md` - Architecture overview of the validation system
 - `docs/development/extending-scheduler-properties.md` - Adding new properties with schema validation
 - `src/features/validation/` - Validation feature implementation (crossQueue.ts, service.ts, ruleCategories.ts)
+- `src/features/validation/README.md` - Validation feature architecture overview
 - YARN Capacity Scheduler documentation - Official YARN scheduler constraints
