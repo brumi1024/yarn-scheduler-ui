@@ -9,45 +9,16 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Determines if legacy queue mode is enforced. Default is true. Disabling allows for more flexible capacity configurations with mixing the various capacity modes.',
     type: 'boolean' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'core' as PropertyCategory,
     defaultValue: 'true',
     required: false,
   },
-  {
-    name: 'yarn.scheduler.capacity.maximum-applications',
-    displayName: 'Maximum Applications (Global)',
-    description:
-      'Maximum number of applications that can be pending and running. Set it to -1 for unlimited applications.',
-    type: 'number' as PropertyType,
-    category: 'general' as PropertyCategory,
-    defaultValue: '10000',
-    required: false,
-    validationRules: [
-      {
-        type: 'range',
-        message: 'Must be above -1',
-        min: -1,
-        max: 2147483647,
-      },
-    ],
-  },
-  {
-    name: 'yarn.scheduler.capacity.application.fail-fast',
-    displayName: 'Application Fail Fast',
-    description: 'Whether applications should fail fast if submitted to a non-existent queue.',
-    type: 'boolean' as PropertyType,
-    category: 'general' as PropertyCategory,
-    defaultValue: 'false',
-    required: false,
-  },
-
-  // Resource Settings
   {
     name: 'yarn.scheduler.capacity.resource-calculator',
     displayName: 'Resource Calculator',
     description: 'Class used to calculate resource requirements.',
     type: 'enum' as PropertyType,
-    category: 'resource' as PropertyCategory,
+    category: 'core' as PropertyCategory,
     defaultValue: 'org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator',
     required: false,
     enumValues: [
@@ -65,12 +36,41 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
     enumDisplay: 'choiceCard',
   },
+
+  // Application Limits
   {
-    name: 'yarn.scheduler.capacity.user.max-parallel-apps',
-    displayName: 'Default Max Parallel Apps per User',
-    description: 'Default maximum parallel applications per user',
+    name: 'yarn.scheduler.capacity.maximum-applications',
+    displayName: 'Maximum Applications (Global)',
+    description: 'Maximum number of applications that can be pending and running.',
     type: 'number' as PropertyType,
-    category: 'resource' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '10000',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be 0 or greater',
+        min: 0,
+        max: 2147483647,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.application.fail-fast',
+    displayName: 'Application Fail Fast',
+    description: 'Whether applications should fail fast if submitted to a non-existent queue.',
+    type: 'boolean' as PropertyType,
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: 'false',
+    required: false,
+  },
+  {
+    name: 'yarn.scheduler.capacity.max-parallel-apps',
+    displayName: 'Max Parallel Apps (Global)',
+    description:
+      'Global maximum parallel applications across all users. This limits the total number of parallel applications that can run simultaneously in the cluster.',
+    type: 'number' as PropertyType,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '2147483647',
     required: false,
     validationRules: [
@@ -82,53 +82,88 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
       },
     ],
   },
-
-  // Locality Settings
   {
-    name: 'yarn.scheduler.capacity.node-locality-delay',
-    displayName: 'Node Locality Delay',
-    description:
-      'Number of missed scheduling opportunities after which the scheduler attempts to schedule rack-local containers. Set to -1 to disable node-locality constraint.',
+    name: 'yarn.scheduler.capacity.user.max-parallel-apps',
+    displayName: 'Default Max Parallel Apps per User',
+    description: 'Default maximum parallel applications per user.',
     type: 'number' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: '40',
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '2147483647',
     required: false,
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between -1 and 1000',
-        min: -1,
-        max: 1000,
+        message: 'Must be between 1 and 2147483647',
+        min: 1,
+        max: 2147483647,
       },
     ],
   },
   {
-    name: 'yarn.scheduler.capacity.rack-locality-additional-delay',
-    displayName: 'Rack Locality Additional Delay',
+    name: 'yarn.scheduler.capacity.minimum-user-limit-percent',
+    displayName: 'Minimum User Limit Percent (Global)',
     description:
-      'Number of additional missed scheduling opportunities over node-locality-delay after which the scheduler attempts to schedule off-switch containers.',
+      'Global default for minimum percentage of queue resources allocated to a user when there is demand. Default is 100 (no user limits). Can be overridden on a per-queue basis.',
     type: 'number' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
-    defaultValue: '-1',
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '100',
     required: false,
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between -1 and 1000',
-        min: -1,
-        max: 1000,
+        message: 'Must be between 0 and 100',
+        min: 0,
+        max: 100,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
+    displayName: 'Maximum AM Resource Percent',
+    description:
+      'Maximum percentage of resources that can be used for Application Masters (expressen in values between 0.0-1.0). Default is 0.1 (10%).',
+    type: 'number' as PropertyType,
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '0.1',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be between 0 and 1',
+        min: 0,
+        max: 1,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.user-limit-factor',
+    displayName: 'User Limit Factor (Global)',
+    description:
+      "Global default for user limit factor, which controls the max amount of resources a single user can consume as a multiple of the queue's capacity. Default is 1. Set to -1 for unlimited. Can be overridden on a per-queue basis. Note: auto-queue-creation-v2 with weights automatically sets this to -1 on the created queues.",
+    type: 'number' as PropertyType,
+    category: 'application-limits' as PropertyCategory,
+    defaultValue: '1',
+    required: false,
+    validationRules: [
+      {
+        type: 'custom',
+        message: 'Must be -1 (unlimited) or >= 0',
+        validator: (value: string) => {
+          const num = parseFloat(value);
+          return num === -1 || num >= 0;
+        },
       },
     ],
   },
 
-  // Queue Mapping Settings
+  // Placement Rules
   {
     name: 'yarn.scheduler.capacity.queue-mappings-override.enable',
     displayName: 'Enable Queue Mappings Override',
     description:
       'Sets whether a user-specified target queue is overridden by a matching placement rule or not. Setting it to true will override the target queue with a matching placement rule.',
     type: 'boolean' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
+    category: 'placement' as PropertyCategory,
     defaultValue: 'false',
     required: false,
   },
@@ -138,7 +173,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Format for queue mapping rules. For using the Placement Rule editor on this UI, the JSON format is required.',
     type: 'enum' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
+    category: 'placement' as PropertyCategory,
     defaultValue: 'legacy',
     required: false,
     enumValues: [
@@ -161,7 +196,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     description:
       'A list of mappings that will be used to assign jobs to queues. The syntax for this list is [u|g]:[name]:[queue_name][,next_mapping]*.',
     type: 'string' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
+    category: 'placement' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [
@@ -171,9 +206,9 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.mapping-rule-json',
     displayName: 'JSON Mapping Rules',
-    description: 'Queue mapping rules in JSON format',
+    description: 'Queue mapping rules in JSON format.',
     type: 'string' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
+    category: 'placement' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [
@@ -185,28 +220,20 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     displayName: 'Enable Workflow Priority Mappings Override',
     description: 'Enable workflow priority mappings override.',
     type: 'boolean' as PropertyType,
-    category: 'scheduling' as PropertyCategory,
+    category: 'placement' as PropertyCategory,
     defaultValue: 'false',
     required: false,
   },
 
-  // Container Assignment Settings
+  // Container Allocation
   {
-    name: 'yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled',
-    displayName: 'Enable Multiple Container Assignments',
-    description: 'Allow multiple container assignments per node heartbeat',
-    type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
-    defaultValue: 'true',
-    required: false,
-  },
-  {
-    name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments',
-    displayName: 'Max Container Assignments per Heartbeat',
-    description: 'Maximum containers assigned per heartbeat (-1 = unlimited)',
+    name: 'yarn.scheduler.capacity.node-locality-delay',
+    displayName: 'Node Locality Delay',
+    description:
+      'Number of missed scheduling opportunities after which the scheduler attempts to schedule rack-local containers. Set to -1 to disable node-locality constraint.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
-    defaultValue: '100',
+    category: 'container-allocation' as PropertyCategory,
+    defaultValue: '40',
     required: false,
     validationRules: [
       {
@@ -218,31 +245,88 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
+    name: 'yarn.scheduler.capacity.rack-locality-additional-delay',
+    displayName: 'Rack Locality Additional Delay',
+    description:
+      'Number of additional missed scheduling opportunities over node-locality-delay after which the scheduler attempts to schedule off-switch containers.',
+    type: 'number' as PropertyType,
+    category: 'container-allocation' as PropertyCategory,
+    defaultValue: '-1',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be between -1 and 1000',
+        min: -1,
+        max: 1000,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled',
+    displayName: 'Enable Multiple Container Assignments',
+    description: 'Allow multiple container assignments per node heartbeat.',
+    type: 'boolean' as PropertyType,
+    category: 'container-allocation' as PropertyCategory,
+    defaultValue: 'true',
+    required: false,
+  },
+  {
+    name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments',
+    displayName: 'Max Container Assignments per Heartbeat',
+    description:
+      'If multiple-assignments-enabled is true, this property controls the maximum containers assigned per heartbeat (-1 = unlimited).',
+    type: 'number' as PropertyType,
+    category: 'container-allocation' as PropertyCategory,
+    defaultValue: '100',
+    required: false,
+    validationRules: [
+      {
+        type: 'custom',
+        message: 'Must be -1 (unlimited) or greater than 0',
+        validator: (value: string) => {
+          const num = parseFloat(value);
+          return num === -1 || num > 0;
+        },
+      },
+    ],
+  },
+  {
     name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments',
     displayName: 'Maximum Off-switch Assignments Per Heartbeat',
-    description: 'Controls the number of OFF_SWITCH assignments allowed during a node heartbeat.',
+    description:
+      'If multiple-assignments-enabled is true, this property controls the number of OFF_SWITCH assignments allowed during a node heartbeat.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'container-allocation' as PropertyCategory,
     defaultValue: '1',
     required: false,
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between 1 and 100',
+        message: 'Must be 1 or greater',
         min: 1,
-        max: 100,
+        max: 2147483647,
       },
     ],
   },
 
-  // Reservation Settings
   {
     name: 'yarn.scheduler.capacity.reservations-continue-look-all-nodes',
     displayName: 'Continue Looking All Nodes for Reservations',
-    description: 'Continue looking at all nodes even after reservation limit hit',
+    description:
+      'Controls whether the scheduler continues to search for available nodes for a reservation even if the first node it considered is reserved. When set to true, it enables the scheduler to continue searching other nodes, which can improve reservation success rates for large resource requests by preventing a single reserved node from blocking all potential reservations.',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'container-allocation' as PropertyCategory,
     defaultValue: 'true',
+    required: false,
+  },
+  {
+    name: 'yarn.scheduler.capacity.skip-allocate-on-nodes-with-reserved-containers',
+    displayName: 'Skip Allocate on Nodes with Reserved Containers',
+    description: 'Skip trying to allocate on nodes which have reserved containers.',
+    type: 'boolean' as PropertyType,
+    category: 'container-allocation' as PropertyCategory,
+    defaultValue: 'false',
     required: false,
   },
 
@@ -250,18 +334,19 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.schedule-asynchronously.enable',
     displayName: 'Enable Asynchronous Scheduling',
-    description: 'Enable asynchronous scheduling for better performance',
+    description:
+      'Enabling this decouples container assigments from node heartbeats to improve performance.',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'async-scheduling' as PropertyCategory,
     defaultValue: 'false',
     required: false,
   },
   {
     name: 'yarn.scheduler.capacity.schedule-asynchronously.scheduling-interval-ms',
     displayName: 'Async Scheduling Interval (ms)',
-    description: 'Scheduling interval for async scheduling',
+    description: 'Scheduling interval for synchronous Scheduling scheduling.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'async-scheduling' as PropertyCategory,
     defaultValue: '5',
     required: false,
     validationRules: [
@@ -274,20 +359,36 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
-    displayName: 'Maximum AM Resource Percent',
-    description:
-      'Maximum percentage of resources that can be used for Application Masters (0.0-1.0)',
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.maximum-threads',
+    displayName: 'Async Scheduling Maximum Threads',
+    description: 'Maximum number of threads for asynchronous scheduling.',
     type: 'number' as PropertyType,
-    category: 'resource' as PropertyCategory,
-    defaultValue: '0.1',
+    category: 'async-scheduling' as PropertyCategory,
+    defaultValue: '1',
     required: false,
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between 0 and 1',
-        min: 0,
-        max: 1,
+        message: 'Must be 1 or greater',
+        min: 1,
+        max: 2147483647,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.maximum-pending-backlogs',
+    displayName: 'Async Scheduling Maximum Pending Backlogs',
+    description: 'Maximum number of pending backlogs for asynchronous scheduling.',
+    type: 'number' as PropertyType,
+    category: 'async-scheduling' as PropertyCategory,
+    defaultValue: '100',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be 1 or greater',
+        min: 1,
+        max: 2147483647,
       },
     ],
   },

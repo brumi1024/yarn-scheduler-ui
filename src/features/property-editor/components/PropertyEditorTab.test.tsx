@@ -3,7 +3,7 @@ import userEvent from '@testing-library/user-event';
 import { vi } from 'vitest';
 import { PropertyEditorTab } from './PropertyEditorTab';
 import { usePropertyEditor } from '~/features/property-editor/hooks/usePropertyEditor';
-import type { QueueInfo } from '~/types';
+import type { QueueInfo, PropertyDescriptor } from '~/types';
 
 // Mock the hooks
 vi.mock('~/features/property-editor/hooks/usePropertyEditor');
@@ -44,24 +44,26 @@ const createMockPropertyEditor = () => ({
   hasChanges: false,
   watchedValues: {},
   propertiesByCategory: {
-    general: [
+    capacity: [
       {
         name: 'capacity',
         displayName: 'Capacity',
         type: 'string' as const,
         defaultValue: '50',
         description: 'Queue capacity allocation',
-        category: 'general' as const,
+        category: 'capacity' as const,
         formFieldName: 'capacity',
         required: true,
         validationRules: [],
       },
     ],
-    resource: [],
-    limits: [],
-    scheduling: [],
-    security: [],
-    advanced: [],
+    resource: [] as PropertyDescriptor[],
+    'application-limits': [] as PropertyDescriptor[],
+    'dynamic-queues': [] as PropertyDescriptor[],
+    'node-labels': [] as PropertyDescriptor[],
+    scheduling: [] as PropertyDescriptor[],
+    security: [] as PropertyDescriptor[],
+    preemption: [] as PropertyDescriptor[],
   },
   getStagedStatus: vi.fn(),
   formState: { isDirty: false },
@@ -75,12 +77,12 @@ const createMockPropertyEditor = () => ({
       type: 'string' as const,
       defaultValue: '50',
       description: 'Queue capacity allocation',
-      category: 'general' as const,
+      category: 'capacity' as const,
       formFieldName: 'capacity',
       required: true,
       validationRules: [],
     },
-  ],
+  ] as PropertyDescriptor[],
 });
 
 describe('PropertyEditorTab', () => {
@@ -113,12 +115,15 @@ describe('PropertyEditorTab', () => {
     vi.mocked(usePropertyEditor).mockReturnValue(mockPropertyEditor as any);
   });
 
-  it('renders configured property categories without node label capacity section', () => {
+  it('renders configured property categories with capacity expanded by default', () => {
     render(<PropertyEditorTab queue={mockQueue} />);
 
-    expect(screen.getByText('General Configuration')).toBeInTheDocument();
-    expect(screen.getByText('Capacity')).toBeInTheDocument();
-    expect(screen.queryByText('Node Labels')).not.toBeInTheDocument();
+    expect(screen.getByText('Capacity Configuration')).toBeInTheDocument();
+    // Node Labels category should not be rendered when there are no properties in it
+    expect(screen.queryByText('Node Labels & Partitions')).not.toBeInTheDocument();
+
+    // Verify capacity category is expanded by default (property field should be visible)
+    expect(screen.getByTestId('property-field-capacity')).toBeInTheDocument();
   });
 
   it('displays error badge when category has errors', () => {
@@ -131,9 +136,9 @@ describe('PropertyEditorTab', () => {
 
     render(<PropertyEditorTab queue={mockQueue} />);
 
-    expect(screen.getByText('General Configuration')).toBeInTheDocument();
-    const generalTrigger = screen.getByRole('button', { name: /General Configuration/i });
-    expect(within(generalTrigger).getByText('1')).toBeInTheDocument();
+    expect(screen.getByText('Capacity Configuration')).toBeInTheDocument();
+    const capacityTrigger = screen.getByRole('button', { name: /Capacity Configuration/i });
+    expect(within(capacityTrigger).getByText('1')).toBeInTheDocument();
   });
 
   it('renders template configuration button when controls allow management', async () => {
@@ -143,14 +148,14 @@ describe('PropertyEditorTab', () => {
       type: 'string' as const,
       defaultValue: 'false',
       description: 'Flexible mode toggle',
-      category: 'general' as const,
+      category: 'dynamic-queues' as const,
       formFieldName: 'auto-queue-creation-v2__DOT__enabled',
       required: false,
       validationRules: [],
     };
 
-    mockPropertyEditor.propertiesByCategory.general = [
-      ...mockPropertyEditor.propertiesByCategory.general,
+    mockPropertyEditor.propertiesByCategory['dynamic-queues'] = [
+      ...mockPropertyEditor.propertiesByCategory['dynamic-queues'],
       templateProperty,
     ];
     mockPropertyEditor.properties = [...mockPropertyEditor.properties, templateProperty];
@@ -170,6 +175,13 @@ describe('PropertyEditorTab', () => {
       />,
     );
 
+    // First expand the Dynamic Queue Creation accordion
+    const dynamicQueuesAccordion = screen.getByRole('button', {
+      name: /Dynamic Queue Creation/i,
+    });
+    await user.click(dynamicQueuesAccordion);
+
+    // Now the button should be visible
     const button = screen.getByRole('button', { name: /Manage template properties/i });
     expect(button).toBeInTheDocument();
 

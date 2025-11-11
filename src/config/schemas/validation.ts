@@ -79,7 +79,8 @@ export const aclFormatSchema = z.string().refine(
   (value) => {
     if (!value.trim()) return true;
 
-    if (value === SPECIAL_VALUES.ALL_USERS_ACL || value === ' ') return true;
+    if (value === SPECIAL_VALUES.ALL_USERS_ACL || value === SPECIAL_VALUES.NO_USERS_ACL)
+      return true;
 
     const parts = value.split(' ');
     if (parts.length > 2) return false;

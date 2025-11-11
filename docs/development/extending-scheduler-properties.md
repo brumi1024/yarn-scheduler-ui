@@ -1,6 +1,6 @@
 # Extending Scheduler Properties
 
-This guide explains how to make new Capacity Scheduler properties editable in the UI and how to plug them into the rewritten validation system (see `docs/validation_overhaul.md` for the architecture overview). Follow the relevant section depending on whether you are working with global scheduler settings or queue-level configuration.
+This guide explains how to make new Capacity Scheduler properties editable in the UI and how to plug them into the validation system. Follow the relevant section depending on whether you are working with global scheduler settings or queue-level configuration.
 
 ## Key modules
 
@@ -24,13 +24,28 @@ This guide explains how to make new Capacity Scheduler properties editable in th
 - Use `displayFormat` to add user-friendly suffixes to numeric inputs.
 - Add conditional logic with `showWhen` / `enableWhen` when the property should only appear or be interactive under specific scheduler states. Each condition receives the merged configuration context (global + queue values, staged changes, scheduler metadata).
 
+**Available property categories** (defined in `src/types/property-descriptor.ts`):
+
+- `'resource'` - Resource allocation settings
+- `'scheduling'` - Scheduling policies and behavior
+- `'security'` - ACLs and permissions
+- `'core'` - Core scheduler settings
+- `'application-limits'` - Application count and resource limits
+- `'placement'` - Placement rules and policies
+- `'container-allocation'` - Container sizing and allocation
+- `'async-scheduling'` - Asynchronous scheduling configuration
+- `'capacity'` - Capacity values and modes
+- `'dynamic-queues'` - Auto-created queue settings
+- `'node-labels'` - Node label and partition configuration
+- `'preemption'` - Preemption policies
+
 ```ts
 {
   name: 'yarn.scheduler.capacity.sample-property',
   displayName: 'Sample Property',
   description: 'What this property controls.',
   type: 'number',
-  category: 'general',
+  category: 'core',
   defaultValue: '0',
   required: false,
   validationRules: [
@@ -153,7 +168,7 @@ The hook returns a `validateGlobalProperty` function that takes a property key a
   displayName: 'Example Threshold',
   description: 'Upper bound applied per queue.',
   type: 'number',
-  category: 'limits',
+  category: 'application-limits',
   defaultValue: '',
   required: false,
   validationRules: [

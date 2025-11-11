@@ -95,14 +95,14 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Queue capacity allocation. Supports percentage (50), weight (2w), or absolute ([memory=1024,vcores=2]) formats.',
     type: 'string' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'capacity' as PropertyCategory,
     defaultValue: '',
     required: true,
     templateSupport: true,
     validationRules: [
       {
         type: 'custom',
-        message: 'Capacity is required and must be valid format',
+        message: 'Capacity is required and must be valid format.',
         validator: (value: string) =>
           capacityValueSchema.safeParse(value).success && value.trim() !== '',
       },
@@ -114,7 +114,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Maximum capacity the queue can expand to. Must be >= capacity. Use -1 for unlimited (100%).',
     type: 'string' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'capacity' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -133,9 +133,9 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'state',
     displayName: 'Queue State',
-    description: 'Operational state of the queue',
+    description: 'Operational state of the queue.',
     type: 'enum' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'capacity' as PropertyCategory,
     defaultValue: 'RUNNING',
     required: false,
     enumValues: [
@@ -157,9 +157,9 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     name: 'minimum-user-limit-percent',
     displayName: 'Minimum User Limit Percent',
     description:
-      "Each queue enforces a limit on the percentage of resources allocated to a user at any given time. The default is 100, it means no user limits, any user can use all of the queue's guaranteed resources.",
+      'Minimum percentage of queue resources allocated to a user when there is demand. Default is 100 (no user limits). Overrides the global default if set.',
     type: 'number' as PropertyType,
-    category: 'limits' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -175,20 +175,21 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'user-limit-factor',
     displayName: 'User Limit Factor',
-    description: 'Multiplier for user resource limits beyond queue capacity. Use -1 to disable.',
+    description:
+      "Controls the max amount of resources a single user can consume as a multiple of the queue's capacity. Default is 1 (limited to queue capacity). Set to -1 for unlimited. Overrides the global default if set. Note: auto-queue-creation-v2 with weights automatically sets this to -1 on the created queues.",
     type: 'number' as PropertyType,
-    category: 'limits' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
     validationRules: [
       {
         type: 'custom',
-        message: 'Must be positive number or -1',
+        message: 'Must be -1 (unlimited) or >= 0',
         validator: (value: string) => {
           if (!value.trim()) return true;
           const num = parseFloat(value);
-          return !isNaN(num) && (num > 0 || num === -1);
+          return !isNaN(num) && (num === -1 || num >= 0);
         },
       },
     ],
@@ -197,26 +198,31 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'maximum-applications',
     displayName: 'Maximum Applications',
-    description: 'Maximum concurrent applications (running + pending) in this queue',
+    description: 'Maximum concurrent applications (running + pending) in this queue.',
     type: 'number' as PropertyType,
-    category: 'limits' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
     validationRules: [
       {
         type: 'custom',
-        message: 'Must be a positive integer',
-        validator: (value: string) => integerSchema.safeParse(value).success,
+        message: 'Must be 0 or a positive integer',
+        validator: (value: string) => {
+          if (!value.trim()) return true;
+          const numericValue = parseFloat(value);
+          return !isNaN(numericValue) && Number.isInteger(numericValue) && numericValue >= 0;
+        },
       },
     ],
   },
   {
     name: 'maximum-am-resource-percent',
     displayName: 'Maximum AM Resource Percent',
-    description: 'Maximum percentage of queue resources for Application Masters (0.0-1.0)',
+    description:
+      'Maximum percentage of queue resources for Application Masters (expressen in values between 0.0-1.0). Default is 0.1 (10%).',
     type: 'number' as PropertyType,
-    category: 'limits' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -236,9 +242,9 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'max-parallel-apps',
     displayName: 'Max Parallel Apps',
-    description: 'Maximum simultaneously running applications (not pending submissions)',
+    description: 'Maximum simultaneously running applications (not pending submissions).',
     type: 'number' as PropertyType,
-    category: 'limits' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     validationRules: [
@@ -253,7 +259,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'ordering-policy',
     displayName: 'Ordering Policy',
-    description: 'Application ordering policy within the queue',
+    description: 'Application ordering policy within the queue.',
     type: 'enum' as PropertyType,
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
@@ -286,7 +292,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     name: 'ordering-policy.fair.enable-size-based-weight',
     displayName: 'Fair Policy Size-Based Weight',
     description:
-      'Enable size-based weighting in fair scheduling (only applies when ordering-policy=fair)',
+      'Enable size-based weighting in fair scheduling (only applies when ordering-policy=fair).',
     type: 'boolean' as PropertyType,
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
@@ -297,7 +303,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'default-application-priority',
     displayName: 'Default Application Priority',
-    description: 'Default priority for applications submitted to this queue',
+    description: 'Default priority for applications submitted to this queue.',
     type: 'number' as PropertyType,
     category: 'scheduling' as PropertyCategory,
     defaultValue: '',
@@ -356,7 +362,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'maximum-allocation-mb',
     displayName: 'Maximum Allocation MB',
-    description: 'Per-queue maximum memory allocation override (MB)',
+    description: 'Per-queue maximum memory allocation override (MB).',
     type: 'number' as PropertyType,
     category: 'resource' as PropertyCategory,
     defaultValue: '',
@@ -373,7 +379,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'maximum-allocation-vcores',
     displayName: 'Maximum Allocation VCores',
-    description: 'Per-queue maximum vcore allocation override',
+    description: 'Per-queue maximum vcore allocation override.',
     type: 'number' as PropertyType,
     category: 'resource' as PropertyCategory,
     defaultValue: '',
@@ -393,7 +399,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     displayName: 'Maximum Application Lifetime',
     description: 'Hard limit on application lifetime in seconds. Use -1 to disable.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -415,7 +421,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Default application lifetime in seconds. Cannot exceed maximum-application-lifetime.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'application-limits' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -435,9 +441,9 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'disable_preemption',
     displayName: 'Disable Preemption',
-    description: 'Disable preemption for this queue',
+    description: 'Disable preemption for this queue.',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'preemption' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -445,20 +451,41 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'intra-queue-preemption.disable_preemption',
     displayName: 'Disable Intra-Queue Preemption',
-    description: 'Disable preemption within this queue',
+    description: 'Disable preemption within this queue.',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'preemption' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
+  },
+  {
+    name: 'priority',
+    displayName: 'Queue Priority',
+    description: 'Priority of this queue relative to other sibling queues. Default is 0.',
+    type: 'number' as PropertyType,
+    category: 'preemption' as PropertyCategory,
+    defaultValue: '0',
+    required: false,
+    templateSupport: true,
+    validationRules: [
+      {
+        type: 'custom',
+        message: 'Must be an integer',
+        validator: (value: string) => {
+          if (!value.trim()) return true;
+          const num = parseInt(value, 10);
+          return !isNaN(num) && Number.isInteger(num);
+        },
+      },
+    ],
   },
 
   {
     name: 'auto-create-child-queue.enabled',
     displayName: 'Legacy Queue Auto-Creation',
-    description: 'Enable leaf queue auto-creation (legacy mode)',
+    description: 'Enable leaf queue auto-creation (legacy mode).',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'dynamic-queues' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [shouldShowLegacyAutoCreation],
@@ -469,7 +496,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Enable flexible queue auto-creation (parent and leaf queues). In legacy queue mode, root queue requires all child queues to use weight-based capacity.',
     type: 'boolean' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'dynamic-queues' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [shouldShowFlexibleAutoCreation],
@@ -478,9 +505,9 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'auto-queue-creation-v2.max-queues',
     displayName: 'Max Auto-Created Queues',
-    description: 'Maximum dynamic queues under this parent',
+    description: 'Maximum dynamic queues under this parent.',
     type: 'number' as PropertyType,
-    category: 'advanced' as PropertyCategory,
+    category: 'dynamic-queues' as PropertyCategory,
     defaultValue: '',
     required: false,
     showWhen: [shouldShowFlexibleAutoCreation],
@@ -501,7 +528,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Comma-separated list of node labels this queue can access. Use "*" for all labels, empty for default partition only.',
     type: 'string' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'node-labels' as PropertyCategory,
     defaultValue: '',
     required: false,
     templateSupport: true,
@@ -529,7 +556,7 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     description:
       'Default node label expression for applications submitted to this queue. Empty for default partition.',
     type: 'string' as PropertyType,
-    category: 'general' as PropertyCategory,
+    category: 'node-labels' as PropertyCategory,
     defaultValue: '',
     required: false,
     validationRules: [

@@ -5,12 +5,18 @@ import type { StagedChange } from './staged-change';
 export type PropertyType = 'string' | 'number' | 'boolean' | 'enum' | 'list';
 
 export type PropertyCategory =
-  | 'general'
   | 'resource'
   | 'scheduling'
-  | 'limits'
   | 'security'
-  | 'advanced';
+  | 'core'
+  | 'application-limits'
+  | 'placement'
+  | 'container-allocation'
+  | 'async-scheduling'
+  | 'capacity'
+  | 'dynamic-queues'
+  | 'node-labels'
+  | 'preemption';
 
 export type ComparisonOperator = '<' | '<=' | '>' | '>=' | '==' | '!=';
 

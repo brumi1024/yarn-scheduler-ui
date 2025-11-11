@@ -16,7 +16,16 @@ export function getTemplatePropertiesByCategory(category: PropertyCategory): Pro
 }
 
 export function getPropertyCategories(): PropertyCategory[] {
-  return ['general', 'resource', 'scheduling', 'limits', 'security', 'advanced'];
+  return [
+    'capacity',
+    'resource',
+    'application-limits',
+    'dynamic-queues',
+    'node-labels',
+    'scheduling',
+    'security',
+    'preemption',
+  ];
 }
 
 export function getPropertyDefinition(name: string): PropertyDescriptor | undefined {

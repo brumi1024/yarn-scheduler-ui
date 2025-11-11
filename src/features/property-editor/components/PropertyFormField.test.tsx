@@ -13,7 +13,7 @@ const getMockPropertyDescriptor = (overrides?: Partial<PropertyDescriptor>): Pro
     displayName: 'Capacity',
     description: 'Queue capacity as percentage, weight, or absolute resources',
     type: 'string',
-    category: 'general',
+    category: 'core',
     required: true,
     defaultValue: '0',
     ...overrides,

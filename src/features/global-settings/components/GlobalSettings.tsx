@@ -1,7 +1,7 @@
 import React from 'react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
-import { SPECIAL_VALUES } from '~/types';
+import { SPECIAL_VALUES, type PropertyCategory } from '~/types';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Card, CardContent } from '~/components/ui/card';
 import { Badge } from '~/components/ui/badge';
@@ -16,6 +16,10 @@ import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
 import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
+import {
+  categoryConfig,
+  globalCategoryOrder,
+} from '~/features/property-editor/constants/categoryConfig';
 
 export const GlobalSettings: React.FC = () => {
   const {
@@ -107,7 +111,7 @@ export const GlobalSettings: React.FC = () => {
   });
 
   const getGlobalPropertyCategories = () => {
-    const categories: string[] = [];
+    const categories: PropertyCategory[] = [];
 
     activePropertyDefinitions.forEach((prop) => {
       if (!categories.includes(prop.category)) {
@@ -115,10 +119,24 @@ export const GlobalSettings: React.FC = () => {
       }
     });
 
-    return categories;
+    // Sort categories based on globalCategoryOrder
+    return categories.sort((a, b) => {
+      const indexA = globalCategoryOrder.indexOf(a);
+      const indexB = globalCategoryOrder.indexOf(b);
+
+      // If both are in the order list, sort by their position
+      if (indexA !== -1 && indexB !== -1) {
+        return indexA - indexB;
+      }
+      // If only one is in the order list, prioritize it
+      if (indexA !== -1) return -1;
+      if (indexB !== -1) return 1;
+      // If neither is in the order list, maintain original order
+      return 0;
+    });
   };
 
-  const getGlobalPropertiesByCategory = (category: string) => {
+  const getGlobalPropertiesByCategory = (category: PropertyCategory) => {
     return activePropertyDefinitions.filter((prop) => prop.category === category);
   };
 
@@ -163,7 +181,10 @@ export const GlobalSettings: React.FC = () => {
               <AccordionItem key={category} value={category} className="border rounded-lg">
                 <AccordionTrigger className="px-6 hover:no-underline">
                   <div className="flex items-center gap-2">
-                    <h3 className="text-lg font-medium capitalize">{category} Settings</h3>
+                    {categoryConfig[category]?.icon}
+                    <h3 className="text-lg font-medium">
+                      {categoryConfig[category]?.label || `${category} Settings`}
+                    </h3>
                     {hasChanges && (
                       <Badge variant="outline" className="border-warning text-warning">
                         Has Changes
@@ -171,7 +192,7 @@ export const GlobalSettings: React.FC = () => {
                     )}
                   </div>
                 </AccordionTrigger>
-                <AccordionContent className="px-6 pb-6">
+                <AccordionContent className="px-6 pt-6 pb-6">
                   <div className="space-y-6">
                     {categoryProperties.map((property, index) => {
                       const { value, isStaged } = getGlobalPropertyValue(property.name);

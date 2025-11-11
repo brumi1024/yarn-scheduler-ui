@@ -187,6 +187,5 @@ The validation system integrates with:
 ## Further Reading
 
 - `docs/development/adding-validation-rules.md` - Guide for adding new validation rules
-- `docs/validation_overhaul.md` - Validation system architecture design document
-- `docs/validation_rule_inventory.md` - Complete reference of all validation rules
+- `docs/development/extending-scheduler-properties.md` - Adding new properties with schema validation
 - `src/config/validation-rules.ts` - Validation rule definitions
