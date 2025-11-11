@@ -19,7 +19,7 @@ import { useSchedulerStore } from '~/stores/schedulerStore';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import {
-  baseCategoryOrder,
+  queueCategoryOrder,
   categoryConfig,
 } from '~/features/property-editor/constants/categoryConfig';
 
@@ -53,7 +53,15 @@ export const PropertyEditorTab = ({
   templateConfigControls,
 }: PropertyEditorTabProps) => {
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [expandedAccordions, setExpandedAccordions] = useState<string[]>(['general']);
+
+  // Get default expanded categories from categoryConfig
+  const defaultExpandedCategories = useMemo(() => {
+    return queueCategoryOrder.filter(
+      (category) => categoryConfig[category]?.defaultExpanded === true,
+    );
+  }, []);
+
+  const [expandedAccordions, setExpandedAccordions] = useState<string[]>(defaultExpandedCategories);
 
   const getGlobalPropertyValue = useSchedulerStore((state) => state.getGlobalPropertyValue);
   const getQueuePropertyValue = useSchedulerStore((state) => state.getQueuePropertyValue);
@@ -138,7 +146,7 @@ export const PropertyEditorTab = ({
     [onSubmit, onReset, isValid, errors],
   );
 
-  const categoryOrder: PropertyCategory[] = [...baseCategoryOrder];
+  const categoryOrder: PropertyCategory[] = [...queueCategoryOrder];
 
   const queueValuesTemp: Record<string, string> = {};
   const watchedRecord = (watchedValues ?? {}) as Record<string, unknown>;

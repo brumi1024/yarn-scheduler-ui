@@ -76,7 +76,7 @@ describe('PropertyDescriptor interface', () => {
       displayName: 'Queue State',
       description: 'The operational state of the queue',
       type: 'enum',
-      category: 'general',
+      category: 'core',
       defaultValue: 'RUNNING',
       required: true,
       enumValues: [
@@ -119,7 +119,7 @@ describe('PropertyDescriptor interface', () => {
       displayName: 'User Limit Factor',
       description: 'Multiplier for user resource limits',
       type: 'number',
-      category: 'limits',
+      category: 'application-limits',
       defaultValue: '1',
       required: false,
       enableWhen: [({ getValue }) => getValue('minimum-user-limit-percent') !== '100'],
@@ -194,7 +194,7 @@ describe('PropertyDescriptor interface', () => {
       displayName: 'Maximum Applications',
       description: 'Maximum number of applications in the queue',
       type: 'number',
-      category: 'limits',
+      category: 'application-limits',
       defaultValue: '10000',
       required: false,
       deprecated: true,
@@ -211,7 +211,7 @@ describe('PropertyDescriptor interface', () => {
       displayName: 'Capacity',
       description: 'Queue capacity setting',
       type: 'number',
-      category: 'general',
+      category: 'core',
       defaultValue: '0',
       required: true,
       templateSupport: true,
@@ -295,18 +295,18 @@ describe('PropertyType', () => {
 
 describe('PropertyCategory', () => {
   it('should only accept valid property categories', () => {
-    const generalCategory: PropertyCategory = 'general';
+    const coreCategory: PropertyCategory = 'core';
     const resourceCategory: PropertyCategory = 'resource';
     const schedulingCategory: PropertyCategory = 'scheduling';
-    const limitsCategory: PropertyCategory = 'limits';
+    const applicationLimitsCategory: PropertyCategory = 'application-limits';
     const securityCategory: PropertyCategory = 'security';
-    const advancedCategory: PropertyCategory = 'advanced';
+    const capacityCategory: PropertyCategory = 'capacity';
 
-    expect(generalCategory).toBe('general');
+    expect(coreCategory).toBe('core');
     expect(resourceCategory).toBe('resource');
     expect(schedulingCategory).toBe('scheduling');
-    expect(limitsCategory).toBe('limits');
+    expect(applicationLimitsCategory).toBe('application-limits');
     expect(securityCategory).toBe('security');
-    expect(advancedCategory).toBe('advanced');
+    expect(capacityCategory).toBe('capacity');
   });
 });

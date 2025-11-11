@@ -82,3 +82,15 @@ export const formatPercentage = (value: number, decimals: number = 1): string =>
 export const formatCount = (value: number): string => {
   return value.toLocaleString();
 };
+
+/**
+ * Format ACL value for display with special value indicators
+ * @param value ACL value (can be "*", " ", or "user1,user2 group1,group2")
+ * @returns Formatted ACL string with special value indicators
+ */
+export const formatAclValue = (value: string | undefined): string => {
+  if (!value) return '(empty)';
+  if (value === SPECIAL_VALUES.ALL_USERS_ACL) return '* (All users)';
+  if (value === SPECIAL_VALUES.NO_USERS_ACL) return '" " (No access)';
+  return value;
+};

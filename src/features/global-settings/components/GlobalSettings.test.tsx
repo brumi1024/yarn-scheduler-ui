@@ -56,7 +56,7 @@ const getMockPropertyDescriptor = (overrides?: Partial<PropertyDescriptor>): Pro
     displayName: 'Test Property',
     description: 'A test property',
     type: 'string',
-    category: 'general',
+    category: 'core',
     defaultValue: 'default',
     required: false,
     ...overrides,
@@ -135,22 +135,22 @@ describe('GlobalSettings', () => {
 
     it('should render property categories as accordion items', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
         getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
-        getMockPropertyDescriptor({ name: 'prop3', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop3', category: 'core' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
       renderWithValidation(<GlobalSettings />);
 
-      expect(screen.getByText('general Settings')).toBeInTheDocument();
-      expect(screen.getByText('security Settings')).toBeInTheDocument();
+      expect(screen.getByText('Core Settings')).toBeInTheDocument();
+      expect(screen.getByText('Security & Access Control')).toBeInTheDocument();
     });
 
     it('should render all properties within their categories', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
         getMockPropertyDescriptor({ name: 'prop3', category: 'security' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
@@ -256,7 +256,7 @@ describe('GlobalSettings', () => {
   describe('category badges', () => {
     it('should show "Has Changes" badge for categories with staged changes', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
         getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
@@ -265,23 +265,23 @@ describe('GlobalSettings', () => {
       renderWithValidation(<GlobalSettings />, { stagedChanges });
 
       // Find the general category heading and its badge
-      const generalHeading = screen.getByText('general Settings').closest('div');
+      const generalHeading = screen.getByText('Core Settings').closest('div');
       expect(generalHeading).toHaveTextContent('Has Changes');
 
       // Security category should not have the badge
-      const securityHeading = screen.getByText('security Settings').closest('div');
+      const securityHeading = screen.getByText('Security & Access Control').closest('div');
       expect(securityHeading).not.toHaveTextContent('Has Changes');
     });
 
     it('should not show badge when category has no changes', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
       renderWithValidation(<GlobalSettings />);
 
-      const generalHeading = screen.getByText('general Settings').closest('div');
+      const generalHeading = screen.getByText('Core Settings').closest('div');
       expect(generalHeading).not.toHaveTextContent('Has Changes');
     });
   });
@@ -305,8 +305,8 @@ describe('GlobalSettings', () => {
 
     it('should handle multiple property changes independently', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
@@ -329,27 +329,27 @@ describe('GlobalSettings', () => {
   });
 
   describe('property ordering', () => {
-    it('should display categories in alphabetical order', () => {
+    it('should display categories in globalCategoryOrder', () => {
       const properties = [
-        getMockPropertyDescriptor({ category: 'advanced' }),
-        getMockPropertyDescriptor({ category: 'general' }),
-        getMockPropertyDescriptor({ category: 'resource' }),
+        getMockPropertyDescriptor({ category: 'async-scheduling' }),
+        getMockPropertyDescriptor({ category: 'core' }),
+        getMockPropertyDescriptor({ category: 'application-limits' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
       renderWithValidation(<GlobalSettings />);
 
       const headings = screen.getAllByTestId('accordion-trigger');
-      expect(headings[0]).toHaveTextContent('advanced Settings');
-      expect(headings[1]).toHaveTextContent('general Settings');
-      expect(headings[2]).toHaveTextContent('resource Settings');
+      expect(headings[0]).toHaveTextContent('Core Settings');
+      expect(headings[1]).toHaveTextContent('Application Limits');
+      expect(headings[2]).toHaveTextContent('Asynchronous Scheduling');
     });
 
     it('should maintain property order within categories as defined', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop3', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop3', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
@@ -405,7 +405,7 @@ describe('GlobalSettings', () => {
   describe('accordion behavior', () => {
     it('should render all category accordions', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
         getMockPropertyDescriptor({ name: 'prop2', category: 'security' }),
         getMockPropertyDescriptor({ name: 'prop3', category: 'scheduling' }),
       ];
@@ -414,9 +414,9 @@ describe('GlobalSettings', () => {
       renderWithValidation(<GlobalSettings />);
 
       // Verify all category accordions are rendered
-      expect(screen.getByText('general Settings')).toBeInTheDocument();
-      expect(screen.getByText('security Settings')).toBeInTheDocument();
-      expect(screen.getByText('scheduling Settings')).toBeInTheDocument();
+      expect(screen.getByText('Core Settings')).toBeInTheDocument();
+      expect(screen.getByText('Security & Access Control')).toBeInTheDocument();
+      expect(screen.getByText('Scheduling Policy')).toBeInTheDocument();
 
       // Verify correct number of accordion items
       const accordionItems = screen.getAllByTestId('accordion-item');
@@ -460,9 +460,9 @@ describe('GlobalSettings', () => {
 
     it('should render correctly when properties have the same category', () => {
       const properties = [
-        getMockPropertyDescriptor({ name: 'prop1', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop2', category: 'general' }),
-        getMockPropertyDescriptor({ name: 'prop3', category: 'general' }),
+        getMockPropertyDescriptor({ name: 'prop1', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop2', category: 'core' }),
+        getMockPropertyDescriptor({ name: 'prop3', category: 'core' }),
       ];
       (globalPropertyDefinitions as PropertyDescriptor[]).push(...properties);
 
@@ -470,7 +470,7 @@ describe('GlobalSettings', () => {
 
       // Should only have one accordion item for the general category
       expect(screen.getAllByTestId('accordion-item')).toHaveLength(1);
-      expect(screen.getByText('general Settings')).toBeInTheDocument();
+      expect(screen.getByText('Core Settings')).toBeInTheDocument();
 
       // But all three properties should be rendered
       expect(screen.getByTestId('property-input-prop1')).toBeInTheDocument();

@@ -113,8 +113,8 @@ export const LegacyModeDocumentation: React.FC<LegacyModeDocumentationProps> = (
             <TabsContent value="legacy" className="space-y-4 pr-4">
               <h3 className="text-lg font-semibold">Legacy Mode Details</h3>
               <p className="text-sm text-muted-foreground">
-                Legacy mode maintains backward compatibility with older YARN versions and enforces
-                traditional capacity scheduling rules.
+                Legacy mode works like the previous YARN versions and enforces traditional capacity
+                scheduling rules.
               </p>
 
               <div className="space-y-3">

@@ -87,17 +87,19 @@ describe('propertyDefinitions', () => {
       const capacityProperty = queuePropertyDefinitions.find((p) => p.name === 'capacity');
       expect(capacityProperty).toBeDefined();
       expect(capacityProperty?.required).toBe(true);
-      expect(capacityProperty?.category).toBe('general');
+      expect(capacityProperty?.category).toBe('capacity');
     });
 
     it('has proper categories for all properties', () => {
       const validCategories = [
-        'general',
+        'capacity',
         'resource',
+        'application-limits',
+        'dynamic-queues',
+        'node-labels',
         'scheduling',
-        'limits',
         'security',
-        'advanced',
+        'preemption',
       ];
 
       queuePropertyDefinitions.forEach((property) => {
@@ -525,7 +527,7 @@ describe('propertyDefinitions', () => {
         (p) => p.name === 'accessible-node-labels',
       );
       expect(accessibleLabelsProperty).toBeDefined();
-      expect(accessibleLabelsProperty?.category).toBe('general');
+      expect(accessibleLabelsProperty?.category).toBe('node-labels');
       expect(accessibleLabelsProperty?.required).toBe(false);
       expect(accessibleLabelsProperty?.type).toBe('string');
       expect(accessibleLabelsProperty?.validationRules).toBeDefined();
@@ -534,7 +536,7 @@ describe('propertyDefinitions', () => {
         (p) => p.name === 'default-node-label-expression',
       );
       expect(defaultExpressionProperty).toBeDefined();
-      expect(defaultExpressionProperty?.category).toBe('general');
+      expect(defaultExpressionProperty?.category).toBe('node-labels');
       expect(defaultExpressionProperty?.required).toBe(false);
       expect(defaultExpressionProperty?.type).toBe('string');
     });
@@ -595,10 +597,10 @@ describe('propertyDefinitions', () => {
   describe('helper functions', () => {
     describe('getPropertiesByCategory', () => {
       it('returns properties for a valid category', () => {
-        const generalProperties = getPropertiesByCategory('general');
-        expect(generalProperties.length).toBeGreaterThan(0);
-        generalProperties.forEach((prop) => {
-          expect(prop.category).toBe('general');
+        const capacityProperties = getPropertiesByCategory('capacity');
+        expect(capacityProperties.length).toBeGreaterThan(0);
+        capacityProperties.forEach((prop) => {
+          expect(prop.category).toBe('capacity');
         });
       });
 
@@ -611,12 +613,14 @@ describe('propertyDefinitions', () => {
     describe('getPropertyCategories', () => {
       it('returns all valid categories', () => {
         const categories = getPropertyCategories();
-        expect(categories).toContain('general');
+        expect(categories).toContain('capacity');
         expect(categories).toContain('resource');
+        expect(categories).toContain('application-limits');
+        expect(categories).toContain('dynamic-queues');
+        expect(categories).toContain('node-labels');
         expect(categories).toContain('scheduling');
-        expect(categories).toContain('limits');
         expect(categories).toContain('security');
-        expect(categories).toContain('advanced');
+        expect(categories).toContain('preemption');
       });
     });
 
@@ -748,11 +752,14 @@ describe('propertyDefinitions', () => {
     it('covers major YARN configuration categories', () => {
       const categories = new Set(queuePropertyDefinitions.map((p) => p.category));
 
-      expect(categories.has('general')).toBe(true);
+      expect(categories.has('capacity')).toBe(true);
       expect(categories.has('resource')).toBe(true);
-      expect(categories.has('limits')).toBe(true);
+      expect(categories.has('application-limits')).toBe(true);
+      expect(categories.has('dynamic-queues')).toBe(true);
+      expect(categories.has('node-labels')).toBe(true);
+      expect(categories.has('scheduling')).toBe(true);
       expect(categories.has('security')).toBe(true);
-      expect(categories.has('advanced')).toBe(true);
+      expect(categories.has('preemption')).toBe(true);
     });
 
     it('has properties for auto-queue creation', () => {

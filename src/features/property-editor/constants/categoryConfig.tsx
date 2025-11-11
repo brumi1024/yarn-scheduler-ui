@@ -1,5 +1,18 @@
 import React from 'react';
-import { Settings, HardDrive, Gauge, Calendar, Shield, Sliders } from 'lucide-react';
+import {
+  HardDrive,
+  Gauge,
+  Calendar,
+  Shield,
+  Cpu,
+  Target,
+  Package,
+  Zap,
+  Layers,
+  GitBranch,
+  Tag,
+  AlertTriangle,
+} from 'lucide-react';
 import type { PropertyCategory } from '~/types';
 
 export const categoryConfig: Record<
@@ -11,23 +24,11 @@ export const categoryConfig: Record<
     icon: React.ReactElement;
   }
 > = {
-  general: {
-    label: 'General Configuration',
-    description: 'Basic queue settings including capacity, state, and hierarchy',
-    defaultExpanded: true,
-    icon: <Settings className="h-4 w-4 text-primary" />,
-  },
   resource: {
     label: 'Resource Allocation',
     description: 'Memory, CPU, and other resource allocation settings',
     defaultExpanded: false,
     icon: <HardDrive className="h-4 w-4 text-primary" />,
-  },
-  limits: {
-    label: 'Application Limits',
-    description: 'User limits, application counts, and resource constraints',
-    defaultExpanded: false,
-    icon: <Gauge className="h-4 w-4 text-primary" />,
   },
   scheduling: {
     label: 'Scheduling Policy',
@@ -41,19 +42,77 @@ export const categoryConfig: Record<
     defaultExpanded: false,
     icon: <Shield className="h-4 w-4 text-primary" />,
   },
-  advanced: {
-    label: 'Advanced Features',
-    description: 'Preemption, auto-queue creation, and other advanced settings',
+  core: {
+    label: 'Core Settings',
+    description: 'Fundamental scheduler configuration and behavior',
+    defaultExpanded: true,
+    icon: <Cpu className="h-4 w-4 text-primary" />,
+  },
+  'application-limits': {
+    label: 'Application Limits',
+    description: 'Global defaults for user limits and application resource constraints',
     defaultExpanded: false,
-    icon: <Sliders className="h-4 w-4 text-primary" />,
+    icon: <Gauge className="h-4 w-4 text-primary" />,
+  },
+  placement: {
+    label: 'Placement Rules',
+    description: 'Queue mapping and application placement configuration',
+    defaultExpanded: false,
+    icon: <Target className="h-4 w-4 text-primary" />,
+  },
+  'container-allocation': {
+    label: 'Container Allocation',
+    description: 'Container assignment, locality, and reservation behavior',
+    defaultExpanded: false,
+    icon: <Package className="h-4 w-4 text-primary" />,
+  },
+  'async-scheduling': {
+    label: 'Asynchronous Scheduling',
+    description: 'Performance optimizations for decoupled scheduling',
+    defaultExpanded: false,
+    icon: <Zap className="h-4 w-4 text-primary" />,
+  },
+  capacity: {
+    label: 'Capacity Configuration',
+    description: 'Queue capacity, maximum capacity, and operational state',
+    defaultExpanded: true,
+    icon: <Layers className="h-4 w-4 text-primary" />,
+  },
+  'dynamic-queues': {
+    label: 'Dynamic Queue Creation',
+    description: 'Auto-creation settings for dynamically created child queues',
+    defaultExpanded: false,
+    icon: <GitBranch className="h-4 w-4 text-primary" />,
+  },
+  'node-labels': {
+    label: 'Node Labels & Partitions',
+    description: 'Node label access control and default partition settings',
+    defaultExpanded: false,
+    icon: <Tag className="h-4 w-4 text-primary" />,
+  },
+  preemption: {
+    label: 'Preemption Settings',
+    description: 'Control preemption behavior for queue containers',
+    defaultExpanded: false,
+    icon: <AlertTriangle className="h-4 w-4 text-primary" />,
   },
 };
 
-export const baseCategoryOrder: PropertyCategory[] = [
-  'general',
+export const globalCategoryOrder: PropertyCategory[] = [
+  'core',
+  'application-limits',
+  'placement',
+  'container-allocation',
+  'async-scheduling',
+];
+
+export const queueCategoryOrder: PropertyCategory[] = [
+  'capacity',
   'resource',
-  'limits',
+  'application-limits',
+  'dynamic-queues',
+  'node-labels',
   'scheduling',
   'security',
-  'advanced',
+  'preemption',
 ];

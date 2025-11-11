@@ -14,7 +14,7 @@ import { ScrollArea } from '~/components/ui/scroll-area';
 import {
   PropertyFormField,
   usePropertyEditor,
-  baseCategoryOrder,
+  queueCategoryOrder,
   categoryConfig,
 } from '~/features/property-editor';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
@@ -174,7 +174,7 @@ export const TemplateScopeForm: React.FC<TemplateScopeFormProps> = ({ scope, bas
     }
   });
 
-  const availableCategories = baseCategoryOrder.filter(
+  const availableCategories = queueCategoryOrder.filter(
     (category) => (visiblePropertiesByCategory[category]?.length ?? 0) > 0,
   );
 

@@ -7,7 +7,7 @@ import { Card, CardContent, CardHeader } from '~/components/ui/card';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
-import { formatPropertyName } from '~/utils/formatUtils';
+import { formatPropertyName, formatAclValue } from '~/utils/formatUtils';
 
 interface DiffViewProps {
   change: StagedChange;
@@ -47,13 +47,17 @@ const DiffValue: React.FC<{
   value: string | undefined;
   type: 'old' | 'new';
   changeType: StagedChange['type'];
-}> = ({ value, type, changeType }) => {
+  propertyName: string;
+}> = ({ value, type, changeType, propertyName }) => {
   if (!value && value !== '') return null;
 
   const isOld = type === 'old';
   const isNew = type === 'new';
+  const isAclProperty = propertyName.includes('acl');
 
   const prefix = changeType === 'add' ? '+ ' : changeType === 'remove' ? '- ' : isOld ? '- ' : '+ ';
+
+  const displayValue = isAclProperty ? formatAclValue(value) : value || '(empty)';
 
   return (
     <div
@@ -76,7 +80,7 @@ const DiffValue: React.FC<{
       >
         {prefix}
       </span>
-      <span className="break-all">{value || '(empty)'}</span>
+      <span className="break-all">{displayValue}</span>
     </div>
   );
 };
@@ -112,17 +116,37 @@ export const DiffView: React.FC<DiffViewProps> = ({ change, onRevert, timestamp 
       <CardContent className="p-3 pt-0 space-y-2">
         {change.type === 'update' && (
           <>
-            <DiffValue value={change.oldValue} type="old" changeType={change.type} />
-            <DiffValue value={change.newValue} type="new" changeType={change.type} />
+            <DiffValue
+              value={change.oldValue}
+              type="old"
+              changeType={change.type}
+              propertyName={change.property}
+            />
+            <DiffValue
+              value={change.newValue}
+              type="new"
+              changeType={change.type}
+              propertyName={change.property}
+            />
           </>
         )}
 
         {change.type === 'add' && change.newValue && (
-          <DiffValue value={change.newValue} type="new" changeType={change.type} />
+          <DiffValue
+            value={change.newValue}
+            type="new"
+            changeType={change.type}
+            propertyName={change.property}
+          />
         )}
 
         {change.type === 'remove' && change.oldValue && (
-          <DiffValue value={change.oldValue} type="old" changeType={change.type} />
+          <DiffValue
+            value={change.oldValue}
+            type="old"
+            changeType={change.type}
+            propertyName={change.property}
+          />
         )}
 
         {change.type === 'remove' && !change.oldValue && (

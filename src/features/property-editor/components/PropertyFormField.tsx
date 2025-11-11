@@ -19,6 +19,7 @@ import { Info, AlertTriangle } from 'lucide-react';
 import { Button } from '~/components/ui/button';
 import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
+import { SPECIAL_VALUES } from '~/types';
 
 interface PropertyFormFieldProps {
   property: PropertyDescriptor;
@@ -531,6 +532,11 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
           );
         }
 
+        const isAclField = property.name.includes('acl');
+        const aclValue = isAclField ? field.value || '' : '';
+        const showAllUsersIndicator = aclValue === SPECIAL_VALUES.ALL_USERS_ACL;
+        const showNoAccessIndicator = aclValue === SPECIAL_VALUES.NO_USERS_ACL;
+
         return (
           <Field>
             <PropertyLabel
@@ -540,7 +546,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               className="justify-between gap-2"
             />
             <FieldControl>
-              {property.name.includes('acl') ? (
+              {isAclField ? (
                 <textarea
                   value={field.value || ''}
                   onChange={(e) => field.onChange(e.target.value)}
@@ -576,6 +582,26 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 />
               )}
             </FieldControl>
+            {isAclField && (showAllUsersIndicator || showNoAccessIndicator) && (
+              <div className="flex items-center gap-2 mt-1">
+                {showAllUsersIndicator && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-blue-500 text-blue-600 dark:text-blue-400"
+                  >
+                    All users
+                  </Badge>
+                )}
+                {showNoAccessIndicator && (
+                  <Badge
+                    variant="outline"
+                    className="text-xs border-red-500 text-red-600 dark:text-red-400"
+                  >
+                    No access
+                  </Badge>
+                )}
+              </div>
+            )}
             {property.description && (
               <FieldDescription className="text-xs text-muted-foreground">
                 {property.description}
