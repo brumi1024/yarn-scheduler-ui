@@ -16,8 +16,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.maximum-applications',
     displayName: 'Maximum Applications (Global)',
-    description:
-      'Maximum number of applications that can be pending and running. Set it to -1 for unlimited applications.',
+    description: 'Maximum number of applications that can be pending and running.',
     type: 'number' as PropertyType,
     category: 'general' as PropertyCategory,
     defaultValue: '10000',
@@ -25,8 +24,8 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     validationRules: [
       {
         type: 'range',
-        message: 'Must be above -1',
-        min: -1,
+        message: 'Must be 0 or greater',
+        min: 0,
         max: 2147483647,
       },
     ],
@@ -97,6 +96,24 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
         message: 'Must be between 0 and 100',
         min: 0,
         max: 100,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
+    displayName: 'Maximum AM Resource Percent',
+    description:
+      'Maximum percentage of resources that can be used for Application Masters (0.0-1.0)',
+    type: 'number' as PropertyType,
+    category: 'resource' as PropertyCategory,
+    defaultValue: '0.1',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be between 0 and 1',
+        min: 0,
+        max: 1,
       },
     ],
   },
@@ -232,7 +249,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.per-node-heartbeat.multiple-assignments-enabled',
     displayName: 'Enable Multiple Container Assignments',
-    description: 'Allow multiple container assignments per node heartbeat',
+    description: 'Allow multiple container assignments per node heartbeat.',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: 'true',
@@ -241,24 +258,28 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-container-assignments',
     displayName: 'Max Container Assignments per Heartbeat',
-    description: 'Maximum containers assigned per heartbeat (-1 = unlimited)',
+    description:
+      'If multiple-assignments-enabled is true, this property controls the maximum containers assigned per heartbeat (-1 = unlimited).',
     type: 'number' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '100',
     required: false,
     validationRules: [
       {
-        type: 'range',
-        message: 'Must be between -1 and 1000',
-        min: -1,
-        max: 1000,
+        type: 'custom',
+        message: 'Must be -1 (unlimited) or greater than 0',
+        validator: (value: string) => {
+          const num = parseFloat(value);
+          return num === -1 || num > 0;
+        },
       },
     ],
   },
   {
     name: 'yarn.scheduler.capacity.per-node-heartbeat.maximum-offswitch-assignments',
     displayName: 'Maximum Off-switch Assignments Per Heartbeat',
-    description: 'Controls the number of OFF_SWITCH assignments allowed during a node heartbeat.',
+    description:
+      'If multiple-assignments-enabled is true, this property controls the number of OFF_SWITCH assignments allowed during a node heartbeat.',
     type: 'number' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '1',
@@ -266,9 +287,9 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between 1 and 100',
+        message: 'Must be 1 or greater',
         min: 1,
-        max: 100,
+        max: 2147483647,
       },
     ],
   },
@@ -277,10 +298,20 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.reservations-continue-look-all-nodes',
     displayName: 'Continue Looking All Nodes for Reservations',
-    description: 'Continue looking at all nodes even after reservation limit hit',
+    description:
+      'Controls whether the scheduler continues to search for available nodes for a reservation even if the first node it considered is reserved. When set to true, it enables the scheduler to continue searching other nodes, which can improve reservation success rates for large resource requests by preventing a single reserved node from blocking all potential reservations.',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: 'true',
+    required: false,
+  },
+  {
+    name: 'yarn.scheduler.capacity.skip-allocate-on-nodes-with-reserved-containers',
+    displayName: 'Skip Allocate on Nodes with Reserved Containers',
+    description: 'Skip trying to allocate on nodes which have reserved containers.',
+    type: 'boolean' as PropertyType,
+    category: 'advanced' as PropertyCategory,
+    defaultValue: 'false',
     required: false,
   },
 
@@ -288,7 +319,8 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.schedule-asynchronously.enable',
     displayName: 'Enable Asynchronous Scheduling',
-    description: 'Enable asynchronous scheduling for better performance',
+    description:
+      'Enabling this decouples container assigments from node heartbeats to improve performance.',
     type: 'boolean' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: 'false',
@@ -297,7 +329,7 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
   {
     name: 'yarn.scheduler.capacity.schedule-asynchronously.scheduling-interval-ms',
     displayName: 'Async Scheduling Interval (ms)',
-    description: 'Scheduling interval for async scheduling',
+    description: 'Scheduling interval for synchronous Scheduling scheduling.',
     type: 'number' as PropertyType,
     category: 'advanced' as PropertyCategory,
     defaultValue: '5',
@@ -312,20 +344,36 @@ export const globalPropertyDefinitions: PropertyDescriptor[] = [
     ],
   },
   {
-    name: 'yarn.scheduler.capacity.maximum-am-resource-percent',
-    displayName: 'Maximum AM Resource Percent',
-    description:
-      'Maximum percentage of resources that can be used for Application Masters (0.0-1.0)',
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.maximum-threads',
+    displayName: 'Async Scheduling Maximum Threads',
+    description: 'Maximum number of threads for asynchronous scheduling',
     type: 'number' as PropertyType,
-    category: 'resource' as PropertyCategory,
-    defaultValue: '0.1',
+    category: 'advanced' as PropertyCategory,
+    defaultValue: '1',
     required: false,
     validationRules: [
       {
         type: 'range',
-        message: 'Must be between 0 and 1',
-        min: 0,
-        max: 1,
+        message: 'Must be 1 or greater',
+        min: 1,
+        max: 2147483647,
+      },
+    ],
+  },
+  {
+    name: 'yarn.scheduler.capacity.schedule-asynchronously.maximum-pending-backlogs',
+    displayName: 'Async Scheduling Maximum Pending Backlogs',
+    description: 'Maximum number of pending backlogs for asynchronous scheduling',
+    type: 'number' as PropertyType,
+    category: 'advanced' as PropertyCategory,
+    defaultValue: '100',
+    required: false,
+    validationRules: [
+      {
+        type: 'range',
+        message: 'Must be 1 or greater',
+        min: 1,
+        max: 2147483647,
       },
     ],
   },

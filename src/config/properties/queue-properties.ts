@@ -207,8 +207,12 @@ export const queuePropertyDefinitions: PropertyDescriptor[] = [
     validationRules: [
       {
         type: 'custom',
-        message: 'Must be a positive integer',
-        validator: (value: string) => integerSchema.safeParse(value).success,
+        message: 'Must be 0 or a positive integer',
+        validator: (value: string) => {
+          if (!value.trim()) return true;
+          const numericValue = parseFloat(value);
+          return !isNaN(numericValue) && Number.isInteger(numericValue) && numericValue >= 0;
+        },
       },
     ],
   },
