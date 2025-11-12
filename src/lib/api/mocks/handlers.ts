@@ -3,7 +3,6 @@ import { API_CONFIG } from '~/lib/api/config';
 import { READ_ONLY_PROPERTY } from '~/config';
 
 // Base URL pattern that matches the API configuration
-// Use the same base URL as the API client for consistency
 
 const { baseUrl, mockMode } = API_CONFIG;
 const MOCK_ASSET_BASE = '/mock/ws/v1/cluster';
@@ -31,6 +30,19 @@ const staticHandlers: HttpHandler[] = [
 
     return HttpResponse.json({
       response: 'Configuration updated successfully',
+    });
+  }),
+
+  http.post(`${baseUrl}/scheduler-conf/validate`, async ({ request }) => {
+    // Simulate processing time
+    await new Promise((resolve) => setTimeout(resolve, 300));
+
+    const changes = await request.json();
+    console.log('Mock: Validating configuration changes:', changes);
+
+    // Always return success for mock mode
+    return HttpResponse.json({
+      validation: 'success',
     });
   }),
 
