@@ -244,7 +244,7 @@ export const buildCapacityEditorDrafts = ({
     const currentMaxCapacity =
       originInitialMaxCapacity !== null ? originInitialMaxCapacity : maxCapacityResult.value;
 
-    const hasStagedChange = capacityResult.isStaged || maxCapacityResult.isStaged;
+    const hasStagedChange = originIsNew || capacityResult.isStaged || maxCapacityResult.isStaged;
 
     return [
       createRowDraft({
