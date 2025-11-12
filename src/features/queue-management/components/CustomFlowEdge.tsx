@@ -1,5 +1,5 @@
 import { type EdgeProps } from '@xyflow/react';
-import { QUEUE_CARD_FLOW_MARGIN, QUEUE_CARD_HEIGHT } from '../constants';
+import { QUEUE_CARD_FLOW_MARGIN, QUEUE_CARD_HEIGHT } from '~/features/queue-management/constants';
 
 /**
  * Custom Sankey-like edge component that creates flowing connections between queue nodes.

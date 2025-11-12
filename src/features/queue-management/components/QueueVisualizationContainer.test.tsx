@@ -3,10 +3,10 @@ import { render, screen, waitFor, fireEvent } from '@testing-library/react';
 import { vi } from 'vitest';
 import { QueueVisualizationContainer } from './QueueVisualizationContainer';
 import { ThemeProvider } from '~/components/providers/theme-provider';
-import { useQueueTreeData } from '../hooks/useQueueTreeData';
+import { useQueueTreeData } from '~/features/queue-management/hooks/useQueueTreeData';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { Node, Edge } from '@xyflow/react';
-import type { QueueCardData } from '../hooks/useQueueTreeData';
+import type { QueueCardData } from '~/features/queue-management/hooks/useQueueTreeData';
 
 type ViMock = ReturnType<typeof vi.fn>;
 

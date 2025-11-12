@@ -1,5 +1,9 @@
 import { CONFIG_PREFIXES } from '~/types';
-import type { TemplateScope, TemplateScopeBuilderOptions, TemplateScopeGroup } from '../types';
+import type {
+  TemplateScope,
+  TemplateScopeBuilderOptions,
+  TemplateScopeGroup,
+} from '~/features/template-config/types';
 
 const LEGACY_SUFFIX = 'leaf-queue-template';
 const FLEXIBLE_TEMPLATE_SUFFIX = 'auto-queue-creation-v2.template';

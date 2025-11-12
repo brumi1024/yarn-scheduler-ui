@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import { createSchedulerDataSlice } from '../schedulerDataSlice';
+import { createSchedulerDataSlice } from '~/stores/slices/schedulerDataSlice';
 import type {
   SchedulerInfo,
   NodeLabelsResponse,

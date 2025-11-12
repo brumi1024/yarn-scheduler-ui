@@ -25,7 +25,7 @@ import {
 } from '~/components/ui/dialog';
 import { cn } from '~/utils/cn';
 import type { PlacementRule } from '~/types/features/placement-rules';
-import { getPolicyDisplayName } from '../constants/policy-descriptions';
+import { getPolicyDisplayName } from '~/features/placement-rules/constants/policy-descriptions';
 
 interface PlacementRulesTableProps {
   rules: PlacementRule[];

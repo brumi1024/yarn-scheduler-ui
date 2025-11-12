@@ -9,7 +9,7 @@ import {
 import { Button } from '~/components/ui/button';
 import { Alert, AlertDescription } from '~/components/ui/alert';
 import { Trash2, AlertTriangle } from 'lucide-react';
-import { useQueueActions } from '../../hooks/useQueueActions';
+import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { SPECIAL_VALUES } from '~/types';
 
 interface DeleteQueueDialogProps {

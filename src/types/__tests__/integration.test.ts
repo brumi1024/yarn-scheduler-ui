@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest';
-import type { SchedulerData, ConfigData, CapacitySchedulerInfo } from '../index';
-import type { NodeLabelsResponse } from '../api';
-import { isLeafQueue, isParentQueue } from '../guards';
-import { QUEUE_STATES, SCHEDULER_TYPES } from '../constants';
+import type { SchedulerData, ConfigData, CapacitySchedulerInfo } from '~/types/index';
+import type { NodeLabelsResponse } from '~/types/api';
+import { isLeafQueue, isParentQueue } from '~/types/guards';
+import { QUEUE_STATES, SCHEDULER_TYPES } from '~/types/constants';
 
 describe('Integration Tests - Complete API Responses', () => {
   describe('Scheduler API Response', () => {

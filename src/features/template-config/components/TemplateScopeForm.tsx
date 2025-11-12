@@ -24,8 +24,8 @@ import type { PropertyCategory } from '~/types';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
 import { CONFIG_PREFIXES } from '~/types';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import type { TemplateScope } from '../types';
-import { formatQueuePathLabel } from '../utils/queuePathLabel';
+import type { TemplateScope } from '~/features/template-config/types';
+import { formatQueuePathLabel } from '~/features/template-config/utils/queuePathLabel';
 
 interface TemplateScopeFormProps {
   scope: TemplateScope;

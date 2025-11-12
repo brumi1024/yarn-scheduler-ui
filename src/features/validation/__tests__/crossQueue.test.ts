@@ -3,15 +3,15 @@ import {
   validatePropertyChange,
   validateAllStagedChanges,
   selectivelyValidateStagedChanges,
-} from '../crossQueue';
+} from '~/features/validation/crossQueue';
 import type { SchedulerInfo, StagedChange, ValidationIssue } from '~/types';
 
 // Mock dependencies
-vi.mock('../service', () => ({
+vi.mock('~/features/validation/service', () => ({
   validateQueue: vi.fn(),
 }));
 
-vi.mock('../ruleCategories', () => ({
+vi.mock('~/features/validation/ruleCategories', () => ({
   isBlockingError: vi.fn(),
   isCrossQueueRule: vi.fn(),
 }));
@@ -20,14 +20,14 @@ vi.mock('~/utils/configUtils', () => ({
   mergeStagedConfig: vi.fn(),
 }));
 
-vi.mock('../utils/affectedQueues', () => ({
+vi.mock('~/features/validation/utils/affectedQueues', () => ({
   getAffectedQueuesForValidation: vi.fn(),
 }));
 
-import { validateQueue } from '../service';
-import { isBlockingError, isCrossQueueRule } from '../ruleCategories';
+import { validateQueue } from '~/features/validation/service';
+import { isBlockingError, isCrossQueueRule } from '~/features/validation/ruleCategories';
 import { mergeStagedConfig } from '~/utils/configUtils';
-import { getAffectedQueuesForValidation } from '../utils/affectedQueues';
+import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
 
 describe('crossQueue validation', () => {
   const createMockSchedulerData = (): SchedulerInfo => ({

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { MutationError, ValidationResponse } from '../mutation';
+import type { MutationError, ValidationResponse } from '~/types/mutation';
 
 describe('MutationError interface', () => {
   it('should accept standard YARN exception format', () => {

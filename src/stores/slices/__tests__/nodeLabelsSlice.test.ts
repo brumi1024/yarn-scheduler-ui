@@ -1,8 +1,8 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { create } from 'zustand';
 import { immer } from 'zustand/middleware/immer';
-import type { SchedulerStore } from '../types';
-import { createNodeLabelsSlice } from '../nodeLabelsSlice';
+import type { SchedulerStore } from '~/stores/slices/types';
+import { createNodeLabelsSlice } from '~/stores/slices/nodeLabelsSlice';
 import { ERROR_CODES } from '~/lib/errors';
 import type { NodeLabelsResponse, NodeToLabelsResponse, NodeLabelInfoItem } from '~/types';
 

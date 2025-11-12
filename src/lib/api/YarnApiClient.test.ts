@@ -12,7 +12,7 @@ import type {
   VersionResponse,
   QueueInfo,
   ConfigProperty,
-} from '../../types';
+} from '~/types';
 
 // Mock data for tests
 const mockSchedulerResponse: SchedulerResponse = {

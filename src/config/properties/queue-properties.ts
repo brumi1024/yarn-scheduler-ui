@@ -1,4 +1,4 @@
-import { capacityValueSchema, integerSchema, aclFormatSchema } from '../schemas/validation';
+import { capacityValueSchema, integerSchema, aclFormatSchema } from '~/config/schemas/validation';
 import { SPECIAL_VALUES } from '~/types';
 import type {
   PropertyDescriptor,

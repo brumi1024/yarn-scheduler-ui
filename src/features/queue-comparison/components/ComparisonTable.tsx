@@ -9,7 +9,7 @@ import {
   TableHeader,
   TableRow,
 } from '~/components/ui/table';
-import type { ComparisonData } from '../utils/comparison';
+import type { ComparisonData } from '~/features/queue-comparison/utils/comparison';
 import { getPropertyCategory, formatPropertyName } from '~/utils/formatUtils';
 
 interface ComparisonTableProps {

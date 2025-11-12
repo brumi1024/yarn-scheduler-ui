@@ -16,8 +16,8 @@ import type {
   VersionResponse,
   YarnConfigResponse,
   ValidationResponse,
-} from '../../types';
-import { READ_ONLY_PROPERTY } from '../../config';
+} from '~/types';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 export class YarnApiClient {
   private readonly baseUrl: string;

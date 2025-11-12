@@ -3,7 +3,7 @@ import { render, screen, within } from '~/testing/setup/setup';
 import { QueueCardNode } from './QueueCardNode';
 import userEvent from '@testing-library/user-event';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import type { QueueCardData } from '../hooks/useQueueTreeData';
+import type { QueueCardData } from '~/features/queue-management/hooks/useQueueTreeData';
 import { TooltipProvider } from '~/components/ui/tooltip';
 import type { NodeProps } from '@xyflow/react';
 

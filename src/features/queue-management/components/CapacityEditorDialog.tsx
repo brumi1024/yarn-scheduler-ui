@@ -35,7 +35,7 @@ import {
   convertVectorDraftToString,
   ensureCoreEntries,
   parseVectorDraft,
-} from '../utils/capacityEditor';
+} from '~/features/queue-management/utils/capacityEditor';
 import type { CapacityResourceMode, CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
 import { SPECIAL_VALUES } from '~/types';
 import type { QueueCapacitiesByPartition } from '~/types';

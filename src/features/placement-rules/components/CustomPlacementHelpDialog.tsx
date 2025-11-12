@@ -10,7 +10,7 @@ import {
 } from '~/components/ui/dialog';
 import { Badge } from '~/components/ui/badge';
 import { Alert, AlertDescription } from '~/components/ui/alert';
-import { CUSTOM_VARIABLES } from '../constants/policy-descriptions';
+import { CUSTOM_VARIABLES } from '~/features/placement-rules/constants/policy-descriptions';
 
 interface CustomPlacementHelpDialogProps {
   triggerText?: string;

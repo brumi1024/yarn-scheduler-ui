@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { SchedulerStoreError } from '../scheduler-store-error';
-import { ERROR_CODES } from '../error-codes';
+import { SchedulerStoreError } from '~/lib/errors/scheduler-store-error';
+import { ERROR_CODES } from '~/lib/errors/error-codes';
 import { READ_ONLY_PROPERTY } from '~/config';
 
 describe('SchedulerStoreError', () => {

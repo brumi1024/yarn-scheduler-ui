@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { createSchedulerStore } from '~/stores/schedulerStore';
 import { YarnApiClient } from '~/lib/api/YarnApiClient';
-import type { CapacityRowDraft } from '../capacityEditorSlice';
+import type { CapacityRowDraft } from '~/stores/slices/capacityEditorSlice';
 import { DEFAULT_PARTITION_VALUE } from '~/features/queue-management/utils/capacityEditor';
 
 // Mock dependencies
