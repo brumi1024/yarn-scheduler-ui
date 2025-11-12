@@ -1,5 +1,6 @@
 import { http, HttpResponse, type HttpHandler } from 'msw';
 import { API_CONFIG } from '~/lib/api/config';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 // Base URL pattern that matches the API configuration
 // Use the same base URL as the API client for consistency
@@ -99,14 +100,13 @@ const staticHandlers: HttpHandler[] = [
     }
 
     // Handle read-only mode query
-    // TODO: change this to the actual config value
-    if (configName === 'yarn.scheduler.capacity.ui.readonly') {
+    if (configName === READ_ONLY_PROPERTY) {
       // Default to false (writable mode) for development
       // Set VITE_READONLY_MODE=true to test read-only mode
       const readOnlyValue = import.meta.env.VITE_READONLY_MODE === 'true' ? 'true' : 'false';
       return HttpResponse.json({
         property: {
-          name: 'yarn.scheduler.capacity.ui.readonly',
+          name: READ_ONLY_PROPERTY,
           value: readOnlyValue,
         },
       });

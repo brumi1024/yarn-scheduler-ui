@@ -16,6 +16,7 @@ import { QueueChangeGroup } from './QueueChangeGroup';
 import { toast } from 'sonner';
 import { Kbd } from '~/components/ui/kbd';
 import { getModifierKey } from '~/hooks/useKeyboardShortcuts';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 interface StagedChangesPanelProps {
   open: boolean;
@@ -169,7 +170,7 @@ export function StagedChangesPanel({ open, onClose, onOpen }: StagedChangesPanel
                       <div className="break-words">
                         Changes are staged but cannot be applied. Set{' '}
                         <code className="text-xs bg-muted px-1 py-0.5 rounded break-all">
-                          yarn.scheduler.capacity.ui.readonly=false
+                          {READ_ONLY_PROPERTY}=false
                         </code>{' '}
                         in YARN to enable editing.
                       </div>

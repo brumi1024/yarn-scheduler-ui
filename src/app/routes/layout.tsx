@@ -16,6 +16,7 @@ import { SPECIAL_VALUES } from '~/types';
 import { SearchBar } from '~/components/search/SearchBar';
 import { useKeyboardShortcuts } from '~/hooks/useKeyboardShortcuts';
 import { toast } from 'sonner';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 export default function Layout() {
   const [stagedChangesPanelOpen, setStagedChangesPanelOpen] = useState(false);
@@ -191,7 +192,7 @@ export default function Layout() {
                       </Badge>
                     </TooltipTrigger>
                     <TooltipContent>
-                      <p>Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing</p>
+                      <p>Set {READ_ONLY_PROPERTY}=false in YARN to enable editing</p>
                     </TooltipContent>
                   </Tooltip>
                 </TooltipProvider>
