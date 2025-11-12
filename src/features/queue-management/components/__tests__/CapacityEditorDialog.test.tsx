@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen, waitFor } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { CapacityEditorDialog } from '../CapacityEditorDialog';
+import { CapacityEditorDialog } from '~/features/queue-management/components/CapacityEditorDialog';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 

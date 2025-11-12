@@ -10,7 +10,10 @@ import {
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { buildComparisonData, exportComparison } from '../utils/comparison';
+import {
+  buildComparisonData,
+  exportComparison,
+} from '~/features/queue-comparison/utils/comparison';
 import { ComparisonTable } from './ComparisonTable';
 
 interface QueueComparisonDialogProps {

@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
-import { createSchedulerStore, traverseQueueTree } from './schedulerStore';
+import { createSchedulerStore, traverseQueueTree } from '~/stores/schedulerStore';
 import { buildMutationRequest } from '~/features/staged-changes/utils/mutationBuilder';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type {
@@ -11,9 +11,9 @@ import type {
   NodesResponse,
   VersionResponse,
   SchedulerResponse,
-} from '../types';
-import { QUEUE_TYPES, SPECIAL_VALUES } from '../types/constants';
-import { AUTO_CREATION_PROPS } from '../types/constants/auto-creation';
+} from '~/types';
+import { QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
+import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 
 const toEntryRecord = (entries?: Array<{ key: string; value: string }>) =>
   Object.fromEntries((entries ?? []).map(({ key, value }) => [key, value]));

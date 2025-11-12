@@ -5,7 +5,7 @@ import { Separator } from '~/components/ui/separator';
 import { Badge } from '~/components/ui/badge';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { PlacementRuleForm } from './PlacementRuleForm';
-import { getPolicyDescription } from '../constants/policy-descriptions';
+import { getPolicyDescription } from '~/features/placement-rules/constants/policy-descriptions';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 export function PlacementRuleDetail() {

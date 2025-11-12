@@ -16,7 +16,7 @@ import {
   AccordionTrigger,
 } from '~/components/ui/accordion';
 import { ScrollArea } from '~/components/ui/scroll-area';
-import { POLICY_DESCRIPTIONS } from '../constants/policy-descriptions';
+import { POLICY_DESCRIPTIONS } from '~/features/placement-rules/constants/policy-descriptions';
 
 export function PolicyReferenceDialog() {
   return (

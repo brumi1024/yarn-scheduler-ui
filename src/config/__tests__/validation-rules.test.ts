@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { runFieldValidation, type ValidationContext } from '../validation-rules';
+import { runFieldValidation, type ValidationContext } from '~/config/validation-rules';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
 import type { SchedulerInfo } from '~/types';
 

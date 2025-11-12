@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { ERROR_CODES } from '../error-codes';
+import { ERROR_CODES } from '~/lib/errors/error-codes';
 
 describe('ERROR_CODES', () => {
   it('should define all expected error codes', () => {

@@ -20,8 +20,8 @@ import {
   SelectValue,
 } from '~/components/ui/select';
 import { Plus, SlidersHorizontal } from 'lucide-react';
-import { useQueueActions } from '../../hooks/useQueueActions';
-import { useCapacityEditor } from '../../hooks/useCapacityEditor';
+import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
+import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
 
 const addQueueSchema = z.object({
   queueName: z

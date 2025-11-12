@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { DiffView } from '../DiffView';
+import { DiffView } from '~/features/staged-changes/components/DiffView';
 import type { StagedChange } from '~/types';
 
 describe('DiffView', () => {

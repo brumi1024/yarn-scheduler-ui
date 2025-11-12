@@ -15,7 +15,7 @@ import { AlertCircle } from 'lucide-react';
 import { PropertyInput } from './PropertyInput';
 import { LegacyModeToggle } from './LegacyModeToggle';
 import { shouldShowProperty, isPropertyEnabled } from '~/utils/propertyConditions';
-import { useGlobalPropertyValidation } from '../hooks/useGlobalPropertyValidation';
+import { useGlobalPropertyValidation } from '~/features/global-settings/hooks/useGlobalPropertyValidation';
 import {
   categoryConfig,
   globalCategoryOrder,

@@ -26,10 +26,13 @@ import {
   placementRuleFormSchema,
   type PlacementRuleFormData,
   formDataToPlacementRule,
-} from '../schemas/placement-rule-schema';
+} from '~/features/placement-rules/schemas/placement-rule-schema';
 import { CustomPlacementHelpDialog } from './CustomPlacementHelpDialog';
-import { getPolicyDescription, POLICY_DISPLAY_NAMES } from '../constants/policy-descriptions';
-import { getAllParentQueues, getAllQueues } from '../utils/queueOptions';
+import {
+  getPolicyDescription,
+  POLICY_DISPLAY_NAMES,
+} from '~/features/placement-rules/constants/policy-descriptions';
+import { getAllParentQueues, getAllQueues } from '~/features/placement-rules/utils/queueOptions';
 import type { PlacementRule } from '~/types/features/placement-rules';
 
 const PARENT_QUEUE_POLICIES = [

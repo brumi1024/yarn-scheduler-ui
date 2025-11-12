@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { StagedChange, StagedChangeType } from '../staged-change';
+import type { StagedChange, StagedChangeType } from '~/types/staged-change';
 
 describe('StagedChange interface', () => {
   it('should accept add queue change', () => {

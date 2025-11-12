@@ -3,11 +3,11 @@ import { render, screen } from '@testing-library/react';
 import { QueueCardNode } from './QueueCardNode';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { NodeProps } from '@xyflow/react';
-import type { QueueCardData } from '../hooks/useQueueTreeData';
+import type { QueueCardData } from '~/features/queue-management/hooks/useQueueTreeData';
 
 // Mock dependencies
 vi.mock('~/stores/schedulerStore');
-vi.mock('../hooks/useQueueActions', () => ({
+vi.mock('~/features/queue-management/hooks/useQueueActions', () => ({
   useQueueActions: () => ({
     canAddChildQueue: vi.fn(() => true),
     canDeleteQueue: vi.fn(() => true),

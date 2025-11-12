@@ -23,8 +23,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '~/components/ui/select';
-import type { TemplateScopeType } from '../types';
-import { getSuffixForTemplateType } from '../utils/scopeUtils';
+import type { TemplateScopeType } from '~/features/template-config/types';
+import { getSuffixForTemplateType } from '~/features/template-config/utils/scopeUtils';
 
 interface AddTemplateScopeDialogProps {
   open: boolean;

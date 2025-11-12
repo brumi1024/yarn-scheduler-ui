@@ -30,8 +30,8 @@ import {
   SlidersHorizontal,
   FileCog,
 } from 'lucide-react';
-import type { QueueCardData } from '../hooks/useQueueTreeData';
-import { useQueueActions } from '../hooks/useQueueActions';
+import type { QueueCardData } from '~/features/queue-management/hooks/useQueueTreeData';
+import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { cn } from '~/utils/cn';
 import { HighlightedText } from '~/components/search/HighlightedText';
@@ -43,8 +43,8 @@ import { QueueResourceStats } from './QueueResourceStats';
 import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 import { Badge } from '~/components/ui/badge';
 import { parseCapacityValue as parseCapacityValueUtil } from '~/utils/capacityUtils';
-import { useCapacityEditor } from '../hooks/useCapacityEditor';
-import { QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '../constants';
+import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacityEditor';
+import { QUEUE_CARD_HEIGHT, QUEUE_CARD_WIDTH } from '~/features/queue-management/constants';
 
 type CapacityDisplay =
   | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }

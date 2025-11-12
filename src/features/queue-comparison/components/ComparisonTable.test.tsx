@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { ComparisonTable } from './ComparisonTable';
-import type { ComparisonData } from '../utils/comparison';
+import type { ComparisonData } from '~/features/queue-comparison/utils/comparison';
 
 describe('ComparisonTable', () => {
   const mockData: ComparisonData = {

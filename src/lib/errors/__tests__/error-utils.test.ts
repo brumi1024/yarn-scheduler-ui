@@ -4,9 +4,9 @@ import {
   extractErrorMessage,
   isNetworkError,
   createDetailedErrorMessage,
-} from '../error-utils';
-import { SchedulerStoreError } from '../scheduler-store-error';
-import { ERROR_CODES } from '../error-codes';
+} from '~/lib/errors/error-utils';
+import { SchedulerStoreError } from '~/lib/errors/scheduler-store-error';
+import { ERROR_CODES } from '~/lib/errors/error-codes';
 
 describe('error-utils', () => {
   describe('createStoreError', () => {

@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { ResourceInfo, ResourceInformation } from '../resource';
+import type { ResourceInfo, ResourceInformation } from '~/types/resource';
 
 describe('ResourceInfo interface', () => {
   it('should accept basic resource info with memory and vCores', () => {

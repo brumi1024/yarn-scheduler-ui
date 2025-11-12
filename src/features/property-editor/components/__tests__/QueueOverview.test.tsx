@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueueOverview } from '../QueueOverview';
+import { QueueOverview } from '~/features/property-editor/components/QueueOverview';
 import type { QueueInfo } from '~/types';
 import { QUEUE_STATES, SPECIAL_VALUES } from '~/types';
 

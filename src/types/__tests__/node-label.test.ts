@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import type { NodeLabel } from '../node-label';
+import type { NodeLabel } from '~/types/node-label';
 
 describe('NodeLabel interface', () => {
   it('should accept basic node label definition', () => {

@@ -1,11 +1,11 @@
 import { describe, it, expect } from 'vitest';
-import { queuePropertyDefinitions } from '../properties/queue-properties';
+import { queuePropertyDefinitions } from '~/config/properties/queue-properties';
 import {
   getPropertiesByCategory,
   getPropertyCategories,
   getPropertyDefinition,
-} from '../properties/helpers';
-import { globalPropertyDefinitions } from '../properties/global-properties';
+} from '~/config/properties/helpers';
+import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { CONFIG_PREFIXES } from '~/types';
 import {
   capacityValueSchema,
@@ -13,7 +13,7 @@ import {
   positiveNumberSchema,
   integerSchema,
   aclFormatSchema,
-} from '../schemas/validation';
+} from '~/config/schemas/validation';
 import { shouldShowProperty } from '~/utils/propertyConditions';
 
 describe('propertyDefinitions', () => {

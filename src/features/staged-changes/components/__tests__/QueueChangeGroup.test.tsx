@@ -1,12 +1,12 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueueChangeGroup } from '../QueueChangeGroup';
+import { QueueChangeGroup } from '~/features/staged-changes/components/QueueChangeGroup';
 import type { StagedChange } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
 
 // Mock the DiffView component
-vi.mock('../DiffView', () => ({
+vi.mock('~/features/staged-changes/components/DiffView', () => ({
   DiffView: ({ change, onRevert }: { change: StagedChange; onRevert: () => void }) => (
     <div data-testid={`diff-view-${change.id}`}>
       <span>DiffView: {change.property}</span>

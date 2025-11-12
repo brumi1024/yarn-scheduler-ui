@@ -10,13 +10,13 @@ import type {
 } from '~/types';
 import type { QueueStateValue } from '~/types/constants/queue';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
-import { DagreLayout } from '../utils/DagreLayout';
+import { DagreLayout } from '~/features/queue-management/utils/DagreLayout';
 import {
   QUEUE_CARD_CORNER_RADIUS,
   QUEUE_CARD_FLOW_MARGIN,
   QUEUE_CARD_HEIGHT,
   QUEUE_CARD_WIDTH,
-} from '../constants';
+} from '~/features/queue-management/constants';
 import type { ValidationIssue } from '~/types';
 
 export type QueueCardData = QueueInfo & {

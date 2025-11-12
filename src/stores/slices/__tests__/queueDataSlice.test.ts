@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { createSchedulerStore } from '~/stores/schedulerStore';
 import { YarnApiClient } from '~/lib/api/YarnApiClient';
-import { traverseQueueTree } from '../queueDataSlice';
+import { traverseQueueTree } from '~/stores/slices/queueDataSlice';
 import type { QueueInfo, SchedulerInfo } from '~/types';
 import { SPECIAL_VALUES } from '~/types';
 

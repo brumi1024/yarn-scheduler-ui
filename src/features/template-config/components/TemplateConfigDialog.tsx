@@ -11,14 +11,17 @@ import { Button } from '~/components/ui/button';
 import { Separator } from '~/components/ui/separator';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
-import type { TemplateScope, TemplateScopeType } from '../types';
-import { buildTemplateScopeGroups, createTemplateScope } from '../utils/scopeUtils';
+import type { TemplateScope, TemplateScopeType } from '~/features/template-config/types';
+import {
+  buildTemplateScopeGroups,
+  createTemplateScope,
+} from '~/features/template-config/utils/scopeUtils';
 import { TemplateScopeForm } from './TemplateScopeForm';
 import { AddTemplateScopeDialog } from './AddTemplateScopeDialog';
 import { ScrollArea } from '~/components/ui/scroll-area';
 import { Badge } from '~/components/ui/badge';
 import { cn } from '~/utils/cn';
-import { formatQueuePathLabel } from '../utils/queuePathLabel';
+import { formatQueuePathLabel } from '~/features/template-config/utils/queuePathLabel';
 
 interface TemplateConfigDialogProps {
   open: boolean;

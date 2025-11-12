@@ -5,7 +5,7 @@ import type {
   SchedConfUpdateInfo,
   QueueMutationParams,
   GlobalUpdateParams,
-} from '../config';
+} from '~/types/config';
 
 describe('ConfigData interface', () => {
   it('should accept valid scheduler configuration response', () => {

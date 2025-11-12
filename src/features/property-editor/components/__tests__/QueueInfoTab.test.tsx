@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
-import { QueueInfoTab } from '../QueueInfoTab';
+import { QueueInfoTab } from '~/features/property-editor/components/QueueInfoTab';
 import type { QueueInfo } from '~/types';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 

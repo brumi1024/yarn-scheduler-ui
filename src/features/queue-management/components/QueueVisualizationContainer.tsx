@@ -13,7 +13,10 @@ import '@xyflow/react/dist/style.css';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { AlertCircle, Tag, Search, X } from 'lucide-react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
-import { useQueueTreeData, type QueueCardData } from '../hooks/useQueueTreeData';
+import {
+  useQueueTreeData,
+  type QueueCardData,
+} from '~/features/queue-management/hooks/useQueueTreeData';
 import { QueueCardNode } from './QueueCardNode';
 import CustomFlowEdge from './CustomFlowEdge';
 import { useTheme } from '~/components/providers/use-theme';

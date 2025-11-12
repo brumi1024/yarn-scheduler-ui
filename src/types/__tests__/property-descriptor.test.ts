@@ -4,7 +4,7 @@ import type {
   PropertyType,
   ValidationRule,
   PropertyCategory,
-} from '../property-descriptor';
+} from '~/types/property-descriptor';
 
 describe('PropertyDescriptor interface', () => {
   it('should accept basic property descriptor', () => {

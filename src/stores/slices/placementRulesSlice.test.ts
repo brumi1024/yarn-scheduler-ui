@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest';
-import { createSchedulerStore } from '../schedulerStore';
+import { createSchedulerStore } from '~/stores/schedulerStore';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import type { PlacementRule } from '~/types/features/placement-rules';
 import { SPECIAL_VALUES } from '~/types/constants/special-values';
