@@ -17,6 +17,7 @@ import type {
   YarnConfigResponse,
   ValidationResponse,
 } from '../../types';
+import { READ_ONLY_PROPERTY } from '../../config';
 
 export class YarnApiClient {
   private readonly baseUrl: string;
@@ -245,11 +246,11 @@ export class YarnApiClient {
   }
 
   /**
-   * Detect read-only mode by checking yarn.scheduler.capacity.ui.readonly
+   * Detect read-only mode by checking the READ_ONLY_PROPERTY configuration
    */
   private async detectReadOnlyMode(): Promise<void> {
     try {
-      const readOnlyValue = await this.getConfiguration('yarn.scheduler.capacity.ui.readonly');
+      const readOnlyValue = await this.getConfiguration(READ_ONLY_PROPERTY);
       // Convert string to boolean - treat 'true' (case-insensitive) as true, everything else as false
       this.isReadOnly = readOnlyValue.toLowerCase() === 'true';
     } catch (error) {

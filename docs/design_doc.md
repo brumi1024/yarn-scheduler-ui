@@ -52,7 +52,7 @@ The **YARN Capacity Scheduler UI** is a modern web interface for managing Apache
    - Legacy mode toggle and capacity configuration modes
 
 7. **Read-Only Mode Support**
-   - Configurable read-only mode via YARN property (`yarn.scheduler.capacity.ui.readonly`)
+   - Configurable read-only mode via YARN property (`yarn.webapp.scheduler-ui.read-only.enable`)
    - Users can stage and validate changes but cannot apply them
    - Visual indicators (lock icon, disabled buttons) in UI
    - Useful for production environments with restricted access

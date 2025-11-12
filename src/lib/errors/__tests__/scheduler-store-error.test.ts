@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { SchedulerStoreError } from '../scheduler-store-error';
 import { ERROR_CODES } from '../error-codes';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 describe('SchedulerStoreError', () => {
   describe('constructor', () => {
@@ -321,13 +322,13 @@ describe('SchedulerStoreError', () => {
         'Configuration is in read-only mode',
         ERROR_CODES.MUTATION_BLOCKED,
         {
-          readOnlyProperty: 'yarn.scheduler.capacity.ui.readonly',
-          instruction: 'Set yarn.scheduler.capacity.ui.readonly=false to enable editing',
+          readOnlyProperty: READ_ONLY_PROPERTY,
+          instruction: `Set ${READ_ONLY_PROPERTY}=false to enable editing`,
         },
       );
 
       expect(error.code).toBe(ERROR_CODES.MUTATION_BLOCKED);
-      expect((error.details as any).instruction).toContain('readonly=false');
+      expect((error.details as any).instruction).toContain('read-only.enable=false');
     });
   });
 });

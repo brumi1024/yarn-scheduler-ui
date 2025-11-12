@@ -18,6 +18,7 @@ import {
   isNetworkError,
 } from '~/lib/errors';
 import { validateLabelRemoval } from '~/features/node-labels/utils/labelValidation';
+import { READ_ONLY_PROPERTY } from '~/config';
 import type { NodeLabelsSlice, SchedulerStore } from './types';
 
 export const createNodeLabelsSlice: StateCreator<
@@ -40,8 +41,7 @@ export const createNodeLabelsSlice: StateCreator<
   addNodeLabel: async (name, exclusivity) => {
     // Block adding node labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage =
-        'Cannot add node labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+      const errorMessage = `Cannot add node labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
 
       set((state) => {
         state.error = errorMessage;
@@ -94,8 +94,7 @@ export const createNodeLabelsSlice: StateCreator<
   removeNodeLabel: async (name) => {
     // Block removing node labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage =
-        'Cannot remove node labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+      const errorMessage = `Cannot remove node labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
 
       set((state) => {
         state.error = errorMessage;
@@ -178,8 +177,7 @@ export const createNodeLabelsSlice: StateCreator<
   assignNodeToLabel: async (nodeId, labelName) => {
     // Block assigning nodes to labels in read-only mode
     if (get().isReadOnly) {
-      const errorMessage =
-        'Cannot assign nodes to labels in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.';
+      const errorMessage = `Cannot assign nodes to labels in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`;
 
       set((state) => {
         state.error = errorMessage;

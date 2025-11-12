@@ -21,6 +21,7 @@ import {
   selectivelyValidateStagedChanges,
   validatePropertyChange,
 } from '~/features/validation/crossQueue';
+import { READ_ONLY_PROPERTY } from '~/config';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
 const clearMutationError = (state: MutationErrorState) => {
@@ -341,7 +342,7 @@ export const createStagedChangesSlice: StateCreator<
     if (get().isReadOnly) {
       throw createStoreError(
         ERROR_CODES.MUTATION_BLOCKED,
-        'Cannot apply changes in read-only mode. Set yarn.scheduler.capacity.ui.readonly=false in YARN to enable editing.',
+        `Cannot apply changes in read-only mode. Set ${READ_ONLY_PROPERTY}=false in YARN to enable editing.`,
       );
     }
 
