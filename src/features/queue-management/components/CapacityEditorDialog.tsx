@@ -8,6 +8,7 @@ import {
   DialogDescription,
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
+import { Kbd } from '~/components/ui/kbd';
 import {
   Field,
   FieldLabel,
@@ -29,6 +30,7 @@ import {
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type { SchedulerStore } from '~/stores/schedulerStore';
 import { cn } from '~/utils/cn';
+import { useKeyboardShortcuts, getModifierKey } from '~/hooks/useKeyboardShortcuts';
 import {
   DEFAULT_PARTITION_VALUE,
   createEmptyVectorEntry,
@@ -358,6 +360,36 @@ export const CapacityEditorDialog: React.FC = () => {
       }
     });
   };
+
+  // Keyboard shortcuts
+  useKeyboardShortcuts(
+    isOpen
+      ? [
+          {
+            key: 's',
+            ctrl: true,
+            meta: true,
+            preventDefault: true,
+            handler: () => {
+              if (!isSaving) {
+                void handleSave(false);
+              }
+            },
+          },
+          {
+            key: 'k',
+            ctrl: true,
+            meta: true,
+            preventDefault: true,
+            handler: () => {
+              if (!isSaving) {
+                resetCapacityDrafts();
+              }
+            },
+          },
+        ]
+      : [],
+  );
 
   const selectValue = selectedNodeLabel ?? DEFAULT_PARTITION_VALUE;
 
@@ -737,6 +769,7 @@ export const CapacityEditorDialog: React.FC = () => {
               disabled={isSaving}
             >
               Reset
+              <Kbd className="ml-auto">{getModifierKey()}+K</Kbd>
             </Button>
             <Button
               type="button"
@@ -765,7 +798,10 @@ export const CapacityEditorDialog: React.FC = () => {
                   Saving…
                 </>
               ) : (
-                'Save changes'
+                <>
+                  Save changes
+                  <Kbd className="ml-auto">{getModifierKey()}+S</Kbd>
+                </>
               )}
             </Button>
           </div>
