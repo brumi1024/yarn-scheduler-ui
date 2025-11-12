@@ -48,6 +48,7 @@ export interface NodeLabelsSlice {
 export interface StagedChangesSlice {
   stagedChanges: StagedChange[];
   applyError: string | null;
+  orphanedValidationErrors: ValidationIssue[];
 
   stageQueueChange: (
     queuePath: string,
