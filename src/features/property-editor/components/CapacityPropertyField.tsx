@@ -13,8 +13,8 @@ import { useCapacityEditor } from '~/features/queue-management/hooks/useCapacity
 import {
   PropertyLabel,
   PropertyWarnings,
-  renderBusinessErrorsList,
-  renderFieldMessage,
+  BusinessErrorsList,
+  FieldErrorMessage,
 } from './PropertyFieldHelpers';
 
 interface CapacityPropertyFieldProps {
@@ -100,8 +100,8 @@ export const CapacityPropertyField: React.FC<CapacityPropertyFieldProps> = ({
       <div className="mt-2 w-full break-all rounded-md border border-dashed bg-muted/40 px-3 py-2 text-sm font-mono text-foreground">
         {displayValue}
       </div>
-      {renderFieldMessage({ error, inlineBusinessError })}
-      {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+      <FieldErrorMessage error={error} inlineBusinessError={inlineBusinessError} />
+      <BusinessErrorsList fieldName={fieldName} messages={remainingBusinessErrors} />
       <PropertyWarnings warnings={warnings} />
     </Field>
   );

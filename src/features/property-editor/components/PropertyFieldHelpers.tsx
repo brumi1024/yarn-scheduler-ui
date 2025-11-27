@@ -47,10 +47,12 @@ export const PropertyLabel: React.FC<PropertyLabelProps> = ({
   </FieldLabel>
 );
 
-export const renderBusinessErrorsList = (
-  fieldName: string,
-  messages: string[],
-): React.ReactNode => {
+export interface BusinessErrorsListProps {
+  fieldName: string;
+  messages: string[];
+}
+
+export const BusinessErrorsList: React.FC<BusinessErrorsListProps> = ({ fieldName, messages }) => {
   if (messages.length === 0) {
     return null;
   }
@@ -103,40 +105,17 @@ export const PropertyWarnings: React.FC<PropertyWarningsProps> = ({ warnings }) 
   );
 };
 
-export interface FieldErrorProps {
+export interface FieldErrorMessageProps {
   error?: { message?: string };
   inlineBusinessError?: string;
 }
 
-export const renderFieldMessage = ({
+export const FieldErrorMessage: React.FC<FieldErrorMessageProps> = ({
   error,
   inlineBusinessError,
-}: FieldErrorProps): React.ReactNode => {
+}) => {
   if (!error && !inlineBusinessError) {
     return null;
   }
   return <FieldMessage>{error ? String(error.message ?? '') : inlineBusinessError}</FieldMessage>;
-};
-
-export const getCommonFieldClassName = (
-  stagedStatus?: 'new' | 'modified' | 'deleted',
-  hasError?: boolean,
-): string => {
-  return cn(
-    stagedStatus === 'modified' && 'ring-2 ring-primary ring-offset-1',
-    hasError && 'ring-2 ring-destructive ring-offset-1',
-  );
-};
-
-export const parseFieldErrors = (
-  errors: string[] = [],
-): { inline?: string; remaining: string[] } => {
-  const fieldErrors = errors
-    .map((message) => (typeof message === 'string' ? message.trim() : ''))
-    .filter((message) => message.length > 0);
-
-  return {
-    inline: fieldErrors[0],
-    remaining: fieldErrors.slice(1),
-  };
 };

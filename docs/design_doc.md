@@ -368,14 +368,14 @@ Translates staged changes into YARN's `SchedConfUpdateInfo` format:
 **Key Components**:
 
 1. **service.ts** - Main validation orchestration
-   - `validateField()` - Single property validation
+   - `validateField()` - Single property validation with context
    - `validateQueue()` - All properties in a queue
-   - `validateAllQueues()` - Full tree validation
+   - `hasBlockingIssues()` - Check for blocking errors
 
 2. **crossQueue.ts** - Cross-queue validation engine
-   - Detects affected queues when a property changes
-   - Validates rules across parent/children/siblings
-   - Examples: sibling capacity sums, max >= min, mode consistency
+   - `validatePropertyChange()` - Validates a property change with cross-queue awareness
+   - `validateStagedChanges()` - Validates all staged changes (or a filtered subset)
+   - Handles parent/children/siblings relationships
 
 3. **ruleCategories.ts** - Rule categorization
    - `CROSS_QUEUE_RULES` - Affects multiple queues (re-validate dependencies)
@@ -810,6 +810,7 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 - `src/features/validation/crossQueue.ts` - Cross-queue validation engine
 - `src/features/validation/ruleCategories.ts` - Rule categorization
 - `src/features/validation/utils/affectedQueues.ts` - Dependency detection
+- `src/features/validation/utils/dedupeIssues.ts` - Issue deduplication
 
 **State Management**:
 

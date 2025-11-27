@@ -12,12 +12,8 @@ import { ToggleGroup, ToggleGroupItem } from '~/components/ui/toggle-group';
 import { FieldSelect } from '~/components/ui/field-select';
 import { Field, FieldControl, FieldDescription } from '~/components/ui/field';
 import type { PropertyDescriptor } from '~/types/property-descriptor';
-import {
-  PropertyLabel,
-  renderBusinessErrorsList,
-  renderFieldMessage,
-  getCommonFieldClassName,
-} from './PropertyFieldHelpers';
+import { PropertyLabel, BusinessErrorsList, FieldErrorMessage } from './PropertyFieldHelpers';
+import { getCommonFieldClassName } from '../utils/fieldHelpers';
 
 interface EnumPropertyFieldProps {
   property: PropertyDescriptor;
@@ -117,8 +113,8 @@ export const EnumPropertyField: React.FC<EnumPropertyFieldProps> = ({
             {property.description}
           </FieldDescription>
         )}
-        {renderFieldMessage({ error, inlineBusinessError })}
-        {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+        <FieldErrorMessage error={error} inlineBusinessError={inlineBusinessError} />
+        <BusinessErrorsList fieldName={fieldName} messages={remainingBusinessErrors} />
       </Field>
     );
   }
@@ -149,7 +145,7 @@ export const EnumPropertyField: React.FC<EnumPropertyFieldProps> = ({
           selectClassName="w-[var(--radix-select-trigger-width)]"
           message={error ? String(error.message ?? '') : inlineBusinessError}
         />
-        {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+        <BusinessErrorsList fieldName={fieldName} messages={remainingBusinessErrors} />
       </>
     );
   }
@@ -179,8 +175,8 @@ export const EnumPropertyField: React.FC<EnumPropertyFieldProps> = ({
           {property.description}
         </FieldDescription>
       )}
-      {renderFieldMessage({ error, inlineBusinessError })}
-      {renderBusinessErrorsList(fieldName, remainingBusinessErrors)}
+      <FieldErrorMessage error={error} inlineBusinessError={inlineBusinessError} />
+      <BusinessErrorsList fieldName={fieldName} messages={remainingBusinessErrors} />
     </Field>
   );
 };

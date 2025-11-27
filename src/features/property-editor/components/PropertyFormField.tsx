@@ -14,11 +14,10 @@ import { CapacityPropertyField } from './CapacityPropertyField';
 import {
   PropertyLabel,
   PropertyWarnings,
-  renderBusinessErrorsList,
-  renderFieldMessage,
-  getCommonFieldClassName,
-  parseFieldErrors,
+  BusinessErrorsList,
+  FieldErrorMessage,
 } from './PropertyFieldHelpers';
+import { getCommonFieldClassName, parseFieldErrors } from '../utils/fieldHelpers';
 
 interface PropertyFormFieldProps {
   property: PropertyDescriptor;
@@ -118,7 +117,7 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
               )}
               message={error ? String(error.message ?? '') : effectiveInlineError}
             />
-            {renderBusinessErrorsList(fieldName, effectiveRemainingErrors)}
+            <BusinessErrorsList fieldName={fieldName} messages={effectiveRemainingErrors} />
           </>
         );
       }
@@ -170,8 +169,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {renderFieldMessage({ error, inlineBusinessError: effectiveInlineError })}
-            {renderBusinessErrorsList(fieldName, effectiveRemainingErrors)}
+            <FieldErrorMessage error={error} inlineBusinessError={effectiveInlineError} />
+            <BusinessErrorsList fieldName={fieldName} messages={effectiveRemainingErrors} />
           </Field>
         );
 
@@ -282,8 +281,8 @@ export const PropertyFormField: React.FC<PropertyFormFieldProps> = ({
                 {property.description}
               </FieldDescription>
             )}
-            {renderFieldMessage({ error, inlineBusinessError: effectiveInlineError })}
-            {renderBusinessErrorsList(fieldName, effectiveRemainingErrors)}
+            <FieldErrorMessage error={error} inlineBusinessError={effectiveInlineError} />
+            <BusinessErrorsList fieldName={fieldName} messages={effectiveRemainingErrors} />
             <PropertyWarnings warnings={warnings} />
           </Field>
         );
