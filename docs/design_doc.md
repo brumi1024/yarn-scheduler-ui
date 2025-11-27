@@ -368,14 +368,14 @@ Translates staged changes into YARN's `SchedConfUpdateInfo` format:
 **Key Components**:
 
 1. **service.ts** - Main validation orchestration
-   - `validateField()` - Single property validation
+   - `validateField()` - Single property validation with context
    - `validateQueue()` - All properties in a queue
-   - `validateAllQueues()` - Full tree validation
+   - `hasBlockingIssues()` - Check for blocking errors
 
 2. **crossQueue.ts** - Cross-queue validation engine
-   - Detects affected queues when a property changes
-   - Validates rules across parent/children/siblings
-   - Examples: sibling capacity sums, max >= min, mode consistency
+   - `validatePropertyChange()` - Validates a property change with cross-queue awareness
+   - `validateStagedChanges()` - Validates all staged changes (or a filtered subset)
+   - Handles parent/children/siblings relationships
 
 3. **ruleCategories.ts** - Rule categorization
    - `CROSS_QUEUE_RULES` - Affects multiple queues (re-validate dependencies)
@@ -810,6 +810,7 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 - `src/features/validation/crossQueue.ts` - Cross-queue validation engine
 - `src/features/validation/ruleCategories.ts` - Rule categorization
 - `src/features/validation/utils/affectedQueues.ts` - Dependency detection
+- `src/features/validation/utils/dedupeIssues.ts` - Issue deduplication
 
 **State Management**:
 
@@ -825,7 +826,9 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 
 - `src/utils/propertyUtils.ts` - Property key construction
 - `src/utils/capacityUtils.ts` - Capacity parsing and validation
-- `src/utils/queueTreeUtils.ts` - Queue tree traversal
+- `src/utils/treeUtils.ts` - Queue tree traversal (`flattenQueueTree`, `traverseQueueTree`, `findQueueByPath`)
+- `src/utils/nodeLabelUtils.ts` - Node label name normalization
+- `src/lib/errors/readOnlyGuard.ts` - Read-only mode enforcement helpers
 
 ---
 
@@ -889,16 +892,29 @@ yarn-scheduler-ui/
 │   │   ├── properties/           # Property descriptors
 │   │   ├── schemas/              # Zod schemas
 │   │   └── validation-rules.ts   # Business validation
-│   ├── features/                 # Feature modules (10 features)
+│   ├── features/                 # Feature modules
+│   │   ├── queue-management/     # Queue tree visualization
+│   │   │   ├── components/       # QueueCardNode, CapacityEditorDialog, etc.
+│   │   │   ├── hooks/            # useCapacityEditor, useQueueActions
+│   │   │   └── utils/            # capacityDisplay, capacityEditor, etc.
+│   │   ├── property-editor/      # Queue property editing
+│   │   │   └── components/       # PropertyPanel, PropertyFormField, etc.
+│   │   ├── staged-changes/       # Change review and mutation
+│   │   ├── validation/           # Cross-queue validation engine
+│   │   ├── placement-rules/      # Placement rule builder
+│   │   ├── node-labels/          # Node label management
+│   │   ├── template-config/      # Auto-queue templates
+│   │   ├── queue-comparison/     # Queue comparison tool
+│   │   └── global-settings/      # Global scheduler settings
 │   ├── hooks/                    # Shared React hooks
 │   ├── lib/                      # Libraries and utilities
 │   │   ├── api/                  # YarnApiClient + MSW
-│   │   └── errors/               # Error handling
+│   │   └── errors/               # Error handling + readOnlyGuard
 │   ├── stores/                   # Zustand state management
 │   │   ├── schedulerStore.ts     # Main store
 │   │   └── slices/               # 8 feature slices
 │   ├── types/                    # TypeScript definitions
-│   ├── utils/                    # Utility functions
+│   ├── utils/                    # Utility functions (treeUtils, nodeLabelUtils, etc.)
 │   └── testing/                  # Test utilities
 ├── public/mock/                  # Mock API responses
 ├── docs/                         # Documentation

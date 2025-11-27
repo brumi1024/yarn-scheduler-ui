@@ -1,8 +1,8 @@
 import { describe, it, expect, vi } from 'vitest';
-import { queueTreeUtils } from './queueTreeUtils';
+import { flattenQueueTree, traverseQueueTree, findQueueByPath } from './treeUtils';
 import type { QueueInfo } from '~/types';
 
-describe('queueTreeUtils', () => {
+describe('treeUtils', () => {
   // Helper to create test queue tree
   const createTestQueueTree = (): QueueInfo => ({
     queueName: 'root',
@@ -91,7 +91,7 @@ describe('queueTreeUtils', () => {
   describe('flattenQueueTree', () => {
     it('should flatten a queue tree into an array', () => {
       const root = createTestQueueTree();
-      const flattened = queueTreeUtils.flattenQueueTree(root);
+      const flattened = flattenQueueTree(root);
 
       expect(flattened).toHaveLength(5);
       expect(flattened.map((q) => q.queuePath)).toEqual([
@@ -120,7 +120,7 @@ describe('queueTreeUtils', () => {
         state: 'RUNNING',
       };
 
-      const flattened = queueTreeUtils.flattenQueueTree(singleQueue);
+      const flattened = flattenQueueTree(singleQueue);
       expect(flattened).toHaveLength(1);
       expect(flattened[0]).toBe(singleQueue);
     });
@@ -145,7 +145,7 @@ describe('queueTreeUtils', () => {
         },
       };
 
-      const flattened = queueTreeUtils.flattenQueueTree(queueWithEmptyQueues);
+      const flattened = flattenQueueTree(queueWithEmptyQueues);
       expect(flattened).toHaveLength(1);
     });
   });
@@ -155,7 +155,7 @@ describe('queueTreeUtils', () => {
       const root = createTestQueueTree();
       const callback = vi.fn();
 
-      queueTreeUtils.traverseQueueTree(root, callback);
+      traverseQueueTree(root, callback);
 
       expect(callback).toHaveBeenCalledTimes(5);
 
@@ -181,7 +181,7 @@ describe('queueTreeUtils', () => {
       const root = createTestQueueTree();
       const parents: Array<QueueInfo | undefined> = [];
 
-      queueTreeUtils.traverseQueueTree(root, (_1, _2, parent) => {
+      traverseQueueTree(root, (_1, _2, parent) => {
         parents.push(parent);
       });
 
@@ -197,7 +197,7 @@ describe('queueTreeUtils', () => {
     it('should find queue by path', () => {
       const root = createTestQueueTree();
 
-      const found = queueTreeUtils.findQueueByPath(root, 'root.production.team1');
+      const found = findQueueByPath(root, 'root.production.team1');
       expect(found).not.toBeNull();
       expect(found?.queueName).toBe('team1');
       expect(found?.queuePath).toBe('root.production.team1');
@@ -206,21 +206,21 @@ describe('queueTreeUtils', () => {
     it('should find root queue', () => {
       const root = createTestQueueTree();
 
-      const found = queueTreeUtils.findQueueByPath(root, 'root');
+      const found = findQueueByPath(root, 'root');
       expect(found).toBe(root);
     });
 
     it('should return null for non-existent path', () => {
       const root = createTestQueueTree();
 
-      const found = queueTreeUtils.findQueueByPath(root, 'root.nonexistent');
+      const found = findQueueByPath(root, 'root.nonexistent');
       expect(found).toBeNull();
     });
 
     it('should return null for partial path', () => {
       const root = createTestQueueTree();
 
-      const found = queueTreeUtils.findQueueByPath(root, 'production');
+      const found = findQueueByPath(root, 'production');
       expect(found).toBeNull();
     });
 
@@ -241,10 +241,10 @@ describe('queueTreeUtils', () => {
         state: 'RUNNING',
       };
 
-      const found = queueTreeUtils.findQueueByPath(singleQueue, 'root');
+      const found = findQueueByPath(singleQueue, 'root');
       expect(found).toBe(singleQueue);
 
-      const notFound = queueTreeUtils.findQueueByPath(singleQueue, 'root.child');
+      const notFound = findQueueByPath(singleQueue, 'root.child');
       expect(notFound).toBeNull();
     });
   });
