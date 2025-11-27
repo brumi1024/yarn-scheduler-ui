@@ -1,5 +1,5 @@
 import type { SchedulerInfo, StagedChange } from '~/types';
-import { findQueueByPath } from '~/utils/queueTreeUtils';
+import { findQueueByPath } from '~/utils/treeUtils';
 import { getParentQueuePath } from '~/utils/propertyUtils';
 import { isTemplateQueuePath } from '~/utils/templateUtils';
 

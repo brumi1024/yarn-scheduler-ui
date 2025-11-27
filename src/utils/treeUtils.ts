@@ -1,9 +1,132 @@
 /**
- * Utilities for working with SchedulerInfo structures
+ * Utilities for working with queue tree and scheduler structures
+ *
+ * This module provides functions for traversing, searching, and filtering
+ * the hierarchical queue tree structure used by YARN Capacity Scheduler.
  */
 
 import type { SchedulerInfo, QueueInfo } from '~/types';
-import { queueTreeUtils } from './queueTreeUtils';
+
+// =============================================================================
+// Queue Tree Traversal
+// =============================================================================
+
+/**
+ * Flatten a queue tree into a flat array of all queues
+ * @param root The root queue to start from
+ * @returns Array of all queues in the tree
+ */
+export function flattenQueueTree(root: QueueInfo): QueueInfo[] {
+  const result: QueueInfo[] = [root];
+
+  if (root.queues?.queue) {
+    root.queues.queue.forEach((child) => {
+      result.push(...flattenQueueTree(child));
+    });
+  }
+
+  return result;
+}
+
+/**
+ * Traverse a queue tree and call a callback for each queue
+ * @param root The root queue to start from
+ * @param callback Function to call for each queue
+ * @param depth Current depth in the tree (starts at 0)
+ * @param parent Parent queue (undefined for root)
+ */
+export function traverseQueueTree(
+  root: QueueInfo,
+  callback: (queue: QueueInfo, depth: number, parent?: QueueInfo) => void,
+  depth = 0,
+  parent?: QueueInfo,
+): void {
+  callback(root, depth, parent);
+
+  if (root.queues?.queue) {
+    root.queues.queue.forEach((child) => {
+      traverseQueueTree(child, callback, depth + 1, root);
+    });
+  }
+}
+
+/**
+ * Find a queue by its path in the queue tree or scheduler data
+ * @param rootOrScheduler The root queue or scheduler data to search from
+ * @param queuePath The queue path to find (e.g., "root", "root.production.team1")
+ * @returns The queue if found, null otherwise
+ */
+export function findQueueByPath(
+  rootOrScheduler: QueueInfo | SchedulerInfo | undefined | null,
+  queuePath: string,
+): QueueInfo | null {
+  if (!rootOrScheduler || !queuePath) {
+    return null;
+  }
+
+  // Handle root queue special case for SchedulerInfo
+  if (
+    'queueName' in rootOrScheduler &&
+    rootOrScheduler.queueName === 'root' &&
+    queuePath === 'root'
+  ) {
+    return rootOrScheduler as unknown as QueueInfo;
+  }
+
+  // If it's a QueueInfo and matches, return it
+  if ('queuePath' in rootOrScheduler && rootOrScheduler.queuePath === queuePath) {
+    return rootOrScheduler as QueueInfo;
+  }
+
+  // Use iterative approach for performance
+  const pathParts = queuePath.split('.');
+  let currentQueue: QueueInfo | undefined = rootOrScheduler as QueueInfo;
+
+  // Verify first part matches root queue name
+  if (!currentQueue || pathParts[0] !== currentQueue.queueName) {
+    return null;
+  }
+
+  // Traverse down the path
+  for (let i = 1; i < pathParts.length; i += 1) {
+    if (!currentQueue?.queues?.queue) {
+      return null;
+    }
+
+    currentQueue = currentQueue.queues.queue.find((q) => q.queueName === pathParts[i]);
+
+    if (!currentQueue) {
+      return null;
+    }
+  }
+
+  return currentQueue;
+}
+
+/**
+ * Get all sibling queues for a given queue path
+ * @param schedulerData The scheduler data
+ * @param queuePath The queue path to find siblings for
+ * @returns Array of sibling queues (excluding the queue itself)
+ */
+export function getSiblingQueues(
+  schedulerData: SchedulerInfo | undefined | null,
+  queuePath: string,
+): QueueInfo[] {
+  const lastDotIndex = queuePath.lastIndexOf('.');
+  const parentPath = lastDotIndex > 0 ? queuePath.substring(0, lastDotIndex) : null;
+
+  if (!parentPath) {
+    return [];
+  }
+
+  const parentQueue = findQueueByPath(schedulerData, parentPath);
+  return parentQueue?.queues?.queue || [];
+}
+
+// =============================================================================
+// Scheduler Tree Operations
+// =============================================================================
 
 /**
  * Get all queues from a SchedulerInfo structure without conversion
@@ -15,7 +138,7 @@ export function flattenSchedulerTree(scheduler: SchedulerInfo): QueueInfo[] {
 
   if (scheduler.queues?.queue) {
     scheduler.queues.queue.forEach((queue) => {
-      queues.push(...queueTreeUtils.flattenQueueTree(queue));
+      queues.push(...flattenQueueTree(queue));
     });
   }
 
@@ -56,9 +179,6 @@ export function filterSchedulerTree(
 
 /**
  * Filter a queue subtree based on matching paths
- * @param queue The queue to filter
- * @param matches Set of queue paths that should be included
- * @returns The filtered queue or null if not included
  */
 function filterQueueSubtree(queue: QueueInfo, matches: Set<string>): QueueInfo | null {
   if (!matches.has(queue.queuePath)) {
@@ -82,8 +202,6 @@ function filterQueueSubtree(queue: QueueInfo, matches: Set<string>): QueueInfo |
 
 /**
  * Build an index of queue relationships for efficient lookups
- * @param queues Array of all queues
- * @returns Index containing parent-child relationships and path lookups
  */
 function buildQueueIndex(queues: QueueInfo[]) {
   const pathToQueue = new Map<string, QueueInfo>();
@@ -154,10 +272,3 @@ export function findMatchingQueues(scheduler: SchedulerInfo, searchQuery: string
 
   return matches;
 }
-
-// Export as namespace for consistency with queueTreeUtils
-export const schedulerTreeUtils = {
-  flattenSchedulerTree,
-  filterSchedulerTree,
-  findMatchingQueues,
-};

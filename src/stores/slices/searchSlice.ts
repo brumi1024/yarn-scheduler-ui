@@ -4,7 +4,7 @@
 
 import type { StateCreator } from 'zustand';
 import type { SearchSlice, SchedulerStore } from './types';
-import { schedulerTreeUtils } from '~/utils/schedulerTreeUtils';
+import { filterSchedulerTree, findMatchingQueues } from '~/utils/treeUtils';
 import { globalPropertyDefinitions } from '~/config/properties/global-properties';
 import { buildGlobalPropertyKey } from '~/utils/propertyUtils';
 import { calculateSearchResults } from '~/utils/searchUtils';
@@ -63,10 +63,10 @@ export const createSearchSlice: StateCreator<
     if (!searchQuery || !schedulerData) return schedulerData;
 
     // Find all matching queue paths
-    const matches = schedulerTreeUtils.findMatchingQueues(schedulerData, searchQuery);
+    const matches = findMatchingQueues(schedulerData, searchQuery);
 
     // Return filtered scheduler tree
-    return schedulerTreeUtils.filterSchedulerTree(schedulerData, matches);
+    return filterSchedulerTree(schedulerData, matches);
   },
 
   getFilteredNodes: () => {
