@@ -4,12 +4,14 @@
  * Functions for parsing and formatting capacity values for display in queue cards.
  */
 
-import { parseCapacityValue } from '~/utils/capacityUtils';
+import {
+  parseCapacityValue,
+  parseResourceVector,
+  type ResourceVectorEntry,
+} from '~/utils/capacityUtils';
 
-export type ResourceVectorEntry = {
-  resource: string;
-  value: string;
-};
+// Re-export for backwards compatibility
+export type { ResourceVectorEntry };
 
 export type CapacityDisplay =
   | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }
@@ -64,35 +66,8 @@ export const getResourceOrder = (
   return ordered;
 };
 
-export const parseResourceVector = (value: string): ResourceVectorEntry[] => {
-  const trimmed = value.trim();
-  if (!trimmed.startsWith('[') || !trimmed.endsWith(']')) {
-    return [];
-  }
-
-  const inner = trimmed.slice(1, -1).trim();
-  if (!inner) {
-    return [];
-  }
-
-  return inner
-    .split(',')
-    .map((pair) => {
-      const [resource, val] = pair.split('=');
-      const resourceName = resource?.trim();
-      const resourceValue = val?.trim();
-
-      if (!resourceName || !resourceValue) {
-        return null;
-      }
-
-      return {
-        resource: resourceName,
-        value: resourceValue,
-      };
-    })
-    .filter((entry): entry is ResourceVectorEntry => entry !== null);
-};
+// Re-export parseResourceVector for backwards compatibility
+export { parseResourceVector };
 
 export const getCapacityDisplay = (input?: string): CapacityDisplay => {
   if (!input) {

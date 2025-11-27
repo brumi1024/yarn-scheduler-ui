@@ -1,9 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
-import {
-  validatePropertyChange,
-  validateAllStagedChanges,
-  selectivelyValidateStagedChanges,
-} from '~/features/validation/crossQueue';
+import { validatePropertyChange, validateStagedChanges } from '~/features/validation/crossQueue';
 import type { SchedulerInfo, StagedChange, ValidationIssue } from '~/types';
 
 // Mock dependencies
@@ -620,9 +616,9 @@ describe('crossQueue validation', () => {
     });
   });
 
-  describe('validateAllStagedChanges', () => {
+  describe('validateStagedChanges', () => {
     it('should return empty map when schedulerData is null', () => {
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges: [],
         schedulerData: null,
         configData: new Map(),
@@ -632,7 +628,7 @@ describe('crossQueue validation', () => {
     });
 
     it('should return empty map when staged changes is empty', () => {
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges: [],
         schedulerData: createMockSchedulerData(),
         configData: new Map(),
@@ -669,7 +665,7 @@ describe('crossQueue validation', () => {
         ],
       });
 
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -699,7 +695,7 @@ describe('crossQueue validation', () => {
         issues: [],
       });
 
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -723,7 +719,7 @@ describe('crossQueue validation', () => {
         },
       ];
 
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -757,7 +753,7 @@ describe('crossQueue validation', () => {
         },
       ];
 
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -791,7 +787,7 @@ describe('crossQueue validation', () => {
 
       vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
 
-      validateAllStagedChanges({
+      validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -824,7 +820,7 @@ describe('crossQueue validation', () => {
         issues: [],
       });
 
-      const result = validateAllStagedChanges({
+      const result = validateStagedChanges({
         stagedChanges,
         schedulerData,
         configData: new Map(),
@@ -834,9 +830,9 @@ describe('crossQueue validation', () => {
     });
   });
 
-  describe('selectivelyValidateStagedChanges', () => {
+  describe('validateStagedChanges', () => {
     it('should return empty map when schedulerData is null', () => {
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(),
         affectedProperties: new Set(),
         stagedChanges: [],
@@ -848,7 +844,7 @@ describe('crossQueue validation', () => {
     });
 
     it('should return empty map when staged changes is empty', () => {
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(),
         affectedProperties: new Set(),
         stagedChanges: [],
@@ -879,7 +875,7 @@ describe('crossQueue validation', () => {
         issues: [],
       });
 
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(['root.default']),
         affectedProperties: new Set(),
         stagedChanges,
@@ -911,7 +907,7 @@ describe('crossQueue validation', () => {
         issues: [],
       });
 
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(),
         affectedProperties: new Set(['capacity']),
         stagedChanges,
@@ -947,7 +943,7 @@ describe('crossQueue validation', () => {
         },
       ];
 
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(['root.default']),
         affectedProperties: new Set(),
         stagedChanges,
@@ -984,7 +980,7 @@ describe('crossQueue validation', () => {
 
       vi.mocked(getAffectedQueuesForValidation).mockReturnValue(['root.default']);
 
-      selectivelyValidateStagedChanges({
+      validateStagedChanges({
         affectedQueuePaths: new Set(['root.default']),
         affectedProperties: new Set(),
         stagedChanges,
@@ -1016,7 +1012,7 @@ describe('crossQueue validation', () => {
         issues: [],
       });
 
-      const result = selectivelyValidateStagedChanges({
+      const result = validateStagedChanges({
         affectedQueuePaths: new Set(['root.newqueue']),
         affectedProperties: new Set(),
         stagedChanges,

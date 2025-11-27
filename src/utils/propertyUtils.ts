@@ -78,7 +78,7 @@ export function validateQueueName(queueName: string): ValidationResult {
  * @param queuePath The queue path (e.g. 'root.production.team1')
  * @returns Array of path segments (e.g. ['root', 'production', 'team1'])
  */
-function splitQueuePath(queuePath: string): string[] {
+export function splitQueuePath(queuePath: string): string[] {
   if (!queuePath) {
     return [];
   }
@@ -90,7 +90,7 @@ function splitQueuePath(queuePath: string): string[] {
  * @param segments Array of path segments (e.g. ['root', 'production', 'team1'])
  * @returns The joined queue path (e.g. 'root.production.team1')
  */
-function joinQueuePath(segments: string[]): string {
+export function joinQueuePath(segments: string[]): string {
   return segments.join('.');
 }
 

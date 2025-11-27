@@ -51,6 +51,27 @@ export function traverseQueueTree(
 }
 
 /**
+ * Map a queue tree to an array using a mapper function
+ * @param root The root queue to start from
+ * @param mapper Function to transform each queue into the desired type
+ * @param filter Optional function to filter which queues to include
+ * @returns Array of mapped values
+ */
+export function mapQueueTree<T>(
+  root: QueueInfo,
+  mapper: (queue: QueueInfo, depth: number) => T,
+  filter?: (queue: QueueInfo) => boolean,
+): T[] {
+  const result: T[] = [];
+  traverseQueueTree(root, (queue, depth) => {
+    if (!filter || filter(queue)) {
+      result.push(mapper(queue, depth));
+    }
+  });
+  return result;
+}
+
+/**
  * Find a queue by its path in the queue tree or scheduler data
  * @param rootOrScheduler The root queue or scheduler data to search from
  * @param queuePath The queue path to find (e.g., "root", "root.production.team1")

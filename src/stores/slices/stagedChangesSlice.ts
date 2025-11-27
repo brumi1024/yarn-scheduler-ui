@@ -27,11 +27,7 @@ import { createStoreError, ERROR_CODES, extractErrorMessage, isNetworkError } fr
 import { assertWritable } from '~/lib/errors/readOnlyGuard';
 import type { StagedChangesSlice, SchedulerStore } from './types';
 import { getAffectedQueuesForValidation } from '~/features/validation/utils/affectedQueues';
-import {
-  validateAllStagedChanges,
-  selectivelyValidateStagedChanges,
-  validatePropertyChange,
-} from '~/features/validation/crossQueue';
+import { validateStagedChanges, validatePropertyChange } from '~/features/validation/crossQueue';
 
 type MutationErrorState = Pick<SchedulerStore, 'applyError' | 'error' | 'errorContext'>;
 const clearMutationError = (state: MutationErrorState) => {
@@ -544,8 +540,8 @@ export const createStagedChangesSlice: StateCreator<
       return;
     }
 
-    // Validate all staged changes using the shared logic
-    const validationResults = validateAllStagedChanges({
+    // Validate all staged changes using the unified validation function
+    const validationResults = validateStagedChanges({
       stagedChanges,
       schedulerData,
       configData,
@@ -594,13 +590,13 @@ export const createStagedChangesSlice: StateCreator<
       });
     }
 
-    // Selectively validate only affected changes
-    const validationResults = selectivelyValidateStagedChanges({
-      affectedQueuePaths,
-      affectedProperties,
+    // Selectively validate only affected changes using the unified validation function
+    const validationResults = validateStagedChanges({
       stagedChanges,
       schedulerData,
       configData,
+      affectedQueuePaths,
+      affectedProperties,
     });
 
     set((state) => {

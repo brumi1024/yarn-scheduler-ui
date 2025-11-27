@@ -825,7 +825,9 @@ Property automatically appears in the Global Settings page (`src/app/routes/glob
 
 - `src/utils/propertyUtils.ts` - Property key construction
 - `src/utils/capacityUtils.ts` - Capacity parsing and validation
-- `src/utils/queueTreeUtils.ts` - Queue tree traversal
+- `src/utils/treeUtils.ts` - Queue tree traversal (`flattenQueueTree`, `traverseQueueTree`, `findQueueByPath`)
+- `src/utils/nodeLabelUtils.ts` - Node label name normalization
+- `src/lib/errors/readOnlyGuard.ts` - Read-only mode enforcement helpers
 
 ---
 
@@ -889,16 +891,29 @@ yarn-scheduler-ui/
 │   │   ├── properties/           # Property descriptors
 │   │   ├── schemas/              # Zod schemas
 │   │   └── validation-rules.ts   # Business validation
-│   ├── features/                 # Feature modules (10 features)
+│   ├── features/                 # Feature modules
+│   │   ├── queue-management/     # Queue tree visualization
+│   │   │   ├── components/       # QueueCardNode, CapacityEditorDialog, etc.
+│   │   │   ├── hooks/            # useCapacityEditor, useQueueActions
+│   │   │   └── utils/            # capacityDisplay, capacityEditor, etc.
+│   │   ├── property-editor/      # Queue property editing
+│   │   │   └── components/       # PropertyPanel, PropertyFormField, etc.
+│   │   ├── staged-changes/       # Change review and mutation
+│   │   ├── validation/           # Cross-queue validation engine
+│   │   ├── placement-rules/      # Placement rule builder
+│   │   ├── node-labels/          # Node label management
+│   │   ├── template-config/      # Auto-queue templates
+│   │   ├── queue-comparison/     # Queue comparison tool
+│   │   └── global-settings/      # Global scheduler settings
 │   ├── hooks/                    # Shared React hooks
 │   ├── lib/                      # Libraries and utilities
 │   │   ├── api/                  # YarnApiClient + MSW
-│   │   └── errors/               # Error handling
+│   │   └── errors/               # Error handling + readOnlyGuard
 │   ├── stores/                   # Zustand state management
 │   │   ├── schedulerStore.ts     # Main store
 │   │   └── slices/               # 8 feature slices
 │   ├── types/                    # TypeScript definitions
-│   ├── utils/                    # Utility functions
+│   ├── utils/                    # Utility functions (treeUtils, nodeLabelUtils, etc.)
 │   └── testing/                  # Test utilities
 ├── public/mock/                  # Mock API responses
 ├── docs/                         # Documentation
