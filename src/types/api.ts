@@ -18,7 +18,7 @@ export type SchedulerConfResponse = {
 };
 
 export type SchedulerIssueResponse = {
-  issueData: string;
+  schedulerIssue: string;
   file: string;
   fileName: string;
   contentType: string;
