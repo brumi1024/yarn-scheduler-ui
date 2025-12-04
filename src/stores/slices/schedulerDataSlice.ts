@@ -20,6 +20,7 @@ export const createSchedulerDataSlice: StateCreator<
   SchedulerDataSlice
 > = (set, get) => ({
   schedulerData: null,
+  schedulerIssueData: null,
   configData: new Map(),
   configVersion: 0,
   isLoading: false,
@@ -37,17 +38,20 @@ export const createSchedulerDataSlice: StateCreator<
     });
 
     try {
-      const [scheduler, config, labels, nodes, nodeToLabels, version] = await Promise.all([
-        get().apiClient.getScheduler(),
-        get().apiClient.getSchedulerConf(),
-        get().apiClient.getNodeLabels(),
-        get().apiClient.getNodes(),
-        get().apiClient.getNodeToLabels(),
-        get().apiClient.getSchedulerConfVersion(),
-      ]);
+      const [scheduler, schedulerIssue, config, labels, nodes, nodeToLabels, version] =
+        await Promise.all([
+          get().apiClient.getScheduler(),
+          get().apiClient.getSchedulerIssue(),
+          get().apiClient.getSchedulerConf(),
+          get().apiClient.getNodeLabels(),
+          get().apiClient.getNodes(),
+          get().apiClient.getNodeToLabels(),
+          get().apiClient.getSchedulerConfVersion(),
+        ]);
 
       set((state) => {
         state.schedulerData = scheduler.scheduler.schedulerInfo;
+        state.schedulerIssueData = schedulerIssue;
         state.configData = new Map(config.property.map((p: ConfigProperty) => [p.name, p.value]));
 
         // Update node labels data

@@ -12,6 +12,7 @@ import type {
   QueueInfo,
   QueueCapacitiesByPartition,
   ValidationIssue,
+  SchedulerIssueResponse,
 } from '~/types';
 import type { PlacementRulesSlice } from './placementRulesSlice';
 import type { CapacityEditorSlice } from './capacityEditorSlice';
@@ -22,6 +23,7 @@ export interface BaseStoreSlice {
 
 export interface SchedulerDataSlice {
   schedulerData: SchedulerInfo | null;
+  schedulerIssueData: SchedulerIssueResponse | null;
   configData: Map<string, string>;
   configVersion: number;
   isLoading: boolean;
