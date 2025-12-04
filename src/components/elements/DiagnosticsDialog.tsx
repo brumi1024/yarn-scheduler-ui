@@ -22,9 +22,6 @@ type DiagnosticDatasetId =
   | 'nodeLabels'
   | 'nodeToLabels'
   | 'nodes'
-  | 'applicationFailed'
-  | 'applicationHanging'
-  | 'rmOrNmStartupFailure'
   | 'schedulerIssue';
 
 interface DiagnosticOption {
