@@ -1,3 +1,6 @@
+> [!IMPORTANT]  
+> This UI was merged into Apache Hadoop YARN, as part of [YARN-11885](https://issues.apache.org/jira/browse/YARN-11885). Further development will be continued in the upstream Hadoop repository.
+
 # YARN Scheduler UI
 
 A modern web interface for managing Apache Hadoop YARN Capacity Scheduler configurations. The app provides visual tools for exploring queue hierarchies, adjusting capacities, validating placement rules, and applying changes with confidence.
