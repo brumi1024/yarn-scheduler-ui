@@ -112,6 +112,7 @@ describe('DeleteQueueDialog', () => {
     render(<DeleteQueueDialog open={true} queuePath="root.default" onClose={vi.fn()} />);
 
     const deleteButton = screen.getByRole('button', { name: /delete queue/i });
-    expect(deleteButton).toHaveClass('bg-destructive');
+    // Destructive buttons use gradient styling
+    expect(deleteButton).toHaveClass('from-destructive');
   });
 });
