@@ -9,6 +9,7 @@ import { AlertCircle, AlertTriangle } from 'lucide-react';
 import { Badge } from '~/components/ui/badge';
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from '~/components/ui/tooltip';
 import type { ValidationIssue } from '~/types';
+import { splitIssues } from '~/features/validation/service';
 
 interface QueueValidationBadgesProps {
   validationErrors?: ValidationIssue[];
@@ -25,8 +26,9 @@ export const QueueValidationBadges: React.FC<QueueValidationBadgesProps> = ({
     return null;
   }
 
-  const errors = validationErrors?.filter((e) => e.severity === 'error') ?? [];
-  const warnings = validationErrors?.filter((e) => e.severity === 'warning') ?? [];
+  const { errors, warnings } = validationErrors
+    ? splitIssues(validationErrors)
+    : { errors: [], warnings: [] };
 
   return (
     <div className="flex items-center gap-1.5 ml-2">

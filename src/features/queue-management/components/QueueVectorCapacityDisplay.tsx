@@ -7,9 +7,9 @@
 import React from 'react';
 import { Badge } from '~/components/ui/badge';
 import { Popover, PopoverContent, PopoverTrigger } from '~/components/ui/popover';
+import { type ResourceVectorEntry } from '~/utils/capacityUtils';
 import {
   type CapacityDisplay,
-  type ResourceVectorEntry,
   INLINE_RESOURCE_LIMIT,
   normalizeResourceKey,
   createEntryMap,

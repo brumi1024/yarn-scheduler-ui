@@ -10,9 +10,6 @@ import {
   type ResourceVectorEntry,
 } from '~/utils/capacityUtils';
 
-// Re-export for backwards compatibility
-export type { ResourceVectorEntry };
-
 export type CapacityDisplay =
   | { type: 'vector'; entries: ResourceVectorEntry[]; raw: string }
   | { type: 'percentage'; formatted: string; raw: string }
@@ -65,9 +62,6 @@ export const getResourceOrder = (
 
   return ordered;
 };
-
-// Re-export parseResourceVector for backwards compatibility
-export { parseResourceVector };
 
 export const getCapacityDisplay = (input?: string): CapacityDisplay => {
   if (!input) {
