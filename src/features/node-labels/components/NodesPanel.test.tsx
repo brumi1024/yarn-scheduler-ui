@@ -247,8 +247,9 @@ describe('NodesPanel', () => {
       const shutdownBadge = screen.getByText('SHUTDOWN');
 
       expect(runningBadge).toHaveAttribute('data-slot', 'badge');
-      expect(runningBadge.className).toContain('bg-primary');
-      expect(unhealthyBadge.className).toContain('bg-destructive');
+      // Badges use gradient styling
+      expect(runningBadge.className).toContain('from-primary');
+      expect(unhealthyBadge.className).toContain('from-destructive');
       expect(shutdownBadge.className).toContain('bg-secondary');
     });
 
@@ -416,7 +417,8 @@ describe('NodesPanel', () => {
       expect(gpuBadgeText).toBeDefined();
       const gpuBadge = gpuBadgeText!.closest('[data-slot="badge"]');
 
-      expect(gpuBadge).toHaveClass('bg-primary');
+      // Badge uses gradient styling
+      expect(gpuBadge).toHaveClass('from-primary');
     });
   });
 
