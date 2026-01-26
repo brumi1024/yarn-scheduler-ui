@@ -120,11 +120,11 @@ body {
 
   /* Queue state colors for light mode */
   --queue-new: oklch(0.648 0.2 131.684); /* Green */
-  --queue-modified: oklch(0.646 0.222 41.116); /* Orange */
+  --queue-modified: oklch(0.75 0.17 70); /* Amber - clearly distinct from red */
   --queue-deleted: oklch(0.577 0.245 27.325); /* Red */
   --queue-running: oklch(0.648 0.2 131.684); /* Green */
   --queue-stopped: oklch(0.577 0.245 27.325); /* Red */
-  --queue-draining: oklch(0.646 0.222 41.116); /* Orange */
+  --queue-draining: oklch(0.75 0.17 70); /* Amber - clearly distinct from red */
 }
 
 .dark {

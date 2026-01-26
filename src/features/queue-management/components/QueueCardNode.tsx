@@ -195,19 +195,35 @@ export const QueueCardNode: React.FC<NodeProps> = ({ data }) => {
         'dark:shadow-md dark:shadow-black/20 dark:hover:shadow-lg dark:hover:shadow-black/30',
         // Cursor styling - not clickable for new queues
         stagedStatus === 'new' ? 'opacity-75 cursor-default' : 'cursor-pointer',
-        // Border styling based on status with left accent
-        stagedStatus === 'new' && 'ring-2 ring-queue-new border-l-4 border-l-queue-new',
-        stagedStatus === 'deleted' && 'ring-2 ring-queue-deleted border-l-4 border-l-queue-deleted',
+        // Left border for staged status (always visible regardless of errors)
+        stagedStatus === 'new' && 'border-l-4 border-l-queue-new',
+        stagedStatus === 'deleted' && 'border-l-4 border-l-queue-deleted',
+        stagedStatus === 'modified' && 'border-l-4 border-l-queue-modified',
+        // Ring for staged status (only if no validation errors)
+        stagedStatus === 'new' &&
+          !(validationErrors && validationErrors.some((e) => e.severity === 'error')) &&
+          'ring-2 ring-queue-new',
+        stagedStatus === 'deleted' &&
+          !(validationErrors && validationErrors.some((e) => e.severity === 'error')) &&
+          'ring-2 ring-queue-deleted',
         stagedStatus === 'modified' &&
-          'ring-2 ring-queue-modified border-l-4 border-l-queue-modified',
+          !(validationErrors && validationErrors.some((e) => e.severity === 'error')) &&
+          'ring-2 ring-queue-modified',
         !stagedStatus && isSelectedQueue && 'ring-2 ring-primary shadow-primary/10',
-        // Validation error styling
+        // Ring for validation errors (can coexist with staged status border)
         validationErrors &&
           validationErrors.some((e) => e.severity === 'error') &&
-          'ring-2 ring-destructive border-l-4 border-l-destructive',
+          'ring-2 ring-destructive',
+        // Left border for affected queues only if no staged status
+        !stagedStatus &&
+          validationErrors &&
+          validationErrors.some((e) => e.severity === 'error') &&
+          'border-l-4 border-l-destructive',
         isAffectedByErrors &&
           !validationErrors &&
+          !stagedStatus &&
           'ring-2 ring-amber-500 border-l-4 border-l-amber-500',
+        isAffectedByErrors && !validationErrors && stagedStatus && 'ring-2 ring-amber-500',
         // Background styling for states
         isSelectedQueue &&
           'from-primary/10 to-primary/5 dark:from-primary/15 dark:to-primary/5 scale-[1.01]',

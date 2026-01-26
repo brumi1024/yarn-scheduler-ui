@@ -1,3 +1,4 @@
+import { useState, useEffect } from 'react';
 import {
   Dialog,
   DialogContent,
@@ -7,7 +8,9 @@ import {
   DialogTitle,
 } from '~/components/ui/dialog';
 import { Button } from '~/components/ui/button';
+import { Input } from '~/components/ui/input';
 import { Alert, AlertDescription } from '~/components/ui/alert';
+import { Field, FieldControl, FieldLabel } from '~/components/ui/field';
 import { Trash2, AlertTriangle } from 'lucide-react';
 import { useQueueActions } from '~/features/queue-management/hooks/useQueueActions';
 import { SPECIAL_VALUES } from '~/types';
@@ -19,13 +22,23 @@ interface DeleteQueueDialogProps {
 }
 
 export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialogProps) {
+  const [confirmText, setConfirmText] = useState('');
   const { deleteQueue, canDeleteQueue } = useQueueActions();
   const queueName = queuePath.split('.').pop() || queuePath;
 
   const canDelete = canDeleteQueue(queuePath);
   const isRoot = queuePath === SPECIAL_VALUES.ROOT_QUEUE_NAME;
+  const isConfirmationValid = confirmText === queueName;
+
+  // Reset confirmation text when dialog opens/closes
+  useEffect(() => {
+    if (!open) {
+      setConfirmText('');
+    }
+  }, [open]);
 
   const handleDelete = () => {
+    if (!isConfirmationValid) return;
     try {
       deleteQueue(queuePath);
       onClose();
@@ -71,6 +84,20 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
                   removed.
                 </AlertDescription>
               </Alert>
+              <Field>
+                <FieldLabel htmlFor="confirmDelete">
+                  Type <strong>{queueName}</strong> to confirm
+                </FieldLabel>
+                <FieldControl>
+                  <Input
+                    id="confirmDelete"
+                    placeholder={queueName}
+                    value={confirmText}
+                    onChange={(e) => setConfirmText(e.target.value)}
+                    autoComplete="off"
+                  />
+                </FieldControl>
+              </Field>
             </>
           )}
         </div>
@@ -80,7 +107,7 @@ export function DeleteQueueDialog({ open, queuePath, onClose }: DeleteQueueDialo
             Cancel
           </Button>
           {canDelete && !isRoot && (
-            <Button onClick={handleDelete} variant="destructive">
+            <Button onClick={handleDelete} variant="destructive" disabled={!isConfirmationValid}>
               <Trash2 className="mr-2 h-4 w-4" />
               Delete Queue
             </Button>

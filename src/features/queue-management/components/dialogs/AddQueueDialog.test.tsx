@@ -86,7 +86,7 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
+    const submitButton = screen.getByRole('button', { name: /create queue/i });
 
     // Initially button should be disabled (no name entered)
     expect(submitButton).toBeDisabled();
@@ -109,7 +109,7 @@ describe('AddQueueDialog', () => {
     render(<AddQueueDialog open={true} parentQueuePath="root" onClose={vi.fn()} />);
 
     const nameInput = screen.getByLabelText(/queue name/i);
-    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
+    const submitButton = screen.getByRole('button', { name: /create queue/i });
 
     await user.type(nameInput, 'queue@#$%');
 
@@ -132,7 +132,7 @@ describe('AddQueueDialog', () => {
     // Fill all required fields
     await user.type(nameInput, 'newqueue');
 
-    const submitButton = screen.getByRole('button', { name: /adjust capacities/i });
+    const submitButton = screen.getByRole('button', { name: /create queue/i });
     expect(submitButton).not.toBeDisabled();
 
     await user.click(submitButton);
