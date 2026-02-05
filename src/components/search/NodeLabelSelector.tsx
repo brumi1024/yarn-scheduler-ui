@@ -1,5 +1,6 @@
 import React from 'react';
 import { Tag } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import {
   Select,
@@ -11,7 +12,16 @@ import {
 import { Badge } from '~/components/ui/badge';
 
 export const NodeLabelSelector: React.FC = () => {
-  const { nodeLabels, selectedNodeLabelFilter, selectNodeLabelFilter } = useSchedulerStore();
+  // State values (trigger re-renders only when these specific values change)
+  const { nodeLabels, selectedNodeLabelFilter } = useSchedulerStore(
+    useShallow((s) => ({
+      nodeLabels: s.nodeLabels,
+      selectedNodeLabelFilter: s.selectedNodeLabelFilter,
+    })),
+  );
+
+  // Actions (stable references, never trigger re-renders)
+  const selectNodeLabelFilter = useSchedulerStore((s) => s.selectNodeLabelFilter);
 
   const handleChange = (value: string) => {
     selectNodeLabelFilter(value === 'DEFAULT' ? '' : value);
