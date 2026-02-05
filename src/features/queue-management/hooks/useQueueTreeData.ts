@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import type { Node, Edge } from '@xyflow/react';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import type {
@@ -65,6 +66,25 @@ function toArray<T>(value: T | T[] | undefined): T[] {
   }
 
   return Array.isArray(value) ? value : [value];
+}
+
+/**
+ * Generates a cache key based on queue tree structure.
+ * Only changes when queue paths are added/removed.
+ */
+function getTreeStructureKey(queue: QueueInfo): string {
+  const paths: string[] = [];
+
+  const collectPaths = (q: QueueInfo) => {
+    paths.push(q.queuePath);
+    if (q.queues?.queue) {
+      const children = toArray(q.queues.queue);
+      children.forEach(collectPaths);
+    }
+  };
+
+  collectPaths(queue);
+  return paths.sort().join('|');
 }
 
 function normalizePartitionName(name?: string | null): string {
@@ -670,6 +690,8 @@ function augmentQueueTreeWithStagedQueues(
   return augmentedRoot;
 }
 
+type LayoutPosition = { x: number; y: number; width: number; height: number };
+
 export function useQueueTreeData(): UseQueueTreeDataResult {
   const schedulerData = useSchedulerStore((state) => state.schedulerData);
   const stagedChanges = useSchedulerStore((state) => state.stagedChanges);
@@ -681,6 +703,12 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
   const searchQuery = useSchedulerStore((state) => state.searchQuery);
   const getFilteredQueues = useSchedulerStore((state) => state.getFilteredQueues);
   const selectedNodeLabelFilter = useSchedulerStore((state) => state.selectedNodeLabelFilter);
+
+  // Cache layout positions to avoid recalculating when tree structure hasn't changed
+  const layoutCache = useRef<{
+    key: string;
+    positions: Map<string, LayoutPosition>;
+  } | null>(null);
 
   const { nodes, edges } = (() => {
     if (!schedulerData || isLoading) {
@@ -705,7 +733,17 @@ export function useQueueTreeData(): UseQueueTreeDataResult {
 
       const flatQueues = flattenQueueTree(augmentedRootQueue, stagedChanges);
 
-      const positions = layoutEngine.calculatePositions(augmentedRootQueue);
+      // Generate structure key for cache lookup
+      const structureKey = getTreeStructureKey(augmentedRootQueue);
+
+      // Use cached positions if structure hasn't changed
+      let positions: Map<string, LayoutPosition>;
+      if (layoutCache.current?.key === structureKey) {
+        positions = layoutCache.current.positions;
+      } else {
+        positions = layoutEngine.calculatePositions(augmentedRootQueue);
+        layoutCache.current = { key: structureKey, positions };
+      }
 
       const flowNodes = createNodes(flatQueues, positions, stagedChanges);
 
