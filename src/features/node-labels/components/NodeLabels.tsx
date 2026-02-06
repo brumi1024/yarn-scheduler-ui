@@ -1,5 +1,6 @@
 import React from 'react';
 import { AlertCircle } from 'lucide-react';
+import { useShallow } from 'zustand/react/shallow';
 import { useSchedulerStore } from '~/stores/schedulerStore';
 import { Alert, AlertDescription, AlertTitle } from '~/components/ui/alert';
 import { Card, CardContent, CardHeader, CardTitle } from '~/components/ui/card';
@@ -8,8 +9,18 @@ import { NodeLabelsPanel } from './NodeLabelsPanel';
 import { NodesPanel } from './NodesPanel';
 
 export const NodeLabels: React.FC = () => {
+  // State values (trigger re-renders only when these specific values change)
   const { isLoading, error, errorContext, applyError, nodeLabels, selectedNodeLabel } =
-    useSchedulerStore();
+    useSchedulerStore(
+      useShallow((s) => ({
+        isLoading: s.isLoading,
+        error: s.error,
+        errorContext: s.errorContext,
+        applyError: s.applyError,
+        nodeLabels: s.nodeLabels,
+        selectedNodeLabel: s.selectedNodeLabel,
+      })),
+    );
 
   if (isLoading && nodeLabels.length === 0) {
     return (

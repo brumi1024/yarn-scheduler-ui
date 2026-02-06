@@ -77,10 +77,17 @@ describe('NodesPanel', () => {
     getFilteredNodes: vi.fn(() => []),
   };
 
+  function mockStore(overrides: Record<string, any> = {}) {
+    const state = { ...defaultStoreState, ...overrides };
+    vi.mocked(useSchedulerStore).mockImplementation((selector?: any) => {
+      return selector ? selector(state) : state;
+    });
+  }
+
   beforeEach(() => {
     vi.clearAllMocks();
     mockConsoleError.mockClear();
-    (useSchedulerStore as any).mockReturnValue(defaultStoreState);
+    mockStore();
     (formatMemory as any).mockImplementation((mb: number) => `${mb} MB`);
   });
 
@@ -116,8 +123,7 @@ describe('NodesPanel', () => {
     ];
 
     it('should display all nodes when no label is selected', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
       });
 
@@ -129,8 +135,7 @@ describe('NodesPanel', () => {
     });
 
     it('should show correct header text for all nodes', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
       });
 
@@ -155,8 +160,7 @@ describe('NodesPanel', () => {
     ];
 
     it('should filter nodes by selected label', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
         nodeToLabels: mockNodeToLabels,
       });
@@ -169,8 +173,7 @@ describe('NodesPanel', () => {
     });
 
     it('should show correct header text for filtered nodes', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
         nodeToLabels: mockNodeToLabels,
       });
@@ -188,8 +191,7 @@ describe('NodesPanel', () => {
     });
 
     it('should show empty state for label with no nodes', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
         nodeToLabels: mockNodeToLabels,
       });
@@ -217,8 +219,7 @@ describe('NodesPanel', () => {
     });
 
     it('should display node basic information', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -235,8 +236,7 @@ describe('NodesPanel', () => {
         createMockNode({ id: 'n3', state: 'SHUTDOWN' }),
       ];
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes,
       });
 
@@ -254,8 +254,7 @@ describe('NodesPanel', () => {
     });
 
     it('should display container count', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -277,8 +276,7 @@ describe('NodesPanel', () => {
     });
 
     it('should display memory utilization', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -290,8 +288,7 @@ describe('NodesPanel', () => {
     });
 
     it('should display CPU utilization', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -301,8 +298,7 @@ describe('NodesPanel', () => {
     });
 
     it('should show progress bars for utilization', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -326,8 +322,7 @@ describe('NodesPanel', () => {
         availableVirtualCores: 1,
       });
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [highUtilNode],
       });
 
@@ -347,8 +342,7 @@ describe('NodesPanel', () => {
         availableVirtualCores: 0,
       });
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [criticalNode],
       });
 
@@ -370,8 +364,7 @@ describe('NodesPanel', () => {
     it('should display assigned labels as badges', () => {
       const node = createMockNode({ id: 'node-1' });
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [node],
         nodeToLabels: mockNodeToLabels,
       });
@@ -388,8 +381,7 @@ describe('NodesPanel', () => {
     it('should display Default badge for nodes without labels', () => {
       const node = createMockNode({ id: 'node-2' });
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [node],
         nodeToLabels: mockNodeToLabels,
       });
@@ -402,8 +394,7 @@ describe('NodesPanel', () => {
     it('should highlight selected label badge', () => {
       const node = createMockNode({ id: 'node-1' });
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [node],
         nodeToLabels: mockNodeToLabels,
       });
@@ -427,8 +418,7 @@ describe('NodesPanel', () => {
     const mockNodeToLabels: NodeToLabelMapping[] = [{ nodeId: 'node-1', nodeLabels: ['gpu'] }];
 
     beforeEach(() => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
       });
@@ -487,8 +477,7 @@ describe('NodesPanel', () => {
     });
 
     it('should disable select when loading', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
         isLoading: true,
@@ -521,8 +510,7 @@ describe('NodesPanel', () => {
     const mockNodeToLabels: NodeToLabelMapping[] = [{ nodeId: 'node-1', nodeLabels: ['gpu'] }];
 
     it('should show remove button for nodes with labels', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
       });
@@ -541,8 +529,7 @@ describe('NodesPanel', () => {
     it('should not show remove button for nodes without labels', () => {
       const nodeToLabels: NodeToLabelMapping[] = [{ nodeId: 'node-1', nodeLabels: [] }];
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels,
       });
@@ -561,8 +548,7 @@ describe('NodesPanel', () => {
     it('should call assignNodeToLabel with null when remove is clicked', async () => {
       mockAssignNodeToLabel.mockResolvedValue(undefined);
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
       });
@@ -580,8 +566,7 @@ describe('NodesPanel', () => {
     });
 
     it('should disable remove button when loading', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
         isLoading: true,
@@ -605,8 +590,7 @@ describe('NodesPanel', () => {
     ];
 
     it('should render table with correct headers', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
       });
 
@@ -622,8 +606,7 @@ describe('NodesPanel', () => {
     });
 
     it('should render correct number of rows', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: mockNodes,
       });
 
@@ -638,8 +621,7 @@ describe('NodesPanel', () => {
     const mockNode = createMockNode({ id: 'node-1' });
 
     it('should have accessible table structure', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -653,8 +635,7 @@ describe('NodesPanel', () => {
     });
 
     it('should have accessible progress bars', () => {
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
       });
 
@@ -677,8 +658,7 @@ describe('NodesPanel', () => {
     it('should have accessible tooltips', () => {
       const mockNodeToLabels: NodeToLabelMapping[] = [{ nodeId: 'node-1', nodeLabels: ['gpu'] }];
 
-      (useSchedulerStore as any).mockReturnValue({
-        ...defaultStoreState,
+      mockStore({
         nodes: [mockNode],
         nodeToLabels: mockNodeToLabels,
       });
