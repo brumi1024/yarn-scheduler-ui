@@ -23,6 +23,7 @@ vi.mock('~/lib/errors', async () => {
 describe('schedulerDataSlice', () => {
   const createMockApiClient = () => ({
     getScheduler: vi.fn(),
+    getSchedulerIssue: vi.fn(),
     getSchedulerConf: vi.fn(),
     getNodeLabels: vi.fn(),
     getNodes: vi.fn(),

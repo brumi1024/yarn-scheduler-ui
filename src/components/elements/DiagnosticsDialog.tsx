@@ -21,7 +21,8 @@ type DiagnosticDatasetId =
   | 'schedulerInfo'
   | 'nodeLabels'
   | 'nodeToLabels'
-  | 'nodes';
+  | 'nodes'
+  | 'schedulerIssue';
 
 interface DiagnosticOption {
   id: DiagnosticDatasetId;
@@ -39,6 +40,7 @@ export function DiagnosticsDialog() {
   const nodeLabels = useSchedulerStore((state) => state.nodeLabels);
   const nodeToLabels = useSchedulerStore((state) => state.nodeToLabels);
   const nodes = useSchedulerStore((state) => state.nodes);
+  const schedulerIssueData = useSchedulerStore((state) => state.schedulerIssueData);
 
   const [open, setOpen] = useState(false);
   const [selectedDatasets, setSelectedDatasets] = useState<DiagnosticDatasetId[]>(DEFAULT_SELECTED);
@@ -79,6 +81,17 @@ export function DiagnosticsDialog() {
       label: 'Nodes',
       description: 'Node metadata returned by /nodes.',
       data: nodes,
+    },
+    {
+      id: 'schedulerIssue',
+      label: 'Scheduler Related Issue',
+      description:
+        'ResourceManager Scheduler Logs with DEBUG enabled for 2 minutes,' +
+        'Multiple Jstack of ResourceManager,' +
+        'YARN and Scheduler Configuration,' +
+        'Cluster Scheduler API /ws/v1/cluster/scheduler and Cluster Nodes API /ws/v1/cluster/nodes response,' +
+        'Scheduler Activities /ws/v1/cluster/scheduler/bulk-activities response.',
+      data: schedulerIssueData,
     },
   ];
 
@@ -136,7 +149,7 @@ export function DiagnosticsDialog() {
           <TooltipContent sideOffset={8}>Download diagnostics</TooltipContent>
         </Tooltip>
 
-        <DialogContent className="sm:max-w-lg">
+        <DialogContent className="sm:max-w-lg max-h-[80vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Download diagnostics</DialogTitle>
             <DialogDescription>

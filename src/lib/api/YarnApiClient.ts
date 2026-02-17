@@ -16,6 +16,7 @@ import type {
   VersionResponse,
   YarnConfigResponse,
   ValidationResponse,
+  SchedulerIssueResponse,
 } from '~/types';
 import { READ_ONLY_PROPERTY } from '~/config';
 
@@ -84,6 +85,16 @@ export class YarnApiClient {
    */
   async getSchedulerConf(): Promise<SchedulerConfResponse> {
     return this.request<SchedulerConfResponse>('GET', '/scheduler-conf');
+  }
+
+  /**
+   * GET /common-issues/collect?issueId=scheduler_related_issue
+   * */
+  async getSchedulerIssue(): Promise<SchedulerIssueResponse> {
+    return this.request<SchedulerIssueResponse>(
+      'GET',
+      '/common-issues/collect?issueId=scheduler_related_issue',
+    );
   }
 
   /**

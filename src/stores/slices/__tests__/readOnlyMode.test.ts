@@ -2,10 +2,12 @@ import { describe, it, expect, beforeEach, vi } from 'vitest';
 import { createSchedulerStore } from '~/stores/schedulerStore';
 import type { YarnApiClient } from '~/lib/api/YarnApiClient';
 import { ERROR_CODES } from '~/lib/errors';
+import type { SchedulerIssueResponse } from '~/types';
 
 // Create mock API client
 const createMockApiClient = (isReadOnly: boolean) => ({
   getScheduler: vi.fn(),
+  getSchedulerIssue: vi.fn(),
   getSchedulerConf: vi.fn(),
   getNodeLabels: vi.fn(),
   getNodes: vi.fn(),
@@ -56,6 +58,14 @@ const mockSchedulerResponse = {
   },
 };
 
+const mockSchedulerIssueResponse: SchedulerIssueResponse = {
+  schedulerIssue: '',
+  file: '',
+  contentType: '',
+  content: '',
+  fileName: '',
+};
+
 const mockConfigResponse = {
   property: [
     { name: 'yarn.scheduler.capacity.root.queues', value: 'default' },
@@ -78,6 +88,9 @@ describe('Read-Only Mode', () => {
 
       // Mock API responses
       vi.mocked(store.getState().apiClient.getScheduler).mockResolvedValue(mockSchedulerResponse);
+      vi.mocked(store.getState().apiClient.getSchedulerIssue).mockResolvedValue(
+        mockSchedulerIssueResponse,
+      );
       vi.mocked(store.getState().apiClient.getSchedulerConf).mockResolvedValue(mockConfigResponse);
       vi.mocked(store.getState().apiClient.getNodeLabels).mockResolvedValue(mockNodeLabelsResponse);
       vi.mocked(store.getState().apiClient.getNodes).mockResolvedValue(mockNodesResponse);
@@ -151,6 +164,9 @@ describe('Read-Only Mode', () => {
 
       // Mock API responses
       vi.mocked(store.getState().apiClient.getScheduler).mockResolvedValue(mockSchedulerResponse);
+      vi.mocked(store.getState().apiClient.getSchedulerIssue).mockResolvedValue(
+        mockSchedulerIssueResponse,
+      );
       vi.mocked(store.getState().apiClient.getSchedulerConf).mockResolvedValue(mockConfigResponse);
       vi.mocked(store.getState().apiClient.getNodeLabels).mockResolvedValue(mockNodeLabelsResponse);
       vi.mocked(store.getState().apiClient.getNodes).mockResolvedValue(mockNodesResponse);

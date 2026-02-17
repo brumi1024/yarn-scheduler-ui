@@ -11,6 +11,7 @@ import type {
   NodesResponse,
   VersionResponse,
   SchedulerResponse,
+  SchedulerIssueResponse,
 } from '~/types';
 import { CONFIG_PREFIXES, QUEUE_TYPES, SPECIAL_VALUES } from '~/types/constants';
 import { AUTO_CREATION_PROPS } from '~/types/constants/auto-creation';
@@ -174,6 +175,14 @@ const mockSchedulerResponse: SchedulerResponse = {
   },
 };
 
+const mockSchedulerIssueResponse: SchedulerIssueResponse = {
+  schedulerIssue: '',
+  file: '',
+  contentType: '',
+  content: '',
+  fileName: '',
+};
+
 const mockConfigResponse: ConfigData = {
   property: [
     {
@@ -326,6 +335,7 @@ vi.mock('~/lib/api/YarnApiClient');
 // Create mock API client
 const createMockApiClient = () => ({
   getScheduler: vi.fn(),
+  getSchedulerIssue: vi.fn(),
   getSchedulerConf: vi.fn(),
   getNodeLabels: vi.fn(),
   getNodes: vi.fn(),
@@ -415,6 +425,7 @@ describe('schedulerStore', () => {
       const mockApiClient = vi.mocked(store.getState().apiClient);
 
       mockApiClient.getScheduler.mockResolvedValue(mockSchedulerResponse);
+      mockApiClient.getSchedulerIssue.mockResolvedValue(mockSchedulerIssueResponse);
       mockApiClient.getSchedulerConf.mockResolvedValue(mockConfigResponse);
       mockApiClient.getNodeLabels.mockResolvedValue(mockNodeLabelsResponse);
       mockApiClient.getNodes.mockResolvedValue(mockNodesResponse);
@@ -424,6 +435,7 @@ describe('schedulerStore', () => {
       await store.getState().loadInitialData();
 
       expect(mockApiClient.getScheduler).toHaveBeenCalledTimes(1);
+      expect(mockApiClient.getSchedulerIssue).toHaveBeenCalledTimes(1);
       expect(mockApiClient.getSchedulerConf).toHaveBeenCalledTimes(1);
       expect(mockApiClient.getNodeLabels).toHaveBeenCalledTimes(1);
       expect(mockApiClient.getSchedulerConfVersion).toHaveBeenCalledTimes(1);

@@ -17,6 +17,14 @@ export type SchedulerConfResponse = {
   property: ConfigProperty[];
 };
 
+export type SchedulerIssueResponse = {
+  schedulerIssue: string;
+  file: string;
+  fileName: string;
+  contentType: string;
+  content: string;
+};
+
 export type YarnErrorResponse = {
   RemoteException?: {
     exception: string;
