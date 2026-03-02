@@ -149,15 +149,3 @@ For contributors and developers working with the codebase, additional technical 
 
 - **[Extending Scheduler Properties](docs/development/extending-scheduler-properties.md)** - Comprehensive guide for adding new queue and global properties to the UI, including validation rules and conditional logic
 - **[Adding Validation Rules](docs/development/adding-validation-rules.md)** - Step-by-step guide for adding new validation rules to the system
-
-## Contributing
-
-1. Fork the repository and create a feature branch (`git checkout -b feature/your-feature`).
-2. Make changes and add tests where appropriate.
-3. Run linting, formatting, typecheck, and the relevant test commands.
-4. Commit with clear messages and push to your fork.
-5. Open a Pull Request describing the change and any manual verification performed.
-
-## Support
-
-Report bugs and request features through the GitHub issue tracker. Contributions, questions, and feedback are welcome!
